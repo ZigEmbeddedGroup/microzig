@@ -3,8 +3,6 @@ const microzig = @import("microzig");
 const mdf = microzig.drivers;
 const rp2xxx = microzig.hal;
 const time = rp2xxx.time;
-const gpio = rp2xxx.gpio;
-const led = gpio.num(25);
 
 /// Dummy example of defining a custom locking/unlocking mechanisms for thread safety
 // const pretend_thread_safety = struct {

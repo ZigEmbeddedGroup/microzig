@@ -3,7 +3,6 @@ const microzig = @import("microzig");
 
 const rp2xxx = microzig.hal;
 const time = rp2xxx.time;
-const gpio = rp2xxx.gpio;
 
 const BUF_LEN = 0x100;
 const spi = rp2xxx.spi.instance.SPI0;

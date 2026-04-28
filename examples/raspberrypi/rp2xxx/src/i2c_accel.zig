@@ -5,7 +5,6 @@ const rp2xxx = microzig.hal;
 const gpio = rp2xxx.gpio;
 const i2c = rp2xxx.i2c;
 
-const ClockDevice = rp2xxx.drivers.ClockDevice;
 const I2C_Device = rp2xxx.drivers.I2C_Device;
 const ICM_20948 = microzig.drivers.sensor.ICM_20948;
 

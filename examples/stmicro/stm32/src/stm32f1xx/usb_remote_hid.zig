@@ -3,8 +3,6 @@
 const std = @import("std");
 const microzig = @import("microzig");
 
-const host = microzig.core.arm_semihosting;
-
 const RCC = microzig.chip.peripherals.RCC;
 const flash = microzig.chip.peripherals.FLASH;
 const rcc_v1 = microzig.chip.types.peripherals.rcc_f1;

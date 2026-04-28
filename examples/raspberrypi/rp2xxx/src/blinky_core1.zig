@@ -1,9 +1,6 @@
-const std = @import("std");
-
 const microzig = @import("microzig");
 const rp2xxx = microzig.hal;
 const board = microzig.board;
-const gpio = rp2xxx.gpio;
 const time = rp2xxx.time;
 const multicore = rp2xxx.multicore;
 

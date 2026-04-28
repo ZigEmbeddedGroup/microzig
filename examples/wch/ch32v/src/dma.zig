@@ -1,10 +1,8 @@
 const std = @import("std");
 const microzig = @import("microzig");
-const mdf = microzig.drivers;
 const hal = microzig.hal;
 const gpio = hal.gpio;
 const dma = hal.dma;
-const time = hal.time;
 
 const usart = hal.usart.instance.USART2;
 const usart_tx_pin = gpio.Pin.init(0, 2); // PA2

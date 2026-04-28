@@ -6,7 +6,6 @@ const microzig = @import("microzig");
 const rp2xxx = microzig.hal;
 const time = rp2xxx.time;
 const gpio = rp2xxx.gpio;
-const pio = rp2xxx.pio;
 
 const drivers = microzig.hal.drivers;
 var wifi_driver: drivers.WiFi = .{};

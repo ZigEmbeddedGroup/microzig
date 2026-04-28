@@ -4,8 +4,6 @@
 
 const microzig = @import("microzig");
 const hal = microzig.hal;
-const gpio = hal.gpio;
-const rcc = hal.rcc;
 const exti = hal.exti;
 
 const led = hal.gpio.Pin.from_port(.B, 2);

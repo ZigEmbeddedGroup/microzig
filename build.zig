@@ -14,8 +14,6 @@ pub const LinkerScript = internals.LinkerScript;
 pub const Stack = internals.Stack;
 pub const MemoryRegion = internals.MemoryRegion;
 
-const regz = @import("tools/regz");
-
 // If more ports are available, the error "error: evaluation exceeded 1000 backwards branches" may occur.
 // In such cases, consider increasing the argument value for @setEvalBranchQuota().
 const port_list: []const struct {
@@ -34,15 +32,6 @@ const port_list: []const struct {
     .{ .name = "ch32v", .dep_name = "port/wch/ch32v" },
     .{ .name = "msp430", .dep_name = "port/texasinstruments/msp430" },
     .{ .name = "tm4c", .dep_name = "port/texasinstruments/tm4c" },
-};
-
-const exe_targets: []const std.Target.Query = &.{
-    .{ .cpu_arch = .aarch64, .os_tag = .macos },
-    .{ .cpu_arch = .aarch64, .os_tag = .linux },
-    .{ .cpu_arch = .aarch64, .os_tag = .windows },
-    .{ .cpu_arch = .x86_64, .os_tag = .macos },
-    .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .musl },
-    .{ .cpu_arch = .x86_64, .os_tag = .windows },
 };
 
 pub fn build(b: *Build) void {

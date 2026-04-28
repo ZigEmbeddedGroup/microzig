@@ -1,7 +1,6 @@
 const std = @import("std");
 const microzig = @import("microzig");
 const rp2xxx = microzig.hal;
-const time = rp2xxx.time;
 const system_timer = rp2xxx.system_timer;
 const chip = rp2xxx.compatibility.chip;
 

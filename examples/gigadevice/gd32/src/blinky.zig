@@ -1,4 +1,3 @@
-const std = @import("std");
 const microzig = @import("microzig");
 const gd32 = microzig.hal;
 

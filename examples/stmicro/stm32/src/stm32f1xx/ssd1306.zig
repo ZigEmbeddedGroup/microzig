@@ -1,11 +1,9 @@
-const std = @import("std");
 const microzig = @import("microzig");
 
 const stm32 = microzig.hal;
 const gpio = stm32.gpio;
 const rcc = stm32.rcc;
 const time = stm32.time;
-const Duration = microzig.drivers.time.Duration;
 
 const drivers = microzig.drivers;
 const lcd_driver = drivers.display.SSD1306_I2C;

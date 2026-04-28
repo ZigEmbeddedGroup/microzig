@@ -1,6 +1,5 @@
 //basic example of using timers on STM32F1xx showing how to use high-level APIs for PWM and Counter.
 
-const std = @import("std");
 const microzig = @import("microzig");
 
 //example usage

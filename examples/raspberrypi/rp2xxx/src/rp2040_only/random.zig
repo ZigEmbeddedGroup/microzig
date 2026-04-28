@@ -6,7 +6,6 @@ const microzig = @import("microzig");
 const rp2xxx = microzig.hal;
 const time = rp2xxx.time;
 const gpio = rp2xxx.gpio;
-const clocks = rp2xxx.clocks;
 const rand = rp2xxx.rand;
 
 const led = gpio.num(25);

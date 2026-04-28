@@ -5,7 +5,6 @@
 /// In the future we can switch on chip name to address
 /// this limitation.
 const microzig = @import("microzig");
-const Clock_Device = microzig.drivers.base.Clock_Device;
 const enums = @import("../common/enums.zig");
 const util = @import("../common/util.zig");
 const clock_tree = @import("ClockTree").get_mcu_tree(microzig.config.chip_name);
@@ -18,7 +17,6 @@ pub const Config = clock_tree.Config;
 const RCC = microzig.chip.peripherals.RCC;
 const FLASH = microzig.chip.peripherals.FLASH;
 const LATENCY = microzig.chip.types.peripherals.flash_f3.LATENCY;
-const PREDIV = microzig.chip.types.peripherals.rcc_f3v1.PREDIV;
 const HPRE = microzig.chip.types.peripherals.rcc_f3v1.HPRE;
 const PPRE = microzig.chip.types.peripherals.rcc_f3v1.PPRE;
 const ADCPRES = microzig.chip.types.peripherals.rcc_f3v1.ADCPRES;
@@ -29,8 +27,6 @@ const PLLSRC = microzig.chip.types.peripherals.rcc_f3v1.PLLSRC;
 const ICSW = microzig.chip.types.peripherals.rcc_f3v1.ICSW;
 const ISSRC = microzig.chip.types.peripherals.rcc_f3v1.ISSRC;
 const SW = microzig.chip.types.peripherals.rcc_f3v1.SW;
-const TIM2SW = microzig.chip.types.peripherals.rcc_f3v1.TIM2SW;
-const TIMSW = microzig.chip.types.peripherals.rcc_f3v1.TIMSW;
 const USART1SW = microzig.chip.types.peripherals.rcc_f3v1.USART1SW;
 const USARTSW = microzig.chip.types.peripherals.rcc_f3v1.USARTSW;
 

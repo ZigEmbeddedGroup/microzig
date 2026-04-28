@@ -61,7 +61,6 @@ const W25Q_STATUS = struct {
 // Flash configuration
 const JEDEC_ID_EXPECTED: u24 = 0xEF4018; // Winbond W25Q128
 const PAGE_SIZE: usize = 256;
-const SECTOR_SIZE: usize = 4096;
 
 // CS pin
 const cs_pin = gpio.Pin.init(0, 3); // PA3

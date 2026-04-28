@@ -1,12 +1,10 @@
 const std = @import("std");
 const microzig = @import("microzig");
-const mdf = microzig.drivers;
 const hal = microzig.hal;
 
 const gpio = hal.gpio;
 const i2c = hal.i2c;
 
-const I2C_Device = hal.drivers.I2C_Device;
 const AS5600 = microzig.drivers.sensor.AS5600;
 
 const usart = hal.usart.instance.USART2;
