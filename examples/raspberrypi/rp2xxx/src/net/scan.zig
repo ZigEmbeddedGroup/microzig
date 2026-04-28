@@ -3,7 +3,6 @@ const microzig = @import("microzig");
 const rp2xxx = microzig.hal;
 const time = rp2xxx.time;
 const gpio = rp2xxx.gpio;
-const pio = rp2xxx.pio;
 const drivers = rp2xxx.drivers;
 
 const uart = rp2xxx.uart.instance.num(0);

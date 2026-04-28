@@ -1,7 +1,6 @@
 const std = @import("std");
 const microzig = @import("microzig");
 
-const PPB = microzig.chip.peripherals.PPB;
 const hal = microzig.hal;
 
 const time = hal.time;

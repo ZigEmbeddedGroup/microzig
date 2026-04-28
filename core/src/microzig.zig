@@ -5,7 +5,6 @@
 
 const std = @import("std");
 const root = @import("root");
-const builtin = @import("builtin");
 
 /// Contains build-time generated configuration options for microzig.
 /// Contains a CPU target description, chip, board and cpu information

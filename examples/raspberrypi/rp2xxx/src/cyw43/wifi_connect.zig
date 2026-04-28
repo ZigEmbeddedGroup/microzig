@@ -6,9 +6,7 @@ const gpio = rp2xxx.gpio;
 const time = rp2xxx.time;
 const cyw43 = rp2xxx.cyw43;
 
-const Wifi = cyw43.Wifi;
 const Security = cyw43.Security;
-const Runner = cyw43.Runner;
 
 const uart = rp2xxx.uart.instance.num(0);
 const uart_tx_pin = gpio.num(0);

@@ -1,6 +1,5 @@
 const std = @import("std");
 const microzig = @import("microzig");
-const time = microzig.drivers.time;
 const rp2xxx = microzig.hal;
 
 const gpio = rp2xxx.gpio;

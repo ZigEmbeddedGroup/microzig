@@ -1,6 +1,5 @@
 const std = @import("std");
 const microzig = @import("microzig");
-const mdf = microzig.drivers;
 const hal = microzig.hal;
 const gpio = hal.gpio;
 const i2c = hal.i2c;

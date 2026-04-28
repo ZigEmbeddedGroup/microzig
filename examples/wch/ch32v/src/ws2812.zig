@@ -1,7 +1,6 @@
 const microzig = @import("microzig");
 const board = microzig.board;
 const hal = microzig.hal;
-const cpu = microzig.cpu;
 
 // Taken from https://github.com/robinjanssens/WCH-Toolchain
 

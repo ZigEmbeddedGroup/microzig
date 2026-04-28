@@ -1,6 +1,5 @@
 const std = @import("std");
 const microzig = @import("microzig");
-const time = microzig.drivers.time;
 const board = microzig.board;
 const nrf = microzig.hal;
 
@@ -11,8 +10,6 @@ const i2cdma = nrf.i2cdma;
 const uart = nrf.uart.num(0);
 const i2c0 = i2c.num(0);
 const i2c0dma = i2cdma.num(0);
-
-const sleep_ms = nrf.time.sleep_ms;
 
 pub const panic = microzig.panic;
 

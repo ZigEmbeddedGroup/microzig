@@ -1,10 +1,8 @@
-const std = @import("std");
 const microzig = @import("microzig");
 const rp2xxx = microzig.hal;
 const gpio = rp2xxx.gpio;
 const time = rp2xxx.time;
 const clocks = rp2xxx.clocks;
-const Pin = rp2xxx.gpio.Pin;
 
 const gpout0_pin = gpio.num(21);
 

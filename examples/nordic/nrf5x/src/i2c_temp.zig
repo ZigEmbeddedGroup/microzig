@@ -1,6 +1,5 @@
 const std = @import("std");
 const microzig = @import("microzig");
-const time = microzig.drivers.time;
 const board = microzig.board;
 
 const nrf = microzig.hal;
@@ -9,7 +8,6 @@ const TMP117 = microzig.drivers.sensor.TMP117;
 const i2c = nrf.i2c;
 const i2cdma = nrf.i2cdma;
 const gpio = nrf.gpio;
-const peripherals = microzig.chip.peripherals;
 const I2C_Device = nrf.drivers.I2C_Device;
 
 const uart = nrf.uart.num(0);

@@ -2,7 +2,6 @@ const std = @import("std");
 const builtin = @import("builtin");
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
-const shared = @import("cortex_m/shared_types.zig");
 const VectorTable = microzig.chip.VectorTable;
 
 const Core = enum {
@@ -1025,7 +1024,6 @@ pub fn export_startup_logic() void {
 
 const scs_base = 0xE000E000;
 const itm_base = 0xE0000000;
-const dwt_base = 0xE0001000;
 const tpi_base = 0xE0040000;
 
 const coredebug_base = 0xE000EDF0;
