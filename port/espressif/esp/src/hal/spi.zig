@@ -380,7 +380,7 @@ pub const SPI = enum(u2) {
             }
         }
 
-        //add remaining bytes
+        // Add remaining bytes
         if (len % 4 != 0) {
             fifo[len / 4] = word;
         }
