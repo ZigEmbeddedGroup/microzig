@@ -30,9 +30,7 @@ const Digital_IO = microzig.drivers.base.Digital_IO;
 
 const State = Digital_IO.State;
 
-pub const pins = @import("./common/pins_v2.zig").get_pins(.{
-    .portcount = 11,
-});
+pub const pins = @import("./common/pins_v2.zig");
 
 pub const clock = struct {
     pub const Domain = enum {
