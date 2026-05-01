@@ -303,7 +303,7 @@ pub fn main() !void {
 
     try writer.interface.writeAll(
         \\
-        \\ASSERT(DEFINED(microzig_main), "microzig: microzig_main is not defined. See https://microzig.tech/docs/boilerplate for the required root source boilerplate.")
+        \\ASSERT(DEFINED(microzig_main), "microzig: microzig_main is not defined. Add `comptime { _ = microzig.export_startup(); }` to your root source file. See https://microzig.tech/docs/boilerplate for details.")
         \\
     );
 
