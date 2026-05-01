@@ -1,0 +1,120 @@
+---
+.title = "Application Boilerplate",
+.date = @date("2026-05-01T00:00:00"),
+.author = "Matthew Knight",
+.draft = false,
+.layout = "index.shtml",
+.description = "MicroZig: Application Boilerplate",
+.tags = []
+---
+
+# Application Boilerplate
+
+Every MicroZig firmware executable needs a small amount of boilerplate in its
+root source file. This page explains what each piece does and why it's required.
+
+## The Minimal Root Source File
+
+Here is the smallest valid MicroZig application:
+
+```zig
+const std = @import("std");
+const microzig = @import("microzig");
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
+pub const panic = microzig.panic;
+
+pub fn main() void {}
+```
+
+Let's walk through each part.
+
+## `std_options`
+
+```zig
+pub const std_options = microzig.std_options(.{});
+```
+
+MicroZig provides its own `std_options` configuration that sets up logging and
+other standard library options appropriate for bare-metal targets. You pass an
+anonymous struct to configure logging:
+
+```zig
+pub const std_options = microzig.std_options(.{
+    .log_level = .debug,
+});
+```
+
+## `export_startup`
+
+```zig
+comptime {
+    _ = microzig.export_startup();
+}
+```
+
+This is the most important line. It exports the startup code and vector table
+that the MCU needs to begin executing your program. Without this call, the
+linker will emit an error:
+
+```
+error: ld.lld: microzig: microzig_main is not defined.
+Add `comptime { _ = microzig.export_startup(); }` to your root source file.
+```
+
+If you see this error, make sure your root source file contains the `comptime`
+block shown above.
+
+## `panic`
+
+```zig
+pub const panic = microzig.panic;
+```
+
+This sets the panic handler to MicroZig's default, which typically enters an
+infinite loop. You can override this with a custom handler if you need different
+behavior (e.g., logging to UART, triggering a watchdog reset):
+
+```zig
+pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
+    @panic(message);
+}
+```
+
+## `main`
+
+```zig
+pub fn main() void {}
+```
+
+Your application entry point. This is called after MicroZig has initialized the
+hardware (clocks, BSS section, data relocation, etc.). The signature is `void`
+return — on embedded targets there is nowhere to return to.
+
+## Custom Panic Handlers
+
+Some examples define their own panic handler instead of using the default. In
+that case, omit the `pub const panic = microzig.panic` line:
+
+```zig
+const std = @import("std");
+const microzig = @import("microzig");
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
+pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
+    // Custom panic behavior
+    while (true) {}
+}
+
+pub fn main() void {}
+```
