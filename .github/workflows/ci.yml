@@ -100,6 +100,7 @@ jobs:
 
   build-sorcerer:
     name: Build Sorcerer
+    if: false # Temporarily disabled: Sorcerer dependency fetches are flaky on CI.
     continue-on-error: true
     strategy:
       matrix:
