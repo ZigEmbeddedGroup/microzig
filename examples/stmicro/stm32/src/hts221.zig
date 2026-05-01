@@ -5,8 +5,17 @@ const systick = stm32.systick;
 const board = microzig.board;
 const HTS221 = microzig.drivers.sensor.HTS221;
 
-pub const microzig_options: microzig.Options = .{
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{
     .logFn = microzig.board.uart_logger.log,
+});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
+pub const microzig_options: microzig.Options = .{
     .cpu = .{
         .ram_vector_table = true,
     },

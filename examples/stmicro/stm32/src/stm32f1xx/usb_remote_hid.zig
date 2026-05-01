@@ -3,8 +3,6 @@
 const std = @import("std");
 const microzig = @import("microzig");
 
-const host = microzig.core.arm_semihosting;
-
 const RCC = microzig.chip.peripherals.RCC;
 const flash = microzig.chip.peripherals.FLASH;
 const rcc_v1 = microzig.chip.types.peripherals.rcc_f1;
@@ -23,6 +21,14 @@ var Counter: stm32.drivers.CounterDevice = undefined;
 const IR_pin = gpio.Pin.from_port(.B, 0);
 const peri = microzig.chip.peripherals;
 const t_types = microzig.chip.types.peripherals.timer_v1;
+
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
 
 pub const microzig_options: microzig.Options = .{
     .interrupts = .{

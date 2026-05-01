@@ -1,8 +1,6 @@
-const std = @import("std");
 const microzig = @import("microzig");
 const rp2xxx = microzig.hal;
 const time = rp2xxx.time;
-const gpio = rp2xxx.gpio;
 
 const DS18B20 = microzig.drivers.sensor.DS18B20;
 
@@ -17,6 +15,14 @@ const pin_config: rp2xxx.pins.GlobalConfiguration = .{
         .pull = .up,
     },
 };
+
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
 
 pub fn main() !void {
     const pins = pin_config.apply();

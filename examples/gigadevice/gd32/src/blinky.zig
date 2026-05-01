@@ -1,4 +1,3 @@
-const std = @import("std");
 const microzig = @import("microzig");
 const gd32 = microzig.hal;
 
@@ -11,6 +10,14 @@ const pin_config = gd32.pins.GlobalConfiguration{
         .PIN2 = .{ .name = "blue", .mode = .{ .output = .general_purpose_push_pull } },
     },
 };
+
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
 
 pub fn main() !void {
     const pins = pin_config.apply();

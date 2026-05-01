@@ -1,9 +1,16 @@
-const std = @import("std");
 const microzig = @import("microzig");
 const chip = microzig.chip;
 const RCC = chip.peripherals.RCC;
 const GPIOB = chip.peripherals.GPIOB;
 const GPIO_TYPE = chip.types.peripherals.gpio_v2;
+
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
 
 pub fn main() !void {
     RCC.GPIOENR.modify(.{ .GPIOBEN = 1 });

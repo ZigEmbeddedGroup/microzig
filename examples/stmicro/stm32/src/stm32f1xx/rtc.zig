@@ -1,4 +1,3 @@
-const std = @import("std");
 const microzig = @import("microzig");
 const hal = microzig.hal;
 const rtc = hal.rtc;
@@ -6,7 +5,15 @@ const rcc = hal.rcc;
 const bkp = hal.backup;
 const gpio = hal.gpio;
 
-pub const microzig_options = microzig.Options{
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
+pub const microzig_options: microzig.Options = .{
     .interrupts = .{ .RTC = .{ .c = rtc_handler } },
 };
 

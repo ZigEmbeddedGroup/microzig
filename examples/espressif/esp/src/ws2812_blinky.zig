@@ -5,9 +5,15 @@ const Color = microzig.drivers.led.ws2812.Color;
 const hal = microzig.hal;
 const gpio = hal.gpio;
 
-pub const microzig_options: microzig.Options = .{
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{
     .logFn = hal.usb_serial_jtag.logger.log,
-};
+});
+
+comptime {
+    _ = microzig.export_startup();
+}
 
 const led_pin = gpio.num(8);
 const spi_bus = hal.spi.instance.SPI2;

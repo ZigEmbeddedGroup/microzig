@@ -21,9 +21,15 @@ fn adc_to_temp(val: usize) f32 {
     return ((v25 - temp_mv) / avg_slope) + 25; //convert to celsius
 }
 
-pub const microzig_options = microzig.Options{
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{
     .logFn = stm32.uart.log,
-};
+});
+
+comptime {
+    _ = microzig.export_startup();
+}
 
 pub fn main() !void {
     rcc.enable_clock(.TIM2);

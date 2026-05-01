@@ -1,4 +1,3 @@
-const std = @import("std");
 const microzig = @import("microzig");
 const hal = microzig.hal;
 const board = microzig.board;
@@ -9,6 +8,14 @@ fn delay() void {
         asm volatile ("nop");
         i += 1;
     }
+}
+
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
 }
 
 pub fn init() void {

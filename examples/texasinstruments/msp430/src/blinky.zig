@@ -4,6 +4,12 @@ const watchdog = microzig.hal.watchdog;
 const launchpad = microzig.board;
 const green_led = launchpad.green_led;
 
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
 pub const panic = std.debug.no_panic;
 
 pub fn main() void {

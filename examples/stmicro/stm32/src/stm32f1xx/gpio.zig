@@ -1,10 +1,17 @@
-const std = @import("std");
 const microzig = @import("microzig");
 
 const stm32 = microzig.hal;
 const rcc = stm32.rcc;
 const gpio = stm32.gpio;
 const time = stm32.time;
+
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
 
 pub fn main() !void {
     _ = try rcc.apply(.{

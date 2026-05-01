@@ -14,7 +14,13 @@ const descriptor = microzig.core.usb.descriptor;
 
 const EpControl = usb_ll.EpControl;
 
-const interrupt = microzig.interrupt;
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
 
 pub const microzig_options: microzig.Options = .{
     .interrupts = .{

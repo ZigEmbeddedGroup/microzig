@@ -14,8 +14,13 @@ const descriptor = microzig.core.usb.descriptor;
 
 const EpControl = usb_ll.EpControl;
 
-const interrupt = microzig.interrupt;
-var Counter: stm32.drivers.CounterDevice = undefined;
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
 
 pub const microzig_options: microzig.Options = .{
     .interrupts = .{ .USB_LP_CAN1_RX0 = .{ .c = usb_ll.usb_handler } },
