@@ -301,5 +301,11 @@ pub fn main() !void {
         try writer.interface.writeAll(user_linker_script);
     }
 
+    try writer.interface.writeAll(
+        \\
+        \\ASSERT(DEFINED(microzig_main), "microzig: microzig_main is not defined. Add `comptime { _ = microzig.export_startup(); }` to your root source file.")
+        \\
+    );
+
     try writer.interface.flush();
 }
