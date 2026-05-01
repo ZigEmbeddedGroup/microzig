@@ -514,7 +514,6 @@ pub fn MicroBuild(port_select: PortSelect) type {
             fw.artifact.link_function_sections = options.strip_unused_symbols;
             fw.artifact.link_data_sections = options.strip_unused_symbols;
             fw.artifact.entry = options.entry orelse target.entry orelse .default;
-            fw.artifact.forceUndefinedSymbol("microzig_main");
 
             const linker_script_options = options.linker_script orelse target.linker_script;
             const linker_script = blk: {
