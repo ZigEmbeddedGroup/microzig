@@ -811,11 +811,14 @@ pub const GlobalConfiguration = struct {
     ///
     /// Can be called at comptime or runtime
     pub fn pins(comptime self: GlobalConfiguration) self.PinsType() {
-        var ret: self.PinsType() = undefined;
+        const T = self.PinsType();
+
+        var ret: T = undefined;
+
         inline for (@typeInfo(GlobalConfiguration).@"struct".fields) |field| {
             if (@field(self, field.name)) |pin_config| {
                 const cname = pin_config.name orelse field.name;
-                if (@hasField(self.PinsType(), cname)) {
+                if (@hasField(T, cname)) {
                     if (pin_config.function == .SIO) {
                         @field(ret, cname) = gpio.num(@intFromEnum(@field(Pin, field.name)));
                     } else if (pin_config.function.is_pwm()) {
