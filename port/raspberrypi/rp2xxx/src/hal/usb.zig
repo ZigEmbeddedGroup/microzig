@@ -114,6 +114,8 @@ pub fn Polled(config: Config) type {
 
             // Setup request received?
             if (ints.SETUP_REQ != 0) {
+                log.debug("-- setup request --", .{});
+
                 // Reset PID to 1 for EP0 IN. Every DATA packet we send in response
                 // to an IN on EP0 needs to use PID DATA1.
                 buffer_control[0].in.modify(.{ .PID_0 = 0 });
@@ -133,6 +135,8 @@ pub fn Polled(config: Config) type {
 
             // Events on one or more buffers? (In practice, always one.)
             if (ints.BUFF_STATUS != 0) {
+                log.debug("-- buffer status --", .{});
+
                 const buff_status = peripherals.USB.BUFF_STATUS.raw;
 
                 inline for (0..2 * config.max_endpoints_count) |shift| {
@@ -163,22 +167,19 @@ pub fn Polled(config: Config) type {
 
             // Has the host signaled a bus reset?
             if (ints.BUS_RESET != 0) {
-                log.info("bus reset", .{});
+                log.debug("-- bus reset --", .{});
 
-                // Abort all endpoints
-                peripherals.USB.EP_ABORT.raw = 0xFFFFFFFF;
-                // Acknowledge by writing the write-one-to-clear status bit.
                 peripherals.USB.SIE_STATUS.modify(.{ .BUS_RESET = 1 });
                 set_address(&self.interface, 0);
                 controller.on_bus_reset(&self.interface);
-                while (peripherals.USB.EP_ABORT_DONE.raw != 0xFFFFFFFF) {}
-                peripherals.USB.EP_ABORT.raw = 0;
             }
         }
 
         pub fn init() @This() {
             if (chip == .RP2350)
                 peripherals.USB.MAIN_CTRL.write(.{ .PHY_ISO = 0 });
+
+            peripherals.USB.SIE_CTRL.modify(.{ .PULLUP_EN = 0 });
 
             // Clear the control portion of DPRAM. This may not be necessary -- the
             // datasheet is ambiguous -- but the C examples do it, and so do we.
@@ -243,6 +244,7 @@ pub fn Polled(config: Config) type {
             };
 
             @memset(std.mem.asBytes(&self.endpoints), 0);
+
             // Set up endpoints.
             self.interface.ep_open(&.control(.in(.ep0), max_supported_packet_size));
             self.interface.ep_open(&.control(.out(.ep0), max_supported_packet_size));
