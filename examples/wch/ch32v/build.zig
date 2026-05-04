@@ -36,7 +36,9 @@ pub fn build(b: *std.Build) void {
         .{ .target = mb.ports.ch32v.chips.ch32v203x6, .name = "blinky_ch32v203", .file = "src/blinky.zig" },
         .{ .target = mb.ports.ch32v.chips.ch32v203x6, .name = "blinky_systick_ch32v203", .file = "src/blinky_systick.zig" },
         .{ .target = mb.ports.ch32v.boards.ch32v203.nano_ch32v203, .name = "nano_ch32v203_blinky", .file = "src/board_blinky.zig" },
+        .{ .target = mb.ports.ch32v.boards.ch32v203.nano_ch32v203, .name = "nano_ch32v203_usb_cdc", .file = "src/usb_cdc.zig" },
         .{ .target = mb.ports.ch32v.boards.ch32v203.suzuduino_uno_v1b, .name = "suzuduino_blinky", .file = "src/board_blinky.zig" },
+        .{ .target = mb.ports.ch32v.boards.ch32v203.suzuduino_uno_v1b, .name = "suzuduino_usb_cdc", .file = "src/usb_cdc.zig" },
         .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_dma", .file = "src/dma.zig" },
         .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_ws2812", .file = "src/ws2812.zig" },
         .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_uart_log", .file = "src/uart_log.zig" },
@@ -46,6 +48,7 @@ pub fn build(b: *std.Build) void {
         .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_spi_loopback", .file = "src/spi_loopback.zig" },
         .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_spi_flash_w25q", .file = "src/spi_flash_w25q.zig" },
         .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_sharp_niceview", .file = "src/sharp_niceview.zig" },
+        .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_usb_cdc", .file = "src/usb_cdc.zig" },
 
         // CH32V30x
         .{ .target = mb.ports.ch32v.chips.ch32v303xb, .name = "empty_ch32v303", .file = "src/empty.zig" },
@@ -53,6 +56,7 @@ pub fn build(b: *std.Build) void {
         .{ .target = mb.ports.ch32v.chips.ch32v303xb, .name = "blinky_systick_ch32v303", .file = "src/blinky_systick.zig" },
         .{ .target = mb.ports.ch32v.boards.ch32v305.nano_ch32v305, .name = "nano_ch32v305_blinky", .file = "src/board_blinky.zig" },
         .{ .target = mb.ports.ch32v.boards.ch32v307.ch32v307v_r1_1v0, .name = "ch32v307v_r1_1v0_blinky", .file = "src/blinky.zig" },
+        .{ .target = mb.ports.ch32v.boards.ch32v307.ch32v307v_r1_1v0, .name = "ch32v307v_r1_1v0_usb_cdc", .file = "src/usb_cdc.zig" },
     };
 
     for (available_examples) |example| {
