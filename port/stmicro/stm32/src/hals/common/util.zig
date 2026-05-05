@@ -15,22 +15,20 @@ pub fn match_name(heystack: []const u8, needles: []const []const u8) bool {
     return false;
 }
 
-pub fn create_peripheral_enum(comptime bases_name: []const []const u8) type {
-    var names: [70]std.builtin.Type.EnumField = undefined;
+pub fn create_peripheral_enum() type {
+    var names: []const std.builtin.Type.EnumField = &.{};
+
     var names_index = 0;
     const peripheral = @typeInfo(peripherals);
     @setEvalBranchQuota(10_000);
     switch (peripheral) {
         .@"struct" => |data| {
             for (data.decls) |decls| {
-                const decl_name = decls.name;
-                if (match_name(decl_name, bases_name)) {
-                    names[names_index] = std.builtin.Type.EnumField{
-                        .name = decls.name,
-                        .value = names_index,
-                    };
-                    names_index += 1;
-                }
+                names = names ++ [_]std.builtin.Type.EnumField{.{
+                    .name = decls.name,
+                    .value = names_index,
+                }};
+                names_index += 1;
             }
         },
         else => unreachable,
@@ -46,16 +44,35 @@ pub fn create_peripheral_enum(comptime bases_name: []const []const u8) type {
     return @Type(peri_enum);
 }
 
+fn sorted_fields(comptime fields: []const std.builtin.Type.EnumField) [fields.len]std.builtin.Type.EnumField {
+    var _fields: [fields.len]std.builtin.Type.EnumField = undefined;
+    @memcpy(&_fields, fields);
+    const f: fn (void, std.builtin.Type.EnumField, std.builtin.Type.EnumField) bool = struct {
+        fn s(_: void, a: std.builtin.Type.EnumField, b: std.builtin.Type.EnumField) bool {
+            const an = std.mem.trimEnd(u8, a.name, "0123456789");
+            const bn = std.mem.trimEnd(u8, b.name, "0123456789");
+            const ai = std.fmt.parseInt(u8, a.name[an.len..a.name.len], 10) catch 0;
+            const bi = std.fmt.parseInt(u8, b.name[bn.len..b.name.len], 10) catch 0;
+            if (ai == bi) {
+                return std.mem.order(u8, a.name, b.name) == .lt;
+            }
+            return ai < bi;
+        }
+    }.s;
+    std.mem.sortUnstable(std.builtin.Type.EnumField, &_fields, {}, f);
+    return _fields;
+}
+
 pub fn sub_peripheral_enum(comptime T: type, comptime keep_name: []const []const u8, match_type: ?[]const u8) type {
     const enum_info = @typeInfo(T);
     var names_index = 0;
 
     var names: [10]std.builtin.Type.EnumField = undefined;
 
-    @setEvalBranchQuota(10_000);
+    @setEvalBranchQuota(30_000);
     switch (enum_info) {
         .@"enum" => |data| {
-            for (data.fields) |field| {
+            for (sorted_fields(data.fields)) |field| {
                 if (match_name(field.name, keep_name)) {
                     if (match_type) |match| {
                         const type_name = @typeName(@TypeOf(@field(peripherals, field.name)));
