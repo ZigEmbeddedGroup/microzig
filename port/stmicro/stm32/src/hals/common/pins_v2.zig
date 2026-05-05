@@ -4,7 +4,7 @@ const comptimePrint = std.fmt.comptimePrint;
 const StructField = std.builtin.Type.StructField;
 
 const microzig = @import("microzig");
-const enums = @import("../common/enums.zig");
+const util = @import("util.zig");
 
 const Digital_IO = microzig.drivers.base.Digital_IO;
 const Direction = Digital_IO.Direction;
@@ -17,9 +17,63 @@ const State = Digital_IO.State;
 
 const gpio_v2 = microzig.chip.types.peripherals.gpio_v2;
 const PUPDR = gpio_v2.PUPDR;
-const rcc = microzig.hal.rcc;
+const MODER = gpio_v2.MODER;
+const OSPEEDR = gpio_v2.OSPEEDR;
+const OT = gpio_v2.OT;
+const AFIO = microzig.chip.peripherals.AFIO;
 
-const gpio = @import("gpio_v2.zig");
+const rcc = microzig.hal.rcc;
+const peripherals = microzig.chip.peripherals;
+
+pub const Mode = union(enum) {
+    input: InputMode,
+    output: OutputMode,
+    analog: AnalogMode,
+    alternate_function: AlternateFunctionMode,
+    digital_io: Digital_IO_Mode,
+};
+
+const Digital_IO_Mode = struct {};
+
+const InputMode = struct {
+    resistor: PUPDR,
+};
+
+const OutputMode = struct {
+    resistor: PUPDR,
+    o_type: OT,
+    o_speed: OSPEEDR = .LowSpeed,
+};
+
+const AnalogMode = struct {
+    resistor: PUPDR = .Floating,
+};
+
+const AF = enum(u4) {
+    AF0,
+    AF1,
+    AF2,
+    AF3,
+    AF4,
+    AF5,
+    AF6,
+    AF7,
+    AF8,
+    AF9,
+    AF10,
+    AF11,
+    AF12,
+    AF13,
+    AF14,
+    AF15,
+};
+
+pub const AlternateFunctionMode = struct {
+    afr: AF,
+    resistor: PUPDR = .Floating,
+    o_type: OT = .PushPull,
+    o_speed: OSPEEDR = .HighSpeed,
+};
 
 pub const Pin = enum {
     PIN0,
@@ -40,12 +94,99 @@ pub const Pin = enum {
     PIN15,
     pub const Configuration = struct {
         name: ?[:0]const u8 = null,
-        mode: ?gpio.Mode = null,
+        mode: ?Mode = null,
     };
 };
 
-pub const InputGPIO = struct {
-    pin: gpio.Pin,
+const GPIO_Pin = struct {
+    pin: Pin,
+    port: Port,
+
+    inline fn write_pin_config(_gpio: GPIO_Pin, mode: Mode) void {
+        switch (mode) {
+            .input => |imode| {
+                _gpio.set_moder(MODER.Input);
+                _gpio.set_bias(imode.resistor);
+            },
+            .output => |omode| {
+                _gpio.set_moder(MODER.Output);
+                _gpio.set_output_type(omode.o_type);
+                _gpio.set_bias(omode.resistor);
+                _gpio.set_speed(omode.o_speed);
+            },
+            .analog => |amode| {
+                _gpio.set_moder(MODER.Analog);
+                _gpio.set_bias(amode.resistor);
+            },
+            .alternate_function => |afmode| {
+                _gpio.set_moder(MODER.Alternate);
+                _gpio.set_bias(afmode.resistor);
+                _gpio.set_speed(afmode.o_speed);
+                _gpio.set_output_type(afmode.o_type);
+                _gpio.set_alternate_function(afmode.afr);
+            },
+            .digital_io => {
+                // Nothing for now
+            },
+        }
+    }
+
+    fn mask_2bit(_gpio: GPIO_Pin) u32 {
+        const pin: u4 = @intFromEnum(_gpio.pin);
+        return @as(u32, 0b11) << (pin << 1);
+    }
+
+    fn mask(_gpio: GPIO_Pin) u32 {
+        const pin: u4 = @intFromEnum(_gpio.pin);
+        return @as(u32, 1) << pin;
+    }
+
+    //NOTE: should invalid pins panic or just be ignored?
+    fn get_port(_gpio: GPIO_Pin) *volatile gpio_v2.GPIO {
+        return _gpio.port.get_port();
+    }
+
+    inline fn set_bias(_gpio: GPIO_Pin, bias: PUPDR) void {
+        const port = _gpio.port.get_port();
+        const pin: u4 = @intFromEnum(_gpio.pin);
+        const modMask: u32 = _gpio.mask_2bit();
+
+        port.PUPDR.write_raw((port.PUPDR.raw & ~modMask) | @as(u32, @intFromEnum(bias)) << (pin << 1));
+    }
+
+    inline fn set_speed(_gpio: GPIO_Pin, speed: OSPEEDR) void {
+        const port = _gpio.port.get_port();
+        const pin: u5 = @intFromEnum(_gpio.pin);
+        const modMask: u32 = _gpio.mask_2bit();
+
+        port.OSPEEDR.write_raw((port.OSPEEDR.raw & ~modMask) | @as(u32, @intFromEnum(speed)) << (pin << 1));
+    }
+
+    inline fn set_moder(_gpio: GPIO_Pin, moder: MODER) void {
+        const port = _gpio.port.get_port();
+        const pin: u5 = @intFromEnum(_gpio.pin);
+        const modMask: u32 = _gpio.mask_2bit();
+
+        port.MODER.write_raw((port.MODER.raw & ~modMask) | @as(u32, @intFromEnum(moder)) << (pin << 1));
+    }
+
+    inline fn set_output_type(_gpio: GPIO_Pin, otype: OT) void {
+        const port = _gpio.port.get_port();
+        const pin: u5 = @intFromEnum(_gpio.pin);
+
+        port.OTYPER.write_raw((port.OTYPER.raw & ~_gpio.mask()) | @as(u32, @intFromEnum(otype)) << pin);
+    }
+
+    fn from_port(port: Port, pin: Pin) GPIO_Pin {
+        return .{
+            .port = port,
+            .pin = pin,
+        };
+    }
+};
+
+pub const Input_GPIO = struct {
+    pin: GPIO_Pin,
     pub inline fn read(self: @This()) u1 {
         const port = self.pin.get_port();
         return if (port.IDR.raw & self.pin.mask() != 0)
@@ -55,8 +196,8 @@ pub const InputGPIO = struct {
     }
 };
 
-pub const OutputGPIO = struct {
-    pin: gpio.Pin,
+pub const Output_GPIO = struct {
+    pin: GPIO_Pin,
 
     pub inline fn put(self: @This(), value: u1) void {
         var port = self.pin.get_port();
@@ -85,11 +226,11 @@ pub const AlternateFunction = struct {
 };
 
 const Analog = struct {
-    pin: gpio.Pin,
+    pin: GPIO_Pin,
 };
 
 pub const Digital_IO_Pin = struct {
-    pin: gpio.Pin,
+    pin: GPIO_Pin,
     const vtable: Digital_IO.VTable = .{
         .set_direction_fn = Digital_IO_Pin.set_direction_fn,
         .set_bias_fn = Digital_IO_Pin.set_bias_fn,
@@ -137,10 +278,10 @@ pub const Digital_IO_Pin = struct {
     }
 };
 
-pub fn GPIO(comptime mode: gpio.Mode) type {
+pub fn GPIO(comptime mode: Mode) type {
     return switch (mode) {
-        .input => InputGPIO,
-        .output => OutputGPIO,
+        .input => Input_GPIO,
+        .output => Output_GPIO,
         .alternate_function => AlternateFunction,
         .analog => Analog,
         .digital_io => Digital_IO_Pin,
@@ -151,6 +292,9 @@ pub fn Pins(comptime config: GlobalConfiguration) type {
     comptime {
         var fields: []const StructField = &.{};
         for (@typeInfo(GlobalConfiguration).@"struct".fields) |port_field| {
+            if (port_field.type != ?Port.Configuration) {
+                continue;
+            }
             if (@field(config, port_field.name)) |port_config| {
                 for (@typeInfo(Port.Configuration).@"struct".fields) |field| {
                     if (@field(port_config, field.name)) |pin_config| {
@@ -186,14 +330,19 @@ pub fn Pins(comptime config: GlobalConfiguration) type {
     }
 }
 
-pub const Port = enum {
-    GPIOA,
-    GPIOB,
-    GPIOC,
-    GPIOD,
-    GPIOE,
-    GPIOF,
-    GPIOG,
+pub const Port = enum(u8) {
+    GPIOA = if (util.has_port('A')) 0 else undefined,
+    GPIOB = if (util.has_port('B')) 1 else undefined,
+    GPIOC = if (util.has_port('C')) 2 else undefined,
+    GPIOD = if (util.has_port('D')) 3 else undefined,
+    GPIOE = if (util.has_port('E')) 4 else undefined,
+    GPIOF = if (util.has_port('F')) 5 else undefined,
+    GPIOG = if (util.has_port('G')) 6 else undefined,
+    GPIOH = if (util.has_port('H')) 7 else undefined,
+    GPIOI = if (util.has_port('I')) 8 else undefined,
+    GPIOJ = if (util.has_port('J')) 9 else undefined,
+    GPIOK = if (util.has_port('K')) 10 else undefined,
+
     pub const Configuration = struct {
         PIN0: ?Pin.Configuration = null,
         PIN1: ?Pin.Configuration = null,
@@ -214,21 +363,35 @@ pub const Port = enum {
 
         comptime {
             const pin_field_count = @typeInfo(Pin).@"enum".fields.len;
-            const config_field_count = @typeInfo(Configuration).@"struct".fields.len;
+            const config_field_count = @typeInfo(Port.Configuration).@"struct".fields.len;
             if (pin_field_count != config_field_count)
                 @compileError(comptimePrint("{} {}", .{ pin_field_count, config_field_count }));
         }
     };
+
+    pub fn get_port(port: Port) *volatile gpio_v2.GPIO {
+        switch (@intFromEnum(port)) {
+            inline 0...@typeInfo(Port).@"enum".fields.len - 1 => |p| {
+                const port_id = [_]u8{"ABCDEFGHIJK"[p]};
+                return @field(peripherals, "GPIO" ++ port_id);
+            },
+            else => unreachable,
+        }
+    }
 };
 
 pub const GlobalConfiguration = struct {
-    GPIOA: ?Port.Configuration = null,
-    GPIOB: ?Port.Configuration = null,
-    GPIOC: ?Port.Configuration = null,
-    GPIOD: ?Port.Configuration = null,
-    GPIOE: ?Port.Configuration = null,
-    GPIOF: ?Port.Configuration = null,
-    GPIOG: ?Port.Configuration = null,
+    GPIOA: ?if (util.has_port('A')) Port.Configuration else undefined = null,
+    GPIOB: ?if (util.has_port('B')) Port.Configuration else undefined = null,
+    GPIOC: ?if (util.has_port('C')) Port.Configuration else undefined = null,
+    GPIOD: ?if (util.has_port('D')) Port.Configuration else undefined = null,
+    GPIOE: ?if (util.has_port('E')) Port.Configuration else undefined = null,
+    GPIOF: ?if (util.has_port('F')) Port.Configuration else undefined = null,
+    GPIOG: ?if (util.has_port('G')) Port.Configuration else undefined = null,
+    GPIOH: ?if (util.has_port('H')) Port.Configuration else undefined = null,
+    GPIOI: ?if (util.has_port('I')) Port.Configuration else undefined = null,
+    GPIOJ: ?if (util.has_port('J')) Port.Configuration else undefined = null,
+    GPIOK: ?if (util.has_port('K')) Port.Configuration else undefined = null,
 
     comptime {
         const port_field_count = @typeInfo(Port).@"enum".fields.len;
@@ -241,23 +404,29 @@ pub const GlobalConfiguration = struct {
         var ret: Pins(config) = undefined;
 
         inline for (@typeInfo(GlobalConfiguration).@"struct".fields) |port_field| {
+            if (port_field.type != ?Port.Configuration) {
+                continue;
+            }
             if (@field(config, port_field.name)) |_| {
-                rcc.enable_clock(@field(enums.Peripherals, port_field.name));
+                rcc.enable_clock(@field(rcc.Peripherals, port_field.name));
             }
         }
 
         inline for (@typeInfo(GlobalConfiguration).@"struct".fields) |port_field| {
+            if (port_field.type != ?Port.Configuration) {
+                continue;
+            }
             if (@field(config, port_field.name)) |port_config| {
                 inline for (@typeInfo(Port.Configuration).@"struct".fields) |field| {
                     if (@field(port_config, field.name)) |pin_config| {
-                        const port = @intFromEnum(@field(Port, port_field.name));
-                        var pin = gpio.Pin.from_port(@enumFromInt(port), @intFromEnum(@field(Pin, field.name)));
+                        const port = @field(Port, port_field.name);
+                        var pin = GPIO_Pin.from_port(port, @field(Pin, field.name));
                         pin.write_pin_config(pin_config.mode.?);
                         const default_name = "P" ++ port_field.name[4..5] ++ field.name[3..];
 
                         switch (pin_config.mode orelse .input) {
-                            .input => @field(ret, pin_config.name orelse default_name) = InputGPIO{ .pin = pin },
-                            .output => @field(ret, pin_config.name orelse default_name) = OutputGPIO{ .pin = pin },
+                            .input => @field(ret, pin_config.name orelse default_name) = Input_GPIO{ .pin = pin },
+                            .output => @field(ret, pin_config.name orelse default_name) = Output_GPIO{ .pin = pin },
                             .analog => @field(ret, pin_config.name orelse default_name) = Analog{},
                             .alternate_function => @field(ret, pin_config.name orelse default_name) = AlternateFunction{},
                             .digital_io => @field(ret, pin_config.name orelse default_name) = Digital_IO_Pin{ .pin = pin },

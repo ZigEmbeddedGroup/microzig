@@ -40,6 +40,13 @@ pub fn main() !void {
                 pins.LD10,
             };
             break :res .{ pins, all_leds };
+        } else if (comptime microzig.config.board_name != null and std.mem.eql(u8, microzig.config.board_name.?, "STM32F429IDISCOVERY")) {
+            const pins = board.leds_config.apply();
+            const all_leds = .{
+                pins.LD3,
+                pins.LD4,
+            };
+            break :res .{ pins, all_leds };
         } else if (comptime microzig.config.board_name != null and std.mem.eql(u8, microzig.config.board_name.?, "STM32L476DISCOVERY")) {
             const pins = board.leds_config.apply();
             const all_leds = .{
