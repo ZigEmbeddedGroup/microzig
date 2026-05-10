@@ -224,7 +224,7 @@ pub const SPI = enum(u2) {
         }
 
         if (pins.clk) |clk_pin| {
-            clk_pin.connect_peripheral_to_output(.{ .signal = .spiclk });
+            clk_pin.connect_peripheral_to_output(.{ .signal = .fspiclk });
         }
     }
 
@@ -378,6 +378,11 @@ pub const SPI = enum(u2) {
                 fifo[i / 4] = word;
                 word = 0;
             }
+        }
+
+        // Add remaining bytes
+        if (len % 4 != 0) {
+            fifo[len / 4] = word;
         }
     }
 
