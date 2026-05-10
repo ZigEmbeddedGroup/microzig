@@ -12,7 +12,7 @@ pub const PIO1 = microzig.chip.peripherals.PIO1;
 pub const assembler = @import("assembler.zig");
 const encoder = @import("assembler/encoder.zig");
 const gpio = @import("../gpio.zig");
-// const hw = @import("../hw.zig"); // see TODO locking below. 
+// const hw = @import("../hw.zig"); // see TODO locking below.
 
 pub const Instruction = encoder.Instruction;
 pub const Program = assembler.Program;
