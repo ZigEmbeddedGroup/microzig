@@ -12,7 +12,7 @@ pub const PIO1 = microzig.chip.peripherals.PIO1;
 pub const assembler = @import("assembler.zig");
 const encoder = @import("assembler/encoder.zig");
 const gpio = @import("../gpio.zig");
-const hw = @import("../hw.zig");
+// const hw = @import("../hw.zig"); // see TODO locking below.
 
 pub const Instruction = encoder.Instruction;
 pub const Program = assembler.Program;
@@ -426,7 +426,7 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
             const regs = self.get_regs();
             const levels = regs.FLEVEL.raw;
 
-            return @as(u4, @truncate(levels >> (@as(u5, 4) * snum) + offset));
+            return @as(u4, @truncate(levels >> (@as(u5, 8) * snum) + offset));
         }
 
         fn interrupt_bit_pos(
