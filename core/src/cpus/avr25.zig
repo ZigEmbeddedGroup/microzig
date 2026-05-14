@@ -41,7 +41,8 @@ pub inline fn cbi(comptime reg: u5, comptime bit: u3) void {
 pub const vector_table_asm = blk: {
     const fields = std.meta.fields(microzig.chip.VectorTable);
     std.debug.assert(std.mem.eql(u8, "RESET", fields[0].name));
-    var asm_str: []const u8 = "jmp microzig_start\n";
+    // avr25 devices use rjmp (2-byte) instead of jmp (4-byte)
+    var asm_str: []const u8 = "rjmp microzig_start\n";
 
     const interrupt_options = microzig.options.interrupts;
 
@@ -49,9 +50,9 @@ pub const vector_table_asm = blk: {
         const handler = @field(interrupt_options, field.name);
         if (handler) |func| {
             const isr = make_isr_handler(field.name, func);
-            asm_str = asm_str ++ "jmp " ++ isr.exported_name ++ "\n";
+            asm_str = asm_str ++ "rjmp " ++ isr.exported_name ++ "\n";
         } else {
-            asm_str = asm_str ++ "jmp microzig_unhandled_vector\n";
+            asm_str = asm_str ++ "rjmp microzig_unhandled_vector\n";
         }
     }
 
