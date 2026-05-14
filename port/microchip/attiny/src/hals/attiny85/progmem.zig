@@ -12,10 +12,10 @@ pub inline fn read(comptime T: type, ptr: *const T) T {
     return ptr.*;
 }
 
-pub inline fn readByte(ptr: *const u8) u8 {
+pub inline fn read_byte(ptr: *const u8) u8 {
     return read(u8, ptr);
 }
 
-pub inline fn readWord(ptr: *const u16) u16 {
+pub inline fn read_word(ptr: *const u16) u16 {
     return read(u16, ptr);
 }

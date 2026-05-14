@@ -30,29 +30,29 @@ pub fn configure(mode: Mode, timeout: Timeout) void {
     // https://ww1.microchip.com/downloads/en/devicedoc/atmel-2586-avr-8-bit-microcontroller-attiny25-attiny45-attiny85_datasheet.pdf
     microzig.interrupt.disable_interrupts();
     reset();
-    regs.setBits(regs.WDTCR, regs.bit(regs.watchdog_bits.wdce) | regs.bit(regs.watchdog_bits.wde));
-    regs.write(regs.WDTCR, controlValue(mode, timeout));
+    regs.set_bits(regs.WDTCR, regs.bit(regs.watchdog_bits.wdce) | regs.bit(regs.watchdog_bits.wde));
+    regs.write(regs.WDTCR, control_value(mode, timeout));
     microzig.interrupt.enable_interrupts();
 }
 
 pub fn stop() void {
     microzig.interrupt.disable_interrupts();
     reset();
-    regs.clearBits(regs.MCUSR, 1 << 3);
-    regs.setBits(regs.WDTCR, regs.bit(regs.watchdog_bits.wdce) | regs.bit(regs.watchdog_bits.wde));
+    regs.clear_bits(regs.MCUSR, 1 << 3);
+    regs.set_bits(regs.WDTCR, regs.bit(regs.watchdog_bits.wdce) | regs.bit(regs.watchdog_bits.wde));
     regs.write(regs.WDTCR, 0);
     microzig.interrupt.enable_interrupts();
 }
 
-pub fn forceReset(timeout: Timeout) noreturn {
+pub fn force_reset(timeout: Timeout) noreturn {
     microzig.interrupt.disable_interrupts();
-    regs.write(regs.WDTCR, controlValue(.reset, timeout));
+    regs.write(regs.WDTCR, control_value(.reset, timeout));
     microzig.interrupt.enable_interrupts();
     reset();
     while (true) asm volatile ("" ::: .{ .memory = true });
 }
 
-fn controlValue(mode: Mode, timeout: Timeout) u8 {
+fn control_value(mode: Mode, timeout: Timeout) u8 {
     const raw: u4 = @intFromEnum(timeout);
     const prescaler = (@as(u8, raw & 0b0111)) |
         ((@as(u8, raw >> 3) & 0x1) << regs.watchdog_bits.wdp3);

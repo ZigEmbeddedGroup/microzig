@@ -8,14 +8,14 @@ const switch_pin = hal.gpio.pin(.a, 5);
 const Ramp = hal.progmem.Table(u8, 4, .{ 1, 4, 16, 64 });
 
 pub fn main() void {
-    hal.clock.useDefault20MHzDiv2();
+    hal.clock.use_default20_m_hz_div2();
 
     pwm_cool.set_direction(.output);
     pwm_warm.set_direction(.output);
     aux_led.set_direction(.output);
     hal.pcint.configure(switch_pin, true, .both_edges);
 
-    hal.tca0.configurePwm(.{
+    hal.tca0.configure_pwm(.{
         .top = 255,
         .compare0 = 48,
         .compare1 = 96,
@@ -36,11 +36,11 @@ pub fn main() void {
         .freerun = true,
         .run_standby = true,
     });
-    hal.adc.enableResultReadyInterrupt();
+    hal.adc.enable_result_ready_interrupt();
     hal.adc.start();
     hal.watchdog.reset();
 
-    const saved_level = hal.eeprom.readByte(.fromInt(0));
+    const saved_level = hal.eeprom.read_byte(.from_int(0));
     const ramp_level = Ramp.get(1);
     _ = saved_level;
     _ = ramp_level;

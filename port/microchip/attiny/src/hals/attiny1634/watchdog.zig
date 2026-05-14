@@ -32,7 +32,7 @@ pub fn configure(mode: Mode, timeout: Timeout) void {
     // configuration-change protected and must follow the CCP signature write.
     // https://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-8303-8-bit-AVR-Microcontroller-tinyAVR-ATtiny1634_Datasheet.pdf
     regs.write(regs.CCP, 0xD8);
-    regs.write(regs.WDTCSR, controlValue(mode, timeout));
+    regs.write(regs.WDTCSR, control_value(mode, timeout));
     microzig.interrupt.enable_interrupts();
 }
 
@@ -47,7 +47,7 @@ pub fn stop() void {
     microzig.interrupt.enable_interrupts();
 }
 
-fn controlValue(mode: Mode, timeout: Timeout) u8 {
+fn control_value(mode: Mode, timeout: Timeout) u8 {
     const raw: u4 = @intFromEnum(timeout);
     const prescaler = (@as(u8, raw & 0b0111)) |
         ((@as(u8, raw >> 3) & 0x1) << regs.watchdog_bits.wdp3);

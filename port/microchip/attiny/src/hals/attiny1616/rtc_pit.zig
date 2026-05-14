@@ -36,6 +36,6 @@ pub fn busy() bool {
     return (regs.read(regs.rtc_pitstatus) & regs.bit(regs.rtc_bits.ctrlbusy)) != 0;
 }
 
-pub fn clearInterruptFlag() void {
+pub fn clear_interrupt_flag() void {
     regs.write(regs.rtc_pitintflags, regs.bit(regs.rtc_bits.pi));
 }

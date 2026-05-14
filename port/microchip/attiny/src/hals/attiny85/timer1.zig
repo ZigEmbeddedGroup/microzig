@@ -44,7 +44,7 @@ pub const FastPwmConfig = struct {
     top: u8 = 255,
 };
 
-pub fn configureFastPwm(config: FastPwmConfig) void {
+pub fn configure_fast_pwm(config: FastPwmConfig) void {
     // ATtiny25/45/85 datasheet, sections 12.2 and 12.3: OCR1C is TOP for
     // Timer/Counter1 PWM and Timer1 register writes are synchronized.
     regs.write(regs.OCR1C, config.top);
@@ -54,7 +54,7 @@ pub fn configureFastPwm(config: FastPwmConfig) void {
             regs.write(regs.TCCR1, 0x40 |
                 (@as(u8, @intFromEnum(config.compare)) << 4) |
                 @as(u8, @intFromEnum(config.prescaler)));
-            regs.clearBits(regs.GTCCR, 0b0111_0000);
+            regs.clear_bits(regs.GTCCR, 0b0111_0000);
         },
         .b => {
             regs.write(regs.TCCR1, @as(u8, @intFromEnum(config.prescaler)));
@@ -63,15 +63,15 @@ pub fn configureFastPwm(config: FastPwmConfig) void {
     }
 }
 
-pub inline fn setCompareA(value: u8) void {
+pub inline fn set_compare_a(value: u8) void {
     regs.write(regs.OCR1A, value);
 }
 
-pub inline fn setCompareB(value: u8) void {
+pub inline fn set_compare_b(value: u8) void {
     regs.write(regs.OCR1B, value);
 }
 
-pub inline fn setTop(value: u8) void {
+pub inline fn set_top(value: u8) void {
     regs.write(regs.OCR1C, value);
 }
 
@@ -79,10 +79,10 @@ pub inline fn counter() u8 {
     return regs.read(regs.TCNT1);
 }
 
-pub inline fn enableInterrupt(interrupt: Interrupt) void {
-    regs.setBits(regs.TIMSK, @intFromEnum(interrupt));
+pub inline fn enable_interrupt(interrupt: Interrupt) void {
+    regs.set_bits(regs.TIMSK, @intFromEnum(interrupt));
 }
 
-pub inline fn disableInterrupt(interrupt: Interrupt) void {
-    regs.clearBits(regs.TIMSK, @intFromEnum(interrupt));
+pub inline fn disable_interrupt(interrupt: Interrupt) void {
+    regs.clear_bits(regs.TIMSK, @intFromEnum(interrupt));
 }

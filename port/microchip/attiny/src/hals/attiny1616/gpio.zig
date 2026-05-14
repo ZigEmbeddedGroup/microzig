@@ -59,7 +59,7 @@ const PortRegisters = struct {
     pinctrl: u16,
 };
 
-fn portRegisters(port: Port) PortRegisters {
+fn port_registers(port: Port) PortRegisters {
     return switch (port) {
         .a => .{ .vdir = regs.vporta_dir, .vout = regs.vporta_out, .vin = regs.vporta_in, .vintflags = regs.vporta_intflags, .pinctrl = regs.porta_pinctrl },
         .b => .{ .vdir = regs.vportb_dir, .vout = regs.vportb_out, .vin = regs.vportb_in, .vintflags = regs.vportb_intflags, .pinctrl = regs.portb_pinctrl },
@@ -72,28 +72,28 @@ pub inline fn mask(gpio_pin: Pin) u8 {
 }
 
 pub fn set_direction(gpio_pin: Pin, direction: Direction) void {
-    const r = portRegisters(gpio_pin.port);
+    const r = port_registers(gpio_pin.port);
     switch (direction) {
-        .input => regs.clearBits(r.vdir, mask(gpio_pin)),
-        .output => regs.setBits(r.vdir, mask(gpio_pin)),
+        .input => regs.clear_bits(r.vdir, mask(gpio_pin)),
+        .output => regs.set_bits(r.vdir, mask(gpio_pin)),
     }
 }
 
 pub fn read(gpio_pin: Pin) bool {
-    return (regs.read(portRegisters(gpio_pin.port).vin) & mask(gpio_pin)) != 0;
+    return (regs.read(port_registers(gpio_pin.port).vin) & mask(gpio_pin)) != 0;
 }
 
 pub fn put(gpio_pin: Pin, value: bool) void {
-    const r = portRegisters(gpio_pin.port);
+    const r = port_registers(gpio_pin.port);
     if (value) {
-        regs.setBits(r.vout, mask(gpio_pin));
+        regs.set_bits(r.vout, mask(gpio_pin));
     } else {
-        regs.clearBits(r.vout, mask(gpio_pin));
+        regs.clear_bits(r.vout, mask(gpio_pin));
     }
 }
 
 pub fn toggle(gpio_pin: Pin) void {
-    regs.write(portRegisters(gpio_pin.port).vout, regs.read(portRegisters(gpio_pin.port).vout) ^ mask(gpio_pin));
+    regs.write(port_registers(gpio_pin.port).vout, regs.read(port_registers(gpio_pin.port).vout) ^ mask(gpio_pin));
 }
 
 pub fn configure_input(gpio_pin: Pin, pullup: bool, sense: Sense) void {
@@ -103,9 +103,9 @@ pub fn configure_input(gpio_pin: Pin, pullup: bool, sense: Sense) void {
     set_direction(gpio_pin, .input);
     var value: u8 = @intFromEnum(sense);
     if (pullup) value |= regs.bit(regs.port_bits.pullupen);
-    regs.write(portRegisters(gpio_pin.port).pinctrl + gpio_pin.index, value);
+    regs.write(port_registers(gpio_pin.port).pinctrl + gpio_pin.index, value);
 }
 
-pub fn clearInterrupt(gpio_pin: Pin) void {
-    regs.write(portRegisters(gpio_pin.port).vintflags, mask(gpio_pin));
+pub fn clear_interrupt(gpio_pin: Pin) void {
+    regs.write(port_registers(gpio_pin.port).vintflags, mask(gpio_pin));
 }

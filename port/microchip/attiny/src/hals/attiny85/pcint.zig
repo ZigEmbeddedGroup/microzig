@@ -9,22 +9,22 @@ pub const PinChange = enum(u3) {
     pcint5 = 5,
 };
 
-pub inline fn enablePin(pin: PinChange) void {
-    regs.setBits(regs.PCMSK, regs.bit(@intFromEnum(pin)));
+pub inline fn enable_pin(pin: PinChange) void {
+    regs.set_bits(regs.PCMSK, regs.bit(@intFromEnum(pin)));
 }
 
-pub inline fn disablePin(pin: PinChange) void {
-    regs.clearBits(regs.PCMSK, regs.bit(@intFromEnum(pin)));
+pub inline fn disable_pin(pin: PinChange) void {
+    regs.clear_bits(regs.PCMSK, regs.bit(@intFromEnum(pin)));
 }
 
 pub inline fn enable() void {
-    regs.setBits(regs.GIMSK, 1 << 5);
+    regs.set_bits(regs.GIMSK, 1 << 5);
 }
 
 pub inline fn disable() void {
-    regs.clearBits(regs.GIMSK, 1 << 5);
+    regs.clear_bits(regs.GIMSK, 1 << 5);
 }
 
-pub inline fn clearFlag() void {
-    regs.setBits(regs.GIFR, 1 << 5);
+pub inline fn clear_flag() void {
+    regs.set_bits(regs.GIFR, 1 << 5);
 }
