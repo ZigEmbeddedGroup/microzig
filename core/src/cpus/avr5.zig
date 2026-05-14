@@ -11,6 +11,17 @@ pub const interrupt = struct {
     }
 };
 
+/// AVR interrupt handler function type.
+pub const HandlerFn = *const fn () callconv(.avr_signal) void;
+
+/// Complete list of interrupt values based on the chip's `interrupts` array.
+pub const Interrupt = microzig.utilities.GenerateInterruptEnum(i32);
+
+/// Allowable `interrupt` options for microzig.options.
+pub const InterruptOptions = microzig.utilities.GenerateInterruptOptions(&.{
+    .{ .InterruptEnum = Interrupt, .HandlerFn = HandlerFn },
+});
+
 pub inline fn sbi(comptime reg: u5, comptime bit: u3) void {
     asm volatile ("sbi %[reg], %[bit]"
         :
@@ -28,31 +39,26 @@ pub inline fn cbi(comptime reg: u5, comptime bit: u3) void {
 }
 
 pub const vector_table_asm = blk: {
-    std.debug.assert(std.mem.eql(u8, "RESET", std.meta.fields(microzig.chip.VectorTable)[0].name));
-    const asm_str: []const u8 = "jmp microzig_start\n";
+    const fields = std.meta.fields(microzig.chip.VectorTable);
+    std.debug.assert(std.mem.eql(u8, "RESET", fields[0].name));
+    var asm_str: []const u8 = "jmp microzig_start\n";
 
-    //const has_interrupts = @hasDecl(root, "microzig_options");
-    //for (@typeInfo(root.VectorTableOptions).@"struct".fields) |field| {
-    //    const new_insn = if (has_interrupts) overload: {
-    //        const interrupts = root.microzig_options.interrupts;
-    //        if (@hasDecl(interrupts, field.name)) {
-    //            const handler = @field(interrupts, field.name);
+    const interrupt_options = microzig.options.interrupts;
 
-    //            const isr = make_isr_handler(field.name, handler);
-
-    //            break :overload "jmp " ++ isr.exported_name;
-    //        } else {
-    //            break :overload "jmp microzig_unhandled_vector";
-    //        }
-    //    } else "jmp microzig_unhandled_vector";
-
-    //    asm_str = asm_str ++ new_insn ++ "\n";
-    //}
+    for (fields[1..]) |field| {
+        const handler = @field(interrupt_options, field.name);
+        if (handler) |func| {
+            const isr = make_isr_handler(field.name, func);
+            asm_str = asm_str ++ "jmp " ++ isr.exported_name ++ "\n";
+        } else {
+            asm_str = asm_str ++ "jmp microzig_unhandled_vector\n";
+        }
+    }
 
     break :blk asm_str;
 };
 
-fn vector_table() callconv(.naked) noreturn {
+fn vector_table() linksection("microzig_flash_start") callconv(.naked) noreturn {
     asm volatile (vector_table_asm);
 }
 
@@ -70,25 +76,24 @@ pub fn export_startup_logic() void {
 
 fn make_isr_handler(comptime name: []const u8, comptime func: anytype) type {
     const calling_convention = switch (@typeInfo(@TypeOf(func))) {
-        .Fn => |info| info.calling_convention,
+        .@"fn" => |info| info.calling_convention,
+        .pointer => |info| switch (@typeInfo(info.child)) {
+            .@"fn" => |fn_info| fn_info.calling_convention,
+            else => @compileError("Declarations in 'interrupts' namespace must all be functions. '" ++ name ++ "' is not a function"),
+        },
         else => @compileError("Declarations in 'interrupts' namespace must all be functions. '" ++ name ++ "' is not a function"),
     };
 
     switch (calling_convention) {
-        .Unspecified, .Signal, .Interrupt => {},
-        else => @compileError("Calling conventions for interrupts must be 'Interrupt', 'Signal', or unspecified. The signal calling convention leaves global interrupts disabled during the ISR, where the interrupt calling conventions enables global interrupts for nested ISRs."),
+        .auto, .avr_signal, .avr_interrupt => {},
+        else => @compileError("Calling conventions for interrupts must be 'avr_interrupt', 'avr_signal', or unspecified. The avr_signal calling convention leaves global interrupts disabled during the ISR, where avr_interrupt enables global interrupts for nested ISRs."),
     }
 
     return struct {
         pub const exported_name = "microzig_isr_" ++ name;
 
-        pub fn isr_vector() callconv(.Signal) void {
-            @call(.always_inline, func, .{});
-        }
-
         comptime {
-            const options = .{ .name = exported_name, .linkage = .Strong };
-            @export(&isr_vector, options);
+            @export(func, .{ .name = exported_name });
         }
     };
 }
