@@ -90,25 +90,25 @@ pub fn start() void {
 }
 
 pub fn stop() void {
-    regs.clearBits(regs.adc0_ctrla, regs.bit(regs.adc_bits.enable));
+    regs.clear_bits(regs.adc0_ctrla, regs.bit(regs.adc_bits.enable));
 }
 
-pub fn resultReady() bool {
+pub fn result_ready() bool {
     return (regs.read(regs.adc0_intflags) & regs.bit(regs.adc_bits.resrdy)) != 0;
 }
 
-pub fn clearResultReady() void {
+pub fn clear_result_ready() void {
     regs.write(regs.adc0_intflags, regs.bit(regs.adc_bits.resrdy));
 }
 
-pub fn enableResultReadyInterrupt() void {
-    regs.setBits(regs.adc0_intctrl, regs.bit(regs.adc_bits.resrdy));
+pub fn enable_result_ready_interrupt() void {
+    regs.set_bits(regs.adc0_intctrl, regs.bit(regs.adc_bits.resrdy));
 }
 
-pub fn disableResultReadyInterrupt() void {
-    regs.clearBits(regs.adc0_intctrl, regs.bit(regs.adc_bits.resrdy));
+pub fn disable_result_ready_interrupt() void {
+    regs.clear_bits(regs.adc0_intctrl, regs.bit(regs.adc_bits.resrdy));
 }
 
-pub fn readRaw16() u16 {
+pub fn read_raw16() u16 {
     return regs.mem16(regs.adc0_res).*;
 }

@@ -43,11 +43,11 @@ pub fn apply(config: Config) void {
         @as(u8, @intFromEnum(config.prescaler)));
 }
 
-pub inline fn setCompareA(value: u8) void {
+pub inline fn set_compare_a(value: u8) void {
     regs.write(regs.OCR0A, value);
 }
 
-pub inline fn setCompareB(value: u8) void {
+pub inline fn set_compare_b(value: u8) void {
     regs.write(regs.OCR0B, value);
 }
 
@@ -55,6 +55,6 @@ pub inline fn counter() u8 {
     return regs.read(regs.TCNT0);
 }
 
-pub inline fn setCounter(value: u8) void {
+pub inline fn set_counter(value: u8) void {
     regs.write(regs.TCNT0, value);
 }

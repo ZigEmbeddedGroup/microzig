@@ -48,23 +48,23 @@ pub fn apply(config: Config) void {
         @as(u8, @intFromEnum(config.prescaler)));
 }
 
-pub inline fn useAdcNoiseReductionSleep() void {
-    sleep.setMode(.adc_noise_reduction);
+pub inline fn use_adc_noise_reduction_sleep() void {
+    sleep.set_mode(.adc_noise_reduction);
 }
 
 pub inline fn start() void {
-    regs.setBits(regs.ADCSRA, regs.bit(regs.adc_bits.adsc));
+    regs.set_bits(regs.ADCSRA, regs.bit(regs.adc_bits.adsc));
 }
 
 pub inline fn stop() void {
-    regs.clearBits(regs.ADCSRA, regs.bit(regs.adc_bits.aden));
+    regs.clear_bits(regs.ADCSRA, regs.bit(regs.adc_bits.aden));
 }
 
-pub inline fn conversionRunning() bool {
+pub inline fn conversion_running() bool {
     return (regs.read(regs.ADCSRA) & regs.bit(regs.adc_bits.adsc)) != 0;
 }
 
-pub inline fn enableDigitalInput(channel: Channel, enabled: bool) void {
+pub inline fn enable_digital_input(channel: Channel, enabled: bool) void {
     const mask: u8 = switch (channel) {
         .adc0 => 1 << 5,
         .adc1 => 1 << 2,
@@ -72,21 +72,21 @@ pub inline fn enableDigitalInput(channel: Channel, enabled: bool) void {
         .adc3 => 1 << 3,
         else => 0,
     };
-    if (enabled) regs.clearBits(regs.DIDR0, mask) else regs.setBits(regs.DIDR0, mask);
+    if (enabled) regs.clear_bits(regs.DIDR0, mask) else regs.set_bits(regs.DIDR0, mask);
 }
 
-pub inline fn readLeftAdjusted10() u16 {
+pub inline fn read_left_adjusted10() u16 {
     const low = regs.read(regs.ADCL);
     const high = regs.read(regs.ADCH);
     return (@as(u16, high) << 2) | (@as(u16, low) >> 6);
 }
 
-pub inline fn readRaw16() u16 {
+pub inline fn read_raw16() u16 {
     const low = regs.read(regs.ADCL);
     const high = regs.read(regs.ADCH);
     return (@as(u16, high) << 8) | low;
 }
 
-pub inline fn clearInterruptFlag() void {
-    regs.setBits(regs.ADCSRA, regs.bit(regs.adc_bits.adif));
+pub inline fn clear_interrupt_flag() void {
+    regs.set_bits(regs.ADCSRA, regs.bit(regs.adc_bits.adif));
 }

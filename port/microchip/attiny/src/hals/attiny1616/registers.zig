@@ -14,11 +14,11 @@ pub inline fn write(address: u16, value: u8) void {
     mem8(address).* = value;
 }
 
-pub inline fn setBits(address: u16, mask: u8) void {
+pub inline fn set_bits(address: u16, mask: u8) void {
     write(address, read(address) | mask);
 }
 
-pub inline fn clearBits(address: u16, mask: u8) void {
+pub inline fn clear_bits(address: u16, mask: u8) void {
     write(address, read(address) & ~mask);
 }
 

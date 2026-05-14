@@ -13,19 +13,19 @@ pub fn main() void {
     fet_pwm.set_direction(.output);
     voltage.set_direction(.input);
 
-    hal.timer1.configurePhaseCorrectDynamic(.{ .top = 255, .prescaler = .clk_1 });
-    hal.timer1.setCompareA(96);
-    hal.timer1.setCompareB(64);
+    hal.timer1.configure_phase_correct_dynamic(.{ .top = 255, .prescaler = .clk_1 });
+    hal.timer1.set_compare_a(96);
+    hal.timer1.set_compare_b(64);
 
-    hal.timer0.configurePhaseCorrectPwmA(.clk_1);
-    hal.timer0.setCompareA(32);
+    hal.timer0.configure_phase_correct_pwm_a(.clk_1);
+    hal.timer0.set_compare_a(32);
 
-    hal.adc.configureInternal1v1(.adc6, .div64);
+    hal.adc.configure_internal1v1(.adc6, .div64);
     hal.adc.start();
     hal.watchdog.reset();
     hal.watchdog.configure(.interrupt, .ms16);
 
-    const saved_level = hal.eeprom.readByte(hal.eeprom.address(0));
+    const saved_level = hal.eeprom.read_byte(hal.eeprom.address(0));
     const gamma_level = Gamma.get(2);
     _ = saved_level;
     _ = gamma_level;

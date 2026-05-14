@@ -34,11 +34,11 @@ pub const PwmConfig = struct {
 // dual-slope PWM uses PER as TOP and CMPn as duty cycle. Buffered PER/CMP
 // writes keep active PWM updates clean for dual-channel LED drivers.
 // https://ww1.microchip.com/downloads/en/DeviceDoc/ATtiny1614-16-17-DataSheet-DS40002204A.pdf
-pub fn configurePwm(config: PwmConfig) void {
+pub fn configure_pwm(config: PwmConfig) void {
     regs.write(regs.tca0_single_ctrla, 0);
-    setTop(config.top);
-    setCompare0(config.compare0);
-    setCompare1(config.compare1);
+    set_top(config.top);
+    set_compare0(config.compare0);
+    set_compare1(config.compare1);
 
     var ctrlb: u8 = @intFromEnum(config.waveform);
     if (config.enable_compare0) ctrlb |= regs.bit(regs.tca_bits.cmp0en);
@@ -49,29 +49,29 @@ pub fn configurePwm(config: PwmConfig) void {
 }
 
 pub fn stop() void {
-    regs.clearBits(regs.tca0_single_ctrla, regs.bit(regs.tca_bits.enable));
+    regs.clear_bits(regs.tca0_single_ctrla, regs.bit(regs.tca_bits.enable));
 }
 
-pub fn setTop(value: u16) void {
+pub fn set_top(value: u16) void {
     regs.mem16(regs.tca0_single_perbuf).* = value;
 }
 
-pub fn setCompare0(value: u16) void {
+pub fn set_compare0(value: u16) void {
     regs.mem16(regs.tca0_single_cmp0buf).* = value;
 }
 
-pub fn setCompare1(value: u16) void {
+pub fn set_compare1(value: u16) void {
     regs.mem16(regs.tca0_single_cmp1buf).* = value;
 }
 
-pub fn setCounter(value: u16) void {
+pub fn set_counter(value: u16) void {
     regs.mem16(regs.tca0_single_cnt).* = value;
 }
 
-pub fn enableOverflowInterrupt() void {
-    regs.setBits(regs.tca0_single_intctrl, regs.bit(regs.tca_bits.ovf));
+pub fn enable_overflow_interrupt() void {
+    regs.set_bits(regs.tca0_single_intctrl, regs.bit(regs.tca_bits.ovf));
 }
 
-pub fn clearOverflowFlag() void {
+pub fn clear_overflow_flag() void {
     regs.write(regs.tca0_single_intflags, regs.bit(regs.tca_bits.ovf));
 }

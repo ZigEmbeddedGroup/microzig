@@ -15,7 +15,7 @@ pub const Prescaler = enum(u8) {
     div64 = 0x0B,
 };
 
-pub fn protectedWrite(comptime address: u16, value: u8) void {
+pub fn protected_write(comptime address: u16, value: u8) void {
     // ATtiny1614/1616/1617 DS40002204A section 8.5.7.1, page 55:
     // protected I/O writes require CPU.CCP=IOREG and the register write
     // within four instructions.
@@ -24,14 +24,14 @@ pub fn protectedWrite(comptime address: u16, value: u8) void {
     regs.write(address, value);
 }
 
-pub fn setPrescaler(prescaler: Prescaler) void {
-    protectedWrite(regs.clkctrl_mclkctrlb, @intFromEnum(prescaler));
+pub fn set_prescaler(prescaler: Prescaler) void {
+    protected_write(regs.clkctrl_mclkctrlb, @intFromEnum(prescaler));
 }
 
-pub fn useDefault20MHzDiv2() void {
-    setPrescaler(.div2);
+pub fn use_default20_m_hz_div2() void {
+    set_prescaler(.div2);
 }
 
-pub fn oscillatorChanging() bool {
+pub fn oscillator_changing() bool {
     return (regs.read(regs.clkctrl_mclkstatus) & regs.bit(0)) != 0;
 }

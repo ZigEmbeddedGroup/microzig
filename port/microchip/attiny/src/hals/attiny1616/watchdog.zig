@@ -22,7 +22,7 @@ pub fn reset() void {
 
 pub fn configure(period: Period) void {
     while (busy()) {}
-    clock.protectedWrite(regs.wdt_ctrla, @intFromEnum(period));
+    clock.protected_write(regs.wdt_ctrla, @intFromEnum(period));
 }
 
 pub fn stop() void {

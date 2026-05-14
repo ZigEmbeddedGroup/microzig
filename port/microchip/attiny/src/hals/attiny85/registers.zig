@@ -10,11 +10,11 @@ pub inline fn write(comptime address: u6, value: u8) void {
     io(address).* = value;
 }
 
-pub inline fn setBits(comptime address: u6, mask: u8) void {
+pub inline fn set_bits(comptime address: u6, mask: u8) void {
     io(address).* |= mask;
 }
 
-pub inline fn clearBits(comptime address: u6, mask: u8) void {
+pub inline fn clear_bits(comptime address: u6, mask: u8) void {
     io(address).* &= ~mask;
 }
 
