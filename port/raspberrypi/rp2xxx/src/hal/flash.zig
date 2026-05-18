@@ -95,7 +95,7 @@ pub const boot2 = if (!microzig.config.ram_image) struct {
 ///
 /// The offset must be aligned to a 4096-byte sector, and count must be a
 /// multiple of 4096 bytes!
-pub inline fn range_erase(offset: u33, count: u32) void {
+pub inline fn range_erase(offset: u32, count: u32) void {
     // Do not inline `_range_erase`!
     @call(.never_inline, _range_erase, .{ offset, count });
 }
