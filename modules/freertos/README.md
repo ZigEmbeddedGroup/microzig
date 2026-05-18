@@ -282,12 +282,28 @@ const pass = freertos.c.pdPASS;
 
 ## Configuration
 
-Each platform has its own `FreeRTOSConfig.h` under `config/<platform>/`:
+FreeRTOS configuration is generated from a single `config/FreeRTOSConfig.h.cmake` template at build time. Per-platform `FreeRTOSConfig.h` files have been removed; all tunable settings are now controlled through `build.zig` options.
 
-```
-modules/freertos/config/
-├── RP2040/FreeRTOSConfig.h
-└── RP2350_ARM/FreeRTOSConfig.h
+### Build options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `-Dport_name` | enum | `RP2040` | FreeRTOS port to target (`RP2040`, `RP2350_ARM`) |
+| `-Didle_hook` | bool | `false` | Enable `configUSE_IDLE_HOOK` — calls `vApplicationIdleHook()` from the idle task |
+| `-Dtick_hook` | bool | `false` | Enable `configUSE_TICK_HOOK` — calls `vApplicationTickHook()` on every tick interrupt |
+
+When either hook is enabled you must define the corresponding callback in your application:
+
+```zig
+// Idle hook — called continuously by the idle task
+export fn vApplicationIdleHook() callconv(.c) void {
+    // e.g. enter low-power sleep
+}
+
+// Tick hook — called from the tick ISR every tick
+export fn vApplicationTickHook() callconv(.c) void {
+    // lightweight bookkeeping only — runs in ISR context
+}
 ```
 
 ### Key settings (defaults)

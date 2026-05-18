@@ -78,7 +78,6 @@ pub fn build(b: *std.Build) void {
             .flags = &flags,
         });
 
-        freertos_lib.addIncludePath(b.path("config/RP2040/"));
         freertos_lib.addIncludePath(freertos_kernel_dep.path("./portable/ThirdParty/GCC/RP2040/include/"));
     } else if (port_name == .RP2350_ARM) {
         freertos_lib.addCSourceFiles(.{
@@ -87,7 +86,6 @@ pub fn build(b: *std.Build) void {
             .flags = &flags,
         });
 
-        freertos_lib.addIncludePath(b.path("config/RP2350_ARM/"));
         freertos_lib.addIncludePath(freertos_kernel_community_dep.path("./GCC/RP2350_ARM_NTZ/non_secure/"));
     }
 
