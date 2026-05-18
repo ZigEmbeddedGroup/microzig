@@ -10,4 +10,39 @@
 
 # Application Boilerplate
 
-TODO
+Three pieces of boilerplate code is needed in order to use MicroZig. 
+
+## Before
+
+In the past, MicroZig used to automate this for you by following a similar pattern to build.zig. The module the user provided, the code that exported `pub fn main()`, was not the root module of the application, instead MicroZig would always pro
+
+## Now
+
+Ever abstraction has a cost, and we decided that hiding information from users was less important 
+
+### Panic
+
+### std_options
+
+### startup
+
+The first two are relatively straight forward because they're configuring the
+standard library with declarations. The reason why is that MicroZig targets
+freestanding targets, ones without an operating system, and the standard
+library defaults sometimes assume that you do have an OS.
+
+Typically, the standard library also figures out the right startup code for
+your application. Different platforms require different low level primitives,
+and that is all figured out at compile-time in the Zig standard library. And
+again, because we are off on our own, the default for freestanding doesn't work
+for us.
+
+Zig's lazy evaluation is powerful, and it's largely responsible for the ease in
+which a lot of code is portable.
+
+The evaluation has to start somewhere, and besides the root namespace of your
+application, the compiler also unconditionally evaluates the root of the
+standard library. This is where the start code for regular operating systems is
+evaluated, and is what actually causes your `main()` function to be evaluated.
+
+Unfortunately, MicroZig doesn't get special treatment from the compiler, 
