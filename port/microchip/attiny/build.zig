@@ -48,7 +48,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
 
     return .{
         .chips = .{
-            .attiny85 = chip_attiny85,
+            .attiny85 = chip_attiny85.derive(.{}),
         },
         .boards = .{
             .adafruit = .{
