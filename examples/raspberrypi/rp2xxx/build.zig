@@ -17,7 +17,6 @@ pub fn build(b: *std.Build) void {
     const specific_examples: []const Example = &.{
         // RaspberryPi Boards:
         .{ .target = raspberrypi.pico, .name = "pico_board_blinky", .file = "src/board_blinky.zig" },
-        .{ .target = raspberrypi.pico, .name = "pico_flash-program", .file = "src/rp2040_only/flash_program.zig" },
         .{ .target = raspberrypi.pico, .name = "pico_random", .file = "src/rp2040_only/random.zig" },
         .{ .target = raspberrypi.pico, .name = "pico_rtc", .file = "src/rp2040_only/rtc.zig" },
         .{ .target = raspberrypi.pico, .name = "pico_multicore", .file = "src/blinky_core1.zig" },
@@ -35,7 +34,6 @@ pub fn build(b: *std.Build) void {
         .{ .target = raspberrypi.pico2_arm, .name = "pico2_arm_freertos-multitask-demo", .file = "src/freertos/multitask_demo.zig" },
 
         .{ .target = raspberrypi.pico_flashless, .name = "pico_flashless_blinky", .file = "src/blinky.zig" },
-        .{ .target = raspberrypi.pico_flashless, .name = "pico_flashless_flash-program", .file = "src/rp2040_only/flash_program.zig" },
 
         .{ .target = raspberrypi.pico2_arm_flashless, .name = "pico2_arm_flashless_blinky", .file = "src/blinky.zig" },
         .{ .target = raspberrypi.pico2_riscv_flashless, .name = "pico2_riscv_flashless_blinky", .file = "src/blinky.zig" },
@@ -110,6 +108,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "net-tcp_client", .file = "src/net/tcp_client.zig" },
         .{ .name = "net-tcp_server", .file = "src/net/tcp_server.zig" },
         .{ .name = "board-id", .file = "src/board_id.zig" },
+        .{ .name = "flash-program", .file = "src/flash_program.zig" },
     };
 
     var available_examples: std.array_list.Managed(Example) = .init(b.allocator);
