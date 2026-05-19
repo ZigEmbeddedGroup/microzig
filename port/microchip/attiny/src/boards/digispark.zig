@@ -1,4 +1,7 @@
-pub const chip = @import("chip");
+const microzig = @import("microzig");
+const gpio = microzig.hal.gpio;
+
+pub const led_pin = gpio.pin(.b, 1);
 
 pub const clock_frequencies = .{
     .cpu = 16_500_000,

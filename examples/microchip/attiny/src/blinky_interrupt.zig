@@ -2,7 +2,7 @@ const std = @import("std");
 const microzig = @import("microzig");
 const gpio = microzig.hal.gpio;
 
-const led_pin = gpio.pin(.b, 1);
+const led_pin = microzig.board.led_pin;
 
 pub const microzig_options: microzig.Options = .{
     .interrupts = .{

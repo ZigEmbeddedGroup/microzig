@@ -2,8 +2,7 @@ const std = @import("std");
 const microzig = @import("microzig");
 const gpio = microzig.hal.gpio;
 
-// ATtiny85: PB1 is the Digispark onboard LED
-const led_pin = gpio.pin(.b, 1);
+const led_pin = microzig.board.led_pin;
 
 pub fn main() void {
     led_pin.set_direction(.output);
