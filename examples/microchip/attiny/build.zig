@@ -13,10 +13,7 @@ pub fn build(b: *std.Build) void {
     const mb = MicroBuild.init(b, mz_dep) orelse return;
 
     const available_examples = [_]Example{
-        .{ .target = mb.ports.attiny.boards.digispark, .name = "digispark_blinky", .file = "src/blinky.zig" },
         .{ .target = mb.ports.attiny.boards.adafruit.trinket, .name = "trinket_blinky", .file = "src/blinky.zig" },
-        .{ .target = mb.ports.attiny.boards.adafruit.gemma, .name = "gemma_blinky", .file = "src/blinky.zig" },
-        .{ .target = mb.ports.attiny.boards.adafruit.gemma, .name = "gemma_blinky_interrupt", .file = "src/blinky_interrupt.zig" },
     };
 
     for (available_examples) |example| {
