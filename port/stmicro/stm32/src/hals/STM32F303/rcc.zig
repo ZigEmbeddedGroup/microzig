@@ -10,7 +10,6 @@ const enums = @import("../common/enums.zig");
 const util = @import("../common/util.zig");
 const ClockTree = @import("ClockTree");
 const Tree = @field(ClockTree, microzig.config.chip_name);
-const app = microzig.app;
 
 pub const RCC_Peripheral = @This();
 
@@ -32,7 +31,6 @@ const ICSW = microzig.chip.types.peripherals.rcc_f3v1.ICSW;
 const ISSRC = microzig.chip.types.peripherals.rcc_f3v1.ISSRC;
 const SW = microzig.chip.types.peripherals.rcc_f3v1.SW;
 const TIM2SW = microzig.chip.types.peripherals.rcc_f3v1.TIM2SW;
-const TIMSW = microzig.chip.types.peripherals.rcc_f3v1.TIMSW;
 const USART1SW = microzig.chip.types.peripherals.rcc_f3v1.USART1SW;
 const USARTSW = microzig.chip.types.peripherals.rcc_f3v1.USARTSW;
 

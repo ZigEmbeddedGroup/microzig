@@ -1,6 +1,3 @@
-const std = @import("std");
-const microzig = @import("microzig");
-
 pub const uart = @import("STM32F303/uart.zig");
 pub const rcc = @import("STM32F303/rcc.zig");
 pub const i2c = @import("STM32F303/i2c.zig");

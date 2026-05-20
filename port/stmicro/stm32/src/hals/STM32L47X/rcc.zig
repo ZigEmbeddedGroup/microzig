@@ -11,18 +11,6 @@ const RCC = microzig.chip.peripherals.RCC;
 const PWR = microzig.chip.peripherals.PWR;
 const I2C1SEL = microzig.chip.types.peripherals.rcc_l4.I2C1SEL;
 const I2C2SEL = microzig.chip.types.peripherals.rcc_l4.I2C2SEL;
-const I2C3SEL = microzig.chip.types.peripherals.rcc_l4.I2C3SEL;
-
-const ICSW = enum(u2) {
-    /// PCLK clock selected
-    PCLK1 = 0x0,
-    /// SYSCLK clock selected
-    SYS = 0x1,
-    /// HSI clock selected
-    HSI = 0x2,
-    _,
-};
-const pins = microzig.hal.pins;
 
 // The current running clock
 pub const current_clocks: Tree.TreeOutput = Tree.get_clocks(microzig.options.hal.rcc_clock_config) catch unreachable;

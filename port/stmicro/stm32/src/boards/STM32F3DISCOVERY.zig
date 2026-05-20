@@ -1,7 +1,6 @@
 const std = @import("std");
 
 pub const microzig = @import("microzig");
-const RCC = microzig.chip.peripherals.RCC;
 
 pub const hal = microzig.hal;
 const rcc = hal.rcc;
