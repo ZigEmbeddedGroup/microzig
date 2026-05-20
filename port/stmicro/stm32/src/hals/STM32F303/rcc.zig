@@ -5,7 +5,6 @@
 /// In the future we can switch on chip name to address
 /// this limitation.
 const microzig = @import("microzig");
-const Clock_Device = microzig.drivers.base.Clock_Device;
 const enums = @import("../common/enums.zig");
 const util = @import("../common/util.zig");
 const ClockTree = @import("ClockTree");
