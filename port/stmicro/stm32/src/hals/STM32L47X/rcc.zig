@@ -1,30 +1,17 @@
 const microzig = @import("microzig");
 const enums = @import("../common/enums.zig");
 const util = @import("../common/util.zig");
-const clock_tree = @import("ClockTree").get_mcu_tree(microzig.config.chip_name);
+const ClockTree = @import("ClockTree");
+const Tree = @field(ClockTree, microzig.config.chip_name);
 
 //expose only configurations structs
-pub const Config = clock_tree.Config;
+pub const Config = Tree.Config;
 pub const Peripherals = enums.Peripherals;
 const RCC = microzig.chip.peripherals.RCC;
 const PWR = microzig.chip.peripherals.PWR;
-const I2C1SEL = microzig.chip.types.peripherals.rcc_l4.I2C1SEL;
-const I2C2SEL = microzig.chip.types.peripherals.rcc_l4.I2C2SEL;
-const I2C3SEL = microzig.chip.types.peripherals.rcc_l4.I2C3SEL;
-
-const ICSW = enum(u2) {
-    /// PCLK clock selected
-    PCLK1 = 0x0,
-    /// SYSCLK clock selected
-    SYS = 0x1,
-    /// HSI clock selected
-    HSI = 0x2,
-    _,
-};
-const pins = microzig.hal.pins;
 
 // The current running clock
-pub const current_clocks: clock_tree.Tree_Output = clock_tree.get_clocks(microzig.options.hal.rcc_clock_config) catch unreachable;
+pub const current_clocks: Tree.TreeOutput = Tree.get_clocks(microzig.options.hal.rcc_clock_config) catch unreachable;
 
 pub fn enable_rtc_lcd() void {
     RCC.APB1ENR1.modify(.{
@@ -39,7 +26,7 @@ pub fn enable_rtc_lcd() void {
     });
 
     while (RCC.BDCR.read().LSERDY != 1) {
-        asm volatile ("" ::: .{ .memory = true });
+        asm volatile ("");
     }
 
     RCC.BDCR.modify(.{
@@ -62,23 +49,23 @@ pub fn get_clock(comptime source: Peripherals) u32 {
         "UART",
         "I2C",
     })) {
-        return @intFromFloat(@field(current_clocks.clock, peri_name ++ "output"));
+        return @intCast(@field(current_clocks.clock, peri_name ++ "output"));
     }
     if (comptime util.match_name(peri_name, &.{
         "SPI1",
     })) {
-        return @intFromFloat(current_clocks.clock.APB2Prescaler);
+        return @intCast(current_clocks.clock.APB2Prescaler);
     }
     if (comptime util.match_name(peri_name, &.{
         "SPI2",
         "SPI3",
     })) {
-        return @intFromFloat(current_clocks.clock.APB1Prescaler);
+        return @intCast(current_clocks.clock.APB1Prescaler);
     }
     if (comptime util.match_name(peri_name, &.{
         "USB",
     })) {
-        return @intFromFloat(current_clocks.clock.USBoutput);
+        return @intCast(current_clocks.clock.USBoutput);
     }
 
     @panic("Unknown clock for peripheral");

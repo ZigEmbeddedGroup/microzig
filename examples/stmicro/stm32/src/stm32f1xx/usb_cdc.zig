@@ -14,9 +14,6 @@ const descriptor = microzig.core.usb.descriptor;
 
 const EpControl = usb_ll.EpControl;
 
-const interrupt = microzig.interrupt;
-var Counter: stm32.drivers.CounterDevice = undefined;
-
 pub const microzig_options: microzig.Options = .{
     .interrupts = .{ .USB_LP_CAN1_RX0 = .{ .c = usb_ll.usb_handler } },
 };
@@ -413,11 +410,11 @@ fn CDC_read(buf: []u8, timeout: ?Duration) ![]const u8 {
 
 pub fn main() !void {
     _ = try rcc.apply(.{
-        .PLLSource = .RCC_PLLSOURCE_HSE,
-        .PLLMUL = .RCC_PLL_MUL9,
-        .SYSCLKSource = .RCC_SYSCLKSOURCE_PLLCLK,
-        .APB1CLKDivider = .RCC_HCLK_DIV2,
-        .USBPrescaler = .RCC_USBCLKSOURCE_PLL_DIV1_5,
+        .PLLSourceVirtual = .HSE_Div_PREDIV,
+        .PLLMUL = .Mul9,
+        .SYSCLKSource = .PLL1_P,
+        .APB1CLKDivider = .Div2,
+        .USBPrescaler = .Div1_5,
         .flags = .{
             .HSEOscillator = true,
             .USBUsed_ForRCC = true,
