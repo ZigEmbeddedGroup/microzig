@@ -9,8 +9,6 @@ pub const Config = Tree.Config;
 pub const Peripherals = enums.Peripherals;
 const RCC = microzig.chip.peripherals.RCC;
 const PWR = microzig.chip.peripherals.PWR;
-const I2C1SEL = microzig.chip.types.peripherals.rcc_l4.I2C1SEL;
-const I2C2SEL = microzig.chip.types.peripherals.rcc_l4.I2C2SEL;
 
 // The current running clock
 pub const current_clocks: Tree.TreeOutput = Tree.get_clocks(microzig.options.hal.rcc_clock_config) catch unreachable;

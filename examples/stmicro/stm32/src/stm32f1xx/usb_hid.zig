@@ -14,8 +14,6 @@ const descriptor = microzig.core.usb.descriptor;
 
 const EpControl = usb_ll.EpControl;
 
-const interrupt = microzig.interrupt;
-
 pub const microzig_options: microzig.Options = .{
     .interrupts = .{
         .USB_LP_CAN1_RX0 = .{ .c = usb_ll.usb_handler },

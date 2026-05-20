@@ -30,7 +30,6 @@ const PLLSRC = microzig.chip.types.peripherals.rcc_f3v1.PLLSRC;
 const ICSW = microzig.chip.types.peripherals.rcc_f3v1.ICSW;
 const ISSRC = microzig.chip.types.peripherals.rcc_f3v1.ISSRC;
 const SW = microzig.chip.types.peripherals.rcc_f3v1.SW;
-const TIM2SW = microzig.chip.types.peripherals.rcc_f3v1.TIM2SW;
 const USART1SW = microzig.chip.types.peripherals.rcc_f3v1.USART1SW;
 const USARTSW = microzig.chip.types.peripherals.rcc_f3v1.USARTSW;
 
