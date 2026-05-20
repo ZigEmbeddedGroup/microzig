@@ -1,8 +1,5 @@
-const std = @import("std");
-
-pub const microzig = @import("microzig");
-
-pub const hal = microzig.hal;
+const microzig = @import("microzig");
+const hal = microzig.hal;
 const rcc = hal.rcc;
 
 pub const rcc_high_speed: rcc.Config = .{
