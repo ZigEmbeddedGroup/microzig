@@ -2,7 +2,7 @@ const std = @import("std");
 const microzig = @import("microzig");
 
 /// @breakpoint() on AVR is calling abort, so we export simple function that is calling hang
-pub fn abort() noreturn {
+pub fn abort() callconv(.c) noreturn {
     microzig.hang();
 }
 
