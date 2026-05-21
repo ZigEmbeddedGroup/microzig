@@ -17,7 +17,11 @@ pub const interrupt = struct {
 };
 
 /// AVR interrupt handler function type.
-pub const HandlerFn = *const fn () callconv(.avr_signal) void;
+pub const HandlerFn = extern union {
+    signal: *const fn () callconv(.avr_signal) void,
+    interrupt: *const fn () callconv(.avr_interrupt) void,
+    naked: *const fn () callconv(.naked) noreturn,
+};
 
 /// Complete list of interrupt values based on the chip's `interrupts` array.
 pub const Interrupt = microzig.utilities.GenerateInterruptEnum(i32);
