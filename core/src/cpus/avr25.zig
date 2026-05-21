@@ -11,7 +11,7 @@ pub const sbi = avr.sbi;
 pub const cbi = avr.cbi;
 
 fn vector_table() linksection("microzig_flash_start") callconv(.naked) noreturn {
-    asm volatile (avr.generate_vector_table_asm(.jmp));
+    asm volatile (avr.generate_vector_table_asm(.rjmp));
 }
 
 pub fn export_startup_logic() void {

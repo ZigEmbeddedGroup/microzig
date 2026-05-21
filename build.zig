@@ -14,8 +14,6 @@ pub const LinkerScript = internals.LinkerScript;
 pub const Stack = internals.Stack;
 pub const MemoryRegion = internals.MemoryRegion;
 
-const regz = @import("tools/regz");
-
 // If more ports are available, the error "error: evaluation exceeded 1000 backwards branches" may occur.
 // In such cases, consider increasing the argument value for @setEvalBranchQuota().
 const port_list: []const struct {
@@ -26,6 +24,7 @@ const port_list: []const struct {
     .{ .name = "gd32", .dep_name = "port/gigadevice/gd32" },
     .{ .name = "samd51", .dep_name = "port/microchip/samd51" },
     .{ .name = "atmega", .dep_name = "port/microchip/atmega" },
+    .{ .name = "attiny", .dep_name = "port/microchip/attiny" },
     .{ .name = "nrf5x", .dep_name = "port/nordic/nrf5x" },
     .{ .name = "lpc", .dep_name = "port/nxp/lpc" },
     .{ .name = "mcx", .dep_name = "port/nxp/mcx" },
@@ -34,15 +33,6 @@ const port_list: []const struct {
     .{ .name = "ch32v", .dep_name = "port/wch/ch32v" },
     .{ .name = "msp430", .dep_name = "port/texasinstruments/msp430" },
     .{ .name = "tm4c", .dep_name = "port/texasinstruments/tm4c" },
-};
-
-const exe_targets: []const std.Target.Query = &.{
-    .{ .cpu_arch = .aarch64, .os_tag = .macos },
-    .{ .cpu_arch = .aarch64, .os_tag = .linux },
-    .{ .cpu_arch = .aarch64, .os_tag = .windows },
-    .{ .cpu_arch = .x86_64, .os_tag = .macos },
-    .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .musl },
-    .{ .cpu_arch = .x86_64, .os_tag = .windows },
 };
 
 pub fn build(b: *Build) void {
@@ -81,6 +71,7 @@ pub const PortSelect = struct {
     gd32: bool = false,
     samd51: bool = false,
     atmega: bool = false,
+    attiny: bool = false,
     nrf5x: bool = false,
     lpc: bool = false,
     mcx: bool = false,
@@ -770,6 +761,11 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 return .{
                     .name = "avr5",
                     .root_source_file = mb.core_dep.namedLazyPath("cpu_avr5"),
+                };
+            } else if (std.mem.eql(u8, target.cpu.model.name, "avr25")) {
+                return .{
+                    .name = "avr25",
+                    .root_source_file = mb.core_dep.namedLazyPath("cpu_avr25"),
                 };
             } else if (std.mem.startsWith(u8, target.cpu.model.name, "cortex_m")) {
                 return .{
