@@ -1,6 +1,6 @@
 const std = @import("std");
 const microzig = @import("microzig");
-const avr = @import("avr.zig");
+const avr = @import("avr_common.zig");
 
 export const abort = avr.abort;
 
