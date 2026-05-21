@@ -27,7 +27,6 @@ jobs:
         run: |
           git clone --depth 1 --revision 837804f1a677578bca7c5e028baf25684b85e6b4 https://github.com/tusharsadhwani/zigimports.git /tmp/zigimports
           cd /tmp/zigimports
-          git checkout 837804f1a677578bca7c5e028baf25684b85e6b4
           zig build --release=safe
           # Binary is named zigimports-<arch>-<os>, find and symlink it
           ln -s /tmp/zigimports/zig-out/bin/zigimports-* /tmp/zigimports/zig-out/bin/zigimports

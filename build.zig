@@ -476,13 +476,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 core_mod.addImport("board", board_mod);
             }
 
-            // The user's main.zig is the executable's root module. The
-            // application opts into microzig's startup via
-            //     comptime { _ = microzig.export_startup(); }
-            // in its root source file, and re-exports microzig's `panic`.
-            // microzig's core module reads the root via `@import("root")`,
-            // so there's no "app" import to wire.
-            const app_mod = mb.builder.createModule(.{
+            const root_mod = mb.builder.createModule(.{
                 .root_source_file = options.root_source_file,
                 .imports = options.imports,
                 .target = zig_resolved_target,
@@ -493,7 +487,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 .error_tracing = options.error_tracing,
                 .dwarf_format = options.dwarf_format,
             });
-            app_mod.addImport("microzig", core_mod);
+            root_mod.addImport("microzig", core_mod);
 
             const fw = mb.builder.allocator.create(Firmware) catch @panic("out of memory");
             fw.* = .{
@@ -501,10 +495,10 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 .core_mod = core_mod,
                 .artifact = mb.builder.addExecutable(.{
                     .name = options.name,
-                    .root_module = app_mod,
+                    .root_module = root_mod,
                     .linkage = .static,
                 }),
-                .app_mod = app_mod,
+                .root_mod = root_mod,
                 .target = target,
                 .emitted_files = Firmware.EmittedFiles.init(mb.builder.allocator),
             };
@@ -594,8 +588,8 @@ pub fn MicroBuild(port_select: PortSelect) type {
             /// The artifact that is built by MicroZig.
             artifact: *Build.Step.Compile,
 
-            /// The app module that is built by Zig.
-            app_mod: *Build.Module,
+            /// The root module that is built by Zig.
+            root_mod: *Build.Module,
 
             // The @import("microzig") module
             core_mod: *Build.Module,
