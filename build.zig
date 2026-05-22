@@ -498,7 +498,6 @@ pub fn MicroBuild(port_select: PortSelect) type {
                     .root_module = root_mod,
                     .linkage = .static,
                 }),
-                .root_mod = root_mod,
                 .target = target,
                 .emitted_files = Firmware.EmittedFiles.init(mb.builder.allocator),
             };
