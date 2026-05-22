@@ -74,7 +74,7 @@ pub fn build(b: *std.Build) void {
                 const lwip_lib = lwip_dep.artifact("lwip");
 
                 lwip_lib.root_module.linkLibrary(libc_lib);
-                firmware.app_mod.linkLibrary(lwip_lib);
+                firmware.root_mod.linkLibrary(lwip_lib);
             }
 
             // `installFirmware()` is the MicroZig pendant to `Build.installArtifact()`

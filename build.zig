@@ -702,7 +702,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 if (fw.emitted_docs == null) {
                     const docs_test = fw.mb.builder.addTest(.{
                         .name = fw.artifact.name,
-                        .root_module = fw.app_mod,
+                        .root_module = fw.root_mod,
                     });
 
                     fw.emitted_docs = docs_test.getEmittedDocs();
@@ -720,7 +720,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 if (options.depend_on_microzig) {
                     module.addImport("microzig", fw.core_mod);
                 }
-                fw.app_mod.addImport(name, module);
+                fw.root_mod.addImport(name, module);
             }
 
             /// Adds an include path to the firmware.
@@ -740,7 +740,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
 
             /// Adds options to your application.
             pub fn add_options(fw: *Firmware, module_name: []const u8, options: *Build.Step.Options) void {
-                fw.app_mod.addOptions(module_name, options);
+                fw.root_mod.addOptions(module_name, options);
             }
 
             /// Adds an object file to the firmware.
