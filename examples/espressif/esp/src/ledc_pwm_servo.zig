@@ -14,6 +14,14 @@ const PWM_MAX_DUTY = std.math.pow(u32, 2, PWM_PRECISION_BITS) - 1;
 const PWM_MIN_LEVEL: u16 = @trunc(@as(f32, 1.0) / PWM_PERIOD_MS * PWM_MAX_DUTY);
 const PWM_MAX_LEVEL: u16 = @trunc(@as(f32, 2.0) / PWM_PERIOD_MS * PWM_MAX_DUTY);
 
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
 pub fn main() !void {
     // pwm servo driver
 

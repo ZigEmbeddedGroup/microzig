@@ -28,10 +28,16 @@ const spi = hal.spi;
 const usart = hal.usart.instance.USART2;
 const usart_tx_pin = gpio.Pin.init(0, 2); // PA2
 
-pub const microzig_options = microzig.Options{
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{
     .log_level = .debug,
     .logFn = hal.usart.log,
-};
+});
+
+comptime {
+    _ = microzig.export_startup();
+}
 
 // W25Q128 Commands
 const W25Q_CMD = struct {
@@ -55,7 +61,6 @@ const W25Q_STATUS = struct {
 // Flash configuration
 const JEDEC_ID_EXPECTED: u24 = 0xEF4018; // Winbond W25Q128
 const PAGE_SIZE: usize = 256;
-const SECTOR_SIZE: usize = 4096;
 
 // CS pin
 const cs_pin = gpio.Pin.init(0, 3); // PA3

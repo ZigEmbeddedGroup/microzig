@@ -1,4 +1,3 @@
-const std = @import("std");
 const microzig = @import("microzig");
 const rp2xxx = microzig.hal;
 const gpio = rp2xxx.gpio;
@@ -35,6 +34,14 @@ const ws2812_program = blk: {
 const pio: Pio = rp2xxx.pio.num(0);
 const sm: StateMachine = .sm0;
 const led_pin = gpio.num(23);
+
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
 
 pub fn main() !void {
     pio.gpio_init(led_pin);

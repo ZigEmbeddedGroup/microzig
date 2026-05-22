@@ -4,6 +4,14 @@ const gpio = microzig.hal.gpio;
 
 const led_pin = gpio.pin(.b, 5);
 
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
 pub fn main() void {
     led_pin.set_direction(.output);
 

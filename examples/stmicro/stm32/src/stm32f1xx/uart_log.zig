@@ -8,9 +8,15 @@ const uart = stm32.uart.UART.init(.USART1);
 const gpio = stm32.gpio;
 const TX = gpio.Pin.from_port(.A, 9);
 
-pub const microzig_options = microzig.Options{
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{
     .logFn = stm32.uart.log,
-};
+});
+
+comptime {
+    _ = microzig.export_startup();
+}
 
 pub fn main() !void {
     rcc.enable_clock(.GPIOA);

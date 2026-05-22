@@ -6,6 +6,20 @@ const time = rp2xxx.time;
 const usb = microzig.core.usb;
 const USB_Device = rp2xxx.usb.Polled(.{});
 
+pub const std_options = microzig.std_options(.{
+    .log_level = .debug,
+    .log_scope_levels = &.{
+        .{ .scope = .usb_dev, .level = .warn },
+        .{ .scope = .usb_ctrl, .level = .warn },
+        .{ .scope = .usb_hid_int_driver, .level = .warn },
+    },
+    .logFn = rp2xxx.uart.log,
+});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
 pub const Modifiers = packed struct(u8) {
     lctrl: bool,
     lshift: bool,
@@ -129,16 +143,6 @@ pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noretu
     @breakpoint();
     while (true) {}
 }
-
-pub const microzig_options = microzig.Options{
-    .log_level = .debug,
-    .log_scope_levels = &.{
-        .{ .scope = .usb_dev, .level = .warn },
-        .{ .scope = .usb_ctrl, .level = .warn },
-        .{ .scope = .usb_hid_int_driver, .level = .warn },
-    },
-    .logFn = rp2xxx.uart.log,
-};
 
 const pin_config: rp2xxx.pins.GlobalConfiguration = .{
     .GPIO0 = .{ .function = .UART0_TX },

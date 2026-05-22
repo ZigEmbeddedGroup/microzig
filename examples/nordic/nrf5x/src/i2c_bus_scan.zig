@@ -1,6 +1,5 @@
 const std = @import("std");
 const microzig = @import("microzig");
-const time = microzig.drivers.time;
 const board = microzig.board;
 const nrf = microzig.hal;
 
@@ -12,12 +11,16 @@ const uart = nrf.uart.num(0);
 const i2c0 = i2c.num(0);
 const i2c0dma = i2cdma.num(0);
 
-const sleep_ms = nrf.time.sleep_ms;
+pub const panic = microzig.panic;
 
-pub const microzig_options = microzig.Options{
+pub const std_options = microzig.std_options(.{
     .log_level = .debug,
     .logFn = nrf.uart.log,
-};
+});
+
+comptime {
+    _ = microzig.export_startup();
+}
 
 pub fn main() !void {
     board.init();

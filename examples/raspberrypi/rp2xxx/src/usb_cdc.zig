@@ -32,13 +32,7 @@ var usb_controller: usb.DeviceController(.{
     .reset = "",
 }}) = .init;
 
-pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
-    std.log.err("panic: {s}", .{message});
-    @breakpoint();
-    while (true) {}
-}
-
-pub const microzig_options = microzig.Options{
+pub const std_options = microzig.std_options(.{
     .log_level = .debug,
     .log_scope_levels = &.{
         .{ .scope = .usb_dev, .level = .warn },
@@ -46,7 +40,17 @@ pub const microzig_options = microzig.Options{
         .{ .scope = .usb_cdc, .level = .warn },
     },
     .logFn = rp2xxx.uart.log,
-};
+});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
+pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
+    std.log.err("panic: {s}", .{message});
+    @breakpoint();
+    while (true) {}
+}
 
 const pin_config: rp2xxx.pins.GlobalConfiguration = .{
     .GPIO0 = .{ .function = .UART0_TX },

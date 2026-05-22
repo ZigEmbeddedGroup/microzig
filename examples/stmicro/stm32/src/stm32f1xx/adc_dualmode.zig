@@ -18,9 +18,15 @@ const TX = gpio.Pin.from_port(.A, 9);
 const ADC_pin1 = gpio.Pin.from_port(.A, 1);
 const ADC_pin2 = gpio.Pin.from_port(.A, 2);
 
-pub const microzig_options = microzig.Options{
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{
     .logFn = stm32.uart.log,
-};
+});
+
+comptime {
+    _ = microzig.export_startup();
+}
 
 const AdcData = packed struct(u32) {
     adc1: u16,

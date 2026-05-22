@@ -1,9 +1,15 @@
-const std = @import("std");
 const microzig = @import("microzig");
 const board = microzig.board;
-const nrf = microzig.hal;
 
 const semihosting = microzig.core.arm_semihosting;
+
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
 
 pub fn main() void {
     board.init();

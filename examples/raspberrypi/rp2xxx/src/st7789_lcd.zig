@@ -33,10 +33,16 @@ const uart = rp2xxx.uart.instance.num(0);
 const uart_tx_pin = gpio.num(0);
 const uart_rx_pin = gpio.num(1);
 
-pub const microzig_options = microzig.Options{
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{
     .log_level = .debug,
     .logFn = rp2xxx.uart.log,
-};
+});
+
+comptime {
+    _ = microzig.export_startup();
+}
 
 const led = gpio.num(DISPLAY_BACKLIGHT_PIN);
 const led_pwm = pwm.get_pwm(DISPLAY_BACKLIGHT_PIN);

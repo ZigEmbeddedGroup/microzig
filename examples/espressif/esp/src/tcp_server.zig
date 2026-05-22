@@ -13,7 +13,9 @@ comptime {
     _ = exports;
 }
 
-pub const microzig_options: microzig.Options = .{
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{
     .log_level = .debug,
     .log_scope_levels = &.{
         .{ .scope = .esp_radio, .level = .err },
@@ -22,6 +24,13 @@ pub const microzig_options: microzig.Options = .{
         .{ .scope = .esp_radio_osi, .level = .err },
     },
     .logFn = usb_serial_jtag.logger.log,
+});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
+pub const microzig_options: microzig.Options = .{
     .interrupts = .{
         .interrupt30 = radio.interrupt_handler,
         .interrupt31 = rtos.interrupt_handler,

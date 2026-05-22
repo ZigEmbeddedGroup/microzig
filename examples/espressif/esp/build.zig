@@ -48,7 +48,7 @@ pub fn build(b: *std.Build) void {
             //
             // The target will convey all necessary information on the chip,
             // cpu and potentially the board as well.
-            const firmware = mb.add_firmware(.{
+            const fw = mb.add_firmware(.{
                 .name = b.fmt("{s}_{s}", .{ target_desc.prefix, example.name }),
                 .target = target_desc.target,
                 .optimize = optimize,
@@ -56,7 +56,7 @@ pub fn build(b: *std.Build) void {
             });
 
             if (example.features.lwip) {
-                const target = b.resolveTargetQuery(firmware.target.zig_target);
+                const target = b.resolveTargetQuery(fw.target.zig_target);
 
                 const foundation_dep = b.dependency("foundation_libc", .{
                     .target = target,
@@ -74,17 +74,17 @@ pub fn build(b: *std.Build) void {
                 const lwip_lib = lwip_dep.artifact("lwip");
 
                 lwip_lib.root_module.linkLibrary(libc_lib);
-                firmware.app_mod.linkLibrary(lwip_lib);
+                fw.exe.root_module.linkLibrary(lwip_lib);
             }
 
             // `installFirmware()` is the MicroZig pendant to `Build.installArtifact()`
             // and allows installing the firmware as a typical firmware file.
             //
             // This will also install into `$prefix/firmware` instead of `$prefix/bin`.
-            mb.install_firmware(firmware, .{});
+            mb.install_firmware(fw, .{});
 
             // For debugging, we also always install the firmware as an ELF file
-            mb.install_firmware(firmware, .{ .format = .elf });
+            mb.install_firmware(fw, .{ .format = .elf });
         }
     }
 }

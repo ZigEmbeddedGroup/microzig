@@ -25,6 +25,14 @@ fn init_lpi2c_pins() void {
         .done();
 }
 
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
 pub fn main() !void {
     hal.Port.num(1).init(); // we init port 1 to edit the pin's config
     init_lpi2c_pins();

@@ -4,6 +4,14 @@ const hal = microzig.hal;
 const port3 = hal.port.num(3);
 const pin_led_red = port3.get_gpio(12);
 
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
 pub fn main() void {
     port3.init();
 

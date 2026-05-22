@@ -10,9 +10,7 @@ const std = @import("std");
 const microzig = @import("microzig");
 const cpu = microzig.cpu;
 const rp2xxx = microzig.hal;
-const time = rp2xxx.time;
 const gpio = rp2xxx.gpio;
-const pio = rp2xxx.pio;
 const drivers = rp2xxx.drivers;
 const system_timer = rp2xxx.system_timer;
 const chip = rp2xxx.compatibility.chip;
@@ -20,17 +18,24 @@ const chip = rp2xxx.compatibility.chip;
 const uart = rp2xxx.uart.instance.num(0);
 const uart_tx_pin = gpio.num(0);
 
-pub const rp2040_options: microzig.Options = .{
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{
     .log_level = .debug,
     .logFn = rp2xxx.uart.log,
+});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
+pub const rp2040_options: microzig.Options = .{
     .interrupts = .{
         .IO_IRQ_BANK0 = .{ .c = gpio_interrupt },
         .TIMER_IRQ_0 = .{ .c = timer_interrupt },
     },
 };
 pub const rp2350_options: microzig.Options = .{
-    .log_level = .debug,
-    .logFn = rp2xxx.uart.log,
     .interrupts = .{
         .IO_IRQ_BANK0 = .{ .c = gpio_interrupt },
         .TIMER0_IRQ_0 = .{ .c = timer_interrupt },

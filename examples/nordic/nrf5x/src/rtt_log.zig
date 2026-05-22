@@ -12,6 +12,17 @@ const rtt_instance = rtt.RTT(.{});
 // Set up RTT channel 0 as a logger
 var rtt_logger: ?rtt_instance.Writer = null;
 
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{
+    .log_level = .debug,
+    .logFn = log,
+});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
 pub fn log(
     comptime level: std.log.Level,
     comptime scope: @TypeOf(.EnumLiteral),
@@ -33,11 +44,6 @@ pub fn log(
         writer.interface.flush() catch unreachable;
     }
 }
-
-pub const microzig_options = microzig.Options{
-    .log_level = .debug,
-    .logFn = log,
-};
 
 pub fn main() !void {
     board.init();

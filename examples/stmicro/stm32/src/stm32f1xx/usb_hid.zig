@@ -14,11 +14,17 @@ const descriptor = microzig.core.usb.descriptor;
 
 const EpControl = usb_ll.EpControl;
 
+pub const panic = microzig.panic;
+pub const std_options = microzig.std_options(.{});
 pub const microzig_options: microzig.Options = .{
     .interrupts = .{
         .USB_LP_CAN1_RX0 = .{ .c = usb_ll.usb_handler },
     },
 };
+
+comptime {
+    _ = microzig.export_startup();
+}
 
 // ============== HID Descriptor ================
 const DeviceDescriptor = [18]u8{
