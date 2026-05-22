@@ -10,39 +10,53 @@
 
 # Application Boilerplate
 
-Three pieces of boilerplate code is needed in order to use MicroZig. 
+Three pieces of boilerplate are needed to use MicroZig:
 
-## Before
+```zig
+const microzig = @import("microzig");
 
-In the past, MicroZig used to automate this for you by following a similar pattern to build.zig. The module the user provided, the code that exported `pub fn main()`, was not the root module of the application, instead MicroZig would always pro
+pub const panic = microzig.panic;
+pub const std_options = microzig.std_options(.{});
 
-## Now
+comptime {
+    _ = microzig.export_startup();
+}
+```
 
-Ever abstraction has a cost, and we decided that hiding information from users was less important 
+MicroZig offers a freestanding-friendly `panic` and `std_options`, that don't
+cause compile errors by default. At the time of writing, the standard library
+ends up pulling in OS-specific declarations which is the cause of these
+compilation errors and isn't obvious when you're starting out on Zig embedded
+programming. `microzig.std_options()` takes an override argument so you can
+customize it as you like.
 
-### Panic
+The `export_startup()` call ensures that your hardware specific startup code is
+linked into the firmware image. These are the parts before main, like setting
+up `bss` and `data` sections.
 
-### std_options
+## Background 
 
-### startup
+In the past, MicroZig would use its own module for the root of an embedded
+application. The code that the user provided was turned into an `app` module,
+and the root would call `app.main()`.
 
-The first two are relatively straight forward because they're configuring the
-standard library with declarations. The reason why is that MicroZig targets
-freestanding targets, ones without an operating system, and the standard
-library defaults sometimes assume that you do have an OS.
+This had the benefit of giving MicroZig control over how the application was set
+up, allowing an easy way for it to link the startup code. It had a downside
+where `@import("root")` did not refer to the user's application root, it
+referred to MicroZig's. Many libraries use that as an avenue for configuration
+at compile-time. The most notable of which, was the standard library itself.
 
-Typically, the standard library also figures out the right startup code for
-your application. Different platforms require different low level primitives,
-and that is all figured out at compile-time in the Zig standard library. And
-again, because we are off on our own, the default for freestanding doesn't work
-for us.
+The standard library is pervasive enough that we were fine forwarding some of
+its options through our own `microzig_options` declaration. None of the
+solutions for forwarding other package "options" felt right.
 
-Zig's lazy evaluation is powerful, and it's largely responsible for the ease in
-which a lot of code is portable.
+In addition, this setup complicated the import of external packages. Users
+needed to understand the module hierarchy, and that adding a package to their
+executable did not make it available to their program. Instead they needed to
+add it to their `app` module, or find the specific option in the firmware build
+interface that would do that for them.
 
-The evaluation has to start somewhere, and besides the root namespace of your
-application, the compiler also unconditionally evaluates the root of the
-standard library. This is where the start code for regular operating systems is
-evaluated, and is what actually causes your `main()` function to be evaluated.
-
-Unfortunately, MicroZig doesn't get special treatment from the compiler, 
+In the end, it just wasn't worth it. We traded a few less lines of boilerplate
+for an increasingly complex system, and it was hurting users' understanding. We
+decided that a few extra lines of code on your end and some documentation on
+ours was worth the more consistent system.
