@@ -20,6 +20,7 @@ const FLASH = microzig.chip.peripherals.FLASH;
 const LATENCY = microzig.chip.types.peripherals.flash_f3.LATENCY;
 const HPRE = microzig.chip.types.peripherals.rcc_f3v1.HPRE;
 const PPRE = microzig.chip.types.peripherals.rcc_f3v1.PPRE;
+const PREDIV = microzig.chip.types.peripherals.rcc_f3v1.PREDIV;
 const ADCPRES = microzig.chip.types.peripherals.rcc_f3v1.ADCPRES;
 const USBPRE = microzig.chip.types.peripherals.rcc_f3v1.USBPRE;
 
