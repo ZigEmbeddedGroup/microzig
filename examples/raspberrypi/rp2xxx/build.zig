@@ -169,7 +169,7 @@ pub fn build(b: *std.Build) void {
                 .pbuf_header_length = 22,
             });
             const net_mod = net_dep.module("net");
-            fw.artifact.root_module.addImport("net", net_mod);
+            fw.exe.root_module.addImport("net", net_mod);
         }
 
         // Import freertos module for some examples, kind of a hack
@@ -190,7 +190,7 @@ pub fn build(b: *std.Build) void {
                 .port_name = port_name,
             });
             const freertos_mod = freertos_dep.module("freertos");
-            fw.artifact.root_module.addImport("freertos", freertos_mod);
+            fw.exe.root_module.addImport("freertos", freertos_mod);
         }
 
         // `install_firmware()` is the MicroZig pendant to `Build.installArtifact()`
