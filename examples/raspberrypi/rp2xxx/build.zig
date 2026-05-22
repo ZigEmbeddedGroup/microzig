@@ -149,7 +149,7 @@ pub fn build(b: *std.Build) void {
         //
         // The target will convey all necessary information on the chip,
         // cpu and potentially the board as well.
-        const firmware = mb.add_firmware(.{
+        const fw = mb.add_firmware(.{
             .name = example.name,
             .target = example.target,
             .optimize = optimize,
@@ -160,7 +160,7 @@ pub fn build(b: *std.Build) void {
         // Import net module for some examples
         if (std.mem.indexOf(u8, example.name, "_net-") != null) {
             const net_dep = b.dependency("net", .{
-                .target = b.resolveTargetQuery(firmware.target.zig_target),
+                .target = b.resolveTargetQuery(fw.target.zig_target),
                 .optimize = optimize,
                 .mtu = 1500,
                 // Cyw43 driver requires 22 bytes of header and 4 bytes of footer.
@@ -169,7 +169,7 @@ pub fn build(b: *std.Build) void {
                 .pbuf_header_length = 22,
             });
             const net_mod = net_dep.module("net");
-            firmware.root_mod.addImport("net", net_mod);
+            fw.artifact.root_module.addImport("net", net_mod);
         }
 
         // Import freertos module for some examples, kind of a hack
@@ -178,29 +178,29 @@ pub fn build(b: *std.Build) void {
             var port_name: []const u8 = "Unknown";
 
             // FIXME: hacky way to select port based on target name (it doesn't take RP2350_RISCV into account)
-            if (std.mem.eql(u8, firmware.target.chip.name, "RP2040")) {
+            if (std.mem.eql(u8, fw.target.chip.name, "RP2040")) {
                 port_name = "RP2040";
             } else {
                 port_name = "RP2350_ARM";
             }
 
             const freertos_dep = b.dependency("freertos", .{
-                .target = b.resolveTargetQuery(firmware.target.zig_target),
+                .target = b.resolveTargetQuery(fw.target.zig_target),
                 .optimize = optimize,
                 .port_name = port_name,
             });
             const freertos_mod = freertos_dep.module("freertos");
-            firmware.root_mod.addImport("freertos", freertos_mod);
+            fw.artifact.root_module.addImport("freertos", freertos_mod);
         }
 
         // `install_firmware()` is the MicroZig pendant to `Build.installArtifact()`
         // and allows installing the firmware as a typical firmware file.
         //
         // This will also install into `$prefix/firmware` instead of `$prefix/bin`.
-        mb.install_firmware(firmware, .{});
+        mb.install_firmware(fw, .{});
 
         // For debugging, we also always install the firmware as an ELF file
-        mb.install_firmware(firmware, .{ .format = .elf });
+        mb.install_firmware(fw, .{ .format = .elf });
     }
 }
 
