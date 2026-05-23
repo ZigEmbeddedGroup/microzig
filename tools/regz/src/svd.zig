@@ -3,7 +3,7 @@ const ArenaAllocator = std.heap.ArenaAllocator;
 const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
 
-const xml = @import("xml.zig");
+const xml = @import("xml");
 const Arch = @import("arch.zig").Arch;
 
 const Database = @import("Database.zig");
@@ -746,7 +746,7 @@ const DimElements = struct {
         pattern: []const u8,
 
         fn expand(list: *const List, gpa: Allocator) ![]const []const u8 {
-            var ret: std.ArrayList([]const u8) = .{};
+            var ret: std.ArrayList([]const u8) = .empty;
             defer ret.deinit(gpa);
 
             if (std.mem.indexOf(u8, list.pattern, "-")) |dash_idx| {

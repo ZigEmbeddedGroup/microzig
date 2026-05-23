@@ -9,6 +9,7 @@
         .ti_data = .{
             .url = "git+https://github.com/ZigEmbeddedGroup/texasinstruments-data.git#2bdd0ff770ea4070caf25e2d33e9744374c75b21",
             .hash = "N-V-__8AAEUAg0HJNVCziuaLjHq479tsKsXb4GbNf5ye38oi",
+            .lazy = true,
         },
     },
     .paths = .{

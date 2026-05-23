@@ -35,7 +35,7 @@ pub const Region = struct {
     };
 };
 
-pub fn init(allocator: std.mem.Allocator, file_reader: *std.fs.File.Reader) !Elf {
+pub fn init(allocator: std.mem.Allocator, file_reader: *std.Io.File.Reader) !Elf {
     var elf_header = try std.elf.Header.read(&file_reader.interface);
 
     const format: Format = if (elf_header.is_64) .@"64" else .@"32";

@@ -38,15 +38,12 @@ fn find_arg(args: []const []const u8, key: []const u8) !?[]const u8 {
 
 var elf_reader_buf: [4096]u8 = undefined;
 
-pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-
-    const args = try std.process.argsAlloc(gpa.allocator());
-    defer std.process.argsFree(gpa.allocator(), args);
-
+pub fn main(init: std.process.Init) !void {
+    const io = init.io;
+    const gpa = init.gpa;
+    const args = try init.minimal.args.toSlice(init.arena.allocator());
     for (args) |arg| if (std.mem.eql(u8, "--help", arg)) {
-        var writer = std.fs.File.stdout().writer(&.{});
+        var writer = std.Io.File.stdout().writer(io, &.{});
         try writer.interface.writeAll(usage);
         return;
     };
@@ -84,15 +81,15 @@ pub fn main() !void {
         };
     }
 
-    const elf_file = try std.fs.cwd().openFile(elf_path, .{});
-    defer elf_file.close();
-    var elf_reader = elf_file.reader(&elf_reader_buf);
+    const elf_file = try std.Io.Dir.cwd().openFile(io, elf_path, .{});
+    defer elf_file.close(io);
+    var elf_reader = elf_file.reader(io, &elf_reader_buf);
 
-    const dest_file = try std.fs.cwd().createFile(output_path, .{});
-    defer dest_file.close();
+    const dest_file = try std.Io.Dir.cwd().createFile(io, output_path, .{});
+    defer dest_file.close(io);
 
     // Unbuffered because dfu uses a hashed writer, which suggests
     // using an unbuffered underlying writer
-    var writer = dest_file.writer(&.{});
-    try dfuse.from_elf(gpa.allocator(), &elf_reader, &writer.interface, opts);
+    var writer = dest_file.writer(io, &.{});
+    try dfuse.from_elf(gpa, &elf_reader, &writer.interface, opts);
 }

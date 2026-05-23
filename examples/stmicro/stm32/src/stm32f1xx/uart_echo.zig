@@ -32,6 +32,8 @@ pub fn main() !void {
         .clock_speed = rcc.get_clock(.USART1),
     });
 
+    var uart_writer = uart.writer(&.{});
+
     var byte: [100]u8 = undefined;
 
     //simple USART echo
@@ -40,7 +42,7 @@ pub fn main() !void {
         @memset(&byte, 0);
         const len = uart.read_blocking(&byte, Duration.from_ms(100)) catch |err| {
             if (err != error.Timeout) {
-                uart.writer().print("Got error {any}\n", .{err}) catch unreachable;
+                uart_writer.intf.print("Got error {any}\n", .{err}) catch unreachable;
                 uart.clear_errors();
             }
             continue;

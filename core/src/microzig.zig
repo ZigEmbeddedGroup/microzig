@@ -37,21 +37,25 @@ pub const Allocator = @import("allocator.zig");
 pub const panic = std.debug.FullPanic(struct {
     pub fn panic_fn(message: []const u8, first_trace_address: ?usize) noreturn {
         std.log.err("panic: {s}", .{message});
+        _ = first_trace_address;
 
-        var frame_index: usize = 0;
-        if (@errorReturnTrace()) |trace| frame_index = utilities.dump_stack_trace(trace);
+        // TODO: sit down and determine if we want to provide our own SelfInfo.
+        // Is that what plugs into the standard panic?
 
-        var iter = std.debug.StackIterator.init(first_trace_address orelse @returnAddress(), null);
-        while (iter.next()) |address| : (frame_index += 1) {
-            std.log.err("{d: >3}: 0x{X:0>8}", .{ frame_index, address });
-        }
+        //var frame_index: usize = 0;
+        //if (@errorReturnTrace()) |trace| frame_index = utilities.dump_stack_trace(trace);
 
-        // Attach a breakpoint. this might trigger another panic internally, so
-        // only do that if requested.
-        if (options.breakpoint_in_panic) {
-            std.log.info("triggering breakpoint...", .{});
-            @breakpoint();
-        }
+        //var iter = std.debug.StackIterator.init(first_trace_address orelse @returnAddress(), null);
+        //while (iter.next()) |address| : (frame_index += 1) {
+        //    std.log.err("{d: >3}: 0x{X:0>8}", .{ frame_index, address });
+        //}
+
+        //// Attach a breakpoint. this might trigger another panic internally, so
+        //// only do that if requested.
+        //if (options.breakpoint_in_panic) {
+        //    std.log.info("triggering breakpoint...", .{});
+        //    @breakpoint();
+        //}
 
         hang();
     }

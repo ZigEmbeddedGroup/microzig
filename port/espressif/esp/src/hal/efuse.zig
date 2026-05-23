@@ -11,8 +11,8 @@ pub fn read_mac() [6]u8 {
     return mac;
 }
 
-pub fn read(comptime what: Item) @Type(.{ .int = .{ .bits = what.bit_length, .signedness = .unsigned } }) {
-    const OutputType = @Type(.{ .int = .{ .bits = what.bit_length, .signedness = .unsigned } });
+pub fn read(comptime what: Item) @Int(.unsigned, what.bit_length) {
+    const OutputType = @Int(.unsigned, what.bit_length);
 
     const block_byte_offsets = [_]u8{ 0x2C, 0x44, 0x5C };
     if (what.block >= block_byte_offsets.len) @compileError("invalid block");

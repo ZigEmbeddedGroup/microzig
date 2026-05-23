@@ -6,7 +6,7 @@ const std = @import("std");
 pub const SEGMENT_HEADER_LEN = 0x8;
 pub const IMAGE_HEADER_LEN = 0x18;
 pub const CHECKSUM_XOR_BYTE = 0xEF;
-pub const DEFAULT_FLASH_MMU_PAGE_SIZE: FlashMMU_PageSize = .@"64k";
+pub const DEFAULT_FLASH_MMU_PAGE_SIZE: Flash_MMU_PageSize = .@"64k";
 
 pub const FlashMode = enum(u8) {
     qio = 0,
@@ -30,13 +30,13 @@ pub const FlashFreq = enum(u4) {
     @"80m" = 3,
 };
 
-pub const FlashMMU_PageSize = enum(u8) {
+pub const Flash_MMU_PageSize = enum(u8) {
     @"8k" = 13,
     @"16k" = 14,
     @"32k" = 15,
     @"64k" = 16,
 
-    pub fn in_bytes(self: FlashMMU_PageSize) usize {
+    pub fn in_bytes(self: Flash_MMU_PageSize) usize {
         return @as(usize, 1) << @intCast(@intFromEnum(self));
     }
 };
@@ -66,7 +66,7 @@ pub const AppDesc = extern struct {
     app_elf_sha256: [32]u8 = std.mem.zeroes([32]u8),
     min_efuse_blk_rev_full: u16 = 0,
     max_efuse_blk_rev_full: u16 = 0xffff,
-    mmu_page_size: FlashMMU_PageSize = DEFAULT_FLASH_MMU_PAGE_SIZE,
+    mmu_page_size: Flash_MMU_PageSize = DEFAULT_FLASH_MMU_PAGE_SIZE,
     reserved1: [3]u8 = std.mem.zeroes([3]u8),
     reserved2: [18]u32 = std.mem.zeroes([18]u32),
 };

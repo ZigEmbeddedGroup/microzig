@@ -76,10 +76,7 @@ pub const Options = struct {
     ready_queue_force_no_buckets: bool = false,
 };
 
-pub const Priority = enum(@Type(.{ .int = .{
-    .bits = rtos_options.priority_bits,
-    .signedness = .unsigned,
-} })) {
+pub const Priority = enum(@Int(.unsigned, rtos_options.priority_bits)) {
     idle = 0,
     lowest = 1,
     _,

@@ -11,7 +11,7 @@ const DeviceID = Database.DeviceID;
 const StructID = Database.StructID;
 const RegisterID = Database.RegisterID;
 
-const xml = @import("xml.zig");
+const xml = @import("xml");
 const Arch = @import("arch.zig").Arch;
 
 const log = std.log.scoped(.atdf);
@@ -368,7 +368,7 @@ fn load_module_type(ctx: *Context, node: xml.Node) !void {
 
 fn load_module_interrupt_group(ctx: *Context, node: xml.Node) !void {
     const name = node.get_attribute("name") orelse return error.MissingInterruptGroupName;
-    try ctx.interrupt_groups.put(ctx.db.gpa, name, .{});
+    try ctx.interrupt_groups.put(ctx.db.gpa, name, .empty);
 
     var interrupt_it = node.iterate(&.{}, &.{"interrupt"});
     while (interrupt_it.next()) |interrupt_node|

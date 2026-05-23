@@ -61,7 +61,6 @@ pub fn Block(Items: type) type {
 }
 
 pub const ImageDef = packed struct(u32) {
-    // IMAGE_DEF type = 0x42
     item_type: u8 = 0x42,
     block_size: u8 = 0x01,
     image_type_flags: ImageTypeFlags,

@@ -7,20 +7,19 @@ const common = @import("common");
 var test_data_writer_buf: [1024]u8 = undefined;
 var elf_file_reader_buf: [1024]u8 = undefined;
 
-pub fn main() !void {
-    var arena_allocator: std.heap.ArenaAllocator = .init(std.heap.page_allocator);
-    defer arena_allocator.deinit();
-    const allocator = arena_allocator.allocator();
+pub fn main(init: std.process.Init) !void {
+    const io = init.io;
+    const allocator = init.arena.allocator();
 
-    const args = try std.process.argsAlloc(allocator);
+    const args = try init.minimal.args.toSlice(allocator);
     if (args.len != 3) return error.UsageError;
 
     const elf_path = args[1];
     const test_data_path = args[2];
 
-    const elf_file = try std.fs.cwd().openFile(elf_path, .{});
-    defer elf_file.close();
-    var elf_file_reader = elf_file.reader(&elf_file_reader_buf);
+    const elf_file = try std.Io.Dir.cwd().openFile(io, elf_path, .{});
+    defer elf_file.close(io);
+    var elf_file_reader = elf_file.reader(io, &elf_file_reader_buf);
 
     const elf = try printer.Elf.init(allocator, &elf_file_reader);
     var debug_info = try printer.DebugInfo.init(allocator, elf);
@@ -44,9 +43,9 @@ pub fn main() !void {
         });
     }
 
-    var test_data_file = try std.fs.cwd().createFile(test_data_path, .{});
-    defer test_data_file.close();
-    var test_data_writer = test_data_file.writer(&.{});
+    var test_data_file = try std.Io.Dir.cwd().createFile(io, test_data_path, .{});
+    defer test_data_file.close(io);
+    var test_data_writer = test_data_file.writer(io, &.{});
 
     const data: common.Data = .{
         .zig_version = builtin.zig_version_string,

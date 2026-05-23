@@ -83,41 +83,25 @@ pub fn GPIO(comptime port: u3, comptime num: u4, comptime mode: gpio.Mode) type 
 }
 
 pub fn Pins(comptime config: GlobalConfiguration) type {
-    comptime {
-        var fields: []const StructField = &.{};
-        for (@typeInfo(GlobalConfiguration).@"struct".fields) |port_field| {
-            if (@field(config, port_field.name)) |port_config| {
-                for (@typeInfo(Port.Configuration).@"struct".fields) |field| {
-                    if (@field(port_config, field.name)) |pin_config| {
-                        var pin_field = StructField{
-                            .is_comptime = false,
-                            .default_value_ptr = null,
-
-                            // initialized below:
-                            .name = undefined,
-                            .type = undefined,
-                            .alignment = undefined,
-                        };
-
-                        pin_field.name = pin_config.name orelse field.name;
-                        pin_field.type = GPIO(@intFromEnum(@field(Port, port_field.name)), @intFromEnum(@field(Pin, field.name)), pin_config.mode orelse .{ .input = .{.floating} });
-                        pin_field.alignment = @alignOf(field.type);
-
-                        fields = fields ++ &[_]StructField{pin_field};
-                    }
+    const Attributes = std.builtin.Type.StructField.Attributes;
+    var field_names: []const []const u8 = &.{};
+    var field_types: []const type = &.{};
+    var field_attrs: []const std.builtin.Type.StructField.Attributes = &.{};
+    for (@typeInfo(GlobalConfiguration).@"struct".fields) |port_field| {
+        if (@field(config, port_field.name)) |port_config| {
+            for (@typeInfo(Port.Configuration).@"struct".fields) |field| {
+                if (@field(port_config, field.name)) |pin_config| {
+                    const name: []const u8 = pin_config.name orelse field.name;
+                    const typ: type = GPIO(@intFromEnum(@field(Port, port_field.name)), @intFromEnum(@field(Pin, field.name)), pin_config.mode orelse .{ .input = .{.floating} });
+                    field_names = field_names ++ .{name};
+                    field_types = field_types ++ .{typ};
+                    field_attrs = field_attrs ++ .{Attributes{}};
                 }
             }
         }
-
-        return @Type(.{
-            .@"struct" = .{
-                .layout = .auto,
-                .is_tuple = false,
-                .fields = fields,
-                .decls = &.{},
-            },
-        });
     }
+
+    return @Struct(.auto, null, field_names, field_types[0..], field_attrs[0..]);
 }
 
 pub const Port = enum {
