@@ -12,7 +12,7 @@ chips: struct {
 
 boards: struct {},
 
-pub fn init(dep: *std.Build.Dependency) Self {
+pub fn init(dep: *std.Build.Dependency) ?Self {
     const b = dep.builder;
 
     const esp32_c3_zig_target: std.Target.Query = .{
@@ -34,7 +34,8 @@ pub fn init(dep: *std.Build.Dependency) Self {
     const esp_image_dep = b.dependency("microzig/tools/esp-image", .{});
     const esp_image_mod = esp_image_dep.module("esp_image");
 
-    const esp_wifi_driver_mod = make_esp_wifi_driver_module(b, "esp32c3", esp32_c3_zig_target);
+    const esp_wifi_sys_dep = b.lazyDependency("esp-wifi-sys", .{}) orelse return null;
+    const esp_wifi_driver_mod = make_esp_wifi_driver_module(b, esp_wifi_sys_dep, "esp32c3", esp32_c3_zig_target);
 
     const chip_esp32_c3: microzig.Target = .{
         .dep = dep,
@@ -196,9 +197,12 @@ fn generate_linker_script(
     return run.addOutputFileArg(output_name);
 }
 
-fn make_esp_wifi_driver_module(b: *std.Build, chip_name: []const u8, target_query: std.Target.Query) *std.Build.Module {
-    const esp_wifi_sys_dep = b.dependency("esp-wifi-sys", .{});
-
+fn make_esp_wifi_driver_module(
+    b: *std.Build,
+    esp_wifi_sys_dep: *std.Build.Dependency,
+    chip_name: []const u8,
+    target_query: std.Target.Query,
+) *std.Build.Module {
     const esp32_c3_resolved_zig_target = b.resolveTargetQuery(target_query);
     const translate_c = b.addTranslateC(.{
         .root_source_file = esp_wifi_sys_dep.path("c/include/include.h"),

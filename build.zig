@@ -55,15 +55,6 @@ pub fn build(b: *Build) void {
     );
 
     b.installArtifact(generate_linker_script_exe);
-
-    const boxzer_dep = b.dependency("boxzer", .{});
-    const boxzer_exe = boxzer_dep.artifact("boxzer");
-    const boxzer_run = b.addRunArtifact(boxzer_exe);
-    if (b.args) |args|
-        boxzer_run.addArgs(args);
-
-    const package_step = b.step("package", "Package monorepo using boxzer");
-    package_step.dependOn(&boxzer_run.step);
 }
 
 pub const PortSelect = struct {
@@ -99,32 +90,6 @@ pub const PortSelect = struct {
         }
     }
 };
-
-// Don't know if this is required but it doesn't hurt either.
-// Helps in case there are multiple microzig instances including the same ports (eg: examples).
-pub const PortCache = blk: {
-    var fields: []const std.builtin.Type.StructField = &.{};
-    for (port_list) |port| {
-        const typ = ?(custom_lazy_import(port.dep_name) orelse struct {});
-        fields = fields ++ [_]std.builtin.Type.StructField{.{
-            .name = port.name,
-            .type = typ,
-            .default_value_ptr = @as(*const anyopaque, @ptrCast(&@as(typ, null))),
-            .is_comptime = false,
-            .alignment = @alignOf(typ),
-        }};
-    }
-    break :blk @Type(.{
-        .@"struct" = .{
-            .layout = .auto,
-            .fields = fields,
-            .decls = &.{},
-            .is_tuple = false,
-        },
-    });
-};
-
-var port_cache: PortCache = .{};
 
 /// The MicroZig build system.
 ///
@@ -165,29 +130,37 @@ pub fn MicroBuild(port_select: PortSelect) type {
         const Self = @This();
 
         const SelectedPorts = blk: {
-            var fields: []const std.builtin.Type.StructField = &.{};
+            const count = count_blk: {
+                var count: usize = 0;
+                for (port_list) |port| {
+                    if (@field(port_select, port.name)) {
+                        count += 1;
+                    }
+                }
 
-            for (port_list) |port| {
-                if (@field(port_select, port.name)) {
-                    const typ = custom_lazy_import(port.dep_name) orelse struct {};
-                    fields = fields ++ [_]std.builtin.Type.StructField{.{
-                        .name = port.name,
-                        .type = typ,
-                        .default_value_ptr = null,
-                        .is_comptime = false,
-                        .alignment = @alignOf(typ),
-                    }};
+                break :count_blk count;
+            };
+
+            var field_names: [count][]const u8 = undefined;
+            var field_types: [count]type = undefined;
+            var field_attrs: [count]std.builtin.Type.StructField.Attributes = undefined;
+
+            if (count > 0) {
+                var i: usize = 0;
+                for (port_list) |port| {
+                    if (@field(port_select, port.name)) {
+                        const typ = custom_lazy_import(port.dep_name) orelse struct {};
+
+                        field_names[i] = port.name;
+                        field_types[i] = typ;
+                        field_attrs[i] = .{};
+
+                        i += 1;
+                    }
                 }
             }
 
-            break :blk @Type(.{
-                .@"struct" = .{
-                    .layout = .auto,
-                    .fields = fields,
-                    .decls = &.{},
-                    .is_tuple = false,
-                },
-            });
+            break :blk @Struct(.auto, null, &field_names, &field_types, &field_attrs);
         };
 
         const InitReturnType = blk: {
@@ -221,12 +194,8 @@ pub fn MicroBuild(port_select: PortSelect) type {
             var ports: SelectedPorts = undefined;
             inline for (port_list) |port| {
                 if (@field(port_select, port.name)) {
-                    @field(ports, port.name) = if (@field(port_cache, port.name)) |cached_port| cached_port else blk: {
-                        const port_dep = dep.builder.lazyDependency(port.dep_name, .{}).?;
-                        const instance = custom_lazy_import(port.dep_name).?.init(port_dep);
-                        @field(port_cache, port.name) = instance;
-                        break :blk instance;
-                    };
+                    const port_dep = dep.builder.lazyDependency(port.dep_name, .{}) orelse return null;
+                    @field(ports, port.name) = custom_lazy_import(port.dep_name).?.init(port_dep) orelse return null;
                 }
             }
 

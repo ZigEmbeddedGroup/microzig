@@ -5,6 +5,7 @@ SECTIONS
     _irom_start = .;
     KEEP(*(microzig_flash_start))
     *(.text*)
+    *(.eh_frame*)
 
     . = ALIGN(8);
   } > IROM

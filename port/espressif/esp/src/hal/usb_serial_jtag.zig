@@ -26,9 +26,6 @@ pub const logger = struct {
     pub const Error = error{
         Timeout,
     };
-    pub const Writer = std.io.GenericWriter(void, Error, generic_writer_fn);
-
-    const writer: Writer = .{ .context = {} };
 
     var timed_out: bool = false;
 
@@ -83,8 +80,13 @@ pub const logger = struct {
             else => " (" ++ @tagName(scope) ++ "): ",
         };
 
+        // TODO: do we use debug_io?
+        _ = format;
+        _ = args;
+        _ = prefix;
+
         // TODO: add timestamp to log message
 
-        writer.print(prefix ++ format ++ "\r\n", args) catch {};
+        //writer.print(prefix ++ format ++ "\r\n", args) catch {};
     }
 };

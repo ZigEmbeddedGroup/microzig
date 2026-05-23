@@ -39,7 +39,7 @@ pub fn main() !void {
         };
 
         //tries to write one byte with 100ms timeout
-        uart.write_blocking(&data, time.deadline_in_ms(100)) catch {
+        _ = uart.write_blocking(&data, time.deadline_in_ms(100)) catch {
             uart.clear_errors();
         };
         // Toggle the led every time we think we've received a character so we

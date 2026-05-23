@@ -6,6 +6,8 @@ const time = @import("time.zig");
 const microzig = @import("microzig");
 const enums = @import("../common/enums.zig");
 
+const assert = std.debug.assert;
+
 const mdf = microzig.drivers;
 const drivers = mdf.base;
 const Duration = mdf.time.Duration;
@@ -87,9 +89,6 @@ fn comptime_fail_or_error(msg: []const u8, fmt_args: anytype, err: ConfigError) 
 pub const Instances = enums.UART_Type;
 
 pub const UART = struct {
-    pub const Writer = std.io.GenericWriter(*const UART, TransmitError, generic_writer_fn);
-    pub const Reader = std.io.GenericReader(*const UART, ReceiveError, generic_reader_fn);
-
     regs: *volatile USART_Peripheral,
     ///Returns an error at runtime, and raises a compile error at comptime.
     fn validate_baudrate(baud_rate: u32, peri_freq: u32) ConfigError!void {
@@ -296,19 +295,79 @@ pub const UART = struct {
         return uart.readv_blocking(&.{data}, timeout);
     }
 
-    pub fn writer(uart: *const UART) Writer {
-        return .{ .context = uart };
+    pub fn writer(uart: *const UART, buffer: []u8) Writer {
+        return Writer{
+            .uart = uart,
+            .intf = .{
+                .buffer = buffer,
+                .vtable = &.{
+                    .drain = drain,
+                },
+            },
+        };
     }
 
-    pub fn reader(uart: *const UART) Reader {
-        return .{ .context = uart };
-    }
-    fn generic_writer_fn(uart: *const UART, buffer: []const u8) TransmitError!usize {
-        return uart.write_blocking(buffer, null);
+    pub fn reader(uart: *const UART, buffer: []u8) Reader {
+        return .{
+            .uart = uart,
+            .intf = .{
+                .buffer = buffer,
+                .vtable = &.{
+                    .stream = stream,
+                },
+            },
+        };
     }
 
-    fn generic_reader_fn(uart: *const UART, buffer: []u8) ReceiveError!usize {
-        return uart.read_blocking(buffer, null);
+    pub const Writer = struct {
+        uart: *const UART,
+        intf: std.Io.Writer,
+    };
+
+    pub const Reader = struct {
+        uart: *const UART,
+        intf: std.Io.Reader,
+    };
+
+    fn drain(w: *std.Io.Writer, data: []const []const u8, splat: usize) std.Io.Writer.Error!usize {
+        const uart_writer: *Writer = @fieldParentPtr("intf", w);
+        const uart = uart_writer.uart;
+
+        // bytes from buffer are not included in count.
+        w.end -= uart.write_blocking(w.buffer[0..w.end], null) catch |err| switch (err) {
+            error.Timeout => unreachable,
+        };
+        assert(w.end == 0);
+
+        var n: usize = 0;
+        n += uart.writev_blocking(data[0 .. data.len - 1], null) catch |err| switch (err) {
+            error.Timeout => unreachable,
+        };
+        for (0..splat) |_|
+            n += uart.write_blocking(data[data.len - 1], null) catch |err| switch (err) {
+                error.Timeout => unreachable,
+            };
+
+        return n;
+    }
+
+    fn stream(io_reader: *std.Io.Reader, w: *std.Io.Writer, limit: std.Io.Limit) std.Io.Reader.StreamError!usize {
+        const r: *Reader = @fieldParentPtr("intf", io_reader);
+        return switch (limit) {
+            .nothing => 0,
+            else => blk: {
+                var buf: [1]u8 = undefined;
+                const n = r.uart.read_blocking(&buf, null) catch |err| switch (err) {
+                    error.ReceiveError => return error.ReadError,
+                };
+
+                break :blk switch (n) {
+                    0 => 0,
+                    1 => try w.writeByte(buf[0]),
+                    else => unreachable,
+                };
+            },
+        };
     }
 
     pub fn init(comptime uart: Instances) UART {
@@ -325,9 +384,9 @@ var uart_logger: ?UART.Writer = null;
 ///     .logFn = hal.uart.log,
 /// };
 pub fn init_logger(uart: *const UART) void {
-    uart_logger = uart.writer();
-    if (uart_logger) |logger| {
-        logger.writeAll("\r\n================ STARTING NEW LOGGER ================\r\n") catch {};
+    uart_logger = uart.writer(&.{});
+    if (uart_logger) |*writer| {
+        writer.intf.writeAll("\r\n================ STARTING NEW LOGGER ================\r\n") catch {};
     }
 }
 
@@ -342,7 +401,7 @@ pub fn log(comptime level: std.log.Level, comptime scope: @TypeOf(.EnumLiteral),
         else => " (" ++ @tagName(scope) ++ "): ",
     };
 
-    if (uart_logger) |uart| {
-        uart.print(prefix ++ format ++ "\r\n", args) catch {};
+    if (uart_logger) |*writer| {
+        writer.intf.print(prefix ++ format ++ "\r\n", args) catch {};
     }
 }

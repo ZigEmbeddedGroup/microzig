@@ -83,41 +83,37 @@ pub fn GPIO(comptime port: u3, comptime num: u4, comptime mode: gpio.Mode) type 
 }
 
 pub fn Pins(comptime config: GlobalConfiguration) type {
-    comptime {
-        var fields: []const StructField = &.{};
-        for (@typeInfo(GlobalConfiguration).@"struct".fields) |port_field| {
-            if (@field(config, port_field.name)) |port_config| {
-                for (@typeInfo(Port.Configuration).@"struct".fields) |field| {
-                    if (@field(port_config, field.name)) |pin_config| {
-                        var pin_field = StructField{
-                            .is_comptime = false,
-                            .default_value_ptr = null,
-
-                            // initialized below:
-                            .name = undefined,
-                            .type = undefined,
-                            .alignment = undefined,
-                        };
-
-                        pin_field.name = pin_config.name orelse field.name;
-                        pin_field.type = GPIO(@intFromEnum(@field(Port, port_field.name)), @intFromEnum(@field(Pin, field.name)), pin_config.mode orelse .{ .input = .{.floating} });
-                        pin_field.alignment = @alignOf(field.type);
-
-                        fields = fields ++ &[_]StructField{pin_field};
-                    }
+    var count: usize = 0;
+    for (@typeInfo(GlobalConfiguration).@"struct".fields) |port_field| {
+        if (@field(config, port_field.name)) |port_config| {
+            for (@typeInfo(Port.Configuration).@"struct".fields) |field| {
+                if (@field(port_config, field.name) != null) {
+                    count += 1;
                 }
             }
         }
-
-        return @Type(.{
-            .@"struct" = .{
-                .layout = .auto,
-                .is_tuple = false,
-                .fields = fields,
-                .decls = &.{},
-            },
-        });
     }
+
+    var field_names: [count][]const u8 = undefined;
+    var field_types: [count]type = undefined;
+    var field_attrs: [count]std.builtin.Type.StructField.Attributes = undefined;
+
+    var i: usize = 0;
+    for (@typeInfo(GlobalConfiguration).@"struct".fields) |port_field| {
+        if (@field(config, port_field.name)) |port_config| {
+            for (@typeInfo(Port.Configuration).@"struct".fields) |field| {
+                if (@field(port_config, field.name)) |pin_config| {
+                    field_names[i] = pin_config.name orelse field.name;
+                    field_types[i] = GPIO(@intFromEnum(@field(Port, port_field.name)), @intFromEnum(@field(Pin, field.name)), pin_config.mode orelse .{ .input = .{.floating} });
+                    field_attrs[i] = .{};
+
+                    i += 1;
+                }
+            }
+        }
+    }
+
+    return @Struct(.auto, null, &field_names, &field_types, &field_attrs);
 }
 
 pub const Port = enum {

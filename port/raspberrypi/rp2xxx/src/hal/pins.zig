@@ -767,44 +767,32 @@ pub const GlobalConfiguration = struct {
     }
 
     pub fn PinsType(self: GlobalConfiguration) type {
-        var fields: []const StructField = &.{};
+        const Attributes = std.builtin.Type.StructField.Attributes;
+
+        var field_names: []const []const u8 = &.{};
+        var field_types: []const type = &.{};
+        var field_attrs: []const Attributes = &.{};
         for (@typeInfo(GlobalConfiguration).@"struct".fields) |field| {
             if (@field(self, field.name)) |pin_config| {
-                var pin_field = StructField{
-                    .is_comptime = false,
-                    .default_value_ptr = null,
-
-                    // initialized below:
-                    .name = undefined,
-                    .type = undefined,
-                    .alignment = undefined,
-                };
-
-                pin_field.name = pin_config.name orelse field.name;
-                if (pin_config.function == .SIO) {
-                    pin_field.type = gpio.Pin;
-                } else if (pin_config.function.is_pwm()) {
-                    pin_field.type = pwm.Pwm;
-                } else if (pin_config.function.is_adc()) {
-                    pin_field.type = adc.Input;
-                } else {
+                const name: []const u8 = pin_config.name orelse field.name;
+                const typ: type = if (pin_config.function == .SIO)
+                    gpio.Pin
+                else if (pin_config.function.is_pwm())
+                    pwm.Pwm
+                else if (pin_config.function.is_adc())
+                    adc.Input
+                else
+                    // TODO: what does this mean? should this be a compilation
+                    // error?
                     continue;
-                }
 
-                pin_field.alignment = @alignOf(field.type);
-
-                fields = fields ++ &[_]StructField{pin_field};
+                field_names = field_names ++ .{name};
+                field_types = field_types ++ .{typ};
+                field_attrs = field_attrs ++ .{Attributes{}};
             }
         }
 
-        return @Type(.{
-            .@"struct" = .{
-                .layout = .auto,
-                .is_tuple = false,
-                .fields = fields,
-                .decls = &.{},
-            },
-        });
+        return @Struct(.auto, null, field_names, field_types[0..], field_attrs[0..]);
     }
 
     /// Populate and return the PinsType struct

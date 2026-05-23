@@ -6,17 +6,10 @@ pub const std_options = std.Options{
     .log_level = .info,
 };
 
-pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-
-    var arena = std.heap.ArenaAllocator.init(gpa.allocator());
-    defer arena.deinit();
-
-    const allocator = arena.allocator();
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+pub fn main(init: std.process.Init) !void {
+    const io = init.io;
+    const allocator = init.arena.allocator();
+    const args = try init.minimal.args.toSlice(init.arena.allocator());
     if (args.len < 2)
         return error.InvalidArgs;
 
@@ -24,11 +17,11 @@ pub fn main() !void {
 
     std.log.info("package path: {s}", .{package_path});
 
-    var package_dir = try std.fs.cwd().openDir(package_path, .{});
-    defer package_dir.close();
+    var package_dir = try std.Io.Dir.cwd().openDir(io, package_path, .{});
+    defer package_dir.close(io);
 
-    var data_dir = try package_dir.openDir("data", .{});
-    defer data_dir.close();
+    var data_dir = try package_dir.openDir(io, "data", .{});
+    defer data_dir.close(io);
 
     var chip_files = std.array_list.Managed(std.json.Parsed(ChipFile)).init(allocator);
     defer {
@@ -37,17 +30,17 @@ pub fn main() !void {
         chip_files.deinit();
     }
 
-    var chips_dir = try data_dir.openDir("chips", .{ .iterate = true });
-    defer chips_dir.close();
+    var chips_dir = try data_dir.openDir(io, "chips", .{ .iterate = true });
+    defer chips_dir.close(io);
 
     var it = chips_dir.iterate();
-    while (try it.next()) |entry| {
+    while (try it.next(io)) |entry| {
         if (entry.kind != .file)
             continue;
 
         std.log.info("file: {s}", .{entry.name});
 
-        const chip_file_text = try chips_dir.readFileAlloc(allocator, entry.name, std.math.maxInt(usize));
+        const chip_file_text = try chips_dir.readFileAlloc(io, entry.name, allocator, .unlimited);
         defer allocator.free(chip_file_text);
 
         var scanner = std.json.Scanner.initCompleteInput(allocator, chip_file_text);
@@ -70,12 +63,11 @@ pub fn main() !void {
     // sort to try to keep things somewhat in order
     std.sort.insertion(std.json.Parsed(ChipFile), chip_files.items, {}, ChipFile.less_than);
 
-    const chips_file = try std.fs.cwd().createFile("src/Chips.zig", .{});
-
-    defer chips_file.close();
+    const chips_file = try std.Io.Dir.cwd().createFile(io, "src/Chips.zig", .{});
+    defer chips_file.close(io);
 
     var buf: [4096]u8 = undefined;
-    var writer = chips_file.writer(&buf);
+    var writer = chips_file.writer(io, &buf);
     try generate_chips_file(allocator, &writer.interface, chip_files.items);
 }
 
@@ -108,9 +100,10 @@ fn generate_chips_file(
 
     try writer.writeAll(
         \\
-        \\pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) Self {
+        \\pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) ?Self {
         \\    const b = dep.builder;
-        \\    const embassy = b.dependency("stm32-data-generated", .{}).path(".");
+        \\    const embassy_dep = b.lazyDependency("stm32-data-generated", .{}) orelse return null;
+        \\    const embassy = embassy_dep.path(".");
         \\    var ret: Self = undefined;
         \\
         \\

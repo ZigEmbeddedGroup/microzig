@@ -7,6 +7,7 @@
         .atpack = .{
             .url = "https://atpack.microzig.tech/Atmel.ATtiny_DFP.2.0.368.atpack",
             .hash = "N-V-__8AAChkfwZp4ZmDp0teMCY8Q-2clc9GmzWHeh7xiKnO",
+            .lazy = true,
         },
     },
     .paths = .{

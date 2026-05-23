@@ -1,3 +1,4 @@
+const std = @import("std");
 const microzig = @import("microzig");
 
 const stm32 = microzig.hal;
@@ -48,7 +49,7 @@ pub fn main() !void {
     stm32.uart.init_logger(&uart);
 
     //the value seen in the uart should be equal to the value of the MCO
-    try uart.writer().print("sys freq: {d}", .{rcc.get_sys_clk()});
+    std.log.info("sys freq: {d}", .{rcc.get_sys_clk()});
 
     MCO.set_output_mode(.alternate_function_push_pull, .max_50MHz);
     while (true) {}

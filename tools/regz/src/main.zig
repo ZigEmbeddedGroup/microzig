@@ -1,8 +1,9 @@
 const std = @import("std");
-const clap = @import("clap");
-const xml = @import("xml.zig");
-const Database = @import("Database.zig");
-const FS_Directory = @import("FS_Directory.zig");
+
+const regz = @import("regz");
+const Database = regz.Database;
+
+const xml = @import("xml");
 
 const ArenaAllocator = std.heap.ArenaAllocator;
 const Allocator = std.mem.Allocator;
@@ -12,8 +13,8 @@ pub const std_options = std.Options{
     .log_level = .warn,
 };
 
-pub fn main() !void {
-    main_impl() catch |err| switch (err) {
+pub fn main(init: std.process.Init) !void {
+    main_impl(init) catch |err| switch (err) {
         error.Explained => std.process.exit(1),
         else => return err,
     };
@@ -25,7 +26,7 @@ const Arguments = struct {
     input_path: ?[]const u8 = null,
     output_path: ?[:0]const u8 = null,
     device: ?[]const u8 = null,
-    patch_paths: std.ArrayList([]const u8) = .{},
+    patch_paths: std.ArrayList([]const u8) = .empty,
     dump_path: ?[:0]const u8 = null,
     help: bool = false,
 
@@ -62,12 +63,9 @@ fn print_usage(writer: *std.Io.Writer) !void {
     try writer.flush();
 }
 
-fn parse_args(allocator: Allocator) !Arguments {
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+fn parse_args(gpa: Allocator, io: std.Io, args: []const []const u8) !Arguments {
     var ret = Arguments{
-        .allocator = allocator,
+        .allocator = gpa,
     };
     errdefer ret.deinit();
 
@@ -77,7 +75,7 @@ fn parse_args(allocator: Allocator) !Arguments {
             ret.help = true;
         } else if (std.mem.eql(u8, args[i], "--db_dump_path")) {
             i += 1;
-            ret.dump_path = try allocator.dupeZ(u8, args[i]);
+            ret.dump_path = try gpa.dupeZ(u8, args[i]);
         } else if (std.mem.eql(u8, args[i], "--format")) {
             i += 1;
             if (i >= args.len)
@@ -93,10 +91,10 @@ fn parse_args(allocator: Allocator) !Arguments {
             };
         } else if (std.mem.eql(u8, args[i], "--output_path")) {
             i += 1;
-            ret.output_path = try allocator.dupeZ(u8, args[i]);
+            ret.output_path = try gpa.dupeZ(u8, args[i]);
         } else if (std.mem.eql(u8, args[i], "--device")) {
             i += 1;
-            ret.device = try allocator.dupe(u8, args[i]);
+            ret.device = try gpa.dupe(u8, args[i]);
         } else if (std.mem.eql(u8, args[i], "--patch_path")) {
             i += 1;
             try ret.append_patch_path(args[i]);
@@ -104,7 +102,7 @@ fn parse_args(allocator: Allocator) !Arguments {
             std.log.err("Unknown argument '{s}'", .{args[i]});
 
             var buf: [80]u8 = undefined;
-            var writer = std.fs.File.stderr().writer(&buf);
+            var writer = std.Io.File.stderr().writer(io, &buf);
             try print_usage(&writer.interface);
             return error.Explained;
         } else if (ret.input_path != null) {
@@ -114,26 +112,25 @@ fn parse_args(allocator: Allocator) !Arguments {
             });
             return error.Explained;
         } else {
-            ret.input_path = try allocator.dupe(u8, args[i]);
+            ret.input_path = try gpa.dupe(u8, args[i]);
         };
 
     return ret;
 }
 
-fn main_impl() anyerror!void {
+fn main_impl(init: std.process.Init) anyerror!void {
     defer xml.cleanupParser();
 
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
+    const gpa = init.gpa;
+    const io = init.io;
+    const args_raw = try init.minimal.args.toSlice(init.arena.allocator());
 
-    const allocator = gpa.allocator();
-
-    var args = try parse_args(allocator);
+    var args = try parse_args(gpa, io, args_raw);
     defer args.deinit();
 
     if (args.help) {
         var buf: [80]u8 = undefined;
-        var writer = std.fs.File.stdout().writer(&buf);
+        var writer = std.Io.File.stdout().writer(io, &buf);
         try print_usage(&writer.interface);
         return;
     }
@@ -146,12 +143,12 @@ fn main_impl() anyerror!void {
         return error.Explained;
     };
 
-    var db = try Database.create_from_path(allocator, format, input_path, args.device);
+    var db = try Database.create_from_path(gpa, io, format, input_path, args.device);
     defer db.destroy();
 
     for (args.patch_paths.items) |patch_path| {
-        const patch = try std.fs.cwd().readFileAllocOptions(allocator, patch_path, std.math.maxInt(u64), null, .@"1", 0);
-        defer allocator.free(patch);
+        const patch = try std.Io.Dir.cwd().readFileAllocOptions(io, patch_path, gpa, .unlimited, .@"1", 0);
+        defer gpa.free(patch);
 
         var diags: std.zon.parse.Diagnostics = .{};
         defer diags.deinit(db.gpa);
@@ -167,12 +164,9 @@ fn main_impl() anyerror!void {
 
     // arch dependent stuff
     {
-        var arena = ArenaAllocator.init(allocator);
-        defer arena.deinit();
-
-        for (try db.get_devices(arena.allocator())) |device| {
+        for (try db.get_devices(init.arena.allocator())) |device| {
             if (device.arch.is_arm()) {
-                const arm = @import("arch/arm.zig");
+                const arm = regz.arm;
                 try arm.load_system_interrupts(db, device.id, device.arch);
             }
         }
@@ -182,9 +176,8 @@ fn main_impl() anyerror!void {
         try db.backup(dump_path);
     }
     // output_path is the directory to write files
-    var output_dir = try std.fs.cwd().makeOpenPath(output_path, .{});
-    defer output_dir.close();
+    var output_dir = try std.Io.Dir.cwd().createDirPathOpen(io, output_path, .{});
+    defer output_dir.close(io);
 
-    var fs = FS_Directory.init(output_dir);
-    try db.to_zig(fs.directory(), .{});
+    try db.to_zig(io, output_dir, .{});
 }

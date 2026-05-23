@@ -14,20 +14,19 @@ boards: struct {
     stm32f303nucleo: *const microzig.Target,
 },
 
-pub fn init(dep: *std.Build.Dependency) Self {
+pub fn init(dep: *std.Build.Dependency) ?Self {
     const b = dep.builder;
 
-    const clockhelper_dep = b.dependency("ClockHelper", .{}).module("clockhelper");
-
+    const clockhelper_dep = b.lazyDependency("ClockHelper", .{}) orelse return null;
+    const clockhelper_module = clockhelper_dep.module("clockhelper");
     const hal_imports: []std.Build.Module.Import = b.allocator.dupe(std.Build.Module.Import, &.{
         .{
             .name = "ClockTree",
-            .module = clockhelper_dep,
+            .module = clockhelper_module,
         },
     }) catch @panic("out of memory");
 
-    const chips = Chips.init(dep, hal_imports);
-
+    const chips = Chips.init(dep, hal_imports) orelse return null;
     return .{
         .chips = chips,
         .boards = .{
@@ -101,7 +100,6 @@ pub fn build(b: *std.Build) !void {
     generate_exe.root_module.addImport("regz", regz);
 
     const generate_run = b.addRunArtifact(generate_exe);
-    generate_run.max_stdio_size = std.math.maxInt(usize);
     generate_run.addFileArg(stm32_data_generated.path("."));
 
     const generate_step = b.step("generate", "Generate chips file 'src/Chips.zig'");
