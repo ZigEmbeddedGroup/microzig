@@ -1,5 +1,5 @@
 const std = @import("std");
-const xml = @import("xml.zig");
+const xml = @import("xml");
 
 const Database = @import("Database.zig");
 const DeviceID = Database.DeviceID;
@@ -34,12 +34,12 @@ fn parse_isa_to_arch(isa: []const u8) Arch {
     return .unknown;
 }
 
-pub fn load_into_db(db: *Database, path: []const u8, device: ?[]const u8) !void {
-    var targetdb_dir = try std.fs.cwd().openDir(path, .{});
-    defer targetdb_dir.close();
+pub fn load_into_db(db: *Database, io: std.Io, path: []const u8, device: ?[]const u8) !void {
+    var targetdb_dir = try std.Io.Dir.cwd().openDir(io, path, .{});
+    defer targetdb_dir.close(io);
 
-    var devices_dir = try targetdb_dir.openDir("devices", .{ .iterate = true });
-    defer devices_dir.close();
+    var devices_dir = try targetdb_dir.openDir(io, "devices", .{ .iterate = true });
+    defer devices_dir.close(io);
 
     var modules = std.StringHashMap(ModuleEntry).init(db.gpa);
     defer {
@@ -51,7 +51,7 @@ pub fn load_into_db(db: *Database, path: []const u8, device: ?[]const u8) !void 
     }
 
     var it = devices_dir.iterate();
-    while (try it.next()) |entry| {
+    while (try it.next(io)) |entry| {
         if (entry.kind != .file)
             continue;
 
@@ -60,22 +60,25 @@ pub fn load_into_db(db: *Database, path: []const u8, device: ?[]const u8) !void 
 
         if (device) |d| {
             if (std.mem.eql(u8, d, entry.name[0 .. entry.name.len - ".xml".len])) {
-                try load_device(db, devices_dir, entry.name, &modules);
+                try load_device(db, io, devices_dir, entry.name, &modules);
                 return;
             }
         } else {
-            try load_device(db, devices_dir, entry.name, &modules);
+            try load_device(db, io, devices_dir, entry.name, &modules);
         }
     } else if (device != null) {
         return error.DeviceMissing;
     }
 }
 
-fn load_device(db: *Database, devices_dir: std.fs.Dir, filename: []const u8, modules: *std.StringHashMap(ModuleEntry)) !void {
-    const device_file = try devices_dir.openFile(filename, .{});
-    defer device_file.close();
-
-    const device_text = try device_file.readToEndAlloc(db.gpa, 1024 * 1024);
+fn load_device(
+    db: *Database,
+    io: std.Io,
+    devices_dir: std.Io.Dir,
+    filename: []const u8,
+    modules: *std.StringHashMap(ModuleEntry),
+) !void {
+    const device_text = try devices_dir.readFileAlloc(io, filename, db.gpa, @enumFromInt(1024 * 1024));
     defer db.gpa.free(device_text);
 
     var doc = try xml.Doc.from_memory(device_text);
@@ -125,11 +128,18 @@ fn load_device(db: *Database, devices_dir: std.fs.Dir, filename: []const u8, mod
     var instance_it = cpu_node.iterate(&.{}, &.{"instance"});
 
     while (instance_it.next()) |instance_node| {
-        try load_instance(db, device_id, devices_dir, instance_node, modules);
+        try load_instance(db, io, device_id, devices_dir, instance_node, modules);
     }
 }
 
-fn load_instance(db: *Database, device_id: DeviceID, devices_dir: std.fs.Dir, node: xml.Node, modules: *std.StringHashMap(ModuleEntry)) !void {
+fn load_instance(
+    db: *Database,
+    io: std.Io,
+    device_id: DeviceID,
+    devices_dir: std.Io.Dir,
+    node: xml.Node,
+    modules: *std.StringHashMap(ModuleEntry),
+) !void {
     const name = node.get_attribute("id") orelse return error.MissingField;
     const href = node.get_attribute("href") orelse return error.MissingField;
 
@@ -145,10 +155,7 @@ fn load_instance(db: *Database, device_id: DeviceID, devices_dir: std.fs.Dir, no
         // Load the module file for the first time
         log.debug("Loading new peripheral type from module file: {s}", .{href});
 
-        const module_file = try devices_dir.openFile(href, .{});
-        defer module_file.close();
-
-        const module_text = try module_file.readToEndAlloc(db.gpa, 1024 * 1024);
+        const module_text = try devices_dir.readFileAlloc(io, href, db.gpa, @enumFromInt(1024 * 1024));
         defer db.gpa.free(module_text);
 
         var doc = try xml.Doc.from_memory(module_text);

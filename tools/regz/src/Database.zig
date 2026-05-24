@@ -9,7 +9,7 @@ const assert = std.debug.assert;
 const zqlite = @import("zqlite");
 const c = zqlite.c;
 
-const xml = @import("xml.zig");
+const xml = @import("xml");
 const svd = @import("svd.zig");
 const atdf = @import("atdf.zig");
 const embassy = @import("embassy.zig");
@@ -19,7 +19,6 @@ const analysis = @import("analysis.zig");
 const Patch = @import("patch.zig").Patch;
 const SQL_Options = @import("SQL_Options.zig");
 const Arch = @import("arch.zig").Arch;
-pub const Directory = @import("Directory.zig");
 
 const log = std.log.scoped(.db);
 const file_size_max = 100 * 1024 * 1024;
@@ -615,43 +614,43 @@ pub fn create_from_doc(allocator: Allocator, format: Format, doc: xml.Doc) !*Dat
     return db;
 }
 
-pub fn create_from_path(allocator: Allocator, format: Format, path: []const u8, device: ?[]const u8) !*Database {
+pub fn create_from_path(gpa: Allocator, io: std.Io, format: Format, path: []const u8, device: ?[]const u8) !*Database {
     return switch (format) {
         .embassy => blk: {
-            var db = try Database.create(allocator);
+            var db = try Database.create(gpa);
             errdefer {
                 std.log.err("sqlite: {s}", .{db.conn.lastError()});
                 db.destroy();
             }
 
-            try embassy.load_into_db(db, path, device);
+            try embassy.load_into_db(db, io, path, device);
             break :blk db;
         },
         .targetdb => blk: {
-            var db = try Database.create(allocator);
+            var db = try Database.create(gpa);
             errdefer {
                 std.log.err("sqlite: {s}", .{db.conn.lastError()});
                 db.destroy();
             }
 
-            try targetdb.load_into_db(db, path, device);
+            try targetdb.load_into_db(db, io, path, device);
             break :blk db;
         },
         .svd, .atdf => blk: {
-            const text = try std.fs.cwd().readFileAlloc(allocator, path, file_size_max);
-            defer allocator.free(text);
+            const text = try std.Io.Dir.cwd().readFileAlloc(io, path, gpa, @enumFromInt(file_size_max));
+            defer gpa.free(text);
 
-            break :blk create_from_xml(allocator, format, text);
+            break :blk create_from_xml(gpa, format, text);
         },
     };
 }
 
-pub fn create_from_xml(allocator: Allocator, format: Format, xml_text: []const u8) !*Database {
+pub fn create_from_xml(gpa: Allocator, format: Format, xml_text: []const u8) !*Database {
     assert(format.is_XML());
     var doc = try xml.Doc.from_memory(xml_text);
     defer doc.deinit();
 
-    return create_from_doc(allocator, format, doc);
+    return create_from_doc(gpa, format, doc);
 }
 
 pub const CreateDeviceOptions = struct {
@@ -811,7 +810,7 @@ fn all(db: *Database, comptime T: type, comptime query: []const u8, allocator: A
     var rows = try db.conn.rows(query, args);
     defer rows.deinit();
 
-    var list: std.ArrayList(T) = .{};
+    var list: std.ArrayList(T) = .empty;
     while (rows.next()) |row| {
         try list.append(allocator, try scan_row(T, allocator, row));
     }
@@ -919,18 +918,18 @@ fn get_nested_struct_fields(
 fn recursively_calculate_struct_size(
     db: *Database,
     depth: *u8,
-    cache: *std.AutoArrayHashMap(StructID, u64),
-    allocator: Allocator,
+    cache: *std.AutoArrayHashMapUnmanaged(StructID, u64),
+    gpa: Allocator,
     struct_id: StructID,
 ) !u64 {
     if (depth.* >= max_recursion_depth)
         return error.MaxRecursionDepth;
 
-    const registers = try db.get_struct_registers(allocator, struct_id);
-    defer allocator.free(registers);
+    const registers = try db.get_struct_registers(gpa, struct_id);
+    defer gpa.free(registers);
 
-    const nested_struct_fields = try db.get_nested_struct_fields(allocator, struct_id);
-    defer allocator.free(nested_struct_fields);
+    const nested_struct_fields = try db.get_nested_struct_fields(gpa, struct_id);
+    defer gpa.free(nested_struct_fields);
 
     var max_end: ?u32 = null;
     for (registers) |register| {
@@ -946,7 +945,7 @@ fn recursively_calculate_struct_size(
     for (nested_struct_fields) |nsf| {
         const nested_struct_field_end = nsf.offset_bytes + ((nsf.size_bytes orelse
             cache.get(nsf.struct_id) orelse
-            try db.recursively_calculate_struct_size(depth, cache, allocator, nsf.struct_id)) * (nsf.count orelse 1));
+            try db.recursively_calculate_struct_size(depth, cache, gpa, nsf.struct_id)) * (nsf.count orelse 1));
         if (max_end) |end| {
             if (nested_struct_field_end > end)
                 max_end = @intCast(nested_struct_field_end);
@@ -974,8 +973,8 @@ pub fn get_nested_struct_fields_with_calculated_size(
 
     log.debug("nested_struct_fields.len={} struct_id={f}", .{ nested_struct_fields.len, struct_id });
 
-    var size_cache: std.AutoArrayHashMap(StructID, u64) = .init(gpa);
-    defer size_cache.deinit();
+    var size_cache: std.AutoArrayHashMapUnmanaged(StructID, u64) = .empty;
+    defer size_cache.deinit(gpa);
 
     for (nested_struct_fields) |*nsf| {
         if (nsf.size_bytes != null) {
@@ -2060,7 +2059,7 @@ fn cleanup_unused_enums(db: *Database) !void {
 }
 
 pub fn apply_patch(db: *Database, zon_text: [:0]const u8, diags: *std.zon.parse.Diagnostics) !void {
-    const patches = try std.zon.parse.fromSlice([]const Patch, db.gpa, zon_text, diags, .{});
+    const patches = try std.zon.parse.fromSliceAlloc([]const Patch, db.gpa, zon_text, diags, .{});
     defer std.zon.parse.free(db.gpa, patches);
 
     for (patches) |patch| {
@@ -2166,8 +2165,8 @@ pub fn apply_patch(db: *Database, zon_text: [:0]const u8, diags: *std.zon.parse.
 
 pub const ToZigOptions = gen.ToZigOptions;
 
-pub fn to_zig(db: *Database, output_dir: Directory, opts: ToZigOptions) !void {
-    try gen.to_zig(db, output_dir, opts);
+pub fn to_zig(db: *Database, io: std.Io, output_dir: std.Io.Dir, opts: ToZigOptions) !void {
+    try gen.to_zig(db, io, output_dir, opts);
 }
 
 test "all" {

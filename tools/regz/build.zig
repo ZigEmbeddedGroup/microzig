@@ -30,24 +30,49 @@ pub fn build(b: *Build) !void {
     const zqlite = zqlite_dep.module("zqlite");
     zqlite.linkLibrary(sqlite3_lib);
 
+    const xml_module = b.createModule(.{
+        .root_source_file = b.path("src/xml.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const regz_module = b.addModule("regz", .{
+        .root_source_file = b.path("src/module.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = &.{
+            .{
+                .name = "zqlite",
+                .module = zqlite,
+            },
+            .{
+                .name = "xml",
+                .module = xml_module,
+            },
+        },
+    });
+    regz_module.linkLibrary(libxml2_dep.artifact("xml"));
+
     const regz = b.addExecutable(.{
         .name = "regz",
         .root_module = b.createModule(.{
             .root_source_file = b.path("src/main.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{
+                    .name = "regz",
+                    .module = regz_module,
+                },
+                .{
+                    .name = "xml",
+                    .module = xml_module,
+                },
+            },
         }),
         .use_llvm = true,
     });
-    regz.linkLibrary(libxml2_dep.artifact("xml2"));
-    regz.root_module.addImport("zqlite", zqlite);
     b.installArtifact(regz);
-
-    const exported_module = b.addModule("regz", .{
-        .root_source_file = b.path("src/module.zig"),
-    });
-    exported_module.linkLibrary(libxml2_dep.artifact("xml2"));
-    exported_module.addImport("zqlite", zqlite);
 
     const run_cmd = b.addRunArtifact(regz);
     run_cmd.step.dependOn(b.getInstallStep());
@@ -59,15 +84,9 @@ pub fn build(b: *Build) !void {
     run_step.dependOn(&run_cmd.step);
 
     const tests = b.addTest(.{
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/Database.zig"),
-            .target = target,
-            .optimize = optimize,
-        }),
+        .root_module = regz_module,
         .use_llvm = true,
     });
-    tests.linkLibrary(libxml2_dep.artifact("xml2"));
-    tests.root_module.addImport("zqlite", zqlite);
     tests.step.dependOn(&regz.step);
 
     const run_tests = b.addRunArtifact(tests);

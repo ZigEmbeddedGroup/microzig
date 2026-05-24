@@ -10,12 +10,12 @@
     },
     .dependencies = .{
         .libxml2 = .{
-            .url = "git+https://github.com/mattnite/zig-build-libxml2.git#5474281ad4d173ed298ee789c7dce4f5edb78e10",
-            .hash = "libxml2-0.0.0-Kr0Y1Ac4ngAiRuFTS2qMO9j-KZsD0PKFKKXoZjynTHLq",
+            .url = "git+https://github.com/allyourcodebase/libxml2.git?ref=2.15.1-2#2528fad1bf17a0a70999930cfd9280554f547787",
+            .hash = "libxml2-2.15.1-2-qHdjhmNMAAAiZOWqVridicq2oMf5NHv0n9W41bz9FtMM",
         },
         .sqlite3 = .{
-            .url = "git+https://github.com/allyourcodebase/sqlite3#8f840560eae88ab66668c6827c64ffbd0d74ef37",
-            .hash = "sqlite3-3.51.0-DMxLWssOAABZ8cAvU_LfBIbp0kZjm824PU8sSLXpEDdr",
+            .url = "git+https://github.com/allyourcodebase/sqlite3#b7514a2b76003bee57db1fc78e84a2abc7499efa",
+            .hash = "sqlite3-3.51.0-DMxLWuAOAABO27GnPH0iTeI57EkQPpGwqI7LTfiE4Pda",
         },
         .zqlite = .{
             .url = "git+https://github.com/karlseguin/zqlite.zig#b44ed5cdc64859b08446c246f307e65ebe2b2d9c",
