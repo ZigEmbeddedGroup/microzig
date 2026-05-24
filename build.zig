@@ -100,32 +100,6 @@ pub const PortSelect = struct {
     }
 };
 
-// Don't know if this is required but it doesn't hurt either.
-// Helps in case there are multiple microzig instances including the same ports (eg: examples).
-pub const PortCache = blk: {
-    var fields: []const std.builtin.Type.StructField = &.{};
-    for (port_list) |port| {
-        const typ = ?(custom_lazy_import(port.dep_name) orelse struct {});
-        fields = fields ++ [_]std.builtin.Type.StructField{.{
-            .name = port.name,
-            .type = typ,
-            .default_value_ptr = @as(*const anyopaque, @ptrCast(&@as(typ, null))),
-            .is_comptime = false,
-            .alignment = @alignOf(typ),
-        }};
-    }
-    break :blk @Type(.{
-        .@"struct" = .{
-            .layout = .auto,
-            .fields = fields,
-            .decls = &.{},
-            .is_tuple = false,
-        },
-    });
-};
-
-var port_cache: PortCache = .{};
-
 /// The MicroZig build system.
 ///
 /// # Example usage:
@@ -165,29 +139,23 @@ pub fn MicroBuild(port_select: PortSelect) type {
         const Self = @This();
 
         const SelectedPorts = blk: {
-            var fields: []const std.builtin.Type.StructField = &.{};
-
-            for (port_list) |port| {
+            var field_names: [port_list.len][]const u8 = undefined;
+            var field_types: [port_list.len]type = undefined;
+            var field_attrs: [port_list.len]std.builtin.Type.StructField.Attributes = undefined;
+            for (port_list, 0..) |port, i| {
                 if (@field(port_select, port.name)) {
                     const typ = custom_lazy_import(port.dep_name) orelse struct {};
-                    fields = fields ++ [_]std.builtin.Type.StructField{.{
-                        .name = port.name,
-                        .type = typ,
+
+                    field_names[i] = port.name;
+                    field_types[i] = typ;
+                    field_attrs[i] = .{
+                        .alignment = @alignOf(type),
                         .default_value_ptr = null,
-                        .is_comptime = false,
-                        .alignment = @alignOf(typ),
-                    }};
+                    };
                 }
             }
 
-            break :blk @Type(.{
-                .@"struct" = .{
-                    .layout = .auto,
-                    .fields = fields,
-                    .decls = &.{},
-                    .is_tuple = false,
-                },
-            });
+            break :blk @Struct(.auto, null, field_names, field_types, field_attrs);
         };
 
         const InitReturnType = blk: {
@@ -221,12 +189,9 @@ pub fn MicroBuild(port_select: PortSelect) type {
             var ports: SelectedPorts = undefined;
             inline for (port_list) |port| {
                 if (@field(port_select, port.name)) {
-                    @field(ports, port.name) = if (@field(port_cache, port.name)) |cached_port| cached_port else blk: {
-                        const port_dep = dep.builder.lazyDependency(port.dep_name, .{}).?;
-                        const instance = custom_lazy_import(port.dep_name).?.init(port_dep);
-                        @field(port_cache, port.name) = instance;
-                        break :blk instance;
-                    };
+                    const port_dep = dep.builder.lazyDependency(port.dep_name, .{}).?;
+                    @field(ports, port.name) =
+                        custom_lazy_import(port.dep_name).?.init(port_dep);
                 }
             }
 
