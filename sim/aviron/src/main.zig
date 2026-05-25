@@ -1,21 +1,32 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const aviron = @import("aviron");
-const args_parser = @import("args");
 const ihex = @import("ihex");
 
+const log = std.log.scoped(.main);
+
+const RunWith_MCU_Options = struct {
+    trace: bool = false,
+    info: bool = false,
+    format: FileFormat = .elf,
+    gas: ?u64 = null,
+    breakpoint: ?u24 = null,
+};
+
 fn run_with_mcu(
-    allocator: std.mem.Allocator,
-    comptime mcu_config: anytype,
-    options: Cli,
+    gpa: std.mem.Allocator,
+    io: std.Io,
+    comptime mcu_config: aviron.mcu.Config,
     positionals: []const []const u8,
+    options: RunWith_MCU_Options,
 ) !u8 {
     // Allocate memory based on MCU configuration
-    var flash_storage = aviron.Flash.Static(mcu_config.flash_size){};
+    var flash_storage: aviron.Flash.Static(mcu_config.flash_size) = .{};
     var sram = aviron.FixedSizeMemory(mcu_config.sram_size, .{ .address_type = u24 }){};
     // TODO: Add support for reading/writing EEPROM through IO
 
-    var io = IO{
+    var bus_io = IO{
+        .io = io,
         .sreg = undefined,
         .sp = mcu_config.sram_base + mcu_config.sram_size - 1,
     };
@@ -24,12 +35,12 @@ fn run_with_mcu(
     const flash_mem = flash_storage.memory();
 
     // Build Bus interfaces
-    const io_data_bus = io.bus(); // For memory-mapped data space
-    const io_io_bus = io.io_bus(); // For direct IO operations
+    const io_data_bus = bus_io.bus(); // For memory-mapped data space
+    const io_io_bus = bus_io.io_bus(); // For direct IO operations
     const sram_bus = sram.bus();
 
-    var spaces = try aviron.mcu.build_spaces(allocator, mcu_config, sram_bus, io_data_bus);
-    defer spaces.deinit(allocator);
+    var spaces = try aviron.mcu.build_spaces(gpa, mcu_config, sram_bus, io_data_bus);
+    defer spaces.deinit(gpa);
 
     var cpu = aviron.Cpu{
         .trace = options.trace,
@@ -46,11 +57,11 @@ fn run_with_mcu(
         .sio = mcu_config.special_io,
     };
 
-    io.sreg = &cpu.sreg;
+    bus_io.sreg = &cpu.sreg;
 
     if (options.info) {
-        var stdout = std.fs.File.stdout().writer(&.{});
-        try stdout.interface.print("Information for {s}:\n", .{@tagName(options.mcu)});
+        var stdout = std.Io.File.stdout().writer(io, &.{});
+        try stdout.interface.print("Information for {s}:\n", .{mcu_config.name});
         try stdout.interface.print("  Generation: {s: >11}\n", .{@tagName(cpu.instruction_set)});
         try stdout.interface.print("  Code Model: {s: >11}\n", .{@tagName(cpu.code_model)});
         try stdout.interface.print("  Flash:      {d: >5} bytes\n", .{cpu.flash.size});
@@ -62,12 +73,11 @@ fn run_with_mcu(
 
     // Load all provided executables:
     for (positionals) |file_path| {
-        var file = try std.fs.cwd().openFile(file_path, .{});
-        defer file.close();
+        var file = try std.Io.Dir.cwd().openFile(io, file_path, .{});
+        defer file.close(io);
 
         var file_buf: [4096]u8 = undefined;
-        var reader = file.reader(&file_buf);
-
+        var reader = file.reader(io, &file_buf);
         switch (options.format) {
             .elf => {
                 var header = try std.elf.Header.read(&reader.interface);
@@ -122,7 +132,7 @@ fn run_with_mcu(
                 }
             },
             .binary, .bin => {
-                const size = try file.readAll(&flash_storage.data);
+                const size = try reader.interface.readSliceShort(&flash_storage.data);
                 @memset(flash_storage.data[size..], 0);
             },
             .ihex, .hex => {
@@ -137,44 +147,116 @@ fn run_with_mcu(
     }
 
     const result = try cpu.run(options.gas, options.breakpoint);
-
     if (options.trace) {
         cpu.dump_system_state();
     }
 
     std.debug.print("\nSTOP: {s}\n", .{@tagName(result)});
-
-    // Handle program exit
     if (result == .program_exit) {
-        return io.exit_code.?;
+        return bus_io.exit_code.?;
     }
 
     return 0;
 }
 
-pub fn main() !u8 {
-    const allocator = std.heap.page_allocator;
+const CLI_Args = struct {
+    help: bool = false,
+    trace: bool = false,
+    mcu: MCU = .atmega328p,
+    info: bool = false,
+    format: FileFormat = .elf,
+    breakpoint: ?u24 = null,
+    gas: ?u64 = null,
 
-    var cli = args_parser.parseForCurrentProcess(Cli, allocator, .print) catch return 1;
-    defer cli.deinit();
+    const default: CLI_Args = .{};
 
-    if (cli.options.help or (cli.positionals.len == 0 and !cli.options.info)) {
-        var stderr_writer = std.fs.File.stderr().writer(&.{});
-        try args_parser.printHelp(
-            Cli,
-            cli.executable_name orelse "aviron",
-            &stderr_writer.interface,
-        );
+    const usage =
+        \\[--help] [--trace] [--mcu=<value>] [--info] [--format=<value>] [--breakpoint=<value>] [--gas=<value>] <file> ...
+        \\
+        \\AViRon is a simulator for the AVR cpu architecture as well as an basic emulator for several microcontrollers from Microchip/Atmel.
+        \\
+        \\Loads at least a single <elf> file into the memory of the system and executes it with the provided MCU.
+        \\
+        \\The code can use certain special registers to perform I/O and exit the emulator.
+        \\
+        \\It accepts the following arguments:
+        \\
+        \\--help
+        \\--trace
+        \\--info
+        \\--mcu=<value>
+        \\--format=<value>
+        \\--breakpoint=<value>
+        \\--gas=<value>
+        \\
+    ;
+};
 
-        return if (cli.options.help) @as(u8, 0) else 1;
+fn parse_bool(str: []const u8) !bool {
+    return if (std.mem.eql(u8, str, "true"))
+        true
+    else if (std.mem.eql(u8, str, "false"))
+        false
+    else
+        error.InvalidBoolStr;
+}
+
+pub fn main(init: std.process.Init) !u8 {
+    const gpa = init.gpa;
+    const args = try init.minimal.args.toSlice(init.arena.allocator());
+
+    var cli_args: CLI_Args = .default;
+    const positionals = for (args, 0..) |arg, i| {
+        if (!std.mem.startsWith(u8, arg, "--"))
+            break args[i..];
+
+        const equals = std.mem.findScalar(u8, arg, '=');
+        const key = arg[2 .. equals orelse arg.len];
+        const value = arg[equals orelse arg.len .. arg.len];
+        inline for (@typeInfo(CLI_Args).@"struct".fields) |field| {
+            if (std.mem.eql(u8, key, field.name)) {
+                @field(cli_args, field.name) = switch (field.type) {
+                    bool => if (equals != null)
+                        try parse_bool(value)
+                    else
+                        true,
+
+                    MCU, FileFormat => std.meta.stringToEnum(field.type, value) orelse {
+                        log.err("Invalid value for --{s}: '{s}'", .{ key, value });
+                        return error.InvalidValue;
+                    },
+                    ?u24 => try std.fmt.parseInt(u24, value, 0),
+                    ?u64 => try std.fmt.parseInt(u64, value, 0),
+                    else => unreachable,
+                };
+            }
+        }
+
+        log.err("Unrecognied CLI argument: --{s}", .{key});
+        return error.UnrecognizedCliArgument;
+    } else &.{};
+
+    const io = init.io;
+    if (cli_args.help) {
+        var stdout = std.Io.File.stdout().writer(io, &.{});
+        try stdout.interface.print("{s}", .{CLI_Args.usage});
+        try stdout.interface.flush();
+        return 0;
     }
 
-    // Dispatch to MCU-specific function
-    return switch (cli.options.mcu) {
-        .atmega328p => try run_with_mcu(allocator, aviron.mcu.atmega328p, cli.options, cli.positionals),
-        .attiny816 => try run_with_mcu(allocator, aviron.mcu.attiny816, cli.options, cli.positionals),
-        .atmega2560 => try run_with_mcu(allocator, aviron.mcu.atmega2560, cli.options, cli.positionals),
-        .xmega128a4u => try run_with_mcu(allocator, aviron.mcu.xmega128a4u, cli.options, cli.positionals),
+    const options: RunWith_MCU_Options = .{
+        .trace = cli_args.trace,
+        .info = cli_args.info,
+        .format = cli_args.format,
+        .gas = cli_args.gas,
+        .breakpoint = cli_args.breakpoint,
+    };
+
+    return switch (cli_args.mcu) {
+        .atmega328p => try run_with_mcu(gpa, io, aviron.mcu.atmega328p, positionals, options),
+        .attiny816 => try run_with_mcu(gpa, io, aviron.mcu.attiny816, positionals, options),
+        .atmega2560 => try run_with_mcu(gpa, io, aviron.mcu.atmega2560, positionals, options),
+        .xmega128a4u => try run_with_mcu(gpa, io, aviron.mcu.xmega128a4u, positionals, options),
     };
 }
 
@@ -194,47 +276,8 @@ pub const FileFormat = enum {
     hex,
 };
 
-const Cli = struct {
-    help: bool = false,
-    trace: bool = false,
-    mcu: MCU = .atmega328p,
-    info: bool = false,
-    format: FileFormat = .elf,
-    breakpoint: ?u24 = null,
-    gas: ?u64 = null,
-
-    pub const shorthands = .{
-        .h = "help",
-        .t = "trace",
-        .m = "mcu",
-        .I = "info",
-        .f = "format",
-        .b = "breakpoint",
-        .g = "gas",
-    };
-    pub const meta = .{
-        .summary = "[-h] [-t] [-m <mcu>] <file> ...",
-        .full_text =
-        \\AViRon is a simulator for the AVR cpu architecture as well as an basic emulator for several microcontrollers from Microchip/Atmel.
-        \\
-        \\Loads at least a single <elf> file into the memory of the system and executes it with the provided MCU.
-        \\
-        \\The code can use certain special registers to perform I/O and exit the emulator.
-        ,
-        .option_docs = .{
-            .help = "Prints this help text.",
-            .trace = "Trace all executed instructions.",
-            .mcu = "Selects the emulated MCU.",
-            .info = "Prints information about the given MCUs memory.",
-            .format = "Specify file format.",
-            .breakpoint = "Break when PC reaches this address (hex or dec)",
-            .dump_len = "Number of bytes to dump (default 32)",
-            .gas = "Stop after N instructions executed",
-        },
-    };
-};
-
 const IO = struct {
+    io: std.Io,
     scratch_regs: [16]u8 = @splat(0),
 
     sp: u16,
@@ -317,45 +360,45 @@ const IO = struct {
     }
 
     fn dev_read(ctx: *anyopaque, addr: IOBusType.Address) u8 {
-        const io: *IO = @ptrCast(@alignCast(ctx));
+        const bus_io: *IO = @ptrCast(@alignCast(ctx));
         const reg: Register = @enumFromInt(@as(aviron.IO.Address, @intCast(addr)));
         return switch (reg) {
             .exit => 0,
             .stdio => blk: {
-                var stdin = std.fs.File.stdin().reader(&.{});
+                var stdin = std.Io.File.stdin().reader(bus_io.io, &.{});
                 var buf: [1]u8 = undefined;
                 stdin.interface.readSliceAll(&buf) catch break :blk 0xFF; // 0xFF = EOF
                 break :blk buf[0];
             },
             .stderr => 0,
 
-            .scratch_0 => io.scratch_regs[0x0],
-            .scratch_1 => io.scratch_regs[0x1],
-            .scratch_2 => io.scratch_regs[0x2],
-            .scratch_3 => io.scratch_regs[0x3],
-            .scratch_4 => io.scratch_regs[0x4],
-            .scratch_5 => io.scratch_regs[0x5],
-            .scratch_6 => io.scratch_regs[0x6],
-            .scratch_7 => io.scratch_regs[0x7],
-            .scratch_8 => io.scratch_regs[0x8],
-            .scratch_9 => io.scratch_regs[0x9],
-            .scratch_a => io.scratch_regs[0xa],
-            .scratch_b => io.scratch_regs[0xb],
-            .scratch_c => io.scratch_regs[0xc],
-            .scratch_d => io.scratch_regs[0xd],
-            .scratch_e => io.scratch_regs[0xe],
-            .scratch_f => io.scratch_regs[0xf],
+            .scratch_0 => bus_io.scratch_regs[0x0],
+            .scratch_1 => bus_io.scratch_regs[0x1],
+            .scratch_2 => bus_io.scratch_regs[0x2],
+            .scratch_3 => bus_io.scratch_regs[0x3],
+            .scratch_4 => bus_io.scratch_regs[0x4],
+            .scratch_5 => bus_io.scratch_regs[0x5],
+            .scratch_6 => bus_io.scratch_regs[0x6],
+            .scratch_7 => bus_io.scratch_regs[0x7],
+            .scratch_8 => bus_io.scratch_regs[0x8],
+            .scratch_9 => bus_io.scratch_regs[0x9],
+            .scratch_a => bus_io.scratch_regs[0xa],
+            .scratch_b => bus_io.scratch_regs[0xb],
+            .scratch_c => bus_io.scratch_regs[0xc],
+            .scratch_d => bus_io.scratch_regs[0xd],
+            .scratch_e => bus_io.scratch_regs[0xe],
+            .scratch_f => bus_io.scratch_regs[0xf],
 
-            .sreg => @bitCast(io.sreg.*),
+            .sreg => @bitCast(bus_io.sreg.*),
 
-            .ramp_x => io.ramp_x,
-            .ramp_y => io.ramp_y,
-            .ramp_z => io.ramp_z,
-            .ramp_d => io.ramp_d,
-            .e_ind => io.e_ind,
+            .ramp_x => bus_io.ramp_x,
+            .ramp_y => bus_io.ramp_y,
+            .ramp_z => bus_io.ramp_z,
+            .ramp_d => bus_io.ramp_d,
+            .e_ind => bus_io.e_ind,
 
-            .sp_l => @truncate(io.sp >> 0),
-            .sp_h => @truncate(io.sp >> 8),
+            .sp_l => @truncate(bus_io.sp >> 0),
+            .sp_h => @truncate(bus_io.sp >> 8),
 
             _ => std.debug.panic("illegal i/o read from undefined register 0x{X:0>2}", .{addr}),
         };
@@ -367,47 +410,47 @@ const IO = struct {
     }
 
     fn dev_write_masked(ctx: *anyopaque, addr: IOBusType.Address, mask: u8, value: u8) void {
-        const io: *IO = @ptrCast(@alignCast(ctx));
+        const bus_io: *IO = @ptrCast(@alignCast(ctx));
         const reg: Register = @enumFromInt(@as(aviron.IO.Address, @intCast(addr)));
         switch (reg) {
             .exit => {
-                io.exit_code = value & mask;
+                bus_io.exit_code = value & mask;
             },
             .stdio => {
-                var stdout = std.fs.File.stdout().writer(&.{});
+                var stdout = std.Io.File.stdout().writer(bus_io.io, &.{});
                 stdout.interface.writeByte(value & mask) catch @panic("i/o failure");
             },
             .stderr => {
-                var stderr = std.fs.File.stderr().writer(&.{});
+                var stderr = std.Io.File.stderr().writer(bus_io.io, &.{});
                 stderr.interface.writeByte(value & mask) catch @panic("i/o failure");
             },
 
-            .scratch_0 => write_masked(&io.scratch_regs[0x0], mask, value),
-            .scratch_1 => write_masked(&io.scratch_regs[0x1], mask, value),
-            .scratch_2 => write_masked(&io.scratch_regs[0x2], mask, value),
-            .scratch_3 => write_masked(&io.scratch_regs[0x3], mask, value),
-            .scratch_4 => write_masked(&io.scratch_regs[0x4], mask, value),
-            .scratch_5 => write_masked(&io.scratch_regs[0x5], mask, value),
-            .scratch_6 => write_masked(&io.scratch_regs[0x6], mask, value),
-            .scratch_7 => write_masked(&io.scratch_regs[0x7], mask, value),
-            .scratch_8 => write_masked(&io.scratch_regs[0x8], mask, value),
-            .scratch_9 => write_masked(&io.scratch_regs[0x9], mask, value),
-            .scratch_a => write_masked(&io.scratch_regs[0xa], mask, value),
-            .scratch_b => write_masked(&io.scratch_regs[0xb], mask, value),
-            .scratch_c => write_masked(&io.scratch_regs[0xc], mask, value),
-            .scratch_d => write_masked(&io.scratch_regs[0xd], mask, value),
-            .scratch_e => write_masked(&io.scratch_regs[0xe], mask, value),
-            .scratch_f => write_masked(&io.scratch_regs[0xf], mask, value),
+            .scratch_0 => write_masked(&bus_io.scratch_regs[0x0], mask, value),
+            .scratch_1 => write_masked(&bus_io.scratch_regs[0x1], mask, value),
+            .scratch_2 => write_masked(&bus_io.scratch_regs[0x2], mask, value),
+            .scratch_3 => write_masked(&bus_io.scratch_regs[0x3], mask, value),
+            .scratch_4 => write_masked(&bus_io.scratch_regs[0x4], mask, value),
+            .scratch_5 => write_masked(&bus_io.scratch_regs[0x5], mask, value),
+            .scratch_6 => write_masked(&bus_io.scratch_regs[0x6], mask, value),
+            .scratch_7 => write_masked(&bus_io.scratch_regs[0x7], mask, value),
+            .scratch_8 => write_masked(&bus_io.scratch_regs[0x8], mask, value),
+            .scratch_9 => write_masked(&bus_io.scratch_regs[0x9], mask, value),
+            .scratch_a => write_masked(&bus_io.scratch_regs[0xa], mask, value),
+            .scratch_b => write_masked(&bus_io.scratch_regs[0xb], mask, value),
+            .scratch_c => write_masked(&bus_io.scratch_regs[0xc], mask, value),
+            .scratch_d => write_masked(&bus_io.scratch_regs[0xd], mask, value),
+            .scratch_e => write_masked(&bus_io.scratch_regs[0xe], mask, value),
+            .scratch_f => write_masked(&bus_io.scratch_regs[0xf], mask, value),
 
-            .sp_l => write_masked(low_byte(&io.sp), mask, value),
-            .sp_h => write_masked(high_byte(&io.sp), mask, value),
-            .sreg => write_masked(@ptrCast(io.sreg), mask, value),
+            .sp_l => write_masked(low_byte(&bus_io.sp), mask, value),
+            .sp_h => write_masked(high_byte(&bus_io.sp), mask, value),
+            .sreg => write_masked(@ptrCast(bus_io.sreg), mask, value),
 
-            .ramp_x => write_masked(&io.ramp_x, mask, value),
-            .ramp_y => write_masked(&io.ramp_y, mask, value),
-            .ramp_z => write_masked(&io.ramp_z, mask, value),
-            .ramp_d => write_masked(&io.ramp_d, mask, value),
-            .e_ind => write_masked(&io.e_ind, mask, value),
+            .ramp_x => write_masked(&bus_io.ramp_x, mask, value),
+            .ramp_y => write_masked(&bus_io.ramp_y, mask, value),
+            .ramp_z => write_masked(&bus_io.ramp_z, mask, value),
+            .ramp_d => write_masked(&bus_io.ramp_d, mask, value),
+            .e_ind => write_masked(&bus_io.e_ind, mask, value),
 
             _ => std.debug.panic(
                 "illegal i/o write to undefined register 0x{X:0>2} with value=0x{X:0>2}, mask=0x{X:0>2}",
@@ -438,8 +481,8 @@ const IO = struct {
     }
 
     fn dev_check_exit(ctx: *anyopaque) ?u8 {
-        const io: *IO = @ptrCast(@alignCast(ctx));
-        if (io.exit_code) |code| {
+        const bus_io: *IO = @ptrCast(@alignCast(ctx));
+        if (bus_io.exit_code) |code| {
             return code;
         }
         return null;

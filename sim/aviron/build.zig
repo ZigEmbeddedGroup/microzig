@@ -28,11 +28,9 @@ pub fn build(b: *Build) !void {
     );
 
     // Deps
-    const args_dep = b.dependency("args", .{});
     const ihex_dep = b.dependency("ihex", .{});
 
     // Dep modules
-    const args_module = args_dep.module("args");
     const ihex_module = ihex_dep.module("ihex");
 
     // Options
@@ -69,7 +67,6 @@ pub fn build(b: *Build) !void {
         }),
         .use_llvm = true,
     });
-    aviron_exe.root_module.addImport("args", args_module);
     aviron_exe.root_module.addImport("ihex", ihex_module);
     aviron_exe.root_module.addImport("aviron", aviron_module);
     b.installArtifact(aviron_exe);
@@ -110,7 +107,7 @@ pub fn build(b: *Build) !void {
 
     // Set up test scanning - this reads existing JSON files and runs tests
     // Only set up if we're not exclusively running update-testsuite
-    try add_test_suite(b, test_step, debug_testsuite_step, target, avr_target, optimize, args_module, aviron_module);
+    try add_test_suite(b, test_step, debug_testsuite_step, target, avr_target, optimize, aviron_module);
 }
 
 fn add_test_suite(
@@ -120,7 +117,6 @@ fn add_test_suite(
     host_target: ResolvedTarget,
     avr_target: ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
-    args_module: *Build.Module,
     aviron_module: *Build.Module,
 ) !void {
     const unit_tests = b.addTest(.{
@@ -153,21 +149,22 @@ fn add_test_suite(
         }),
         .use_llvm = true,
     });
-    testrunner_exe.root_module.addImport("args", args_module);
     testrunner_exe.root_module.addImport("aviron", aviron_module);
 
     debug_step.dependOn(&b.addInstallArtifact(testrunner_exe, .{}).step);
 
+    const io = b.graph.io;
+
     // Scan the testsuite directory for files. Based on the extension, either load or compile them.
     // Files in testsuite.avr-gcc will be compiled with avr-gcc and have the output copied to
     // this directory.
-    var walkdir = try b.build_root.handle.openDir("testsuite", .{ .iterate = true });
-    defer walkdir.close();
+    var walkdir = try b.build_root.handle.openDir(io, "testsuite", .{ .iterate = true });
+    defer walkdir.close(io);
 
     var walker = try walkdir.walk(b.allocator);
     defer walker.deinit();
 
-    while (try walker.next()) |entry| {
+    while (try walker.next(io)) |entry| {
         if (entry.kind != .file)
             continue;
 
@@ -217,8 +214,8 @@ fn add_test_suite(
             .ignore => continue,
 
             .compile => blk: {
-                var file = try entry.dir.openFile(entry.basename, .{});
-                defer file.close();
+                var file = try entry.dir.openFile(io, entry.basename, .{});
+                defer file.close(io);
 
                 const config = try parse_test_suite_config(b, file);
 
@@ -254,7 +251,7 @@ fn add_test_suite(
                     }),
                     .use_llvm = true,
                 });
-                test_payload.want_lto = false; // AVR has no LTO support!
+                test_payload.lto = .none; // AVR has no LTO support!
                 test_payload.verbose_link = true;
                 test_payload.verbose_cc = true;
                 test_payload.bundle_compiler_rt = false;
@@ -262,16 +259,16 @@ fn add_test_suite(
                 test_payload.setLinkerScript(b.path("linker.ld"));
 
                 if (is_c_test or is_asm_test) {
-                    test_payload.addIncludePath(b.path("testsuite"));
+                    test_payload.root_module.addIncludePath(b.path("testsuite"));
                 }
                 if (is_c_test) {
-                    test_payload.addCSourceFile(.{
+                    test_payload.root_module.addCSourceFile(.{
                         .file = source_file,
                         .flags = &.{},
                     });
                 }
                 if (is_asm_test) {
-                    test_payload.addAssemblyFile(source_file);
+                    test_payload.root_module.addAssemblyFile(source_file);
                 }
                 if (is_zig_test) {
                     test_payload.root_module.addAnonymousImport("testsuite", .{
@@ -294,9 +291,9 @@ fn add_test_suite(
             },
             .load => blk: {
                 const config_path = b.fmt("{s}.json", .{entry.basename});
-                const config = if (entry.dir.openFile(config_path, .{})) |file| cfg: {
-                    defer file.close();
-                    break :cfg try TestSuiteConfig.load(b.allocator, file);
+                const config = if (entry.dir.openFile(io, config_path, .{})) |file| cfg: {
+                    defer file.close(io);
+                    break :cfg try TestSuiteConfig.load(b.allocator, io, file);
                 } else |_| {
                     // If JSON file doesn't exist, skip this test (likely during testsuite update)
                     std.log.warn("Skipping test {s} - JSON config file {s} not found (run 'zig build update-testsuite' first)", .{ entry.path, config_path });
@@ -347,13 +344,14 @@ fn add_test_suite_update(
         .use_llvm = true,
     }).getEmittedBin();
 
-    var walkdir = try b.build_root.handle.openDir("testsuite.avr-gcc", .{ .iterate = true });
-    defer walkdir.close();
+    const io = b.graph.io;
+    var walkdir = try b.build_root.handle.openDir(io, "testsuite.avr-gcc", .{ .iterate = true });
+    defer walkdir.close(io);
 
     var walker = try walkdir.walk(b.allocator);
     defer walker.deinit();
 
-    while (try walker.next()) |entry| {
+    while (try walker.next(io)) |entry| {
         if (entry.kind != .file)
             continue;
 
@@ -389,8 +387,8 @@ fn add_test_suite_update(
             .ignore => continue,
 
             .compile => {
-                var file = try entry.dir.openFile(entry.basename, .{});
-                defer file.close();
+                var file = try entry.dir.openFile(io, entry.basename, .{});
+                defer file.close(io);
 
                 const config = try parse_test_suite_config(b, file);
 
@@ -447,22 +445,20 @@ fn add_test_suite_update(
     }
 }
 
-fn parse_test_suite_config(b: *Build, file: std.fs.File) !TestSuiteConfig {
+fn parse_test_suite_config(b: *Build, file: std.Io.File) !TestSuiteConfig {
+    const io = b.graph.io;
     var code = std.array_list.Managed(u8).init(b.allocator);
     defer code.deinit();
 
     var read_buf: [4096]u8 = undefined;
-    var file_reader = file.reader(&read_buf);
+    var file_reader = file.reader(io, &read_buf);
     const reader = &file_reader.interface;
 
     while (true) {
-        const line = reader.takeDelimiterExclusive('\n') catch |err| switch (err) {
-            error.EndOfStream => break,
-            else => |e| return e,
-        };
-
-        if (std.mem.startsWith(u8, line, "//!")) {
-            try code.appendSlice(line[3..]);
+        const comment_prefix = "//!";
+        const line = try reader.takeDelimiter('\n') orelse break;
+        if (std.mem.startsWith(u8, line, comment_prefix)) {
+            try code.appendSlice(line[comment_prefix.len..]);
             try code.appendSlice("\n");
         }
     }
@@ -486,7 +482,7 @@ fn generate_isa_tables(b: *Build, isa_mod: *Build.Module) LazyPath {
     const generate_tables_exe = b.addExecutable(.{
         .name = "aviron-generate-tables",
         .root_module = b.createModule(.{
-            .root_source_file = b.path("tools/generate-tables.zig"),
+            .root_source_file = b.path("tools/generate_tables.zig"),
             .target = b.graph.host,
             .optimize = .Debug,
             .imports = &.{

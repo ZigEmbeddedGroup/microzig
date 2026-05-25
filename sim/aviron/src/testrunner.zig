@@ -1,10 +1,9 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const aviron = @import("aviron");
-const args_parser = @import("args");
 const testconfig = @import("testconfig.zig");
 
-const Cli = struct {
+const CLI_Args = struct {
     help: bool = false,
     trace: bool = false,
 
@@ -22,33 +21,41 @@ const ExitMode = union(testconfig.ExitType) {
     system_exit: u8,
 };
 
+const RunTestWith_MCU_Options = struct {
+
+};
+
 fn run_test_with_mcu(
     allocator: std.mem.Allocator,
     mcu_name: []const u8,
     test_config: testconfig.TestSuiteConfig,
-    options: Cli,
+    options: RunTestWith_MCU_Options,
     elf_paths: []const []const u8,
 ) !void {
-    // Use comptime dispatch based on memory sizes (case-insensitive comparison)
-    if (std.ascii.eqlIgnoreCase(mcu_name, "ATmega328P")) {
-        try run_test(allocator, aviron.mcu.atmega328p, test_config, options, elf_paths);
-    } else if (std.ascii.eqlIgnoreCase(mcu_name, "ATtiny816")) {
-        try run_test(allocator, aviron.mcu.attiny816, test_config, options, elf_paths);
-    } else if (std.ascii.eqlIgnoreCase(mcu_name, "ATmega2560")) {
-        try run_test(allocator, aviron.mcu.atmega2560, test_config, options, elf_paths);
-    } else if (std.ascii.eqlIgnoreCase(mcu_name, "ATxmega128A4U")) {
-        try run_test(allocator, aviron.mcu.xmega128a4u, test_config, options, elf_paths);
-    } else {
+    const mcu = if (std.ascii.eqlIgnoreCase(mcu_name, "ATmega328P")) 
+aviron.mcu.atmega328p
+     else if (std.ascii.eqlIgnoreCase(mcu_name, "ATtiny816")) 
+         aviron.mcu.attiny816
+     else if (std.ascii.eqlIgnoreCase(mcu_name, "ATmega2560")) 
+         aviron.mcu.atmega2560
+     else if (std.ascii.eqlIgnoreCase(mcu_name, "ATxmega128A4U")) 
+         aviron.mcu.xmega128a4u
+     else {
         std.debug.print("MCU '{s}' not yet supported in test runner\n", .{mcu_name});
         return error.UnsupportedMCU;
-    }
+    };
+
+        try run_test(allocator, mcu, test_config, options, elf_paths);
 }
+
+const RunTestOptions = struct {
+};
 
 fn run_test(
     allocator: std.mem.Allocator,
-    comptime mcu_config: anytype,
+    mcu_config: aviron.mcu.Config,
     test_config: testconfig.TestSuiteConfig,
-    options: Cli,
+    options: RunTestOptions,
     elf_paths: []const []const u8,
 ) !void {
     var flash_storage = aviron.Flash.Static(mcu_config.flash_size){};
@@ -251,17 +258,14 @@ fn run_test(
     std.process.exit(if (ok) 0x00 else 0x01);
 }
 
-pub fn main() !u8 {
-    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    defer arena.deinit();
 
-    const allocator = arena.allocator();
+pub fn main(init: std.process.Init) !u8 {
+    const arena = init.arena;
 
-    var cli = args_parser.parseForCurrentProcess(Cli, allocator, .print) catch return 1;
-    defer cli.deinit();
+    //var cli = args_parser.parseForCurrentProcess(Cli, allocator, .print) catch return 1;
+    //defer cli.deinit();
 
     const config_path = cli.options.config orelse @panic("missing configuration path!");
-
     const config = blk: {
         var file = try std.fs.cwd().openFile(config_path, .{});
         defer file.close();
