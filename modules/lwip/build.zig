@@ -22,15 +22,15 @@ pub fn build(b: *std.Build) void {
         .linkage = .static,
     });
 
-    lwip.addCSourceFiles(.{
+    lwip.root_module.addCSourceFiles(.{
         .root = upstream.path("src"),
         .files = &files,
         .flags = &flags,
     });
-    lwip.addIncludePath(upstream.path("src/include"));
+    lwip.root_module.addIncludePath(upstream.path("src/include"));
 
     if (maybe_include_dir) |include_dir| {
-        lwip.addIncludePath(include_dir);
+        lwip.root_module.addIncludePath(include_dir);
         lwip.installHeadersDirectory(include_dir, "", .{});
     }
 
