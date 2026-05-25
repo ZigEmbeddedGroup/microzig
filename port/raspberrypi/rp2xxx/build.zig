@@ -319,7 +319,7 @@ pub fn build(b: *std.Build) !void {
             }},
         }),
     });
-    unit_tests.addIncludePath(b.path("src/hal/pio/assembler"));
+    unit_tests.root_module.addIncludePath(b.path("src/hal/pio/assembler"));
 
     const unit_tests_run = b.addRunArtifact(unit_tests);
     const test_step = b.step("test", "Run platform agnostic unit tests");

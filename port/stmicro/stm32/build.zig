@@ -101,7 +101,6 @@ pub fn build(b: *std.Build) !void {
     generate_exe.root_module.addImport("regz", regz);
 
     const generate_run = b.addRunArtifact(generate_exe);
-    generate_run.max_stdio_size = std.math.maxInt(usize);
     generate_run.addFileArg(stm32_data_generated.path("."));
 
     const generate_step = b.step("generate", "Generate chips file 'src/Chips.zig'");
