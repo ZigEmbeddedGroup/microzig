@@ -2,7 +2,7 @@ const std = @import("std");
 const Build = std.Build;
 
 pub fn build(b: *Build) void {
-    const validation_step = b.step("validate", "Runs the test suite and validates everything. Automatically triggered in Debug builds.");
+    const validation_step = b.step("test", "Runs the test suite and validates everything. Automatically triggered in Debug builds.");
 
     //const maybe_gcc = b.findProgram(&.{"gcc"}, &.{}) catch null;
     const maybe_clang = b.findProgram(&.{"clang"}, &.{}) catch null;
@@ -28,16 +28,18 @@ pub fn build(b: *Build) void {
 
                 {
                     // Check if the syntax of all of our header files is valid:
-                    const syntax_validator = b.addStaticLibrary(.{
+                    const syntax_validator = b.addLibrary(.{
                         .name = "syntax-validator",
-                        .target = b.graph.host,
-                        .optimize = .Debug,
+                        .root_module = b.createModule(.{
+                            .target = b.graph.host,
+                            .optimize = .Debug,
+                        }),
                     });
-                    syntax_validator.addCSourceFile(.{
+                    syntax_validator.root_module.addCSourceFile(.{
                         .file = syntax_validator_source,
                         .flags = &common_c_flags,
                     });
-                    syntax_validator.linkLibrary(foundation);
+                    syntax_validator.root_module.linkLibrary(foundation);
                     _ = syntax_validator.getEmittedBin();
 
                     // Just compile, do not install:
@@ -69,7 +71,7 @@ pub fn build(b: *Build) void {
                     ext_compiler.addFileArg(syntax_validator_source);
 
                     ext_compiler.addArg("-o");
-                    ext_compiler.addArg(b.pathJoin(&.{ b.makeTempPath(), "dummy" })); // we don't really care where this ends up
+                    _ = ext_compiler.addOutputFileArg("dummy");
 
                     validation_step.dependOn(&ext_compiler.step);
                 }
@@ -82,16 +84,18 @@ pub fn build(b: *Build) void {
                     "FOUNDATION_LIBC_ASSERT_EXPECTED",
                 }) |assert_mode| {
                     // Check if the syntax of all of our header files is valid:
-                    const assert_validator = b.addStaticLibrary(.{
+                    const assert_validator = b.addLibrary(.{
                         .name = "assert-validator",
-                        .target = b.graph.host,
-                        .optimize = .Debug,
+                        .root_module = b.createModule(.{
+                            .target = b.graph.host,
+                            .optimize = .Debug,
+                        }),
                     });
-                    assert_validator.addCSourceFile(.{
+                    assert_validator.root_module.addCSourceFile(.{
                         .file = b.path("src/assert-validator.c"),
                         .flags = &common_c_flags,
                     });
-                    assert_validator.linkLibrary(foundation);
+                    assert_validator.root_module.linkLibrary(foundation);
                     _ = assert_validator.getEmittedBin();
 
                     assert_validator.root_module.addCMacro("FOUNDATION_LIBC_ASSERT", assert_mode);
