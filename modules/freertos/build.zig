@@ -165,7 +165,7 @@ fn addPicoSDKIncludeDirs(
         .PICO_SDK_VERSION_REVISION = "0",
     });
 
-    _ = wf.addCopyFile(cmake_version_file.getOutput(), "picosdk_generated/pico/version.h");
+    _ = wf.addCopyFile(cmake_version_file.getOutputFile(), "picosdk_generated/pico/version.h");
 
     // Generate required config_autogen.h (this support custom #include directives)
     _ = wf.addCopyFile(pico_root.path(b, "bazel/include/pico/config_autogen.h"), "picosdk_generated/pico/config_autogen.h");
@@ -206,16 +206,17 @@ fn addAllIncludeDirs(
     subdir: []const u8,
 ) void {
     const allocator = b.allocator;
+    const io = b.graph.io;
     const full = std.fs.path.join(allocator, &.{ base.getPath(b), subdir }) catch @panic("join");
     defer allocator.free(full);
 
-    var dir = std.fs.openDirAbsolute(full, .{ .iterate = true }) catch return;
-    defer dir.close();
+    var dir = std.Io.Dir.cwd().openDir(io, full, .{ .iterate = true }) catch return;
+    defer dir.close(io);
 
     var walker = dir.walk(allocator) catch @panic("walk");
     defer walker.deinit();
 
-    while (walker.next() catch @panic("next")) |e| {
+    while (walker.next(io) catch @panic("next")) |e| {
         if (e.kind != .directory) continue;
         if (!std.mem.eql(u8, std.fs.path.basename(e.path), "include")) continue;
 
