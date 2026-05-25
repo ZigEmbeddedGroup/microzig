@@ -139,23 +139,37 @@ pub fn MicroBuild(port_select: PortSelect) type {
         const Self = @This();
 
         const SelectedPorts = blk: {
-            var field_names: [port_list.len][]const u8 = undefined;
-            var field_types: [port_list.len]type = undefined;
-            var field_attrs: [port_list.len]std.builtin.Type.StructField.Attributes = undefined;
-            for (port_list, 0..) |port, i| {
-                if (@field(port_select, port.name)) {
-                    const typ = custom_lazy_import(port.dep_name) orelse struct {};
+            const count = count_blk: {
+                var count: usize = 0;
+                for (port_list) |port| {
+                    if (@field(port_select, port.name)) {
+                        count += 1;
+                    }
+                }
 
-                    field_names[i] = port.name;
-                    field_types[i] = typ;
-                    field_attrs[i] = .{
-                        .alignment = @alignOf(type),
-                        .default_value_ptr = null,
-                    };
+                break :count_blk count;
+            };
+
+            var field_names: [count][]const u8 = undefined;
+            var field_types: [count]type = undefined;
+            var field_attrs: [count]std.builtin.Type.StructField.Attributes = undefined;
+
+            if (count > 0) {
+                var i: usize = 0;
+                for (port_list) |port| {
+                    if (@field(port_select, port.name)) {
+                        const typ = custom_lazy_import(port.dep_name) orelse struct {};
+
+                        field_names[i] = port.name;
+                        field_types[i] = typ;
+                        field_attrs[i] = .{};
+
+                        i += 1;
+                    }
                 }
             }
 
-            break :blk @Struct(.auto, null, field_names, field_types, field_attrs);
+            break :blk @Struct(.auto, null, &field_names, &field_types, &field_attrs);
         };
 
         const InitReturnType = blk: {
