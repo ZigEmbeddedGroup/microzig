@@ -22,10 +22,10 @@ boards: struct {
     },
 },
 
-pub fn init(dep: *std.Build.Dependency) Self {
+pub fn init(dep: *std.Build.Dependency) ?Self {
     const b = dep.builder;
 
-    const nrfx = b.dependency("nrfx", .{});
+    const nrfx = b.lazyDependency("nrfx", .{}) orelse return null;
 
     const hal: microzig.HardwareAbstractionLayer = .{
         .root_source_file = b.path("src/hal.zig"),

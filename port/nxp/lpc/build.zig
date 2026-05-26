@@ -13,7 +13,7 @@ boards: struct {
     },
 },
 
-pub fn init(dep: *std.Build.Dependency) Self {
+pub fn init(dep: *std.Build.Dependency) ?Self {
     const b = dep.builder;
 
     const chip_lpc176x5x: microzig.Target = .{

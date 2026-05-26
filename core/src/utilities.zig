@@ -246,9 +246,8 @@ pub fn max_enum_tag(T: type) @typeInfo(T).@"enum".tag_type {
 }
 
 pub fn GenerateInterruptEnum(TagType: type) type {
-    if (@typeInfo(TagType) != .int) @compileError("expected an int type");
-
-    if (microzig.chip.interrupts.len == 0) return enum {};
+    if (@typeInfo(TagType) != .int)
+        @compileError("expected an int type");
 
     const count = microzig.chip.interrupts.len;
     var field_names: [count][]const u8 = undefined;
@@ -256,7 +255,7 @@ pub fn GenerateInterruptEnum(TagType: type) type {
 
     for (microzig.chip.interrupts, &field_names, &field_values) |interrupt, *field_name, *field_value| {
         field_name.* = interrupt.name;
-        field_value.* = interrupt.value;
+        field_value.* = interrupt.index;
     }
 
     return @Enum(TagType, .exhaustive, &field_names, &field_values);

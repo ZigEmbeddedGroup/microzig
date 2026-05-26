@@ -767,44 +767,38 @@ pub const GlobalConfiguration = struct {
     }
 
     pub fn PinsType(self: GlobalConfiguration) type {
-        var fields: []const StructField = &.{};
+        var count: usize = 0;
         for (@typeInfo(GlobalConfiguration).@"struct".fields) |field| {
-            if (@field(self, field.name)) |pin_config| {
-                var pin_field = StructField{
-                    .is_comptime = false,
-                    .default_value_ptr = null,
-
-                    // initialized below:
-                    .name = undefined,
-                    .type = undefined,
-                    .alignment = undefined,
-                };
-
-                pin_field.name = pin_config.name orelse field.name;
-                if (pin_config.function == .SIO) {
-                    pin_field.type = gpio.Pin;
-                } else if (pin_config.function.is_pwm()) {
-                    pin_field.type = pwm.Pwm;
-                } else if (pin_config.function.is_adc()) {
-                    pin_field.type = adc.Input;
-                } else {
-                    continue;
-                }
-
-                pin_field.alignment = @alignOf(field.type);
-
-                fields = fields ++ &[_]StructField{pin_field};
+            if (@field(self, field.name) != null) {
+                count += 1;
             }
         }
 
-        return @Type(.{
-            .@"struct" = .{
-                .layout = .auto,
-                .is_tuple = false,
-                .fields = fields,
-                .decls = &.{},
-            },
-        });
+        var field_names: [count][]const u8 = undefined;
+        var field_types: [count]type = undefined;
+        var field_attrs: [count]std.builtin.Type.StructField.Attributes = undefined;
+
+        var i: usize = 0;
+        for (@typeInfo(GlobalConfiguration).@"struct".fields) |field| {
+            if (@field(self, field.name)) |pin_config| {
+                field_names[i] = pin_config.name orelse field.name;
+                field_attrs[i] = .{};
+                field_types[i] = if (pin_config.function == .SIO)
+                    gpio.Pin
+                else if (pin_config.function.is_pwm())
+                    pwm.Pwm
+                else if (pin_config.function.is_adc())
+                    adc.Input
+                else
+                    // TODO: what does this mean? should this be a compilation
+                    // error?
+                    continue;
+
+                i += 1;
+            }
+        }
+
+        return @Struct(.auto, null, &field_names, &field_types, &field_attrs);
     }
 
     /// Populate and return the PinsType struct

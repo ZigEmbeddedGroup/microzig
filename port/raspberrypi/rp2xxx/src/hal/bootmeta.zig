@@ -60,12 +60,12 @@ pub fn Block(Items: type) type {
     };
 }
 
-pub const ImageDef = packed struct {
+pub const ImageDef = packed struct(u32) {
     item_type: u8 = 0x42,
     block_size: u8 = 0x01,
     image_type_flags: ImageTypeFlags,
 
-    pub const ImageTypeFlags = packed struct {
+    pub const ImageTypeFlags = packed struct(u16) {
         image_type: ImageType,
         exe_security: ExeSecurity,
         reserved0: u2 = 0,
