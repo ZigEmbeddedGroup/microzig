@@ -8,6 +8,7 @@
         .@"mcux-soc-svd" = .{
             .url = "https://github.com/nxp-mcuxpresso/mcux-soc-svd/archive/refs/tags/MCUX_2.16.100.tar.gz",
             .hash = "N-V-__8AADdFeofKFhsuzMbDdzLAKB4-syMJsHSEOTYGFrlH",
+            .lazy = true,
         },
     },
     .paths = .{

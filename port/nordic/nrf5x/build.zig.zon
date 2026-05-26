@@ -7,6 +7,7 @@
         .nrfx = .{
             .url = "https://github.com/NordicSemiconductor/nrfx/archive/refs/tags/v3.11.0.tar.gz",
             .hash = "N-V-__8AABC-kgxbmC3Prd8fgisfbLs1giU34ofX1vz9bwaA",
+            .lazy = true,
         },
     },
     .paths = .{

@@ -18,7 +18,9 @@ const avr_target_query = std.Target.Query{
 };
 
 pub fn build(b: *Build) !void {
-    // Targets
+    const target = b.standardTargetOptions(.{});
+    const optimize = b.standardOptimizeOption(.{});
+
     const test_step = b.step("test", "Run test suite");
     const run_step = b.step("run", "Run the app");
     const debug_testsuite_step = b.step("debug-testsuite", "Installs all testsuite examples");
@@ -27,17 +29,12 @@ pub fn build(b: *Build) !void {
         "Updates the folder testsuite with the data in testsuite.avr-gcc. Requires avr-gcc to be present!",
     );
 
-    // Deps
     const ihex_dep = b.dependency("ihex", .{});
+    const flags_dep = b.dependency("flags", .{});
 
-    // Dep modules
     const ihex_module = ihex_dep.module("ihex");
+    const flags_module = flags_dep.module("flags");
 
-    // Options
-    const target = b.standardTargetOptions(.{});
-    const optimize = b.standardOptimizeOption(.{});
-
-    // Modules
     const isa_module = b.createModule(.{ .root_source_file = b.path("src/shared/isa.zig") });
     const isa_tables_module = b.createModule(.{
         .root_source_file = generate_isa_tables(b, isa_module),
@@ -64,11 +61,14 @@ pub fn build(b: *Build) !void {
             .root_source_file = b.path("src/main.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "ihex", .module = ihex_module },
+                .{ .name = "aviron", .module = aviron_module },
+                .{ .name = "flags", .module = flags_module },
+            },
         }),
         .use_llvm = true,
     });
-    aviron_exe.root_module.addImport("ihex", ihex_module);
-    aviron_exe.root_module.addImport("aviron", aviron_module);
     b.installArtifact(aviron_exe);
 
     const run_cmd = b.addRunArtifact(aviron_exe);

@@ -2,6 +2,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 const aviron = @import("aviron");
 const ihex = @import("ihex");
+const flags = @import("flags");
 
 const log = std.log.scoped(.main);
 
@@ -168,7 +169,7 @@ const CLI_Args = struct {
     breakpoint: ?u24 = null,
     gas: ?u64 = null,
 
-    const default: CLI_Args = .{};
+    pub const default: CLI_Args = .{};
 
     const usage =
         \\[--help] [--trace] [--mcu=<value>] [--info] [--format=<value>] [--breakpoint=<value>] [--gas=<value>] <file> ...
@@ -192,49 +193,10 @@ const CLI_Args = struct {
     ;
 };
 
-fn parse_bool(str: []const u8) !bool {
-    return if (std.mem.eql(u8, str, "true"))
-        true
-    else if (std.mem.eql(u8, str, "false"))
-        false
-    else
-        error.InvalidBoolStr;
-}
-
 pub fn main(init: std.process.Init) !u8 {
     const gpa = init.gpa;
     const args = try init.minimal.args.toSlice(init.arena.allocator());
-
-    var cli_args: CLI_Args = .default;
-    const positionals = for (args, 0..) |arg, i| {
-        if (!std.mem.startsWith(u8, arg, "--"))
-            break args[i..];
-
-        const equals = std.mem.findScalar(u8, arg, '=');
-        const key = arg[2 .. equals orelse arg.len];
-        const value = arg[equals orelse arg.len .. arg.len];
-        inline for (@typeInfo(CLI_Args).@"struct".fields) |field| {
-            if (std.mem.eql(u8, key, field.name)) {
-                @field(cli_args, field.name) = switch (field.type) {
-                    bool => if (equals != null)
-                        try parse_bool(value)
-                    else
-                        true,
-
-                    MCU, FileFormat => std.meta.stringToEnum(field.type, value) orelse {
-                        log.err("Invalid value for --{s}: '{s}'", .{ key, value });
-                        return error.InvalidValue;
-                    },
-                    ?u24 => try std.fmt.parseInt(u24, value, 0),
-                    ?u64 => try std.fmt.parseInt(u64, value, 0),
-                    else => unreachable,
-                };
-            }
-        }
-
-        log.err("Unrecognied CLI argument: --{s}", .{key});
-        return error.UnrecognizedCliArgument;
-    } else &.{};
+    const cli_args, const positionals = try flags.parse(CLI_Args, init.arena.allocator(), args);
 
     const io = init.io;
     if (cli_args.help) {

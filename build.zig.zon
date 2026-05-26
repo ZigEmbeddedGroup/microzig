@@ -15,6 +15,7 @@
         .@"tools/regz" = .{ .path = "tools/regz" },
         .@"tools/uf2" = .{ .path = "tools/uf2" },
         .@"tools/dfu" = .{ .path = "tools/dfu" },
+        .@"tools/flags" = .{ .path = "tools/flags" },
 
         // modules
         .@"modules/foundation-libc" = .{ .path = "modules/foundation-libc" },
