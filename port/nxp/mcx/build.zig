@@ -13,10 +13,10 @@ boards: struct {
     frdm_mcxn947: *const microzig.Target,
 },
 
-pub fn init(dep: *std.Build.Dependency) Self {
+pub fn init(dep: *std.Build.Dependency) ?Self {
     const b = dep.builder;
 
-    const mcux_soc_svd = b.dependency("mcux-soc-svd", .{});
+    const mcux_soc_svd = b.lazyDependency("mcux-soc-svd", .{}) orelse return null;
 
     const chip_mcxa153: microzig.Target = .{
         .dep = dep,

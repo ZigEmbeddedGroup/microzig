@@ -1407,9 +1407,10 @@ STM32WLE5J8: *microzig.Target,
 STM32WLE5JB: *microzig.Target,
 STM32WLE5JC: *microzig.Target,
 
-pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) Self {
+pub fn init(dep: *std.Build.Dependency, hal_imports: []std.Build.Module.Import) ?Self {
     const b = dep.builder;
-    const embassy = b.dependency("stm32-data-generated", .{}).path(".");
+    const embassy_dep = b.lazyDependency("stm32-data-generated", .{}) orelse return null;
+    const embassy = embassy_dep.path(".");
     var ret: Self = undefined;
 
     ret.STM32C011D6 = b.allocator.create(microzig.Target) catch @panic("out of memory");

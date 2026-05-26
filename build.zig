@@ -55,15 +55,6 @@ pub fn build(b: *Build) void {
     );
 
     b.installArtifact(generate_linker_script_exe);
-
-    const boxzer_dep = b.dependency("boxzer", .{});
-    const boxzer_exe = boxzer_dep.artifact("boxzer");
-    const boxzer_run = b.addRunArtifact(boxzer_exe);
-    if (b.args) |args|
-        boxzer_run.addArgs(args);
-
-    const package_step = b.step("package", "Package monorepo using boxzer");
-    package_step.dependOn(&boxzer_run.step);
 }
 
 pub const PortSelect = struct {

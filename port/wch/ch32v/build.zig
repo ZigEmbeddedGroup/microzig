@@ -108,7 +108,7 @@ boards: struct {
     },
 },
 
-pub fn init(dep: *std.Build.Dependency) Self {
+pub fn init(dep: *std.Build.Dependency) ?Self {
     const b = dep.builder;
 
     const chip_ch32v003_base: BaseChip = .{

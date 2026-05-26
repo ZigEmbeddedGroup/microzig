@@ -14,7 +14,7 @@ boards: struct {
     },
 },
 
-pub fn init(dep: *std.Build.Dependency) Self {
+pub fn init(dep: *std.Build.Dependency) ?Self {
     const b = dep.builder;
 
     const hal_f103: microzig.HardwareAbstractionLayer = .{

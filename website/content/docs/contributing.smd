@@ -53,17 +53,6 @@ Here is an overview of the top level directories of the monorepo:
   for flashing MCUs.
 - `website`: This website, which is built using [zine](https://zine-ssg.io).
 
-### Packaging
-
-MicroZig does not force users to download the entire codebase if they use a
-released version. This is done through a small project called
-[boxzer](https://github.com/mattnite/boxzer), which creates a separate tarball
-for each package in MicroZig. With the use of lazy dependencies in the Zig
-build system, a user will download the `esp` package for their hardware, but
-nothing related to `stm32`. This will enable us to support a lot of hardware
-without MicroZig users needing to download gigabytes everytime they run their
-CI.
-
 ## Naming Sub-packages
 
 We try to keep package names identical to their path in the project, with

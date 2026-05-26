@@ -18,11 +18,10 @@ boards: struct {
     },
 },
 
-pub fn init(dep: *std.Build.Dependency) Self {
+pub fn init(dep: *std.Build.Dependency) ?Self {
     const b = dep.builder;
 
-    const atpack = b.dependency("atpack", .{});
-
+    const atpack = b.lazyDependency("atpack", .{}) orelse return null;
     const avr5_target: std.Target.Query = .{
         .cpu_arch = .avr,
         .cpu_model = .{ .explicit = &std.Target.avr.cpu.avr5 },

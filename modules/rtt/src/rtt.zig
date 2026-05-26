@@ -422,39 +422,29 @@ pub const channel = struct {
 ///
 /// Fields follow the naming convention "up_buffer_N" for up channels, and "down_buffer_N" for down channels.
 fn BuildBufferStorageType(comptime up_channels: []const channel.Config, comptime down_channels: []const channel.Config) type {
-    const fields: []const std.builtin.Type.StructField = comptime v: {
-        var fields_temp: [up_channels.len + down_channels.len]std.builtin.Type.StructField = undefined;
-        for (up_channels, 0..) |up_cfg, idx| {
-            const buffer_type = [up_cfg.buffer_size]u8;
-            fields_temp[idx] = .{
-                .name = std.fmt.comptimePrint("up_buffer_{d}", .{idx}),
-                .type = buffer_type,
-                .is_comptime = false,
-                .alignment = @alignOf(buffer_type),
-                .default_value_ptr = null,
-            };
-        }
-        for (down_channels, 0..) |down_cfg, idx| {
-            const buffer_type = [down_cfg.buffer_size]u8;
-            fields_temp[up_channels.len + idx] = .{
-                .name = std.fmt.comptimePrint("down_buffer_{d}", .{idx}),
-                .type = buffer_type,
-                .is_comptime = false,
-                .alignment = @alignOf(buffer_type),
-                .default_value_ptr = null,
-            };
-        }
-        break :v &fields_temp;
-    };
+    const count = up_channels.len + down_channels.len;
+    var field_names: [count][]const u8 = undefined;
+    var field_types: [count]type = undefined;
+    var field_attrs: [count]std.builtin.Type.StructField.Attributes = undefined;
 
-    return @Type(.{
-        .@"struct" = .{
-            .layout = .@"extern",
-            .fields = fields,
-            .decls = &[_]std.builtin.Type.Declaration{},
-            .is_tuple = false,
-        },
-    });
+    var i: usize = 0;
+    for (up_channels, 0..) |up_cfg, idx| {
+        field_names[i] = std.fmt.comptimePrint("up_buffer_{d}", .{idx});
+        field_types[i] = [up_cfg.buffer_size]u8;
+        field_attrs[i] = .{};
+
+        i += 1;
+    }
+
+    for (down_channels, 0..) |down_cfg, idx| {
+        field_names[i] = std.fmt.comptimePrint("down_buffer_{d}", .{idx});
+        field_types[i] = [down_cfg.buffer_size]u8;
+        field_attrs[i] = .{};
+
+        i += 1;
+    }
+
+    return @Struct(.@"extern", null, &field_names, &field_types, &field_attrs);
 }
 
 /// Creates a control block struct for the given channel configs. Buffer storage is also contained within this struct, although

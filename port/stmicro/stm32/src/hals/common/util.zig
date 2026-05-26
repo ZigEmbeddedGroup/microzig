@@ -12,69 +12,36 @@ pub fn match_name(heystack: []const u8, needles: []const []const u8) bool {
 }
 
 pub fn create_peripheral_enum(comptime bases_name: []const []const u8) type {
-    var names: [70]std.builtin.Type.EnumField = undefined;
-    var names_index = 0;
-    const peripheral = @typeInfo(peripherals);
+    var field_names: []const []const u8 = &.{};
+    var field_values: []const usize = &.{};
     @setEvalBranchQuota(10_000);
-    switch (peripheral) {
-        .@"struct" => |data| {
-            for (data.decls) |decls| {
-                const decl_name = decls.name;
-                if (match_name(decl_name, bases_name)) {
-                    names[names_index] = std.builtin.Type.EnumField{
-                        .name = decls.name,
-                        .value = names_index,
-                    };
-                    names_index += 1;
-                }
-            }
-        },
-        else => unreachable,
+    for (@typeInfo(peripherals).@"struct".decls, 0..) |decl, i| {
+        if (match_name(decl.name, bases_name)) {
+            field_names = field_names ++ .{decl.name};
+            field_values = field_values ++ .{i};
+        }
     }
 
-    const peri_enum = std.builtin.Type{ .@"enum" = .{
-        .tag_type = usize,
-        .is_exhaustive = true,
-        .decls = &[_]std.builtin.Type.Declaration{},
-        .fields = names[0..names_index],
-    } };
-
-    return @Type(peri_enum);
+    return @Enum(usize, .exhaustive, field_names, field_values[0..]);
 }
 
 pub fn sub_peripheral_enum(comptime T: type, comptime keep_name: []const []const u8, match_type: ?[]const u8) type {
-    const enum_info = @typeInfo(T);
-    var names_index = 0;
-
-    var names: [10]std.builtin.Type.EnumField = undefined;
-
+    var field_names: []const []const u8 = &.{};
+    var field_values: []const usize = &.{};
     @setEvalBranchQuota(10_000);
-    switch (enum_info) {
-        .@"enum" => |data| {
-            for (data.fields) |field| {
-                if (match_name(field.name, keep_name)) {
-                    if (match_type) |match| {
-                        const type_name = @typeName(@TypeOf(@field(peripherals, field.name)));
-                        _ = std.mem.indexOf(u8, type_name, match) orelse continue;
-                    }
-                    names[names_index] = std.builtin.Type.EnumField{
-                        .name = field.name,
-                        .value = field.value,
-                    };
-                    names_index += 1;
-                }
+    for (@typeInfo(T).@"enum".fields) |field| {
+        if (match_name(field.name, keep_name)) {
+            if (match_type) |match| {
+                const type_name = @typeName(@TypeOf(@field(peripherals, field.name)));
+                _ = std.mem.indexOf(u8, type_name, match) orelse continue;
             }
-        },
-        else => unreachable,
+
+            field_names = field_names ++ .{field.name};
+            field_values = field_values ++ .{field.value};
+        }
     }
 
-    const new_enum = std.builtin.Type{ .@"enum" = .{
-        .tag_type = usize,
-        .is_exhaustive = true,
-        .decls = &[_]std.builtin.Type.Declaration{},
-        .fields = names[0..names_index],
-    } };
-    return @Type(new_enum);
+    return @Enum(usize, .exhaustive, field_names, field_values[0..]);
 }
 
 pub fn load_timer_interrupt(handler: *const fn () callconv(.c) void) microzig.cpu.InterruptOptions {
