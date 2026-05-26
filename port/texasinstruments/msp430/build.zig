@@ -12,8 +12,8 @@ const Boards = struct {
     launch_pad_msp430g2553: *microzig.Target,
 };
 
-pub fn init(dep: *std.Build.Dependency) Self {
-    const chips = Chips.init(dep);
+pub fn init(dep: *std.Build.Dependency) ?Self {
+    const chips = Chips.init(dep) orelse return null;
     const boards = Boards{
         .launch_pad_msp430f5529 = chips.MSP430F5529.derive(.{
             .board = .{
@@ -38,7 +38,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
 }
 
 pub fn build(b: *std.Build) void {
-    const ti_data = b.dependency("ti_data", .{});
+    const ti_data = b.lazyDependency("ti_data", .{}) orelse return;
     const targetdb = ti_data.path("targetdb");
 
     const generate_optimize = .ReleaseSafe;

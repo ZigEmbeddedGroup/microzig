@@ -6,9 +6,9 @@ const Self = @This();
 MSP430F5529: *microzig.Target,
 MSP430G2553: *microzig.Target,
 
-pub fn init(dep: *std.Build.Dependency) Self {
+pub fn init(dep: *std.Build.Dependency) ?Self {
     const b = dep.builder;
-    const ti_data = b.dependency("ti_data", .{});
+    const ti_data = b.lazyDependency("ti_data", .{}) orelse return null;
     const targetdb = ti_data.path("targetdb");
 
     var ret: Self = undefined;

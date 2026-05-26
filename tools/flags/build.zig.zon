@@ -1,0 +1,12 @@
+.{
+    .name = .mz_tools_flags,
+    .version = "0.0.1",
+    .minimum_zig_version = "0.16.0",
+    .fingerprint = 0xa32e1a54c66c4a49,
+    .paths = .{
+        "README.md",
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}

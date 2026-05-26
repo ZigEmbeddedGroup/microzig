@@ -4,6 +4,7 @@
     .fingerprint = 0xfc536f957aeaeb54,
     .dependencies = .{
         .@"bounded-array" = .{ .path = "../../modules/bounded-array" },
+        .flags = .{ .path = "../../tools/flags" },
         .ihex = .{
             .url = "git+https://github.com/mattnite/zig-ihex#9deb291104ecd7dcaab0db27bf05252764600947",
             .hash = "ihex-0.1.0-1POu25EyAADaasaxKmaex5A6D_4cohzZkOW4qpn_mav0",

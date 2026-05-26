@@ -203,9 +203,8 @@ pub fn MicroBuild(port_select: PortSelect) type {
             var ports: SelectedPorts = undefined;
             inline for (port_list) |port| {
                 if (@field(port_select, port.name)) {
-                    const port_dep = dep.builder.lazyDependency(port.dep_name, .{}).?;
-                    @field(ports, port.name) =
-                        custom_lazy_import(port.dep_name).?.init(port_dep);
+                    const port_dep = dep.builder.lazyDependency(port.dep_name, .{}) orelse return null;
+                    @field(ports, port.name) = custom_lazy_import(port.dep_name).?.init(port_dep) orelse return null;
                 }
             }
 
