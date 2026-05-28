@@ -5,9 +5,7 @@ const Database = regz.Database;
 
 const xml = @import("xml");
 
-const ArenaAllocator = std.heap.ArenaAllocator;
 const Allocator = std.mem.Allocator;
-const assert = std.debug.assert;
 
 pub const std_options = std.Options{
     .log_level = .warn,

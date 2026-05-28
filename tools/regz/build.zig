@@ -1,8 +1,5 @@
 const std = @import("std");
 const Build = std.Build;
-const Compile = Build.Compile;
-const Step = Build.Step;
-const GeneratedFile = Build.GeneratedFile;
 
 pub const patch = @import("src/patch.zig");
 

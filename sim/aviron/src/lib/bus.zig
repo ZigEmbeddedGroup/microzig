@@ -1,5 +1,4 @@
 const std = @import("std");
-const isa = @import("decoder.zig");
 
 pub const Flash = struct {
     pub const Address = u24;

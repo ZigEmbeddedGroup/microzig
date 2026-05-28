@@ -1,11 +1,8 @@
 const std = @import("std");
 const comptimePrint = std.fmt.comptimePrint;
-const StructField = std.builtin.Type.StructField;
 
 const microzig = @import("microzig");
-
 const RCC = microzig.chip.peripherals.RCC;
-
 const hal = microzig.hal;
 const gpio = hal.gpio;
 
