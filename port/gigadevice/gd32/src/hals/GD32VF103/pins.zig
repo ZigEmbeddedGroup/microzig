@@ -1,7 +1,5 @@
 const std = @import("std");
-const assert = std.debug.assert;
 const comptimePrint = std.fmt.comptimePrint;
-const StructField = std.builtin.Type.StructField;
 
 const microzig = @import("microzig");
 
