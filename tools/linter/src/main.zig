@@ -11,31 +11,19 @@ const Issue = struct {
     message: []const u8,
 };
 
-pub fn main() !void {
-    var debug_allocator: std.heap.DebugAllocator(.{}) = .init;
-    defer _ = debug_allocator.deinit();
+pub fn main(init: std.process.Init) !void {
+    const io = init.io;
+    const allocator = init.arena.allocator();
+    const args = try init.minimal.args.toSlice(allocator);
 
-    var arena = std.heap.ArenaAllocator.init(debug_allocator.allocator());
-    defer arena.deinit();
-
-    const allocator = arena.allocator();
-
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
-    var issues: std.ArrayListUnmanaged(Issue) = .{};
-    defer issues.deinit(allocator);
-
+    var issues: std.ArrayList(Issue) = .empty;
     for (args[1..]) |path| {
-        const source = std.fs.cwd().readFileAllocOptions(allocator, path, 100 * 1024 * 1024, null, .@"1", 0) catch |err| {
+        const source = std.Io.Dir.cwd().readFileAllocOptions(io, path, allocator, .unlimited, .@"1", 0) catch |err| {
             std.log.err("Failed to read file '{s}': {}", .{ path, err });
             return err;
         };
-        defer allocator.free(source);
 
         var ast = try std.zig.Ast.parse(allocator, source, .zig);
-        defer ast.deinit(allocator);
-
         for (ast.nodes.items(.tag), ast.nodes.items(.main_token)) |node_tag, main_tok_idx| {
             switch (node_tag) {
                 .fn_proto_simple,
@@ -83,9 +71,9 @@ pub fn main() !void {
         }
     }
 
-    const stdout = std.fs.File.stdout();
+    const stdout = std.Io.File.stdout();
     var buf: [4096]u8 = undefined;
-    var file_writer = stdout.writer(&buf);
+    var file_writer = stdout.writer(io, &buf);
     const writer = &file_writer.interface;
 
     try std.json.Stringify.value(issues.items, .{}, writer);
@@ -107,7 +95,7 @@ const TypenameComponent = union(TypenameComponentTag) {
 };
 
 const TypenameComponents = struct {
-    list: std.ArrayList(TypenameComponent) = .{},
+    list: std.ArrayList(TypenameComponent) = .empty,
 
     pub fn format(components: *const TypenameComponents, writer: *std.Io.Writer) !void {
         try writer.print("Components:\n", .{});
@@ -210,7 +198,7 @@ fn has_lower(str: []const u8) bool {
 }
 
 fn from_string(gpa: Allocator, typename: []const u8) !TypenameComponents {
-    var components: std.ArrayList(TypenameComponent) = .{};
+    var components: std.ArrayList(TypenameComponent) = .empty;
     errdefer components.deinit(gpa);
 
     var buf: []const u8 = &.{};
@@ -346,7 +334,7 @@ fn should_transform_typename(gpa: Allocator, typename: []const u8) !?[]const u8 
         }
     }
 
-    var new_components: std.ArrayList(TypenameComponent) = .{};
+    var new_components: std.ArrayList(TypenameComponent) = .empty;
     defer new_components.deinit(gpa);
 
     for (components.list.items) |component| switch (component) {
@@ -557,9 +545,7 @@ fn camel_to_snake(arena: Allocator, str: []const u8) ![]const u8 {
     if (str.len == 0)
         return str;
 
-    var ret = std.ArrayListUnmanaged(u8){};
-    errdefer ret.deinit(arena);
-
+    var ret: std.ArrayList(u8) = .empty;
     if (std.ascii.isUpper(str[0])) {
         try ret.append(arena, std.ascii.toLower(str[0]));
     } else {
