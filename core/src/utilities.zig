@@ -289,7 +289,7 @@ pub fn GenerateInterruptOptions(sources: []const Source) type {
         for (@typeInfo(source.InterruptEnum).@"enum".fields) |enum_field| {
             field_names[i] = enum_field.name;
             field_types[i] = ?source.HandlerFn;
-            field_attrs[i] = .{ .default_value_ptr = &@as(?source.HandlerFn, null) };
+            field_attrs[i] = .{ .default_value_ptr = @ptrCast(&@as(?source.HandlerFn, null)) };
 
             i += 1;
         }

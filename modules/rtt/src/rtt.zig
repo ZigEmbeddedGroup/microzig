@@ -91,7 +91,7 @@ pub const channel = struct {
             }
 
             fn mode(self: *Self) Mode {
-                return std.meta.intToEnum(Mode, self.flags & 3) catch unreachable;
+                return @enumFromInt(self.flags & 3);
             }
 
             fn set_mode(self: *Self, mode_: Mode) void {

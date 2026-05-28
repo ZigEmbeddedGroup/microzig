@@ -4,6 +4,7 @@
 //! Based on the WCH CH32V20x USART peripheral implementation.
 //!
 const std = @import("std");
+const assert = std.debug.assert;
 const microzig = @import("microzig");
 const mdf = microzig.drivers;
 const hal = microzig.hal;
@@ -109,15 +110,82 @@ pub const USART = enum(u2) {
         deadline: mdf.time.Deadline,
     };
 
-    pub const Writer = std.io.GenericWriter(USART_With_Timeout, TransmitError, generic_writer_fn);
-    pub const Reader = std.io.GenericReader(USART_With_Timeout, ReceiveError, generic_reader_fn);
+    pub const Writer = struct {
+        usart: USART,
+        deadline: mdf.time.Deadline,
+        intf: std.Io.Writer,
+    };
 
-    pub fn writer(usart: USART, deadline: mdf.time.Deadline) Writer {
-        return .{ .context = .{ .instance = usart, .deadline = deadline } };
+    pub const Reader = struct {
+        usart: USART,
+        deadline: mdf.time.Deadline,
+        intf: std.Io.Reader,
+    };
+
+    pub fn writer(usart: USART, deadline: mdf.time.Deadline, buffer: []u8) Writer {
+        return .{
+            .usart = usart,
+            .deadline = deadline,
+            .intf = .{
+                .buffer = buffer,
+                .vtable = &.{
+                    .drain = drain,
+                },
+            },
+        };
     }
 
-    pub fn reader(usart: USART, deadline: mdf.time.Deadline) Reader {
-        return .{ .context = .{ .instance = usart, .deadline = deadline } };
+    pub fn reader(usart: USART, deadline: mdf.time.Deadline, buffer: []u8) Reader {
+        return .{
+            .usart = usart,
+            .deadline = deadline,
+            .intf = .{
+                .buffer = buffer,
+                .vtable = &.{
+                    .stream = stream,
+                },
+            },
+        };
+    }
+
+    fn drain(io_writer: *std.Io.Writer, data: []const []const u8, splat: usize) std.Io.Writer.Error!usize {
+        const w: *Writer = @alignCast(@fieldParentPtr("intf", io_writer));
+
+        // bytes from buffer are not included in count.
+        io_writer.end -= w.usart.write_blocking(io_writer.buffer[0..io_writer.end], w.deadline) catch |err| switch (err) {
+            error.Timeout => unreachable,
+        };
+        assert(io_writer.end == 0);
+
+        var n: usize = 0;
+        n += w.usart.writev_blocking(data[0 .. data.len - 1], w.deadline) catch |err| switch (err) {
+            error.Timeout => unreachable,
+        };
+        for (0..splat) |_|
+            n += w.usart.write_blocking(data[data.len - 1], w.deadline) catch |err| switch (err) {
+                error.Timeout => unreachable,
+            };
+
+        return n;
+    }
+
+    fn stream(io_reader: *std.Io.Reader, w: *std.Io.Writer, limit: std.Io.Limit) std.Io.Reader.StreamError!usize {
+        const r: *Reader = @fieldParentPtr("intf", io_reader);
+        return switch (limit) {
+            .nothing => 0,
+            else => blk: {
+                var buf: [1]u8 = undefined;
+                const n = r.usart.read_blocking(&buf, r.deadline) catch |err| switch (err) {
+                    error.ReceiveError => return error.ReadError,
+                };
+
+                break :blk switch (n) {
+                    0 => 0,
+                    1 => try w.writeByte(buf[0]),
+                    else => unreachable,
+                };
+            },
+        };
     }
 
     pub inline fn get_regs(usart: USART) *volatile UsartRegs {
@@ -301,12 +369,13 @@ pub const USART = enum(u2) {
     }
 
     /// Write bytes to USART TX and block until complete
-    pub fn write_blocking(usart: USART, payload: []const u8, deadline: mdf.time.Deadline) TransmitError!void {
-        return try usart.writev_blocking(&.{payload}, deadline);
+    pub fn write_blocking(usart: USART, payload: []const u8, deadline: mdf.time.Deadline) TransmitError!usize {
+        return usart.writev_blocking(&.{payload}, deadline);
     }
 
     /// Vectored write - writes multiple buffers in sequence
-    pub fn writev_blocking(usart: USART, payloads: []const []const u8, deadline: mdf.time.Deadline) TransmitError!void {
+    pub fn writev_blocking(usart: USART, payloads: []const []const u8, deadline: mdf.time.Deadline) TransmitError!usize {
+        var written: usize = 0;
         var iter = microzig.utilities.SliceVector([]const u8).init(payloads).iterator();
         while (iter.next_chunk(null)) |payload| {
             for (payload) |byte| {
@@ -317,6 +386,7 @@ pub const USART = enum(u2) {
                     }
                 }
                 usart.write_byte(byte);
+                written += 1;
             }
         }
 
@@ -326,12 +396,8 @@ pub const USART = enum(u2) {
                 return TransmitError.Timeout;
             }
         }
-    }
 
-    /// Wrap write_blocking() for use as a GenericWriter
-    fn generic_writer_fn(usart: USART_With_Timeout, buffer: []const u8) TransmitError!usize {
-        try usart.instance.write_blocking(buffer, usart.deadline);
-        return buffer.len;
+        return written;
     }
 
     /// Read bytes from USART RX and block until complete
@@ -384,8 +450,8 @@ var usart_logger: ?USART.Writer = null;
 
 /// Set a specific USART instance to be used for logging
 pub fn init_logger(usart: USART) void {
-    usart_logger = usart.writer(.no_deadline);
-    usart_logger.?.writeAll("\r\n================ STARTING NEW LOGGER ================\r\n") catch {};
+    usart_logger = usart.writer(.no_deadline, &.{});
+    usart_logger.?.intf.writeAll("\r\n================ STARTING NEW LOGGER ================\r\n") catch {};
 }
 
 /// Disables logging via the USART instance
@@ -405,11 +471,11 @@ pub fn log(
         else => " (" ++ @tagName(scope) ++ "): ",
     };
 
-    if (usart_logger) |usart| {
+    if (usart_logger) |*writer| {
         const current_time = hal.time.get_time_since_boot();
         const seconds = current_time.to_us() / std.time.us_per_s;
         const microseconds = current_time.to_us() % std.time.us_per_s;
 
-        usart.print(prefix ++ format ++ "\r\n", .{ seconds, microseconds } ++ args) catch {};
+        writer.intf.print(prefix ++ format ++ "\r\n", .{ seconds, microseconds } ++ args) catch {};
     }
 }
