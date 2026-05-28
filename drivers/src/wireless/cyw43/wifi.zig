@@ -118,7 +118,7 @@ pub const CYW43_Wifi = struct {
 
     const clm_data = @embedFile("firmware/43439A0_clm.bin");
 
-    pub fn init(bus: *cyw43_bus.Cyw43_Bus) CYW43_Wifi {
+    pub fn init(bus: *cyw43_bus.CYW43_Bus) CYW43_Wifi {
         return CYW43_Wifi{
             .transport = sdpcm.SDPCM.init(bus),
         };

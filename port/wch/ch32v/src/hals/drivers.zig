@@ -16,7 +16,6 @@ const drivers = microzig.drivers.base;
 const DatagramDevice = drivers.DatagramDevice;
 const Stream_Device = drivers.Stream_Device;
 const Digital_IO = drivers.Digital_IO;
-const ClockDevice = drivers.Clock_Device;
 const I2CError = drivers.I2C_Device.Error;
 const I2CAddress = drivers.I2C_Device.Address;
 
@@ -341,16 +340,15 @@ pub fn SPI_DatagramDevice(comptime config: spi.Config) type {
 /// Implementation of a time device
 ///
 pub const ClockDevice = struct {
-    pub fn clock_device(td: *ClockDevice) ClockDevice {
+    pub fn clock_device(td: *ClockDevice) drivers.ClockDevice {
         _ = td;
-        return ClockDevice{
+        return drivers.ClockDevice{
             .ptr = undefined,
-            .vtable = &vtable,
+            .vtable = &.{
+                .get_time_since_boot = get_time_since_boot_fn,
+            },
         };
     }
-    const vtable = ClockDevice.VTable{
-        .get_time_since_boot = get_time_since_boot_fn,
-    };
 
     fn get_time_since_boot_fn(td: *anyopaque) time.Absolute {
         _ = td;

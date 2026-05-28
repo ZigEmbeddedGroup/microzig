@@ -24,7 +24,7 @@
 const std = @import("std");
 const mdf = @import("../root.zig");
 const DatagramDevice = mdf.base.DatagramDevice;
-const ClockDevice = mdf.base.Clock_Device;
+const ClockDevice = mdf.base.ClockDevice;
 
 pub const MPU_6050 = struct {
     dev: DatagramDevice,

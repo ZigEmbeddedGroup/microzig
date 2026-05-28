@@ -2,15 +2,15 @@ const std = @import("std");
 const microzig = @import("microzig");
 const hal = @import("../hal.zig");
 
-const Cyw43PioSpi = hal.cyw49_pio_spi.Cyw43PioSpi;
-const Cyw43_Spi = microzig.drivers.wireless.Cyw43_Spi;
-const Cyw43_Bus = microzig.drivers.wireless.Cyw43_Bus;
-const Cyw43_Runner = microzig.drivers.wireless.Cyw43_Runner;
+const CYW43_PIO_SPI = hal.cyw49_pio_spi.CYW43_PIO_SPI;
+const CYW43_SPI = microzig.drivers.wireless.CYW43_SPI;
+const CYW43_Bus = microzig.drivers.wireless.CYW43_Bus;
+const CYW43_Runner = microzig.drivers.wireless.CYW43_Runner;
 const GPIO_Device = hal.drivers.GPIO_Device;
 
 pub const Wifi = microzig.drivers.wireless.cyw43.Wifi;
 pub const Security = microzig.drivers.wireless.cyw43.Security;
-pub const Runner = Cyw43_Runner;
+pub const Runner = CYW43_Runner;
 
 // See page 8 of the Raspberry Pi Pico 2 W Datasheet
 /// Pico 2 W pin configuration for CYW43
@@ -25,10 +25,10 @@ const pico2w_config = .{
 /// Static state for the CYW43 device
 var state: struct {
     pwr_gpio: GPIO_Device = undefined,
-    pio_spi: Cyw43PioSpi = undefined,
-    spi: Cyw43_Spi = undefined,
-    bus: Cyw43_Bus = undefined,
-    runner: Cyw43_Runner = undefined,
+    pio_spi: CYW43_PIO_SPI = undefined,
+    spi: CYW43_SPI = undefined,
+    bus: CYW43_Bus = undefined,
+    runner: CYW43_Runner = undefined,
     initialized: bool = false,
 } = .{};
 

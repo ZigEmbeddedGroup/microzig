@@ -1,7 +1,7 @@
 const microzig = @import("microzig");
 const drivers = microzig.drivers;
 const lcd = drivers.display.HD44780;
-const PCF8574 = drivers.IO_expander.PCF8574;
+const PCF8574 = drivers.io_expander.PCF8574;
 
 const rp2040 = microzig.hal;
 const i2c = rp2040.i2c;

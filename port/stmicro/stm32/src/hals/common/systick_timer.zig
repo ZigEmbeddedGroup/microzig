@@ -1,6 +1,6 @@
 const microzig = @import("microzig");
 const cpu_systick = @import("systick.zig");
-const ClockDevice = microzig.drivers.base.Clock_Device;
+const ClockDevice = microzig.drivers.base.ClockDevice;
 const time = microzig.drivers.time;
 const vtable: ClockDevice.VTable = .{ .get_time_since_boot = get_time_since_boot };
 

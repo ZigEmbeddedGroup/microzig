@@ -8,7 +8,7 @@ const mdf = @import("../root.zig");
 pub fn WS2812(options: struct {
     max_led_count: usize = 1,
     DatagramDevice: type = mdf.base.DatagramDevice,
-    ClockDevice: type = mdf.base.Clock_Device,
+    ClockDevice: type = mdf.base.ClockDevice,
 }) type {
     return struct {
         const Self = @This();

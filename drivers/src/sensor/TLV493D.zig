@@ -8,7 +8,7 @@
 const std = @import("std");
 const mdf = @import("../root.zig");
 const I2C_Device = mdf.base.I2C_Device;
-const ClockDevice = mdf.base.Clock_Device;
+const ClockDevice = mdf.base.ClockDevice;
 
 /// TLV493D I2C addresses
 pub const ADDRESS0: I2C_Device.Address = @enumFromInt(0x1F);
