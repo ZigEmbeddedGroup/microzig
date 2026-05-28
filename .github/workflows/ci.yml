@@ -215,7 +215,7 @@ jobs:
         working-directory: examples/${{ matrix.example_dir }}
 
   validate-foundation-libc:
-    name: Validate Foundation Libc
+    name: Test Foundation Libc
     continue-on-error: true
     runs-on: ${{ matrix.os }}
     strategy:
@@ -228,10 +228,10 @@ jobs:
         uses: mlugg/setup-zig@v2
         with:
           version: ${{ env.ZIG_VERSION }}
-      - name: Generate and validate packages
+      - name: Generate and test packages
         working-directory: modules/foundation-libc
         run: |
-          zig build validate
+          zig build test
 
   build-website:
     name: Build Website
