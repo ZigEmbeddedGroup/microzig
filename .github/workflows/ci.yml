@@ -31,7 +31,7 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - run: mkdir -p ~/.cache/zig
+      - run: zig env
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup Zig
