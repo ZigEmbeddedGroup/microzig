@@ -7,8 +7,8 @@ on:
 
 jobs:
   build:
+    if: false # avr is broken on 0.16.0
     runs-on: ${{ matrix.os }}
-
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
