@@ -1,4 +1,5 @@
 const std = @import("std");
+const assert = std.debug.assert;
 
 const microzig = @import("microzig");
 const peripherals = microzig.chip.peripherals;
@@ -33,8 +34,8 @@ pub fn num(n: u1) UART {
 ///     .logFn = hal.uart.log,
 /// };
 pub fn init_logger(uart: UART) void {
-    uart_logger = uart.writer();
-    uart_logger.?.writeAll("\r\n================ STARTING NEW LOGGER ================\r\n") catch {};
+    uart_logger = uart.writer(&.{});
+    uart_logger.?.intf.writeAll("\r\n================ STARTING NEW LOGGER ================\r\n") catch {};
 }
 
 pub fn deinit_logger() void {
@@ -53,12 +54,12 @@ pub fn log(
         else => " (" ++ @tagName(scope) ++ "): ",
     };
 
-    if (uart_logger) |uart| {
+    if (uart_logger) |*writer| {
         const current_time = time.get_time_since_boot();
         const seconds = current_time.to_us() / std.time.us_per_s;
         const microseconds = current_time.to_us() % std.time.us_per_s;
 
-        uart.print(prefix ++ format ++ "\r\n", .{ seconds, microseconds } ++ args) catch {};
+        writer.intf.print(prefix ++ format ++ "\r\n", .{ seconds, microseconds } ++ args) catch {};
     }
 }
 
@@ -241,7 +242,7 @@ pub const UART = enum(u1) {
         regs.ENABLE.write(.{ .ENABLE = .Disabled });
     }
 
-    pub fn read_blocking(uart: UART, buffer: []u8) void {
+    pub fn read_blocking(uart: UART, buffer: []u8) usize {
         uart.start_rx_task();
         defer uart.stop_rx_task();
 
@@ -254,9 +255,11 @@ pub const UART = enum(u1) {
 
             b.* = uart.read_rxd();
         }
+
+        return buffer.len;
     }
 
-    pub fn write_blocking(uart: UART, buffer: []const u8) void {
+    pub fn write_blocking(uart: UART, buffer: []const u8) usize {
         uart.start_tx_task();
         defer uart.stop_tx_task();
 
@@ -267,24 +270,68 @@ pub const UART = enum(u1) {
 
             while (!uart.have_tx_rdy_event()) {}
         }
-    }
 
-    pub fn reader(uart: UART) Reader {
-        return .{ .context = uart };
-    }
-
-    pub fn writer(uart: UART) Writer {
-        return .{ .context = uart };
-    }
-
-    fn generic_writer_fn(uart: UART, buffer: []const u8) TransmitError!usize {
-        uart.write_blocking(buffer);
         return buffer.len;
     }
 
-    fn generic_reader_fn(uart: UART, buffer: []u8) ReceiveError!usize {
-        uart.read_blocking(buffer);
-        return buffer.len;
+    pub fn reader(uart: UART, buffer: []u8) Reader {
+        return .{
+            .uart = uart,
+            .intf = .{
+                .buffer = buffer,
+                .vtable = &.{
+                    .stream = stream,
+                },
+            },
+        };
+    }
+
+    pub fn writer(uart: UART, buffer: []u8) Writer {
+        return .{
+            .uart = uart,
+            .intf = .{
+                .buffer = buffer,
+                .vtable = &.{
+                    .drain = drain,
+                },
+            },
+        };
+    }
+
+    fn drain(io_writer: *std.Io.Writer, data: []const []const u8, splat: usize) std.Io.Writer.Error!usize {
+        const w: *Writer = @fieldParentPtr("intf", io_writer);
+
+        // bytes from buffer are not included in count.
+        w.intf.end -= w.uart.write_blocking(w.intf.buffer[0..w.intf.end]);
+        assert(w.intf.end == 0);
+
+        var n: usize = 0;
+        for (data[0 .. data.len - 1]) |chunk|
+            n += w.uart.write_blocking(chunk);
+
+        for (0..splat) |_|
+            n += w.uart.write_blocking(data[data.len - 1]);
+
+        return n;
+    }
+
+    fn stream(io_reader: *std.Io.Reader, w: *std.Io.Writer, limit: std.Io.Limit) std.Io.Reader.StreamError!usize {
+        const r: *Reader = @fieldParentPtr("intf", io_reader);
+        return switch (limit) {
+            .nothing => 0,
+            else => blk: {
+                var buf: [1]u8 = undefined;
+                const n = r.uart.read_blocking(&buf) catch |err| switch (err) {
+                    error.ReceiveError => return error.ReadError,
+                };
+
+                break :blk switch (n) {
+                    0 => 0,
+                    1 => try w.writeByte(buf[0]),
+                    else => unreachable,
+                };
+            },
+        };
     }
 
     pub fn read_rxd(uart: UART) u8 {
