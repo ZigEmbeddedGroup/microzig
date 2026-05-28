@@ -9,20 +9,20 @@ const mdf = microzig.drivers;
 const drivers = microzig.drivers.base;
 const time = microzig.drivers.time;
 
-const Datagram_Device = drivers.Datagram_Device;
+const DatagramDevice = drivers.DatagramDevice;
 const Digital_IO = drivers.Digital_IO;
-const Clock_Device = drivers.Clock_Device;
+const ClockDevice = drivers.Clock_Device;
 const I2CError = drivers.I2C_Device.Error;
 const I2CAddress = drivers.I2C_Device.Address;
 
 ///
 /// A datagram device attached to an I²C bus.
 ///
-pub const I2C_Datagram_Device = struct {
-    pub const ConnectError = Datagram_Device.ConnectError;
+pub const I2C_DatagramDevice = struct {
+    pub const ConnectError = DatagramDevice.ConnectError;
 
-    pub const WriteError = Datagram_Device.WriteError;
-    pub const ReadError = Datagram_Device.ReadError;
+    pub const WriteError = DatagramDevice.WriteError;
+    pub const ReadError = DatagramDevice.ReadError;
 
     /// Selects which I²C bus should be used.
     bus: hal.i2c.I2C,
@@ -33,7 +33,7 @@ pub const I2C_Datagram_Device = struct {
     /// Default timeout duration
     timeout: ?mdf.time.Duration = null,
 
-    pub fn init(bus: hal.i2c.I2C, address: hal.i2c.Address, timeout: ?mdf.time.Duration) I2C_Datagram_Device {
+    pub fn init(bus: hal.i2c.I2C, address: hal.i2c.Address, timeout: ?mdf.time.Duration) I2C_DatagramDevice {
         return .{
             .bus = bus,
             .address = address,
@@ -41,41 +41,41 @@ pub const I2C_Datagram_Device = struct {
         };
     }
 
-    pub fn datagram_device(dev: *I2C_Datagram_Device) Datagram_Device {
+    pub fn datagram_device(dev: *I2C_DatagramDevice) DatagramDevice {
         return .{
             .ptr = dev,
             .vtable = &vtable,
         };
     }
 
-    pub fn connect(dev: I2C_Datagram_Device) ConnectError!void {
+    pub fn connect(dev: I2C_DatagramDevice) ConnectError!void {
         _ = dev;
     }
 
-    pub fn disconnect(dev: I2C_Datagram_Device) void {
+    pub fn disconnect(dev: I2C_DatagramDevice) void {
         _ = dev;
     }
 
-    pub fn write(dev: I2C_Datagram_Device, datagram: []const u8) !void {
+    pub fn write(dev: I2C_DatagramDevice, datagram: []const u8) !void {
         try dev.bus.write_blocking(dev.address, datagram, dev.timeout);
     }
 
-    pub fn writev(dev: I2C_Datagram_Device, datagrams: []const []const u8) !void {
+    pub fn writev(dev: I2C_DatagramDevice, datagrams: []const []const u8) !void {
         try dev.bus.writev_blocking(dev.address, datagrams, dev.timeout);
     }
 
-    pub fn read(dev: I2C_Datagram_Device, datagram: []u8) !usize {
+    pub fn read(dev: I2C_DatagramDevice, datagram: []u8) !usize {
         try dev.bus.read_blocking(dev.address, datagram, dev.timeout);
         return datagram.len;
     }
 
-    pub fn readv(dev: I2C_Datagram_Device, datagrams: []const []u8) !usize {
+    pub fn readv(dev: I2C_DatagramDevice, datagrams: []const []u8) !usize {
         try dev.bus.readv_blocking(dev.address, datagrams, dev.timeout);
 
         return microzig.utilities.SliceVector([]u8).init(datagrams).size();
     }
 
-    const vtable = Datagram_Device.VTable{
+    const vtable = DatagramDevice.VTable{
         .connect_fn = connect_fn,
         .disconnect_fn = disconnect_fn,
         .writev_fn = writev_fn,
@@ -93,7 +93,7 @@ pub const I2C_Datagram_Device = struct {
     }
 
     fn writev_fn(dd: *anyopaque, chunks: []const []const u8) WriteError!void {
-        const dev: *I2C_Datagram_Device = @ptrCast(@alignCast(dd));
+        const dev: *I2C_DatagramDevice = @ptrCast(@alignCast(dd));
         return dev.writev(chunks) catch |e|
             switch (e) {
                 hal.i2c.Error.Timeout => WriteError.Timeout,
@@ -102,7 +102,7 @@ pub const I2C_Datagram_Device = struct {
     }
 
     fn readv_fn(dd: *anyopaque, chunks: []const []u8) ReadError!usize {
-        const dev: *I2C_Datagram_Device = @ptrCast(@alignCast(dd));
+        const dev: *I2C_DatagramDevice = @ptrCast(@alignCast(dd));
         return dev.readv(chunks) catch |e|
             switch (e) {
                 hal.i2c.Error.Timeout => WriteError.Timeout,
@@ -243,10 +243,10 @@ pub const I2C_Device = struct {
 /// A datagram device attached to an SPI half duplex connection.
 ///
 pub const SPI_Device = struct {
-    pub const ConnectError = Datagram_Device.ConnectError;
+    pub const ConnectError = DatagramDevice.ConnectError;
 
-    pub const WriteError = Datagram_Device.WriteError;
-    pub const ReadError = Datagram_Device.ReadError;
+    pub const WriteError = DatagramDevice.WriteError;
+    pub const ReadError = DatagramDevice.ReadError;
 
     pub const ChipSelect = struct {
         pin: hal.gpio.Pin,
@@ -275,7 +275,7 @@ pub const SPI_Device = struct {
         return dev;
     }
 
-    pub fn datagram_device(dev: *SPI_Device) Datagram_Device {
+    pub fn datagram_device(dev: *SPI_Device) DatagramDevice {
         return .{
             .ptr = dev,
             .vtable = &vtable,
@@ -334,7 +334,7 @@ pub const SPI_Device = struct {
         _ = try dev.readv(read_chunks);
     }
 
-    const vtable = Datagram_Device.VTable{
+    const vtable = DatagramDevice.VTable{
         .connect_fn = connect_fn,
         .disconnect_fn = disconnect_fn,
         .writev_fn = writev_fn,
@@ -448,11 +448,11 @@ pub const GPIO_Device = struct {
 };
 
 ///
-/// Implementation of a `Clock_Device` that uses the HAL's `time` module.
+/// Implementation of a `ClockDevice` that uses the HAL's `time` module.
 ///
-pub fn clock_device() Clock_Device {
+pub fn clock_device() ClockDevice {
     const S = struct {
-        const vtable: Clock_Device.VTable = .{
+        const vtable: ClockDevice.VTable = .{
             .get_time_since_boot = get_time_since_boot_fn,
         };
 

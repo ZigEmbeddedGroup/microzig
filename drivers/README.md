@@ -7,12 +7,12 @@ A collection of device drivers and driver abstractions for embedded systems usin
 - [Introduction](#introduction)
 - [Available Drivers](#available-drivers)
 - [Base Interfaces](#base-interfaces)
-  - [Datagram_Device](#datagram_device)
-  - [Stream_Device](#stream_device)
+  - [DatagramDevice](#datagram_device)
+  - [StreamDevice](#stream_device)
   - [Digital_IO](#digital_io)
   - [I2C_Device](#i2c_device)
-  - [Clock_Device](#clock_device)
-  - [Block_Memory](#block_memory)
+  - [ClockDevice](#clock_device)
+  - [BlockMemory](#block_memory)
 - [Writing a Simple Driver](#writing-a-simple-driver)
 - [Zero-Cost Abstraction Pattern](#zero-cost-abstraction-pattern)
   - [The Problem](#the-problem)
@@ -90,7 +90,7 @@ Drivers with a checkmark are already implemented, drivers without are missing:
 
 All base interfaces are located in `drivers/base/` and are re-exported through `microzig.drivers.base.*`.
 
-### Datagram_Device
+### DatagramDevice
 
 **Purpose**: Abstract packet-oriented communication devices where data is transferred in fixed-size
 packets with known boundaries.
@@ -99,7 +99,7 @@ packets with known boundaries.
 
 **Structure**:
 ```zig
-pub const Datagram_Device = struct {
+pub const DatagramDevice = struct {
     ptr: *anyopaque,
     vtable: *const VTable,
 
@@ -146,7 +146,7 @@ try spi_dd.write_then_read(cmd, &data);
 
 ---
 
-### Stream_Device
+### StreamDevice
 
 **Purpose**: Abstract stream-oriented communication devices with continuous data flow and no packet
 boundaries.
@@ -155,7 +155,7 @@ boundaries.
 
 **Structure**:
 ```zig
-pub const Stream_Device = struct {
+pub const StreamDevice = struct {
     ptr: *anyopaque,
     vtable: *const VTable,
 
@@ -330,7 +330,7 @@ const temp_celsius = @as(f32, @intCast(temp_raw)) * 0.0625;
 
 ---
 
-### Clock_Device
+### ClockDevice
 
 **Purpose**: Provide time tracking and sleep functionality for drivers that need timing.
 
@@ -367,7 +367,7 @@ pub const Deadline = struct {
 
 **Structure**:
 ```zig
-pub const Clock_Device = struct {
+pub const ClockDevice = struct {
     ptr: *anyopaque,
     vtable: *const VTable,
 
@@ -405,7 +405,7 @@ clock.sleep_ms(10);
 
 ---
 
-### Block_Memory
+### BlockMemory
 
 **Purpose**: Abstract flash/block memory operations with sector-based erase and write.
 
@@ -420,7 +420,7 @@ pub const ReadError = BaseError || error{ReadDisabled};
 
 **Structure**:
 ```zig
-pub const Block_Memory = struct {
+pub const BlockMemory = struct {
     ptr: *anyopaque,
     vtable: *const VTable,
 
@@ -593,7 +593,7 @@ concrete struct type.
 ```zig
 pub const Driver_Options = struct {
     // Defaults to vtable interface
-    Device_Interface: type = mdf.base.Datagram_Device,
+    Device_Interface: type = mdf.base.DatagramDevice,
     // Other configuration...
 };
 
@@ -635,7 +635,7 @@ const mdf = @import("microzig").drivers;
 pub const Display_Options = struct {
     width: comptime_int,
     height: comptime_int,
-    Datagram_Device: type = mdf.base.Datagram_Device,
+    DatagramDevice: type = mdf.base.DatagramDevice,
 };
 
 /// Helper init function that infers type from argument
@@ -646,13 +646,13 @@ pub fn init(
 ) !Display(.{
     .width = width,
     .height = height,
-    .Datagram_Device = @TypeOf(datagram_device),  // Infer concrete type
+    .DatagramDevice = @TypeOf(datagram_device),  // Infer concrete type
 }) {
     // Create specialized type
     const Type = Display(.{
         .width = width,
         .height = height,
-        .Datagram_Device = @TypeOf(datagram_device),
+        .DatagramDevice = @TypeOf(datagram_device),
     });
 
     // Forward to actual init
@@ -663,9 +663,9 @@ pub fn init(
 pub fn Display(comptime options: Display_Options) type {
     return struct {
         const Self = @This();
-        dd: options.Datagram_Device,
+        dd: options.DatagramDevice,
 
-        pub fn init(dd: options.Datagram_Device) !Self {
+        pub fn init(dd: options.DatagramDevice) !Self {
             return .{ .dd = dd };
         }
 
@@ -680,7 +680,7 @@ pub fn Display(comptime options: Display_Options) type {
 const hal = microzig.hal;
 
 // Create concrete SPI device
-var spi_dev = hal.drivers.SPI_Datagram_Device(...).init(...);
+var spi_dev = hal.drivers.SPI_DatagramDevice(...).init(...);
 
 // Type is inferred from spi_dev - no need to specify!
 var display = try init(160, 68, spi_dev);
@@ -691,7 +691,7 @@ var display = try init(160, 68, spi_dev);
 // var display = Display(.{
 //     .width = 160,
 //     .height = 68,
-//     .Datagram_Device = @TypeOf(spi_dev),
+//     .DatagramDevice = @TypeOf(spi_dev),
 // }).init(spi_dev);
 ```
 
@@ -707,7 +707,7 @@ pub const Display_Config = struct {
     width: comptime_int,
     height: comptime_int,
     vcom_mode: enum { none, software },  // VCOM toggling mode
-    Datagram_Device: type = mdf.base.Datagram_Device,
+    DatagramDevice: type = mdf.base.DatagramDevice,
     Digital_IO: ?type = null,  // Optional display enable pin
 };
 
@@ -715,7 +715,7 @@ pub fn Display(comptime config: Display_Config) type {
     return struct {
         const Self = @This();
 
-        dd: config.Datagram_Device,
+        dd: config.DatagramDevice,
 
         // Pin field only exists if Digital_IO is provided
         disp_pin: if (config.Digital_IO) |T| T else void,
@@ -724,7 +724,7 @@ pub fn Display(comptime config: Display_Config) type {
         vcom_state: if (config.vcom_mode == .software) bool else void,
 
         pub fn init(
-            dd: config.Datagram_Device,
+            dd: config.DatagramDevice,
             disp_pin: if (config.Digital_IO) |T| T else void,
         ) !Self {
             var self = Self{
@@ -796,15 +796,15 @@ pub const Config = struct {
     width: comptime_int,
     height: comptime_int,
     vcom_mode: VCOM_Mode = .none,
-    Datagram_Device: type = mdf.base.Datagram_Device,
+    DatagramDevice: type = mdf.base.DatagramDevice,
     Digital_IO: ?type = null,
 };
 
-pub fn Sharp_Memory_LCD(comptime config: Config) type {
+pub fn SharpMemory_LCD(comptime config: Config) type {
     return struct {
         const Self = @This();
 
-        dd: config.Datagram_Device,
+        dd: config.DatagramDevice,
 
         // Pin only exists if Digital_IO is provided
         disp_pin: if (config.Digital_IO) |T| T else void,
@@ -831,11 +831,11 @@ pub fn Sharp_Memory_LCD(comptime config: Config) type {
 
 ```zig
 // nice!view display - no VCOM needed
-const Display = mdf.display.Sharp_Memory_LCD(.{
+const Display = mdf.display.SharpMemory_LCD(.{
     .width = 160,
     .height = 68,
     .vcom_mode = .none,  // Feature disabled at compile time
-    .Datagram_Device = @TypeOf(spi_dev),  // Zero-cost concrete type
+    .DatagramDevice = @TypeOf(spi_dev),  // Zero-cost concrete type
 });
 ```
 
@@ -848,18 +848,18 @@ This driver accepts multiple interface types:
 ```zig
 pub fn WS2812(options: struct {
     max_led_count: usize = 1,
-    Datagram_Device: type = mdf.base.Datagram_Device,
-    Clock_Device: type = mdf.base.Clock_Device,
+    DatagramDevice: type = mdf.base.DatagramDevice,
+    ClockDevice: type = mdf.base.Clock_Device,
 }) type {
     return struct {
         const Self = @This();
 
-        dev: options.Datagram_Device,
-        clock_dev: options.Clock_Device,
+        dev: options.DatagramDevice,
+        clock_dev: options.ClockDevice,
 
         pub fn init(
-            dev: options.Datagram_Device,
-            clock_dev: options.Clock_Device,
+            dev: options.DatagramDevice,
+            clock_dev: options.ClockDevice,
         ) Self {
             return .{
                 .dev = dev,
@@ -895,8 +895,8 @@ pub fn WS2812(options: struct {
 // Create with concrete types for maximum performance
 var ws2812: WS2812(.{
     .max_led_count = 1,
-    .Datagram_Device = hal.drivers.SPI_Device,
-    .Clock_Device = hal.drivers.Clock,
+    .DatagramDevice = hal.drivers.SPI_Device,
+    .ClockDevice = hal.drivers.Clock,
 }) = .init(spi_dev, clock);
 
 const red: Color = .{ .r = 255, .g = 0, .b = 0 };
@@ -911,7 +911,7 @@ This driver provides a helper init function that infers the type:
 
 ```zig
 pub const PCA9685_Config = struct {
-    Datagram_Device: type = mdf.base.Datagram_Device,
+    DatagramDevice: type = mdf.base.DatagramDevice,
     oscillator_frequency: u32 = 25_000_000,
 };
 
@@ -919,9 +919,9 @@ pub const PCA9685_Config = struct {
 pub fn init(
     datagram_device: anytype,
     frequency: u32,
-) !PCA9685(.{ .Datagram_Device = @TypeOf(datagram_device) }) {
+) !PCA9685(.{ .DatagramDevice = @TypeOf(datagram_device) }) {
     const Type = PCA9685(.{
-        .Datagram_Device = @TypeOf(datagram_device),
+        .DatagramDevice = @TypeOf(datagram_device),
         //                  ^^^^^^ Type inference!
     });
 
@@ -932,9 +932,9 @@ pub fn init(
 pub fn PCA9685(comptime config: PCA9685_Config) type {
     return struct {
         const Self = @This();
-        dd: config.Datagram_Device,
+        dd: config.DatagramDevice,
 
-        fn init(dd: config.Datagram_Device, frequency: u32) !Self {
+        fn init(dd: config.DatagramDevice, frequency: u32) !Self {
             var self = Self{ .dd = dd };
             try self.reset();
             try self.set_pwm_freq(frequency);
@@ -954,7 +954,7 @@ var pwm = try pca9685.init(i2c_dev, 50);  // 50 Hz for servos
 
 // Equivalent to manually specifying:
 // var pwm = pca9685.PCA9685(.{
-//     .Datagram_Device = @TypeOf(i2c_dev),
+//     .DatagramDevice = @TypeOf(i2c_dev),
 // }).init(i2c_dev, 50);
 ```
 
@@ -969,14 +969,14 @@ pub const Driver_Mode = enum { i2c, spi_3wire, spi_4wire, dynamic };
 
 pub const SSD1306_Options = struct {
     mode: Driver_Mode,
-    Datagram_Device: type = mdf.base.Datagram_Device,
+    DatagramDevice: type = mdf.base.DatagramDevice,
     Digital_IO: type = mdf.base.Digital_IO,
 };
 
 pub fn SSD1306_Generic(comptime options: SSD1306_Options) type {
     return struct {
         const Self = @This();
-        const Datagram_Device = options.Datagram_Device;
+        const DatagramDevice = options.DatagramDevice;
 
         // Digital_IO only exists for 4-wire SPI mode
         const Digital_IO = switch (options.mode) {
@@ -984,18 +984,18 @@ pub fn SSD1306_Generic(comptime options: SSD1306_Options) type {
             .i2c, .spi_3wire => void,  // Not used - no overhead
         };
 
-        dd: Datagram_Device,
+        dd: DatagramDevice,
         dev_pin: Digital_IO,  // Will be 'void' for I2C/3-wire SPI
 
         // Init varies by mode
-        pub fn init_without_io(dd: Datagram_Device) !Self {
+        pub fn init_without_io(dd: DatagramDevice) !Self {
             return .{
                 .dd = dd,
                 .dev_pin = {},  // void for I2C/3-wire modes
             };
         }
 
-        pub fn init_with_io(dd: Datagram_Device, pin: Digital_IO) !Self {
+        pub fn init_with_io(dd: DatagramDevice, pin: Digital_IO) !Self {
             return .{
                 .dd = dd,
                 .dev_pin = pin,
@@ -1078,7 +1078,7 @@ This section shows how to create HAL wrappers that implement the base interfaces
 
 ### Creating a Concrete Implementation
 
-Here's how the CH32V port implements `SPI_Datagram_Device`:
+Here's how the CH32V port implements `SPI_DatagramDevice`:
 
 **File**: `port/wch/ch32v/src/hals/drivers.zig`
 
@@ -1089,7 +1089,7 @@ const mdf = microzig.drivers;
 
 /// SPI Datagram Device implementation
 /// Generic over SPI configuration to enable compile-time DMA optimization
-pub fn SPI_Datagram_Device(comptime config: spi.Config) type {
+pub fn SPI_DatagramDevice(comptime config: spi.Config) type {
     return struct {
         const Self = @This();
         // ... Add required fields
@@ -1099,7 +1099,7 @@ pub fn SPI_Datagram_Device(comptime config: spi.Config) type {
         }
 
         /// Create vtable interface from this concrete type
-        pub fn datagram_device(dev: *Self) Datagram_Device {
+        pub fn datagram_device(dev: *Self) DatagramDevice {
             return .{
                 .ptr = dev,
                 .vtable = &datagram_vtable,
@@ -1133,7 +1133,7 @@ pub fn SPI_Datagram_Device(comptime config: spi.Config) type {
 
         // Vtable implementation (for runtime polymorphism mode)
 
-        const datagram_vtable = Datagram_Device.VTable{
+        const datagram_vtable = DatagramDevice.VTable{
             .connect_fn = connect_fn,
             .disconnect_fn = disconnect_fn,
             .writev_fn = writev_fn,
@@ -1184,15 +1184,15 @@ pub fn SPI_Datagram_Device(comptime config: spi.Config) type {
 var spi_dev = SPI_DD.init(spi1, cs_pin, false, timeout);
 var datagram_if = spi_dev.datagram_device();  // Get vtable interface
 
-const Display = Sharp_Memory_LCD(.{});  // Uses default vtable type
+const Display = SharpMemory_LCD(.{});  // Uses default vtable type
 var display = Display.init(datagram_if, {});
 
 // Pattern 2: Use concrete type directly (zero-cost)
-const SPI_DD = hal.drivers.SPI_Datagram_Device(spi_config);
+const SPI_DD = hal.drivers.SPI_DatagramDevice(spi_config);
 var spi_dev = SPI_DD.init(spi1, cs_pin, false, timeout);
 
-const Display = Sharp_Memory_LCD(.{
-    .Datagram_Device = SPI_DD,  // Concrete type
+const Display = SharpMemory_LCD(.{
+    .DatagramDevice = SPI_DD,  // Concrete type
 });
 var display = Display.init(spi_dev, {});
 

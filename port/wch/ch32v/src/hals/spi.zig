@@ -24,7 +24,7 @@
 //! Chip Select (CS) Pin:
 //! ====================
 //! CS is NOT managed by this HAL - you must handle it manually.
-//! For automatic CS management, use SPI_Datagram_Device wrapper (see drivers.zig).
+//! For automatic CS management, use SPI_DatagramDevice wrapper (see drivers.zig).
 //!
 //! User must configure all pins before calling apply()
 //!
@@ -114,7 +114,7 @@ pub const Config = struct {
 
     // NOTE: Chip select (CS) must be managed manually by the caller.
     // This SPI HAL is stateless and does not manage CS pins.
-    // See SPI_Datagram_Device in drivers.zig for automatic CS management.
+    // See SPI_DatagramDevice in drivers.zig for automatic CS management.
 };
 
 pub const instance = struct {

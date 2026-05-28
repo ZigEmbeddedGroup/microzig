@@ -5,7 +5,7 @@ const SH1106 = microzig.drivers.display.SH1106;
 const esp = microzig.hal;
 const i2c = esp.i2c;
 const gpio = esp.gpio;
-const I2C_Datagram_Device = esp.drivers.I2C_Datagram_Device;
+const I2C_DatagramDevice = esp.drivers.I2C_DatagramDevice;
 const sleep_ms = esp.time.sleep_ms;
 
 var i2c0 = i2c.instance.num(0);
@@ -46,11 +46,11 @@ pub fn main() !void {
     try i2c0.apply(400_000);
 
     // Create i2c datagram device
-    const i2c_device = I2C_Datagram_Device.init(i2c0, @enumFromInt(0x3C), null);
+    const i2c_device = I2C_DatagramDevice.init(i2c0, @enumFromInt(0x3C), null);
     // Pass i2c device to driver to create display instance
     const display_driver = SH1106(.{
         .mode = .i2c,
-        .Datagram_Device = I2C_Datagram_Device,
+        .DatagramDevice = I2C_DatagramDevice,
     });
 
     // Configure device
