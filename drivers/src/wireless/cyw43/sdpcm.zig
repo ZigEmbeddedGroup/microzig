@@ -154,7 +154,7 @@ pub const SDPCM = struct {
         NoCredit,
     };
 
-    bus: *cyw43_bus.Cyw43_Bus,
+    bus: *cyw43_bus.CYW43_Bus,
 
     // Sequence numbers and flow control
     tx_seq: u8 = 0,
@@ -173,7 +173,7 @@ pub const SDPCM = struct {
     last_control_status: u32 = 0,
     last_control_valid: bool = false,
 
-    pub fn init(bus: *cyw43_bus.Cyw43_Bus) SDPCM {
+    pub fn init(bus: *cyw43_bus.CYW43_Bus) SDPCM {
         return SDPCM{
             .bus = bus,
         };

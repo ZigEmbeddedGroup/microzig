@@ -1,7 +1,7 @@
 const microzig = @import("microzig");
 
 const drivers = microzig.drivers;
-const PCF8574 = drivers.IO_expander.PCF8574;
+const PCF8574 = drivers.io_expander.PCF8574;
 const State = drivers.base.Digital_IO.State;
 
 const rp2040 = microzig.hal;

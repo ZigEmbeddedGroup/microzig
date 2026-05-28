@@ -13,7 +13,7 @@ const time = microzig.drivers.time;
 const DatagramDevice = drivers.DatagramDevice;
 const Stream_Device = drivers.Stream_Device;
 const Digital_IO = drivers.Digital_IO;
-const ClockDevice = drivers.Clock_Device;
+const ClockDevice = drivers.ClockDevice;
 const I2CError = drivers.I2C_Device.Error;
 const I2CAddress = drivers.I2C_Device.Address;
 
@@ -465,13 +465,13 @@ pub fn clock_device() ClockDevice {
     };
 }
 
-const Cyw43PioSpi = microzig.hal.cyw49_pio_spi.Cyw43PioSpi;
-const Cyw43_Spi = microzig.drivers.wireless.Cyw43_Spi;
-const Cyw43_Bus = microzig.drivers.wireless.Cyw43_Bus;
-const Cyw43_Runner = microzig.drivers.wireless.Cyw43_Runner;
+const CYW43_PIO_SPI = microzig.hal.cyw49_pio_spi.CYW43_PIO_SPI;
+const CYW43_SPI = microzig.drivers.wireless.CYW43_SPI;
+const CYW43_Bus = microzig.drivers.wireless.CYW43_Bus;
+const CYW43_Runner = microzig.drivers.wireless.CYW43_Runner;
 
 pub const CYW43_Pio_Device_Config = struct {
-    spi: hal.cyw49_pio_spi.Cyw43PioSpi_Config,
+    spi: hal.cyw49_pio_spi.CYW43_PIO_SPI_Config,
     pwr_pin: hal.gpio.Pin,
 };
 
@@ -479,10 +479,10 @@ pub const CYW43_Pio_Device_Config = struct {
 pub const CYW43_Pio_Device = struct {
     const Self = @This();
     pwr_pin: GPIO_Device = undefined,
-    cyw43_pio_spi: Cyw43PioSpi = undefined,
-    cyw43_spi: Cyw43_Spi = undefined,
-    cyw43_bus: Cyw43_Bus = undefined,
-    cyw43_runner: Cyw43_Runner = undefined,
+    cyw43_pio_spi: CYW43_PIO_SPI = undefined,
+    cyw43_spi: CYW43_SPI = undefined,
+    cyw43_bus: CYW43_Bus = undefined,
+    cyw43_runner: CYW43_Runner = undefined,
 
     pub fn init(self: *Self, config: CYW43_Pio_Device_Config) !void {
         std.log.info("before gpio init", .{});

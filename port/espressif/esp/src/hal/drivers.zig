@@ -11,7 +11,7 @@ const time = microzig.drivers.time;
 
 const DatagramDevice = drivers.DatagramDevice;
 const Digital_IO = drivers.Digital_IO;
-const ClockDevice = drivers.Clock_Device;
+const ClockDevice = drivers.ClockDevice;
 const I2CError = drivers.I2C_Device.Error;
 const I2CAddress = drivers.I2C_Device.Address;
 

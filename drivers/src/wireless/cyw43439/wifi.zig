@@ -93,7 +93,7 @@ pub fn init(self: *Self, opt: InitOptions) !void {
             chip.sdiod_core_base_address + sdio_int_host_mask,
             i_hmb_sw_mask,
         );
-        bus.write_int(u16, .bus, Bus.reg.interrupt_enable, @bitCast(Bus.Irq{ .f2_packet_available = true }));
+        bus.write_int(u16, .bus, Bus.reg.interrupt_enable, @bitCast(Bus.IRQ{ .f2_packet_available = true }));
     }
 
     // "Lower F2 Watermark to avoid DMA Hang in F2 when SD Clock is stopped."

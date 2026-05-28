@@ -6,9 +6,9 @@ const bus = @import("bus.zig");
 const runner_mod = @import("runner.zig");
 const wifi_mod = @import("wifi.zig");
 
-pub const Runner = runner_mod.Cyw43_Runner;
+pub const Runner = runner_mod.CYW43_Runner;
 pub const Wifi = wifi_mod.CYW43_Wifi;
-pub const Bus = bus.Cyw43_Bus;
+pub const Bus = bus.CYW43_Bus;
 pub const Security = wifi_mod.Security;
 pub const Event = wifi_mod.Event;
 

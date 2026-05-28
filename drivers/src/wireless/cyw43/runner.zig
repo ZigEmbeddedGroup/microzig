@@ -13,7 +13,7 @@ pub const CYW43_Runner = struct {
     const chip_log = std.log.scoped(.cyw43_chip);
     chip_log_state: LogState = .{},
 
-    bus: *bus.Cyw43_Bus,
+    bus: *bus.CYW43_Bus,
     internal_delay_ms: *const delayus_callback,
 
     // WiFi instance (initialized in init())

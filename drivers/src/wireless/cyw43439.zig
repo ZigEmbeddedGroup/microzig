@@ -18,7 +18,7 @@ mac: [6]u8 = @splat(0),
 
 pub fn init(
     self: *Self,
-    spi: Bus.Spi,
+    spi: Bus.SPI,
     sleep_ms: *const fn (delay: u32) void,
     opt: InitOptions,
 ) !void {
