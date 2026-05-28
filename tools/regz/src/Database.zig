@@ -637,7 +637,7 @@ pub fn create_from_path(gpa: Allocator, io: std.Io, format: Format, path: []cons
             break :blk db;
         },
         .svd, .atdf => blk: {
-            const text = try std.Io.Dir.cwd().readFileAlloc(io, path, gpa, @enumFromInt(file_size_max));
+            const text = try std.Io.Dir.cwd().readFileAlloc(io, path, gpa, .limited(file_size_max));
             defer gpa.free(text);
 
             break :blk create_from_xml(gpa, format, text);

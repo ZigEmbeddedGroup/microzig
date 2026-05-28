@@ -28,7 +28,7 @@ pub fn main(init: std.process.Init) !void {
     const parsed_args = try std.json.parseFromSliceLeaky(Args, allocator, json_args, .{});
 
     const maybe_user_linker_script = if (args.len == 4)
-        try std.Io.Dir.cwd().readFileAlloc(io, args[3], allocator, @enumFromInt(100 * 1024 * 1024))
+        try std.Io.Dir.cwd().readFileAlloc(io, args[3], allocator, .limited(100 * 1024 * 1024))
     else
         null;
 

@@ -6,38 +6,37 @@ const common = @import("common");
 
 var buf: [1024]u8 = undefined;
 
-pub fn main() !void {
-    var debug_allocator: std.heap.DebugAllocator(.{}) = .init;
-    defer _ = debug_allocator.deinit();
-    const allocator = debug_allocator.allocator();
+pub fn main(init: std.process.Init) !void {
+    const gpa = init.gpa;
+    const io = init.io;
 
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
-    if (args.len != 3) return error.UsageError;
+    const args = try init.minimal.args.toSlice(init.arena.allocator());
+    if (args.len != 3)
+        return error.UsageError;
 
     const elf_path = args[1];
     const test_data_path = args[2];
     const test_name = std.fs.path.stem(test_data_path);
 
-    const elf_file = try std.fs.cwd().openFile(elf_path, .{});
-    defer elf_file.close();
+    const elf_file = try std.Io.Dir.cwd().openFile(io, elf_path, .{});
+    defer elf_file.close(io);
 
-    var elf_file_reader = elf_file.reader(&buf);
+    var elf_file_reader = elf_file.reader(io, &buf);
 
-    var elf = try printer.Elf.init(allocator, &elf_file_reader);
-    defer elf.deinit(allocator);
+    var elf = try printer.Elf.init(gpa, &elf_file_reader);
+    defer elf.deinit(gpa);
 
-    const test_data_raw = try std.fs.cwd().readFileAllocOptions(allocator, test_data_path, 1_000_000, null, .@"1", 0);
-    defer allocator.free(test_data_raw);
+    const test_data_raw = try std.Io.Dir.cwd().readFileAllocOptions(io, test_data_path, gpa, .limited(1_000_000), .@"1", 0);
+    defer gpa.free(test_data_raw);
 
-    const test_data = try std.zon.parse.fromSlice(common.Data, allocator, test_data_raw, null, .{});
-    defer std.zon.parse.free(allocator, test_data);
+    const test_data = try std.zon.parse.fromSliceAlloc(common.Data, gpa, test_data_raw, null, .{});
+    defer std.zon.parse.free(gpa, test_data);
 
-    var debug_info = try printer.DebugInfo.init(allocator, elf);
-    defer debug_info.deinit(allocator);
+    var debug_info = try printer.DebugInfo.init(gpa, elf);
+    defer debug_info.deinit(gpa);
 
-    if (!std.mem.eql(u8, test_data.zig_version, builtin.zig_version_string)) return error.ZigVersionMismatch;
+    if (!std.mem.eql(u8, test_data.zig_version, builtin.zig_version_string))
+        return error.ZigVersionMismatch;
 
     for (test_data.tests) |t| {
         const actual = debug_info.query(t.address);
