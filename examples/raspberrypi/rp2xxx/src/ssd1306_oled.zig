@@ -34,7 +34,7 @@ pub fn main() void {
 
     rp2xxx.i2c.I2C.apply(i2c0, .{ .baud_rate = 400_000, .clock_config = rp2xxx.clock_config });
 
-    const i2c_dd = rp2xxx.drivers.I2C_Datagram_Device.init(i2c0, @enumFromInt(0x3C), null);
+    const i2c_dd = rp2xxx.drivers.I2C_DatagramDevice.init(i2c0, @enumFromInt(0x3C), null);
     const lcd = microzig.drivers.display.ssd1306.init(.i2c, i2c_dd, null) catch unreachable;
 
     const print_val = four_rows ++ "    WELCOME";

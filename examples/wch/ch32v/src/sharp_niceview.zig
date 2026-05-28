@@ -113,7 +113,7 @@ pub fn main() !void {
     spi1.apply(spi_config);
 
     // Create SPI Datagram Device wrapper
-    const SPI_DD = hal.drivers.SPI_Datagram_Device(spi_config);
+    const SPI_DD = hal.drivers.SPI_DatagramDevice(spi_config);
     var spi_dev = SPI_DD.init(
         spi1,
         cs_pin,

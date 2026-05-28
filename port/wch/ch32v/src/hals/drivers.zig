@@ -13,10 +13,10 @@ const time = microzig.hal.time;
 
 const drivers = microzig.drivers.base;
 
-const Datagram_Device = drivers.Datagram_Device;
+const DatagramDevice = drivers.DatagramDevice;
 const Stream_Device = drivers.Stream_Device;
 const Digital_IO = drivers.Digital_IO;
-const Clock_Device = drivers.Clock_Device;
+const ClockDevice = drivers.Clock_Device;
 const I2CError = drivers.I2C_Device.Error;
 const I2CAddress = drivers.I2C_Device.Address;
 
@@ -210,7 +210,7 @@ pub const GPIO_Device = struct {
 /// Generic over SPI configuration to enable compile-time DMA optimization
 /// Manages chip select pin via connect/disconnect
 ///
-pub fn SPI_Datagram_Device(comptime config: spi.Config) type {
+pub fn SPI_DatagramDevice(comptime config: spi.Config) type {
     return struct {
         const Self = @This();
 
@@ -240,7 +240,7 @@ pub fn SPI_Datagram_Device(comptime config: spi.Config) type {
             };
         }
 
-        pub fn datagram_device(dev: *Self) Datagram_Device {
+        pub fn datagram_device(dev: *Self) DatagramDevice {
             return .{
                 .ptr = dev,
                 .vtable = &datagram_vtable,
@@ -248,7 +248,7 @@ pub fn SPI_Datagram_Device(comptime config: spi.Config) type {
         }
 
         /// Connect to the device (assert chip select)
-        pub fn connect(dev: Self) Datagram_Device.ConnectError!void {
+        pub fn connect(dev: Self) DatagramDevice.ConnectError!void {
             dev.cs_pin.put(if (dev.cs_active_high) 1 else 0);
         }
 
@@ -257,18 +257,18 @@ pub fn SPI_Datagram_Device(comptime config: spi.Config) type {
             dev.cs_pin.put(if (dev.cs_active_high) 0 else 1);
         }
 
-        pub fn writev(dev: Self, chunks: []const []const u8) Datagram_Device.WriteError!void {
+        pub fn writev(dev: Self, chunks: []const []const u8) DatagramDevice.WriteError!void {
             return dev.bus.writev_auto(config, chunks, dev.timeout) catch |err| switch (err) {
-                error.Timeout => Datagram_Device.WriteError.Timeout,
-                else => Datagram_Device.WriteError.IoError,
+                error.Timeout => DatagramDevice.WriteError.Timeout,
+                else => DatagramDevice.WriteError.IoError,
             };
         }
 
-        pub fn readv(dev: Self, chunks: []const []u8) Datagram_Device.ReadError!usize {
+        pub fn readv(dev: Self, chunks: []const []u8) DatagramDevice.ReadError!usize {
             dev.bus.readv_auto(config, chunks, dev.timeout) catch |err|
                 return switch (err) {
-                    error.Timeout => Datagram_Device.ReadError.Timeout,
-                    else => Datagram_Device.ReadError.IoError,
+                    error.Timeout => DatagramDevice.ReadError.Timeout,
+                    else => DatagramDevice.ReadError.IoError,
                 };
             // Calculate total bytes read
             var total: usize = 0;
@@ -282,23 +282,23 @@ pub fn SPI_Datagram_Device(comptime config: spi.Config) type {
             dev: Self,
             write_chunks: []const []const u8,
             read_chunks: []const []u8,
-        ) Datagram_Device.ReadError!void {
+        ) DatagramDevice.ReadError!void {
             // Send write chunks
             dev.bus.writev_auto(config, write_chunks, dev.timeout) catch |err|
                 return switch (err) {
-                    error.Timeout => Datagram_Device.ReadError.Timeout,
-                    else => Datagram_Device.ReadError.IoError,
+                    error.Timeout => DatagramDevice.ReadError.Timeout,
+                    else => DatagramDevice.ReadError.IoError,
                 };
 
             // Receive read chunks
             dev.bus.readv_auto(config, read_chunks, dev.timeout) catch |err|
                 return switch (err) {
-                    error.Timeout => Datagram_Device.ReadError.Timeout,
-                    else => Datagram_Device.ReadError.IoError,
+                    error.Timeout => DatagramDevice.ReadError.Timeout,
+                    else => DatagramDevice.ReadError.IoError,
                 };
         }
 
-        const datagram_vtable = Datagram_Device.VTable{
+        const datagram_vtable = DatagramDevice.VTable{
             .connect_fn = connect_fn,
             .disconnect_fn = disconnect_fn,
             .writev_fn = writev_fn,
@@ -306,7 +306,7 @@ pub fn SPI_Datagram_Device(comptime config: spi.Config) type {
             .writev_then_readv_fn = writev_then_readv_fn,
         };
 
-        fn connect_fn(dd: *anyopaque) Datagram_Device.ConnectError!void {
+        fn connect_fn(dd: *anyopaque) DatagramDevice.ConnectError!void {
             const dev: *Self = @ptrCast(@alignCast(dd));
             try dev.connect();
         }
@@ -316,12 +316,12 @@ pub fn SPI_Datagram_Device(comptime config: spi.Config) type {
             dev.disconnect();
         }
 
-        fn writev_fn(dd: *anyopaque, chunks: []const []const u8) Datagram_Device.WriteError!void {
+        fn writev_fn(dd: *anyopaque, chunks: []const []const u8) DatagramDevice.WriteError!void {
             const dev: *Self = @ptrCast(@alignCast(dd));
             return dev.writev(chunks);
         }
 
-        fn readv_fn(dd: *anyopaque, chunks: []const []u8) Datagram_Device.ReadError!usize {
+        fn readv_fn(dd: *anyopaque, chunks: []const []u8) DatagramDevice.ReadError!usize {
             const dev: *Self = @ptrCast(@alignCast(dd));
             return dev.readv(chunks);
         }
@@ -330,7 +330,7 @@ pub fn SPI_Datagram_Device(comptime config: spi.Config) type {
             dd: *anyopaque,
             write_chunks: []const []const u8,
             read_chunks: []const []u8,
-        ) Datagram_Device.ReadError!void {
+        ) DatagramDevice.ReadError!void {
             const dev: *Self = @ptrCast(@alignCast(dd));
             return dev.writev_then_readv(write_chunks, read_chunks);
         }
@@ -341,14 +341,14 @@ pub fn SPI_Datagram_Device(comptime config: spi.Config) type {
 /// Implementation of a time device
 ///
 pub const ClockDevice = struct {
-    pub fn clock_device(td: *ClockDevice) Clock_Device {
+    pub fn clock_device(td: *ClockDevice) ClockDevice {
         _ = td;
-        return Clock_Device{
+        return ClockDevice{
             .ptr = undefined,
             .vtable = &vtable,
         };
     }
-    const vtable = Clock_Device.VTable{
+    const vtable = ClockDevice.VTable{
         .get_time_since_boot = get_time_since_boot_fn,
     };
 
@@ -360,11 +360,11 @@ pub const ClockDevice = struct {
 };
 
 ///
-/// Implementation of a `Clock_Device` that uses the HAL's `time` module.
+/// Implementation of a `ClockDevice` that uses the HAL's `time` module.
 ///
-pub fn clock_device() Clock_Device {
+pub fn clock_device() ClockDevice {
     const S = struct {
-        const vtable: Clock_Device.VTable = .{
+        const vtable: ClockDevice.VTable = .{
             .get_time_since_boot = get_time_since_boot_fn,
         };
 

@@ -9,7 +9,7 @@ const drivers = microzig.drivers;
 const lcd_driver = drivers.display.SSD1306_I2C;
 
 const I2C = stm32.i2c;
-const I2C_Datagram_Device = stm32.drivers.I2C_Datagram_Device;
+const I2C_DatagramDevice = stm32.drivers.I2C_DatagramDevice;
 
 const uart = stm32.uart.UART.init(.USART1);
 const TX = gpio.Pin.from_port(.A, 9);
@@ -33,7 +33,7 @@ comptime {
     _ = microzig.export_startup();
 }
 
-const i2c_device = I2C_Datagram_Device.init(i2c, I2C.Address.new(0x3c), null);
+const i2c_device = I2C_DatagramDevice.init(i2c, I2C.Address.new(0x3c), null);
 
 const zig_img = [_]u8{
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,

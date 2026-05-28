@@ -34,7 +34,7 @@ pub fn main() !void {
 
     var ws2812: WS2812(.{
         .max_led_count = 1,
-        .Datagram_Device = hal.drivers.SPI_Device,
+        .DatagramDevice = hal.drivers.SPI_Device,
     }) = .init(
         spi_dev,
         hal.drivers.clock_device(),

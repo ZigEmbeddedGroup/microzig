@@ -43,7 +43,7 @@ pub fn main() !void {
 
     try camera.set_refresh_rate(0b101);
 
-    const i2c_dd = rp2xxx.drivers.I2C_Datagram_Device.init(i2c0, @enumFromInt(0x3C), null);
+    const i2c_dd = rp2xxx.drivers.I2C_DatagramDevice.init(i2c0, @enumFromInt(0x3C), null);
     const lcd = try display.ssd1306.init(.i2c, i2c_dd, null);
     try lcd.clear_screen(false);
 
