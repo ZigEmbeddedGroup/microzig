@@ -31,13 +31,14 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - run: zig env
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
         with:
           version: ${{ env.ZIG_VERSION }}
+      - run: zig env
+      - run: mkdir -p ~/.cache/zig
       - name: Unit Test Regz
         run: zig build test
         working-directory: tools/regz
