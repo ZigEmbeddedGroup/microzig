@@ -1,7 +1,5 @@
 const std = @import("std");
-const assert = std.debug.assert;
 const comptimePrint = std.fmt.comptimePrint;
-const StructField = std.builtin.Type.StructField;
 
 const microzig = @import("microzig");
 const SIO = microzig.chip.peripherals.SIO;
@@ -10,7 +8,6 @@ const XIP_CTRL = microzig.chip.peripherals.XIP_CTRL;
 const gpio = @import("gpio.zig");
 const pwm = @import("pwm.zig");
 const adc = @import("adc.zig");
-const resets = @import("resets.zig");
 
 const compatibility = @import("compatibility.zig");
 const chip = compatibility.chip;
