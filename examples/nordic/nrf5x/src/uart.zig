@@ -30,7 +30,7 @@ pub fn main() !void {
     // now echo any bytes sent
     var buf: [1]u8 = undefined;
     while (true) {
-        uart.read_blocking(&buf);
-        uart.write_blocking(buf[0..]);
+        const n = uart.read_blocking(&buf);
+        _ = uart.write_blocking(buf[0..n]);
     }
 }

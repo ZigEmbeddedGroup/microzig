@@ -1,9 +1,8 @@
 const std = @import("std");
 
-pub fn main() !u8 {
-    const argv = try std.process.argsAlloc(std.heap.page_allocator);
-    defer std.process.argsFree(std.heap.page_allocator, argv);
-
+pub fn main(init: std.process.Init) !u8 {
+    const io = init.io;
+    const argv = try init.minimal.args.toSlice(init.arena.allocator());
     if (argv.len != 3) {
         std.log.err("usage: lpc-patchelf <input> <output>", .{});
         return 1;
@@ -12,21 +11,22 @@ pub fn main() !u8 {
     const input_file_name = argv[1];
     const output_file_name = argv[2];
 
-    try std.fs.Dir.copyFile(
-        std.fs.cwd(),
+    try std.Io.Dir.copyFile(
+        std.Io.Dir.cwd(),
         input_file_name,
-        std.fs.cwd(),
+        std.Io.Dir.cwd(),
         output_file_name,
+        io,
         .{},
     );
 
-    var file = try std.fs.cwd().openFile(output_file_name, .{ .mode = .read_write });
-    defer file.close();
+    var file = try std.Io.Dir.cwd().openFile(io, output_file_name, .{ .mode = .read_write });
+    defer file.close(io);
 
     var read_buf: [4096]u8 = undefined;
     var write_buf: [4096]u8 = undefined;
-    var file_reader = file.reader(&read_buf);
-    var file_writer = file.writer(&write_buf);
+    var file_reader = file.reader(io, &read_buf);
+    var file_writer = file.writer(io, &write_buf);
 
     const header = try std.elf.Header.read(&file_reader.interface);
 
@@ -52,7 +52,7 @@ pub fn main() !u8 {
             continue;
         }
 
-        try file.seekTo(phdr.p_offset);
+        try file_reader.seekTo(phdr.p_offset);
 
         var checksum: u32 = 0;
 
