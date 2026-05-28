@@ -78,7 +78,7 @@ fn load_device(
     filename: []const u8,
     modules: *std.StringHashMap(ModuleEntry),
 ) !void {
-    const device_text = try devices_dir.readFileAlloc(io, filename, db.gpa, @enumFromInt(1024 * 1024));
+    const device_text = try devices_dir.readFileAlloc(io, filename, db.gpa, .limited(1024 * 1024));
     defer db.gpa.free(device_text);
 
     var doc = try xml.Doc.from_memory(device_text);
@@ -155,7 +155,7 @@ fn load_instance(
         // Load the module file for the first time
         log.debug("Loading new peripheral type from module file: {s}", .{href});
 
-        const module_text = try devices_dir.readFileAlloc(io, href, db.gpa, @enumFromInt(1024 * 1024));
+        const module_text = try devices_dir.readFileAlloc(io, href, db.gpa, .limited(1024 * 1024));
         defer db.gpa.free(module_text);
 
         var doc = try xml.Doc.from_memory(module_text);
