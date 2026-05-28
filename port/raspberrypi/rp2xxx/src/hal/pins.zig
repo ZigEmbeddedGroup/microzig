@@ -767,23 +767,15 @@ pub const GlobalConfiguration = struct {
     }
 
     pub fn PinsType(self: GlobalConfiguration) type {
-        var count: usize = 0;
-        for (@typeInfo(GlobalConfiguration).@"struct".fields) |field| {
-            if (@field(self, field.name) != null) {
-                count += 1;
-            }
-        }
+        const Attributes = std.builtin.Type.StructField.Attributes;
 
-        var field_names: [count][]const u8 = undefined;
-        var field_types: [count]type = undefined;
-        var field_attrs: [count]std.builtin.Type.StructField.Attributes = undefined;
-
-        var i: usize = 0;
+        var field_names: []const []const u8 = &.{};
+        var field_types: []const type = &.{};
+        var field_attrs: []const Attributes = &.{};
         for (@typeInfo(GlobalConfiguration).@"struct".fields) |field| {
             if (@field(self, field.name)) |pin_config| {
-                field_names[i] = pin_config.name orelse field.name;
-                field_attrs[i] = .{};
-                field_types[i] = if (pin_config.function == .SIO)
+                const name: []const u8 = pin_config.name orelse field.name;
+                const typ: type = if (pin_config.function == .SIO)
                     gpio.Pin
                 else if (pin_config.function.is_pwm())
                     pwm.Pwm
@@ -794,11 +786,13 @@ pub const GlobalConfiguration = struct {
                     // error?
                     continue;
 
-                i += 1;
+                field_names = field_names ++ .{name};
+                field_types = field_types ++ .{typ};
+                field_attrs = field_attrs ++ .{Attributes{}};
             }
         }
 
-        return @Struct(.auto, null, &field_names, &field_types, &field_attrs);
+        return @Struct(.auto, null, field_names, field_types[0..], field_attrs[0..]);
     }
 
     /// Populate and return the PinsType struct

@@ -101,7 +101,7 @@ pub const ImageDef = packed struct(u32) {
 pub fn EntryPoint(with_stack_limit: bool) type {
     if (with_stack_limit) {
         return extern struct {
-            header: packed struct {
+            header: packed struct(u32) {
                 item_type: u8 = 0x44,
                 block_size: u8 = 0x04,
                 padding: u16 = 0,
@@ -112,7 +112,7 @@ pub fn EntryPoint(with_stack_limit: bool) type {
         };
     } else {
         return extern struct {
-            header: packed struct {
+            header: packed struct(u32) {
                 item_type: u8 = 0x44,
                 block_size: u8 = 0x03,
                 padding: u16 = 0,

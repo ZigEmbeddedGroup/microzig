@@ -103,8 +103,15 @@ pub const BaudRate = enum {
 pub const UART = enum(u1) {
     _,
 
-    pub const Writer = std.io.GenericWriter(UART, TransmitError, generic_writer_fn);
-    pub const Reader = std.io.GenericReader(UART, ReceiveError, generic_reader_fn);
+    pub const Writer = struct {
+        uart: UART,
+        intf: std.Io.Writer,
+    };
+
+    pub const Reader = struct {
+        uart: UART,
+        intf: std.Io.Reader,
+    };
 
     const TransmitError = error{};
     const ReceiveError = error{};

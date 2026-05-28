@@ -61,6 +61,11 @@ pub const DescriptorAllocator = struct {
             ret = ret ++ [1]descriptor.String{.from_str(s)};
         return ret;
     }
+
+    pub fn to_const(self: *DescriptorAllocator) DescriptorAllocator {
+        defer self.* = undefined;
+        return self.*;
+    }
 };
 
 /// Wraps a Descriptor type. Returned by the `create` method of the Descriptor.
@@ -243,6 +248,9 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
             assert(std.math.isPowerOfTwo(max_psize));
 
             var alloc: DescriptorAllocator = .init(config.unique_endpoints);
+            const manufacturer_s = alloc.string(config.vendor.str);
+            const product_s = alloc.string(config.product.str);
+            const serial_s = alloc.string(config.serial);
 
             const desc_device: descriptor.Device = .{
                 .bcd_usb = config.bcd_usb,
@@ -251,9 +259,9 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
                 .vendor = .from(config.vendor.id),
                 .product = .from(config.product.id),
                 .bcd_device = config.bcd_device,
-                .manufacturer_s = alloc.string(config.vendor.str),
-                .product_s = alloc.string(config.product.str),
-                .serial_s = alloc.string(config.serial),
+                .manufacturer_s = manufacturer_s,
+                .product_s = product_s,
+                .serial_s = serial_s,
                 .num_configurations = config.configurations.len,
             };
             const configuration_s = alloc.string(config0.name);
@@ -261,14 +269,14 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
             var size = @sizeOf(descriptor.Configuration);
             var field_names: [driver_fields.len][:0]const u8 = undefined;
             var field_types: [field_names.len]type = undefined;
-            var field_attrs: [field_names.len]std.builtin.StructField.Attributes = undefined;
+            var field_attrs: [field_names.len]std.builtin.Type.StructField.Attributes = undefined;
             var ep_handler_types: [2][16]type = @splat(@splat(void));
             var ep_handler_names: [2][16][:0]const u8 = undefined;
             var ep_handler_drivers: [2][16]?usize = @splat(@splat(null));
             var itf_handlers: []const DriverEnum = &.{};
             var driver_alloc_names: []const [:0]const u8 = &.{};
             var driver_alloc_types: []const type = &.{};
-            var driver_alloc_attrs: []const std.builtin.StructField.Attributes = &.{};
+            var driver_alloc_attrs: []const std.builtin.Type.StructField.Attributes = &.{};
 
             for (driver_fields, 0..) |drv, drv_id| {
                 // Get descriptor type for the current driver
@@ -282,7 +290,7 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
                 if (result.alloc_bytes) |len| {
                     driver_alloc_names = driver_alloc_names ++ &[_][:0]const u8{drv.name};
                     driver_alloc_types = driver_alloc_types ++ &[_]type{[len]u8};
-                    driver_alloc_attrs = driver_alloc_attrs ++ &[_]std.builtin.StructField.Attributes{.{ .@"align" = result.alloc_align }};
+                    driver_alloc_attrs = driver_alloc_attrs ++ &[_]std.builtin.Type.StructField.Attributes{.{ .@"align" = result.alloc_align }};
                 } else {
                     assert(result.alloc_align == null);
                 }
@@ -353,6 +361,11 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
                 }
             }
 
+            // alloc is invalidated after this point. It will cause a compile
+            // error if mutated.
+            const const_alloc = alloc.to_const();
+            const const_ep_handlers = ep_handlers;
+
             const DriverConfig = @Struct(.@"extern", null, &field_names, &field_types, &field_attrs);
             const idx_in = @intFromEnum(types.Dir.In);
             const idx_out = @intFromEnum(types.Dir.Out);
@@ -361,7 +374,7 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
                 .config_descriptor = extern struct {
                     first: descriptor.Configuration = .{
                         .total_length = .from(size),
-                        .num_interfaces = alloc.next_itf_num,
+                        .num_interfaces = const_alloc.next_itf_num,
                         .configuration_value = 1,
                         .configuration_s = configuration_s,
                         .attributes = config0.attributes,
@@ -369,11 +382,11 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
                     },
                     drv: DriverConfig = .{},
                 }{},
-                .string_descriptors = alloc.string_descriptors(config.language),
+                .string_descriptors = const_alloc.string_descriptors(config.language),
                 .handlers_itf = itf_handlers,
                 .handlers_ep = struct {
-                    In: ep_handlers_types[idx_in] = ep_handlers[idx_in],
-                    Out: ep_handlers_types[idx_out] = ep_handlers[idx_out],
+                    In: ep_handlers_types[idx_in] = const_ep_handlers[idx_in],
+                    Out: ep_handlers_types[idx_out] = const_ep_handlers[idx_out],
                 }{},
                 .drivers_ep = ep_handler_drivers,
                 .DriverAlloc = @Struct(
