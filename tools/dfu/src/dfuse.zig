@@ -108,7 +108,7 @@ const Segment = struct {
 /// Convert an ELF file into a single-target DfuSe image.
 pub fn from_elf(
     allocator: Allocator,
-    reader: *std.fs.File.Reader,
+    reader: *std.Io.File.Reader,
     writer: *std.Io.Writer,
     opts: Options,
 ) !void {
@@ -156,7 +156,7 @@ pub fn from_elf(
 
 fn collect_segments(
     allocator: Allocator,
-    reader: *std.fs.File.Reader,
+    reader: *std.Io.File.Reader,
     segments: *std.ArrayList(Segment),
 ) !void {
     const header = try std.elf.Header.read(&reader.interface);
@@ -208,7 +208,7 @@ fn calculate_target_size(segments: []const Segment) u32 {
     return size;
 }
 
-fn write_elements(reader: *std.fs.File.Reader, writer: *std.Io.Writer, segments: []const Segment) !void {
+fn write_elements(reader: *std.Io.File.Reader, writer: *std.Io.Writer, segments: []const Segment) !void {
     var ranges = ElementRangeIterator.init(segments);
     while (ranges.next()) |range| {
         const element_size = range.size();
