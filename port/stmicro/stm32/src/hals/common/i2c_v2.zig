@@ -30,8 +30,7 @@ const TimingSpec_Standard = .{
     .t_min_af = 0.05,
 };
 
-const TIMINGR = blk: for (@typeInfo(I2C_Peripherals).@"struct".fields) |field|
-{
+const TIMINGR = blk: for (@typeInfo(I2C_Peripherals).@"struct".fields) |field| {
     if (std.mem.eql(u8, "TIMINGR", field.name)) {
         break :blk field.type;
     }
