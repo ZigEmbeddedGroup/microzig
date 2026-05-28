@@ -494,19 +494,20 @@ test "Segment.write_to" {
 
     @memset(segment.data, 'a');
 
-    var segment_data: std.ArrayList(u8) = .empty;
-    defer segment_data.deinit(allocator);
-    const writer = segment_data.writer(allocator);
+    var segment_data: std.Io.Writer.Allocating = .init(std.testing.allocator);
+    defer segment_data.deinit();
+
+    const writer = &segment_data.writer;
 
     var checksum: u8 = esp_image.CHECKSUM_XOR_BYTE;
     try segment.write_to(allocator, writer, 0x10, &checksum);
     try segment.write_to(allocator, writer, null, &checksum);
 
-    try std.testing.expectEqual(std.mem.readInt(u32, segment_data.items[0..4], .little), 0x42000020);
-    try std.testing.expectEqual(std.mem.readInt(u32, segment_data.items[4..8], .little), 0x10);
-    try std.testing.expectEqualStrings(segment_data.items[8..24], &@as([16]u8, @splat('a')));
-    try std.testing.expectEqual(std.mem.readInt(u32, segment_data.items[24..28], .little), 0x42000030);
-    try std.testing.expectEqual(std.mem.readInt(u32, segment_data.items[28..32], .little), 0x10);
-    try std.testing.expectEqualStrings(segment_data.items[32..48], &@as([16]u8, @splat('a')));
+    try std.testing.expectEqual(std.mem.readInt(u32, writer.buffered()[0..4], .little), 0x42000020);
+    try std.testing.expectEqual(std.mem.readInt(u32, writer.buffered()[4..8], .little), 0x10);
+    try std.testing.expectEqualStrings(writer.buffered()[8..24], &@as([16]u8, @splat('a')));
+    try std.testing.expectEqual(std.mem.readInt(u32, writer.buffered()[24..28], .little), 0x42000030);
+    try std.testing.expectEqual(std.mem.readInt(u32, writer.buffered()[28..32], .little), 0x10);
+    try std.testing.expectEqualStrings(writer.buffered()[32..48], &@as([16]u8, @splat('a')));
     try std.testing.expectEqual(segment.size, 0);
 }
