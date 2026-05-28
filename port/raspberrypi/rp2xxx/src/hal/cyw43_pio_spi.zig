@@ -4,7 +4,7 @@ const std = @import("std");
 const microzig = @import("microzig");
 const hal = @import("../hal.zig");
 
-const Cyw43_Spi = microzig.drivers.wireless.Cyw43_Spi;
+const CYW43_SPI = microzig.drivers.wireless.CYW43_SPI;
 
 const chip = microzig.hal.compatibility.chip;
 
@@ -38,14 +38,14 @@ const cyw43spi_program = blk: {
     , .{}).get_program_by_name("cyw43spi");
 };
 
-pub const Cyw43PioSpi_Config = struct {
+pub const CYW43_PIO_SPI_Config = struct {
     pio: hal.pio.Pio,
     cs_pin: hal.gpio.Pin,
     io_pin: hal.gpio.Pin,
     clk_pin: hal.gpio.Pin,
 };
 
-pub fn init(config: Cyw43PioSpi_Config) !Cyw43PioSpi {
+pub fn init(config: CYW43_PIO_SPI_Config) !CYW43_PIO_SPI {
     const sm = try config.pio.claim_unused_state_machine();
 
     // Chip select pin setup
@@ -102,7 +102,7 @@ pub fn init(config: Cyw43PioSpi_Config) !Cyw43PioSpi {
     };
 }
 
-pub const Cyw43PioSpi = struct {
+pub const CYW43_PIO_SPI = struct {
     const Self = @This();
 
     pio: hal.pio.Pio,
@@ -233,15 +233,15 @@ pub const Cyw43PioSpi = struct {
         return @enumFromInt(@intFromEnum(self.pio) * @as(u6, 8) + @intFromEnum(self.sm) + 4);
     }
 
-    /// Cyw43_Spi interface implementation
-    pub fn cyw43_spi(self: *Self) Cyw43_Spi {
+    /// CYW43_SPI interface implementation
+    pub fn cyw43_spi(self: *Self) CYW43_SPI {
         return .{
             .ptr = self,
             .vtable = &vtable,
         };
     }
 
-    const vtable = Cyw43_Spi.VTable{
+    const vtable = CYW43_SPI.VTable{
         .spi_read_blocking_fn = spi_read_blocking_fn,
         .spi_write_blocking_fn = spi_write_blocking_fn,
     };

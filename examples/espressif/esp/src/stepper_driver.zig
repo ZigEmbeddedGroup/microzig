@@ -47,8 +47,8 @@ pub fn main() !void {
     try stepper.begin(100, 1);
 
     while (true) {
-        const linear_profile = A4988.Speed_Profile{ .linear_speed = .{ .accel = 200, .decel = 200 } };
-        const constant_profile = A4988.Speed_Profile.constant_speed;
+        const linear_profile = A4988.SpeedProfile{ .linear_speed = .{ .accel = 200, .decel = 200 } };
+        const constant_profile = A4988.SpeedProfile.constant_speed;
         // Try both constant and linear acceleration profiles
         inline for (.{ constant_profile, linear_profile }) |profile| {
             stepper.set_speed_profile(

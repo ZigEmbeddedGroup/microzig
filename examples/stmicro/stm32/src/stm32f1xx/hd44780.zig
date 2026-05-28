@@ -7,7 +7,7 @@ const time = stm32.time;
 
 const drivers = microzig.drivers;
 const lcd = drivers.display.HD44780;
-const PCF8574 = drivers.IO_expander.PCF8574;
+const PCF8574 = drivers.io_expander.PCF8574;
 
 const I2C = stm32.i2c;
 const I2C_Device = stm32.drivers.I2C_Device;
