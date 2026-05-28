@@ -1,12 +1,10 @@
 const std = @import("std");
-const testing = std.testing;
 const assert = std.debug.assert;
 const Allocator = std.mem.Allocator;
 
 pub const FamilyId = @import("family_id.zig").FamilyId;
 
 const prog_page_size = 256;
-const uf2_alignment = 4;
 
 pub const Archive = struct {
     allocator: Allocator,

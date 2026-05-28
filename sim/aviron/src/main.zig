@@ -4,8 +4,6 @@ const aviron = @import("aviron");
 const ihex = @import("ihex");
 const flags = @import("flags");
 
-const log = std.log.scoped(.main);
-
 const RunWith_MCU_Options = struct {
     trace: bool = false,
     info: bool = false,
