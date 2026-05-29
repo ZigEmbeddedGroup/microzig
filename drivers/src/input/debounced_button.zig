@@ -31,7 +31,7 @@ pub const Options = struct {
 pub fn DebouncedButton(comptime options: Options) type {
     return struct {
         const Button = @This();
-        const FilterInt = std.meta.Int(.unsigned, options.filter_depth orelse 16);
+        const FilterInt = @Int(.unsigned, options.filter_depth orelse 16);
 
         io: options.Digital_IO,
         filter_buffer: FilterInt,

@@ -4,7 +4,7 @@ directories: Map(ID, Dir) = .empty,
 files: Map(ID, File) = .empty,
 // child -> parent
 hierarchy: Map(ID, ID) = .empty,
-next_id: u16 = 1,
+next_id: u16 = 2,
 
 const VirtualFilesystem = @This();
 
@@ -12,8 +12,23 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const Map = std.AutoArrayHashMapUnmanaged;
 const assert = std.debug.assert;
-
 const log = std.log.scoped(.vfs);
+
+const builtin = @import("builtin");
+
+fn id_from_handle(handle: std.posix.fd_t) ID {
+    return switch (builtin.os.tag) {
+        .windows => @enumFromInt(@intFromPtr(handle)),
+        else => @enumFromInt(handle),
+    };
+}
+
+fn handle_from_id(id: ID) std.posix.fd_t {
+    return switch (builtin.os.tag) {
+        .windows => @ptrFromInt(@intFromEnum(id)),
+        else => @intFromEnum(id),
+    };
+}
 
 pub const Kind = enum {
     file,
@@ -29,7 +44,7 @@ pub const Dir = struct {
 
     fn create_file(userdata: ?*anyopaque, dir: std.Io.Dir, sub_path: []const u8, _: std.Io.Dir.CreateFileOptions) std.Io.File.OpenError!std.Io.File {
         const vfs: *VirtualFilesystem = @ptrCast(@alignCast(userdata.?));
-        const dir_id: ID = @enumFromInt(dir.handle);
+        const dir_id = id_from_handle(dir.handle);
 
         if (std.mem.findScalar(u8, sub_path, '/') != null) {
             log.err("path includes '/': '{s}'", .{sub_path});
@@ -40,7 +55,7 @@ pub const Dir = struct {
             error.OutOfMemory => return error.NoSpaceLeft,
         };
         return .{
-            .handle = @intFromEnum(id),
+            .handle = handle_from_id(id),
             .flags = .{
                 .nonblocking = false,
             },
@@ -55,11 +70,11 @@ pub const Dir = struct {
         _: std.Io.Dir.OpenOptions,
     ) std.Io.Dir.CreateDirPathOpenError!std.Io.Dir {
         const vfs: *VirtualFilesystem = @ptrCast(@alignCast(userdata.?));
-        const parent: ID = @enumFromInt(parent_dir.handle);
+        const parent = id_from_handle(parent_dir.handle);
         const id = vfs.create_dir(parent, sub_path) catch return error.NoSpaceLeft;
 
         return .{
-            .handle = @intFromEnum(id),
+            .handle = handle_from_id(id),
         };
     }
 
@@ -82,7 +97,7 @@ fn operate(userdata: ?*anyopaque, op: std.Io.Operation) std.Io.Cancelable!std.Io
     const vfs: *VirtualFilesystem = @ptrCast(@alignCast(userdata.?));
     return switch (op) {
         .file_write_streaming => |write_op| blk: {
-            const file = vfs.files.getPtr(@enumFromInt(write_op.file.handle)).?;
+            const file = vfs.files.getPtr(id_from_handle(write_op.file.handle)).?;
             const header = write_op.header;
             const data = write_op.data;
             const splat = write_op.splat;
@@ -93,11 +108,16 @@ fn operate(userdata: ?*anyopaque, op: std.Io.Operation) std.Io.Cancelable!std.Io
         .file_read_streaming => unreachable,
         .device_io_control => unreachable,
         .net_receive => unreachable,
+        .net_read => unreachable,
     };
 }
 
 pub const ID = enum(u16) {
-    root = 0,
+    // Don't use this one, because on windows, fd_t is actually a *anyopaque,
+    // and setting that null under the hood is ILLEGAL, and I don't want to go
+    // to jail.
+    invalid = 0,
+    root = 1,
     _,
 };
 
@@ -118,7 +138,7 @@ pub fn deinit(fs: *VirtualFilesystem) void {
 
 pub fn root_dir(fs: *VirtualFilesystem) std.Io.Dir {
     _ = fs;
-    return .{ .handle = @intFromEnum(ID.root) };
+    return .{ .handle = handle_from_id(ID.root) };
 }
 
 pub fn get_file(fs: *VirtualFilesystem, path: []const u8) !?ID {
@@ -360,7 +380,6 @@ pub fn io(vfs: *VirtualFilesystem) std.Io {
             .netSocketCreatePair = std.Io.failingNetSocketCreatePair,
             .netSend = std.Io.failingNetSend,
 
-            .netRead = std.Io.failingNetRead,
             .netWrite = std.Io.failingNetWrite,
             .netWriteFile = std.Io.failingNetWriteFile,
             .netClose = std.Io.unreachableNetClose,

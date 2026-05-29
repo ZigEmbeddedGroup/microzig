@@ -7,8 +7,8 @@ const i2c = rp2xxx.i2c;
 const font8x8 = @import("font8x8");
 
 const i2c0 = i2c.instance.num(0);
-const empty_row: []const u8 = " " ** 16;
-const four_rows = empty_row ** 4;
+const empty_row: [16]u8 = @splat(' ');
+const four_rows: [16 * 4]u8 = @splat(' ');
 
 pub const panic = microzig.panic;
 
@@ -68,7 +68,7 @@ fn center_to_screen(buf: []u8, str: []u8) []u8 {
     const padding = @divTrunc(ldc_row_len - str.len, 2);
 
     // Copy the initial four rows
-    @memcpy(buf[0..four_rows_len], four_rows);
+    @memcpy(buf[0..four_rows_len], &four_rows);
 
     // Add left padding
     const left_pad_start = four_rows_len;

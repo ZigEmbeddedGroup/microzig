@@ -113,7 +113,7 @@ pub const CYW43_Wifi = struct {
     mac_valid: bool = false,
     connected: bool = false,
     link_up: bool = false,
-    event_mask: [24]u8 = .{0xFF} ** 24,
+    event_mask: [24]u8 = @splat(0xFF),
     scan_ctx: ScanCtx = .{},
 
     const clm_data = @embedFile("firmware/43439A0_clm.bin");
@@ -367,7 +367,7 @@ pub const CYW43_Wifi = struct {
             if (security == .wpa3_sae) {
                 var sae = SAE_PassphraseInfo{
                     .len = @intCast(password.len),
-                    .passphrase = .{0} ** 128,
+                    .passphrase = @splat(0),
                 };
                 const pwd_len = @min(password.len, 128);
                 @memcpy(sae.passphrase[0..pwd_len], password[0..pwd_len]);
@@ -377,7 +377,7 @@ pub const CYW43_Wifi = struct {
                 var pmk = PassphraseInfo{
                     .len = @intCast(password.len),
                     .flags = 1,
-                    .passphrase = .{0} ** 64,
+                    .passphrase = @splat(0),
                 };
                 const pwd_len = @min(password.len, 64);
                 @memcpy(pmk.passphrase[0..pwd_len], password[0..pwd_len]);
@@ -414,7 +414,7 @@ pub const CYW43_Wifi = struct {
 
         var ssid_info = SSID_Info{
             .len = @intCast(ssid.len),
-            .ssid = .{0} ** 32,
+            .ssid = @splat(0),
         };
         const len = @min(ssid.len, 32);
         @memcpy(ssid_info.ssid[0..len], ssid[0..len]);

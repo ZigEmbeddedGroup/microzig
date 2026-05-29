@@ -208,7 +208,7 @@ fn calculate_target_size(segments: []const Segment) u32 {
     return size;
 }
 
-fn write_elements(reader: *std.Io.File.fsReader, writer: *std.Io.Writer, segments: []const Segment) !void {
+fn write_elements(reader: *std.Io.File.Reader, writer: *std.Io.Writer, segments: []const Segment) !void {
     var ranges = ElementRangeIterator.init(segments);
     while (ranges.next()) |range| {
         const element_size = range.size();

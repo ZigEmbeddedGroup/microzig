@@ -50,7 +50,7 @@ pub fn print_fields(comptime ty: []const u8, comptime suffix_: ?[]const u8) []Fi
     }
     const fields = fields_[0..len];
     var last_i = fields[0].i;
-    const spaces = " " ** 20;
+    const spaces: [20]u8 = @splat(' ');
     for (fields) |field| {
         if (last_i != field.i) {
             last_i = field.i;
