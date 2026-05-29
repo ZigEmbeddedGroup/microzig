@@ -65,7 +65,7 @@ sram_size: u16 = 0,
 
 // State
 pc: u24 = 0,
-regs: [32]u8 = [1]u8{0} ** 32,
+regs: [32]u8 = @splat(0),
 sreg: SREG = @bitCast(@as(u8, 0)),
 instr_count: u64 = 0,
 
@@ -73,7 +73,7 @@ instr_effect: InstructionEffect = .none,
 
 pub fn reset(cpu: *Cpu) void {
     cpu.pc = 0;
-    cpu.regs = [1]u8{0} ** 32;
+    cpu.regs = @splat(0);
     cpu.sreg = @bitCast(@as(u8, 0));
 }
 

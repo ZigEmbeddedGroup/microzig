@@ -1,10 +1,5 @@
 const std = @import("std");
-pub const c = @cImport({
-    @cDefine("LIBXML_TREE_ENABLED", {});
-    @cDefine("LIBXML_SCHEMAS_ENABLED", {});
-    @cDefine("LIBXML_READER_ENABLED", {});
-    @cInclude("libxml/xmlreader.h");
-});
+pub const c = @import("xml").c;
 
 const Allocator = std.mem.Allocator;
 

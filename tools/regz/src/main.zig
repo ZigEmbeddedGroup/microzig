@@ -73,7 +73,7 @@ fn parse_args(gpa: Allocator, io: std.Io, args: []const []const u8) !Arguments {
             ret.help = true;
         } else if (std.mem.eql(u8, args[i], "--db_dump_path")) {
             i += 1;
-            ret.dump_path = try gpa.dupeZ(u8, args[i]);
+            ret.dump_path = try gpa.dupeSentinel(u8, args[i], 0);
         } else if (std.mem.eql(u8, args[i], "--format")) {
             i += 1;
             if (i >= args.len)
@@ -89,7 +89,7 @@ fn parse_args(gpa: Allocator, io: std.Io, args: []const []const u8) !Arguments {
             };
         } else if (std.mem.eql(u8, args[i], "--output_path")) {
             i += 1;
-            ret.output_path = try gpa.dupeZ(u8, args[i]);
+            ret.output_path = try gpa.dupeSentinel(u8, args[i], 0);
         } else if (std.mem.eql(u8, args[i], "--device")) {
             i += 1;
             ret.device = try gpa.dupe(u8, args[i]);

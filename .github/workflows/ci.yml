@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  ZIG_VERSION: 0.16.0
+  ZIG_VERSION: master
 
 jobs:
   formatting-check:
@@ -134,7 +134,7 @@ jobs:
         with:
           version: ${{ env.ZIG_VERSION }}
       - name: Generate Code
-        run: zig build generate
+        run: zig build -Dgenerate
         working-directory: port/stmicro/stm32
       - name: Check for code diffs
         run: |
@@ -163,6 +163,14 @@ jobs:
           version: ${{ env.ZIG_VERSION }}
       - name: Build
         run: zig build -Doptimize=ReleaseSmall
+
+  # Make sure that we are building examples and invoking tests for each port
+  validate-ports-checks:
+    name: Validate Port Checks
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    steps:
+    - run: sudo apt install -y yq
 
   unit-test-ports:
     name: Unit Test Ports
@@ -216,7 +224,7 @@ jobs:
 
   validate-foundation-libc:
     name: Test Foundation Libc
-    if: false # TODO: investigate libc issues on 0.16.0
+    if: false # TODO: investigate libc issues on master
     continue-on-error: true
     runs-on: ${{ matrix.os }}
     strategy:
@@ -247,7 +255,7 @@ jobs:
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
         with:
-          version: 0.16.0
+          version: master
       - name: Build Website
         run: zig build
         working-directory: website

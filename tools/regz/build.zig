@@ -10,14 +10,7 @@ pub fn build(b: *Build) !void {
     const libxml2_dep = b.dependency("libxml2", .{
         .target = target,
         .optimize = .ReleaseSafe,
-        .iconv = false,
     });
-
-    const sqlite3_dep = b.dependency("sqlite3", .{
-        .target = target,
-        .optimize = .ReleaseSafe,
-    });
-    const sqlite3_lib = sqlite3_dep.artifact("sqlite3");
 
     const zqlite_dep = b.dependency("zqlite", .{
         .target = target,
@@ -25,12 +18,14 @@ pub fn build(b: *Build) !void {
     });
 
     const zqlite = zqlite_dep.module("zqlite");
-    zqlite.linkLibrary(sqlite3_lib);
 
     const xml_module = b.createModule(.{
         .root_source_file = b.path("src/xml.zig"),
         .target = target,
         .optimize = optimize,
+        .imports = &.{
+            .{ .name = "xml", .module = libxml2_dep.module("xml") },
+        },
     });
 
     const regz_module = b.addModule("regz", .{
@@ -72,10 +67,8 @@ pub fn build(b: *Build) !void {
     b.installArtifact(regz);
 
     const run_cmd = b.addRunArtifact(regz);
+    run_cmd.addPassthruArgs();
     run_cmd.step.dependOn(b.getInstallStep());
-    if (b.args) |args| {
-        run_cmd.addArgs(args);
-    }
 
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);

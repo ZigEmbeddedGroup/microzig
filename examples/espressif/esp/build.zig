@@ -71,10 +71,10 @@ pub fn build(b: *std.Build) void {
                 });
 
                 const libc_lib = foundation_dep.artifact("foundation");
-                const lwip_lib = lwip_dep.artifact("lwip");
+                const lwip = lwip_dep.module("lwip");
 
-                lwip_lib.root_module.linkLibrary(libc_lib);
-                fw.exe.root_module.linkLibrary(lwip_lib);
+                lwip.linkLibrary(libc_lib);
+                fw.exe.root_module.addImport("lwip", lwip);
             }
 
             // `installFirmware()` is the MicroZig pendant to `Build.installArtifact()`

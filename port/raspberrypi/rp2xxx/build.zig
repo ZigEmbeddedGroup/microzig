@@ -308,15 +308,23 @@ pub fn build(b: *std.Build) !void {
 
     const bounded_array_dep = b.dependency("bounded-array", .{});
 
+    const translate_c = b.addTranslateC(.{
+        .root_source_file = b.path("src/hal/pio/assembler/comparison_tests.h"),
+        .target = target,
+        .optimize = optimize,
+        .link_libc = false,
+    });
+    translate_c.defineCMacro("PICO_NO_HARDWARE", "1");
+
     const unit_tests = b.addTest(.{
         .root_module = b.createModule(.{
             .root_source_file = b.path("src/hal.zig"),
             .target = target,
             .optimize = optimize,
-            .imports = &.{.{
-                .name = "bounded-array",
-                .module = bounded_array_dep.module("bounded-array"),
-            }},
+            .imports = &.{
+                .{ .name = "bounded-array", .module = bounded_array_dep.module("bounded-array") },
+                .{ .name = "c", .module = translate_c.createModule() },
+            },
         }),
     });
     unit_tests.root_module.addIncludePath(b.path("src/hal/pio/assembler"));

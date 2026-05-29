@@ -34,11 +34,9 @@ pub fn main() !void {
     }
 
     try spi.apply(.{ .clock_config = rp2xxx.clock_config });
-    var out_buf: [BUF_LEN]u8 = .{ 'h', 'e', 'y', ' ', 'y', 'o', 'u', '!' } ** (BUF_LEN / 8);
-
     while (true) {
-        std.log.info("Sending some data\n", .{});
-        spi.write_blocking(u8, &out_buf);
+        std.log.info("Sending some data", .{});
+        spi.write_blocking(u8, "hello world\r\n");
         time.sleep_ms(1 * 1000);
     }
 }
