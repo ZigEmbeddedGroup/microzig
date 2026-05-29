@@ -162,8 +162,8 @@ pub const TLV493D = struct {
             .dev = dev,
             .address = address,
             .clock = clock,
-            .read_data = @bitCast([_]u8{0} ** 10),
-            .write_data = @bitCast([_]u8{0} ** 4),
+            .read_data = 0,
+            .write_data = 0,
             .mode = config.access_mode,
         };
 

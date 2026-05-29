@@ -11,7 +11,7 @@ pub fn Mmio(comptime PackedT: type) type {
     if (!std.math.isPowerOfTwo(size / 8))
         @compileError("size must encode a power of two number of bytes!");
 
-    const IntT = std.meta.Int(.unsigned, size);
+    const IntT = @Int(.unsigned, size);
 
     if (@sizeOf(PackedT) != (size / 8))
         @compileError(std.fmt.comptimePrint("IntT and PackedT must have the same size!, they are {} and {} bytes respectively", .{ size / 8, @sizeOf(PackedT) }));

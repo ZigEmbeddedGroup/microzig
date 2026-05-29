@@ -851,9 +851,9 @@ const DimElements = struct {
     }
 
     fn dim_index_value(self: DimElements, ctx: *Context, index: usize) ![]const u8 {
-        if (std.mem.containsAtLeastScalar(u8, self.dim_index.?, 1, '-')) {
+        if (std.mem.containsAtLeastScalar(u8, self.dim_index.?, '-', 1)) {
             return try self.dim_index_value_range(ctx, index);
-        } else if (std.mem.containsAtLeastScalar(u8, self.dim_index.?, 1, ',')) {
+        } else if (std.mem.containsAtLeastScalar(u8, self.dim_index.?, ',', 1)) {
             return try self.dim_index_value_csv(ctx, index);
         } else return error.DimIndexInvalid;
     }
@@ -888,6 +888,7 @@ const DimElements = struct {
             if (start_index.len == 1 and std.ascii.isAlphabetic(start_index[0])) {
                 return start_index;
             }
+
             return error.DimIndexInvalid;
         }
     }

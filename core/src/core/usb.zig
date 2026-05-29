@@ -319,7 +319,8 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
                         };
                         if (itf_start != itf_handlers.len)
                             @compileError("interface numbering mismatch");
-                        itf_handlers = itf_handlers ++ &[_]DriverEnum{@field(DriverEnum, drv.name)} ** itf_count;
+
+                        itf_handlers = itf_handlers ++ @as([itf_count]DriverEnum, @splat(@field(DriverEnum, drv.name)));
                     }
 
                     switch (fld.type) {
