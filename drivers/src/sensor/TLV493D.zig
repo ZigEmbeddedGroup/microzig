@@ -162,8 +162,8 @@ pub const TLV493D = struct {
             .dev = dev,
             .address = address,
             .clock = clock,
-            .read_data = 0,
-            .write_data = 0,
+            .read_data = std.mem.zeroes(ReadRegister),
+            .write_data = std.mem.zeroes(WriteRegister),
             .mode = config.access_mode,
         };
 

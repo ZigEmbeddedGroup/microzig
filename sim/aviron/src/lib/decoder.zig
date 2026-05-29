@@ -25,9 +25,9 @@ pub fn decode(inst_val: u16) !Instruction {
             }
 
             const positionals = @field(tables.positionals, @tagName(tag));
-            const Bitsets = std.meta.Tuple(types: {
+            const Bitsets = @Tuple(types: {
                 var bs_types: [positionals.len]type = undefined;
-                inline for (positionals, 0..) |pos, i| {
+                for (positionals, 0..) |pos, i| {
                     bs_types[i] = std.bit_set.IntegerBitSet(pos[1].len);
                 }
                 break :types &bs_types;
@@ -35,10 +35,10 @@ pub fn decode(inst_val: u16) !Instruction {
 
             var bitsets: Bitsets = undefined;
             inline for (&bitsets) |*bs| {
-                bs.* = @TypeOf(bs.*).initEmpty();
+                bs.* = .empty;
             }
 
-            var bitset = std.bit_set.IntegerBitSet(16).initEmpty();
+            var bitset: std.bit_set.IntegerBitSet(16) = .empty;
             bitset.mask = @bitReverse(inst_val);
 
             var result: Result = undefined;
