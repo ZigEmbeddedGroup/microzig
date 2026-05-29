@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  ZIG_VERSION: 0.16.0
+  ZIG_VERSION: master
 
 jobs:
   formatting-check:
@@ -221,7 +221,7 @@ jobs:
 
   validate-foundation-libc:
     name: Test Foundation Libc
-    if: false # TODO: investigate libc issues on 0.16.0
+    if: false # TODO: investigate libc issues on master
     continue-on-error: true
     runs-on: ${{ matrix.os }}
     strategy:
@@ -252,7 +252,7 @@ jobs:
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
         with:
-          version: 0.16.0
+          version: master
       - name: Build Website
         run: zig build
         working-directory: website
