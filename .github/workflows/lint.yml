@@ -23,7 +23,7 @@ jobs:
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
         with:
-          version: master
+          version: 0.16.0
 
       # Build linter from trusted base branch code
       - name: Build linter

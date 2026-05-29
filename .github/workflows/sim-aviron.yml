@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    if: false # avr is broken on master
+    if: false # avr is broken on 0.16.0
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -19,7 +19,7 @@ jobs:
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
         with:
-          version: master
+          version: 0.16.0
 
       - name: Build
         working-directory: sim/aviron
