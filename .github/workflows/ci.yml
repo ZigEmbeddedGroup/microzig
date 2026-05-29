@@ -40,6 +40,8 @@ jobs:
       - run: zig env
       - run: echo $ZIG_GLOBAL_CACHE_DIR
       - run: mkdir -p $ZIG_GLOBAL_CACHE_DIR
+      - run: echo $HOME/.cache/zig
+      - run: mkdir -p $HOME/.cache/zig
       - name: Unit Test Regz
         run: zig build test
         working-directory: tools/regz
