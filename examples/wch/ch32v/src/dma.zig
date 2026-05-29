@@ -19,9 +19,9 @@ comptime {
 }
 
 // Should be in flash .rodata
-const rbuf: [1024]u32 = .{0x12345678} ** 1024;
+const rbuf: [1024]u32 = @splat(0x12345678);
 // Should be in RAM .bss
-var wbuf: [1024]u32 = .{0} ** 1024;
+var wbuf: [1024]u32 = @splat(0);
 
 inline fn read_stk_cnt() u64 {
     const PFIC = microzig.chip.peripherals.PFIC;

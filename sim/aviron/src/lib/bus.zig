@@ -37,7 +37,7 @@ pub const Flash = struct {
         return struct {
             const Self = @This();
 
-            data: [size]u8 align(2) = .{0} ** size,
+            data: [size]u8 align(2) = @splat(0),
 
             pub fn memory(self: *Self) Flash {
                 return Flash{
@@ -236,7 +236,7 @@ pub fn FixedSizeMemory(comptime size: comptime_int, comptime bus_config: ?BusCon
         pub const BusType = Bus(config);
         const AddressType = BusType.Address;
 
-        data: [size]u8 align(2) = .{0} ** size,
+        data: [size]u8 align(2) = @splat(0),
 
         pub fn bus(self: *Self) BusType {
             return .{ .ctx = self, .vtable = &bus_vtable };

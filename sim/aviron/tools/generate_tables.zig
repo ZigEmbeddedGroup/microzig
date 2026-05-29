@@ -26,7 +26,7 @@ pub fn main(init: std.process.Init) !void {
     var buf: std.Io.Writer.Allocating = .init(gpa);
     defer buf.deinit();
 
-    var lut = [_]isa.Opcode{.unknown} ** (std.math.maxInt(u16) + 1);
+    var lut: [std.math.maxInt(u16) + 1]isa.Opcode = @splat(.unknown);
 
     var base_number_bit_set = std.bit_set.IntegerBitSet(16).initEmpty();
     var unknown_indices = try BoundedArray(u8, 16).init(0);

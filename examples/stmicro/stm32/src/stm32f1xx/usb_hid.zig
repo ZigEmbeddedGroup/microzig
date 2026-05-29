@@ -139,7 +139,7 @@ const ReportDescriptor = [63]u8{
 //=============== USB DATA =================
 var EP0_RX_BUFFER: [64]u8 = undefined;
 var USB_RX_BUFFER: [64]u8 = undefined;
-var HID_send: [8]u8 = .{0} ** 8;
+var HID_send: [8]u8 = @splat(0);
 var to_report: bool = false;
 var device_addr: ?u7 = null;
 var config: bool = false;

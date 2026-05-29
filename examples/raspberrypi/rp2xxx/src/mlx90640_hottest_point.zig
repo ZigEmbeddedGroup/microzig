@@ -88,7 +88,7 @@ inline fn find_hottest_cluster_centroid(image: *const [768]f32) struct { row: f3
         hot[i] = image[i] >= threshold;
     }
 
-    var visited: [768]bool = .{false} ** 768;
+    var visited: [768]bool = @splat(false);
     var queue: [768]u16 = undefined;
 
     var best_sum_row: f32 = 0;

@@ -74,7 +74,7 @@ pub fn main() !void {
     time.init_timer(.TIM2);
 
     const ref_ovf_flag: *volatile bool = &ovf_flag;
-    var adc_buf: [10]u16 = .{0} ** 10;
+    var adc_buf: [10]u16 = @splat(0);
     const dma_channel = adc_dma.get_channel();
 
     dma_channel.apply(.{

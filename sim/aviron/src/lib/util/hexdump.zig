@@ -121,7 +121,7 @@ pub fn hexdump(
 
             // Store as previous row
             if (prev_row == null) {
-                prev_row = [_]u8{0} ** 256;
+                prev_row = @splat(0);
             }
             @memcpy(prev_row.?[0..row_len], cur_row[0..row_len]);
             prev_len = row_len;

@@ -77,7 +77,7 @@ pub const SelectedPatch = struct {
 pub const PendingPatchCreation = struct {
     peripheral_name: []const u8,
     group_idx: usize,
-    enum_name_buffer: [128]u8 = [_]u8{0} ** 128,
+    enum_name_buffer: [128]u8 = @splat(0),
     selected_file_index: ?usize = null,
 };
 

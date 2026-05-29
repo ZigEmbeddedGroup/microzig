@@ -139,7 +139,7 @@ pub const CYW43_Bus = struct {
 
     fn readn(self: *Self, func: FuncType, addr: u17, len: u11) u32 {
         const cmd = Cmd{ .cmd = .read, .incr = .incremental, .func = func, .addr = addr, .len = len };
-        var buff = [_]u32{0} ** 2;
+        var buff: [2]u32 = @splat(0);
         // if we are reading from the backplane, we need an extra word for the response delay
         const buff_len: usize = if (func == .backplane) 2 else 1;
 
