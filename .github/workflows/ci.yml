@@ -38,7 +38,8 @@ jobs:
         with:
           version: ${{ env.ZIG_VERSION }}
       - run: zig env
-      - run: mkdir -p ~/.cache/zig
+      - run: echo $ZIG_GLOBAL_CACHE_DIR
+      - run: mkdir -p $ZIG_GLOBAL_CACHE_DIR
       - name: Unit Test Regz
         run: zig build test
         working-directory: tools/regz
