@@ -835,7 +835,7 @@ const DimElements = struct {
             const buf = try ctx.arena.allocator().allocSentinel(u8, 16, 0);
             @memset(buf, 0);
             // dim index range is with
-            dim_index = try std.fmt.bufPrintZ(buf, "0-{d}", .{dim.? - 1});
+            dim_index = try std.fmt.bufPrintSentinel(buf, "0-{d}", .{dim.? - 1}, 0);
         }
 
         if (node.get_value("dimArrayIndex") != null) {

@@ -10,16 +10,12 @@
     },
     .dependencies = .{
         .libxml2 = .{
-            .url = "git+https://github.com/allyourcodebase/libxml2.git?ref=2.15.1-2#2528fad1bf17a0a70999930cfd9280554f547787",
-            .hash = "libxml2-2.15.1-2-qHdjhmNMAAAiZOWqVridicq2oMf5NHv0n9W41bz9FtMM",
-        },
-        .sqlite3 = .{
-            .url = "git+https://github.com/allyourcodebase/sqlite3#b7514a2b76003bee57db1fc78e84a2abc7499efa",
-            .hash = "sqlite3-3.51.0-DMxLWuAOAABO27GnPH0iTeI57EkQPpGwqI7LTfiE4Pda",
+            .url = "git+https://github.com/allyourcodebase/libxml2.git#675b1709603929393613d0ab00a61ff11491bbbe",
+            .hash = "libxml2-2.15.1-2-qHdjhvNVAADdvYgiVeAqxhST_JM3VhVplmc1REvwtAYr",
         },
         .zqlite = .{
-            .url = "git+https://github.com/karlseguin/zqlite.zig#b44ed5cdc64859b08446c246f307e65ebe2b2d9c",
-            .hash = "zqlite-0.0.0-RWLaY_y_mADh2LdbDrG_2HT2dBAcsAR8Jig_7-dOJd0B",
+            .url = "git+https://github.com/karlseguin/zqlite.zig#5ac4cabe95a6d7faa7baf0da8057a8e6e8a227a1",
+            .hash = "zqlite-0.0.1-RWLaY64xnAAxsD2YNT8QqPMJUuaFv2GOzFRR4aGypJv3",
         },
     },
 }
