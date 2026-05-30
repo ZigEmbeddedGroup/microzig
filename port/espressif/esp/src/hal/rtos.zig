@@ -752,7 +752,7 @@ pub const ReadyTaskConstraint = union(enum) {
 pub const ReadyPriorityQueue = if (ready_queue_use_buckets) struct {
     const ReadySet = std.EnumSet(Priority);
 
-    ready: ReadySet = .initEmpty(),
+    ready: ReadySet = .empty,
     lists: std.EnumArray(Priority, DoublyLinkedList) = .initFill(.{}),
 
     pub fn max_ready_priority(pq: *ReadyPriorityQueue) ?Priority {
