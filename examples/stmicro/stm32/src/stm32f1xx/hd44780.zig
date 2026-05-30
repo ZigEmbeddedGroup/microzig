@@ -1,17 +1,13 @@
-const std = @import("std");
 const microzig = @import("microzig");
 
 const stm32 = microzig.hal;
 const rcc = stm32.rcc;
 const gpio = stm32.gpio;
 const time = stm32.time;
-const Duration = microzig.drivers.time.Duration;
 
 const drivers = microzig.drivers;
-const lcd_driver = drivers.display.hd44780;
 const lcd = drivers.display.HD44780;
 const PCF8574 = drivers.IO_expander.PCF8574;
-const State = drivers.base.Digital_IO.State;
 
 const I2C = stm32.i2c;
 const I2C_Device = stm32.drivers.I2C_Device;
@@ -29,6 +25,14 @@ const i2c_device = I2C_Device.init(i2c, config, null);
 
 fn delay_us(delay: u32) void {
     time.sleep_us(delay);
+}
+
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
 }
 
 pub fn main() !void {

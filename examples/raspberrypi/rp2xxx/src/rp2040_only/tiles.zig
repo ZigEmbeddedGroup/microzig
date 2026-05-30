@@ -70,6 +70,14 @@ inline fn float_to_bright(f: f32) u8 {
     ];
 }
 
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
 pub fn main() !void {
     pio.gpio_init(led_pin);
     sm_set_consecutive_pindirs(pio, sm, @intFromEnum(led_pin), 1, true);

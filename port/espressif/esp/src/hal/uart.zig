@@ -4,8 +4,6 @@ const peripherals = microzig.chip.peripherals;
 
 // TODO: chip independent. currently specific to esp32c3.
 
-const UART = peripherals.UART;
-
 fn reg(comptime index: comptime_int) @TypeOf(@field(peripherals, std.fmt.comptimePrint("UART{}", .{index}))) {
     return @field(peripherals, std.fmt.comptimePrint("UART{}", .{index}));
 }

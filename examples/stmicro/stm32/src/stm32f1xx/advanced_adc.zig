@@ -28,8 +28,17 @@ const ADC_pin1 = gpio.Pin.from_port(.A, 1);
 const ADC_pin2 = gpio.Pin.from_port(.A, 2);
 const ADC_pin3 = gpio.Pin.from_port(.A, 3);
 
-pub const microzig_options = microzig.Options{
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{
     .logFn = stm32.uart.log,
+});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
+pub const microzig_options: microzig.Options = .{
     .interrupts = .{ .ADC1_2 = .{ .c = watchdog_handler } },
 };
 
@@ -49,7 +58,7 @@ fn adc_to_temp(val: usize) f32 {
 
 pub fn main() !void {
     _ = try rcc.apply(.{
-        .ADCPresc = .RCC_ADCPCLK2_DIV2,
+        .ADCPresc = .Div2,
         .flags = .{
             .USE_ADC1 = true,
         },

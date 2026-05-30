@@ -1,12 +1,10 @@
 const std = @import("std");
 const microzig = @import("microzig");
-const time = microzig.drivers.time;
 const SH1106 = microzig.drivers.display.SH1106;
 
 const esp = microzig.hal;
 const i2c = esp.i2c;
 const gpio = esp.gpio;
-const peripherals = microzig.chip.peripherals;
 const I2C_Datagram_Device = esp.drivers.I2C_Datagram_Device;
 const sleep_ms = esp.time.sleep_ms;
 
@@ -14,9 +12,15 @@ var i2c0 = i2c.instance.num(0);
 
 const usb_serial_jtag = esp.usb_serial_jtag;
 
-pub const microzig_options = microzig.Options{
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{
     .logFn = usb_serial_jtag.logger.log,
-};
+});
+
+comptime {
+    _ = microzig.export_startup();
+}
 
 pub fn main() !void {
     const sda_pin = gpio.num(5);

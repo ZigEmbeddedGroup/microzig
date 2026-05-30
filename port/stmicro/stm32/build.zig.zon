@@ -10,8 +10,8 @@
             .hash = "N-V-__8AAFi8WBlOh-NikHFVBjzQE0F1KixgKjVWYnlijPNm",
         },
         .ClockHelper = .{
-            .url = "git+https://github.com/ZigEmbeddedGroup/ClockHelper#922c35eb54f0417318ccfcc32367bdcf11823ede",
-            .hash = "ClockHelper-2.0.0-RcMaOUMGIwEUEHQJ0C2Q-KbWdKXN2GqzQcs9MpVSTgm3",
+            .url = "git+https://github.com/ZigEmbeddedGroup/ClockHelper#252a3d81f80915dcd0ac280b1ef6be455447d1c5",
+            .hash = "ClockHelper-2.0.0-RcMaOYpcIwHRJCnKF3AVSXrDyMpUlmIpZprAHjqflyzy",
         },
     },
     .paths = .{

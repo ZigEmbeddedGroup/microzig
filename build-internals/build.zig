@@ -8,6 +8,7 @@ pub const Patch = regz.patch.Patch;
 const uf2 = @import("uf2");
 pub const FamilyId = uf2.FamilyId;
 const esp_image = @import("esp-image");
+const dfu = @import("dfu");
 
 pub fn build(b: *Build) void {
     _ = b.addModule("build-internals", .{
@@ -216,7 +217,8 @@ pub const BinaryFormat = union(enum) {
     hex,
 
     /// A [Device Firmware Upgrade](https://www.usb.org/sites/default/files/DFU_1.1.pdf) file.
-    dfu,
+    /// ST MicroElectronics [DfuSe](https://rc.fdr.hu/UM0391.pdf) format is also supported.
+    dfu: dfu.Options,
 
     /// The [USB Flashing Format (UF2)](https://github.com/microsoft/uf2) designed by Microsoft.
     uf2: uf2.Options,

@@ -3,9 +3,7 @@ const microzig = @import("microzig");
 
 const rp2xxx = microzig.hal;
 const flash = rp2xxx.flash;
-const time = rp2xxx.time;
 const gpio = rp2xxx.gpio;
-const clocks = rp2xxx.clocks;
 
 const led = gpio.num(25);
 const uart = rp2xxx.uart.instance.num(0);
@@ -14,16 +12,20 @@ const uart_tx_pin = gpio.num(0);
 const flash_target_offset: u32 = 256 * 1024;
 const flash_target_contents = @as([*]const u8, @ptrFromInt(rp2xxx.flash.XIP_BASE + flash_target_offset));
 
+pub const std_options = microzig.std_options(.{
+    .log_level = .debug,
+    .logFn = rp2xxx.uart.log,
+});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
 pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
     std.log.err("panic: {s}", .{message});
     @breakpoint();
     while (true) {}
 }
-
-pub const microzig_options = microzig.Options{
-    .log_level = .debug,
-    .logFn = rp2xxx.uart.log,
-};
 
 pub fn main() !void {
     // init uart logging

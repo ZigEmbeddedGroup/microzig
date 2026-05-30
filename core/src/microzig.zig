@@ -5,10 +5,6 @@
 
 const std = @import("std");
 const root = @import("root");
-const builtin = @import("builtin");
-
-/// The app that is currently built.
-pub const app = @import("app");
 
 /// Contains build-time generated configuration options for microzig.
 /// Contains a CPU target description, chip, board and cpu information
@@ -67,26 +63,6 @@ pub const CPU_Options = if (@hasDecl(cpu, "CPU_Options")) cpu.CPU_Options else s
 pub const HAL_Options = if (config.has_hal and @hasDecl(hal, "HAL_Options")) hal.HAL_Options else struct {};
 
 pub const Options = struct {
-    log_level: std.log.Level = std.log.default_level,
-    log_scope_levels: []const std.log.ScopeLevel = &.{},
-    logFn: fn (
-        comptime message_level: std.log.Level,
-        comptime scope: @TypeOf(.enum_literal),
-        comptime format: []const u8,
-        args: anytype,
-    ) void = struct {
-        fn log(
-            comptime message_level: std.log.Level,
-            comptime scope: @Type(.enum_literal),
-            comptime format: []const u8,
-            args: anytype,
-        ) void {
-            _ = message_level;
-            _ = scope;
-            _ = format;
-            _ = args;
-        }
-    }.log,
     interrupts: InterruptOptions = .{},
     overwrite_hal_interrupts: bool = false, //force overwrite the Hal default interrupts
     cpu: CPU_Options = .{},
@@ -103,7 +79,41 @@ pub const Options = struct {
     simple_panic_if_main_errors: bool = false,
 };
 
-pub const options: Options = if (@hasDecl(app, "microzig_options")) app.microzig_options else .{};
+pub const options: Options = if (@hasDecl(root, "microzig_options")) root.microzig_options else .{};
+
+pub const StdOptions = struct {
+    /// Control verbosity of `std.log` calls
+    log_level: std.log.Level = std.log.default_level,
+    /// Per-scope filtering for fine-grained logging
+    log_scope_levels: []const std.log.ScopeLevel = &.{},
+    /// The logging callback function, you'll need to provide to be able to log
+    /// to UART for example. The default is to do nothing, which is very
+    /// portable.
+    logFn: fn (
+        comptime message_level: std.log.Level,
+        comptime scope: @TypeOf(.enum_literal),
+        comptime format: []const u8,
+        args: anytype,
+    ) void = no_op_log,
+};
+
+/// Helper for setting std_options relevant to embedded systems and freestanding
+/// targets. Makes fewer assumptions about your system that the stdlib, and will
+/// compile by default. You can set you own values using the overrides parameter.
+pub fn std_options(comptime overrides: StdOptions) std.Options {
+    return .{
+        .log_level = overrides.log_level,
+        .log_scope_levels = overrides.log_scope_levels,
+        .logFn = overrides.logFn,
+    };
+}
+
+fn no_op_log(
+    comptime _: std.log.Level,
+    comptime _: @TypeOf(.enum_literal),
+    comptime _: []const u8,
+    _: anytype,
+) void {}
 
 /// Hangs the processor and will stop doing anything useful. Use with caution!
 pub fn hang() noreturn {
@@ -112,6 +122,63 @@ pub fn hang() noreturn {
         // "this loop has side effects, don't optimize the endless loop away please. thanks!"
         asm volatile ("" ::: .{ .memory = true });
     }
+}
+
+/// Call this in the root of your application to ensure that startup code is
+/// linked correctly:
+///
+/// ```zig
+/// comptime { _ = microzig.export_startup(); }
+/// ```
+///
+/// Different systems require different startup procedures, and MicroZig will
+/// select the right one for your system.
+pub fn export_startup() void {
+    cpu.export_startup_logic();
+    @export(&microzig_main, .{ .name = "microzig_main" });
+}
+
+fn microzig_main() callconv(.c) noreturn {
+    // A HAL may define `init` (e.g. clocks, PLL) that runs before main. The
+    // user's root source file may define its own `init` to override the HAL
+    // default.
+    if (@hasDecl(root, "init"))
+        root.init()
+    else if (hal != void and @hasDecl(hal, "init"))
+        hal.init();
+
+    const main = @field(root, "main");
+    const return_type = @typeInfo(@TypeOf(main)).@"fn".return_type orelse
+        @compileError("microzig: `main` must have a return type");
+
+    if (@typeInfo(return_type) == .error_union) {
+        main() catch |err| {
+            const msg_base = "main() returned error.";
+
+            if (!options.simple_panic_if_main_errors) {
+                const max_error_size = comptime blk: {
+                    var max: usize = 0;
+                    const err_type = @typeInfo(return_type).error_union.error_set;
+                    if (@typeInfo(err_type).error_set) |err_set| {
+                        for (err_set) |current_err| {
+                            max = @max(max, current_err.name.len);
+                        }
+                    }
+                    break :blk max;
+                };
+
+                var buf: [msg_base.len + max_error_size]u8 = undefined;
+                const msg = std.fmt.bufPrint(&buf, "{s}{s}", .{ msg_base, @errorName(err) }) catch @panic(msg_base);
+                @panic(msg);
+            } else {
+                @panic(msg_base);
+            }
+        };
+    } else {
+        main();
+    }
+
+    hang();
 }
 
 test {

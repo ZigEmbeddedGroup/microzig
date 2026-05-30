@@ -6,6 +6,7 @@
         .regz = .{ .path = "../tools/regz" },
         .uf2 = .{ .path = "../tools/uf2" },
         .@"esp-image" = .{ .path = "../tools/esp-image" },
+        .dfu = .{ .path = "../tools/dfu" },
     },
     .paths = .{
         "build.zig",

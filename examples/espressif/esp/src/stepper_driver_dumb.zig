@@ -9,9 +9,15 @@ const ULN2003 = microzig.drivers.stepper.ULN2003;
 
 const usb_serial_jtag = hal.usb_serial_jtag;
 
-pub const microzig_options = microzig.Options{
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{
     .logFn = usb_serial_jtag.logger.log,
-};
+});
+
+comptime {
+    _ = microzig.export_startup();
+}
 
 pub fn main() !void {
     // Setup all pins for the stepper driver

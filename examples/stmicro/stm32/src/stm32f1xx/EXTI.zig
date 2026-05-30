@@ -4,14 +4,20 @@
 
 const microzig = @import("microzig");
 const hal = microzig.hal;
-const gpio = hal.gpio;
-const rcc = hal.rcc;
 const exti = hal.exti;
 
 const led = hal.gpio.Pin.from_port(.B, 2);
 const input = hal.gpio.Pin.from_port(.B, 9);
 
 //define the EXTI handler
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
 pub const microzig_options: microzig.Options = .{
     .interrupts = .{
         .EXTI9_5 = .{ .c = EXTI_handler },

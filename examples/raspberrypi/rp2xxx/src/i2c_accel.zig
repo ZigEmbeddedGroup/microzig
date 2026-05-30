@@ -5,7 +5,6 @@ const rp2xxx = microzig.hal;
 const gpio = rp2xxx.gpio;
 const i2c = rp2xxx.i2c;
 
-const ClockDevice = rp2xxx.drivers.ClockDevice;
 const I2C_Device = rp2xxx.drivers.I2C_Device;
 const ICM_20948 = microzig.drivers.sensor.ICM_20948;
 
@@ -13,10 +12,16 @@ const uart = rp2xxx.uart.instance.num(0);
 const uart_tx_pin = gpio.num(0);
 const i2c0 = i2c.instance.num(0);
 
-pub const microzig_options = microzig.Options{
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{
     .log_level = .info,
     .logFn = rp2xxx.uart.log,
-};
+});
+
+comptime {
+    _ = microzig.export_startup();
+}
 
 const sleep_ms = rp2xxx.time.sleep_ms;
 

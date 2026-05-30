@@ -12,13 +12,11 @@ pub const Descriptor = extern struct {
     ep_out: desc.Endpoint,
     ep_in: desc.Endpoint,
 
-    /// This function is used during descriptor creation. Endpoint and
-    /// interface numbers are allocated through the `alloc` parameter.
-    /// Third argument can be of any type, it's passed by the user when
-    /// creating the device controller type. If multiple instances of
-    /// a driver are used, this function is called for each, with different
-    /// arguments. Passing arguments through this function is preffered to
-    /// making the whole driver generic.
+    /// This function is used during descriptor creation. Endpoint and interface numbers are
+    /// allocated through the `alloc` parameter. Third argument can be of any type, it's passed
+    /// by the user when creating the device controller type. If multiple instances of a driver
+    /// are used, this function is called for each, with different arguments. Passing arguments
+    /// through this function is preffered to making the whole driver generic.
     pub fn create(
         alloc: *usb.DescriptorAllocator,
         max_supported_packet_size: usb.types.Len,
@@ -43,9 +41,9 @@ pub const Descriptor = extern struct {
     }
 };
 
-/// This is a mapping from endpoint descriptor field names to handler
-/// function names. Counterintuitively, usb devices send data on 'in'
-/// endpoints and receive on 'out' endpoints.
+/// This is a mapping from endpoint descriptor field names to handler function names.
+/// 'in' and 'out' are from the perspective of the host, so, usb devices send data on 'in' endpoints
+/// and receive on 'out' endpoints.
 pub const handlers: usb.DriverHandlers(@This()) = .{
     .ep_in = on_tx_ready,
     .ep_out = on_rx,
@@ -56,9 +54,8 @@ descriptor: *const Descriptor,
 packet_buffer: []u8,
 tx_ready: std.atomic.Value(bool),
 
-/// This function is called when the host chooses a configuration
-/// that contains this driver. `self` points to undefined memory.
-/// `data` is of the length specified in `Descriptor.create()`.
+/// This function is called when the host chooses a configuration that contains this driver. `self`
+/// points to undefined memory. `data` is of the length specified in `Descriptor.create()`.
 pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterface, data: []u8) void {
     assert(data.len == desc.ep_in.max_packet_size.into());
     self.* = .{
@@ -77,19 +74,21 @@ pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterfac
 /// Data returned by this function is sent on endpoint 0.
 pub fn class_request(self: *@This(), setup: *const usb.types.SetupPacket) ?[]const u8 {
     _ = self;
-    _ = setup;
+    log.debug("setup: {x}, {}, {}", .{ setup.request, setup.length.into(), setup.value.into() });
     return usb.ack;
 }
 
+/// Transmit handler callback.
 /// Each endpoint (as defined in the descriptor) has its own handler.
-/// Endpoint number is passed as an argument so that it does not need
-/// to be stored in the driver.
+/// Endpoint number is passed as an argument so that it does not need to be stored in the driver.
 pub fn on_tx_ready(self: *@This(), ep_tx: usb.types.Endpoint.Num) void {
     log.info("tx ready ({t})", .{ep_tx});
     // Mark transmission as available
     self.tx_ready.store(true, .seq_cst);
 }
 
+/// Receive handler callback.
+/// Endpoint number is passed as an argument so that it does not need to be stored in the driver.
 pub fn on_rx(self: *@This(), ep_rx: usb.types.Endpoint.Num) void {
     var buf: [64]u8 = undefined;
     // Read incoming packet into a local buffer

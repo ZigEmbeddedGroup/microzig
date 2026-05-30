@@ -1,21 +1,25 @@
 const std = @import("std");
-const log = std.log;
 
 const microzig = @import("microzig");
-const peripherals = microzig.chip.peripherals;
 const esp = microzig.hal;
-const gpio = esp.gpio;
-const systimer = esp.systimer;
 const usb_serial_jtag = esp.usb_serial_jtag;
 const rtos = esp.rtos;
 
-pub const microzig_options: microzig.Options = .{
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{
     .logFn = usb_serial_jtag.logger.log,
-    .interrupts = .{
-        .interrupt30 = rtos.general_purpose_interrupt_handler,
-        .interrupt31 = rtos.yield_interrupt_handler,
-    },
     .log_level = .debug,
+});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
+pub const microzig_options: microzig.Options = .{
+    .interrupts = .{
+        .interrupt31 = rtos.interrupt_handler,
+    },
     .cpu = .{
         .interrupt_stack = .{
             .enable = true,
@@ -29,17 +33,15 @@ pub const microzig_options: microzig.Options = .{
     },
 };
 
-var heap_buf: [10 * 1024]u8 = undefined;
-
 fn task1(queue: *rtos.Queue(u32)) void {
     for (0..5) |i| {
-        queue.put_one(i, null) catch unreachable;
+        queue.put_one(i, .never) catch unreachable;
         rtos.sleep(.from_ms(500));
     }
 }
 
 pub fn main() !void {
-    var heap = try microzig.Allocator.init_with_buffer(&heap_buf);
+    var heap = try microzig.Allocator.init_with_heap(4096);
     const gpa = heap.allocator();
 
     var buffer: [1]u32 = undefined;
@@ -47,10 +49,11 @@ pub fn main() !void {
 
     esp.time.sleep_ms(1000);
 
-    _ = try rtos.spawn(gpa, task1, .{&queue}, .{});
+    const task = try rtos.spawn(gpa, task1, .{&queue}, .{});
+    defer rtos.wait_and_free(gpa, task);
 
     while (true) {
-        const item = try queue.get_one(.from_ms(1000));
+        const item = try queue.get_one(.{ .after = .from_ms(1000) });
         std.log.info("got item: {}", .{item});
     }
 }

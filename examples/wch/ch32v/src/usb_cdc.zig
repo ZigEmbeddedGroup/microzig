@@ -16,7 +16,7 @@ const usart = hal.usart.instance.USART1;
 
 const usart_tx_pin = gpio.Pin.init(0, 9); // PA9
 
-pub const microzig_options = microzig.Options{
+pub const std_options = microzig.std_options(.{
     .logFn = hal.usart.log,
     .log_level = .debug,
     .log_scope_levels = &.{
@@ -24,7 +24,11 @@ pub const microzig_options = microzig.Options{
         .{ .scope = .usb_ctrl, .level = .warn },
         .{ .scope = .usb_cdc, .level = .warn },
     },
-};
+});
+
+comptime {
+    _ = microzig.export_startup();
+}
 
 const USBController = usb.DeviceController(.{
     .bcd_usb = .v2_00,

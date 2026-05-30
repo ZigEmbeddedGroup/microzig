@@ -9,8 +9,11 @@ typedef unsigned int sys_prot_t;
 extern uint32_t lwip_rand(void);
 extern void lwip_lock_core_mutex();
 extern void lwip_unlock_core_mutex();
+extern void lwip_assert_core_locked();
 extern void lwip_assert(const char *msg, const char *file, int line);
 extern void lwip_diag(const char *msg, const char *file, int line);
+
+#define LWIP_ASSERT_CORE_LOCKED()   do { lwip_assert_core_locked(); } while (0)
 
 #define LWIP_PLATFORM_DIAG(x)                                                  \
     do {                                                                       \

@@ -1,4 +1,3 @@
-const std = @import("std");
 const microzig = @import("microzig");
 const rp2xxx = microzig.hal;
 const time = rp2xxx.time;
@@ -9,6 +8,14 @@ const pin_config: rp2xxx.pins.GlobalConfiguration = .{
         .direction = .out,
     },
 };
+
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
 
 pub fn main() !void {
     const pins = pin_config.apply();
