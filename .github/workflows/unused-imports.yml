@@ -25,7 +25,7 @@ jobs:
 
       - name: Build zigimports
         run: |
-          git clone --depth 1 --revision 0c56cb27d932f69e572fb1247213075624011f7f https://github.com/tusharsadhwani/zigimports.git /tmp/zigimports
+          git clone --depth 1 https://github.com/tusharsadhwani/zigimports.git /tmp/zigimports
           cd /tmp/zigimports
           zig build --release=safe
           # Binary is named zigimports-<arch>-<os>, find and symlink it
