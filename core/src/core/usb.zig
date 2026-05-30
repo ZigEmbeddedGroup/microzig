@@ -209,7 +209,7 @@ pub const Config = struct {
         var field_types: [self.configurations.len]type = undefined;
         for (self.configurations, &field_types) |cfg, *dst|
             dst.* = cfg.Args();
-        return std.meta.Tuple(&field_types);
+        return @Tuple(&field_types);
     }
 };
 
@@ -350,10 +350,9 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
             }
 
             // Finally, bind the handler functions based on the data collected above.
-            const Tuple = std.meta.Tuple;
             // Create a tuple with the appropriate types
-            const ep_handlers_types: [2]type = .{ Tuple(&ep_handler_types[0]), Tuple(&ep_handler_types[1]) };
-            var ep_handlers: Tuple(&ep_handlers_types) = undefined;
+            const ep_handlers_types: [2]type = .{ @Tuple(&ep_handler_types[0]), @Tuple(&ep_handler_types[1]) };
+            var ep_handlers: @Tuple(&ep_handlers_types) = undefined;
             // Iterate over all IN and OUT endpoints and bind the handler for any that are set.
             for (&ep_handler_types, &ep_handler_names, &ep_handler_drivers, 0..) |htypes, hnames, hdrivers, dir| {
                 for (&htypes, &hnames, &hdrivers, 0..) |T, name, drv_id, ep| {

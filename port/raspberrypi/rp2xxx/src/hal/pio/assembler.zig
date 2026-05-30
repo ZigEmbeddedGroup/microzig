@@ -131,6 +131,8 @@ fn format_compile_error(comptime message: []const u8, comptime source: []const u
         }
     }
 
+    const indent: [column]u8 = @splat(' ');
+
     return std.fmt.comptimePrint(
         \\failed to assemble PIO code:
         \\
@@ -140,8 +142,8 @@ fn format_compile_error(comptime message: []const u8, comptime source: []const u
         \\
     , .{
         line_str,
-        [_]u8{' '} ** column,
-        [_]u8{' '} ** column,
+        indent,
+        indent,
         message,
     });
 }

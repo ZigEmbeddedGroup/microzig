@@ -71,7 +71,7 @@ pub fn busy_sleep(comptime limit: comptime_int) void {
         bits += 1;
     }
 
-    const I = std.meta.Int(.unsigned, bits);
+    const I = @Int(.unsigned, bits);
 
     var i: I = 0;
     while (i < limit) : (i += 1) {

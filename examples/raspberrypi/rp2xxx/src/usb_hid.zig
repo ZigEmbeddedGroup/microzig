@@ -180,7 +180,7 @@ pub fn main() !void {
             } else {
                 idx += @intFromBool(if (idx & 1 == 0 and idx < 2 * message.len)
                     drivers.keyboard.send_report(
-                        &.{ .modifiers = .none, .keys = .{message[@intCast(idx / 2)]} ++ .{.reserved} ** 5 },
+                        &.{ .modifiers = .none, .keys = .{message[@intCast(idx / 2)]} ++ @as([5]Code, @splat(.reserved)) },
                     )
                 else
                     drivers.keyboard.send_report(&.empty));

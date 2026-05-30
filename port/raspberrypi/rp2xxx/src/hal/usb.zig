@@ -298,7 +298,8 @@ pub fn Polled(config: Config) type {
                 // separately to the rest of the data in the buffer control register,
                 // so that the rest of the data in the buffer control register is
                 // accurate when the AVAILABLE bit is set.
-                asm volatile ("nop\n" ** config.sync_noops);
+                inline for (0..config.sync_noops) |_|
+                    asm volatile ("nop");
             }
             // Set available bit
             bufctrl.AVAILABLE_0 = 1;
@@ -360,7 +361,8 @@ pub fn Polled(config: Config) type {
                 // separately to the rest of the data in the buffer control register,
                 // so that the rest of the data in the buffer control register is
                 // accurate when the AVAILABLE bit is set.
-                asm volatile ("nop\n" ** config.sync_noops);
+                inline for (0..config.sync_noops) |_|
+                    asm volatile ("nop");
             }
             // Set available bit
             bufctrl.AVAILABLE_0 = 1;

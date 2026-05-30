@@ -305,7 +305,7 @@ pub const channel = struct {
             }
 
             pub fn mode(self: *Self) Mode {
-                return std.meta.intToEnum(Mode, self.mode & 3);
+                return @enumFromInt(self.mode & 3);
             }
 
             pub fn set_mode(self: *Self, mode_: Mode) void {

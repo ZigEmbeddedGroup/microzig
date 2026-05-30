@@ -3,36 +3,7 @@ const assembler = @import("../assembler.zig");
 const tokenizer = @import("tokenizer.zig");
 const Chip = @import("../../chip.zig").Chip;
 
-const c = @cImport({
-    @cDefine("PICO_NO_HARDWARE", "1");
-    @cInclude("stdint.h");
-    @cInclude("comparison_tests/addition.pio.h");
-    @cInclude("comparison_tests/apa102.pio.h");
-    @cInclude("comparison_tests/blink.pio.h");
-    @cInclude("comparison_tests/clocked_input.pio.h");
-    @cInclude("comparison_tests/differential_manchester.pio.h");
-    @cInclude("comparison_tests/hello.pio.h");
-    @cInclude("comparison_tests/hub75.pio.h");
-    @cInclude("comparison_tests/i2c.pio.h");
-    @cInclude("comparison_tests/irq.pio.h");
-    @cInclude("comparison_tests/manchester_encoding.pio.h");
-    @cInclude("comparison_tests/movrx.pio.h");
-    @cInclude("comparison_tests/nec_carrier_burst.pio.h");
-    @cInclude("comparison_tests/nec_carrier_control.pio.h");
-    @cInclude("comparison_tests/nec_receive.pio.h");
-    @cInclude("comparison_tests/pio_serialiser.pio.h");
-    @cInclude("comparison_tests/pwm.pio.h");
-    @cInclude("comparison_tests/quadrature_encoder.pio.h");
-    @cInclude("comparison_tests/resistor_dac.pio.h");
-    @cInclude("comparison_tests/spi.pio.h");
-    @cInclude("comparison_tests/squarewave.pio.h");
-    @cInclude("comparison_tests/squarewave_fast.pio.h");
-    @cInclude("comparison_tests/squarewave_wrap.pio.h");
-    @cInclude("comparison_tests/st7789_lcd.pio.h");
-    @cInclude("comparison_tests/uart_rx.pio.h");
-    @cInclude("comparison_tests/uart_tx.pio.h");
-    @cInclude("comparison_tests/ws2812.pio.h");
-});
+const c = @import("c");
 
 fn pio_comparison(comptime source: []const u8) !void {
     inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {

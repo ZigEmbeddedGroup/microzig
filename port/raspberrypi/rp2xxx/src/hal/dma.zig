@@ -15,7 +15,7 @@ const num_channels = switch (chip) {
     .RP2350 => 16,
 };
 var claimed_channels = microzig.concurrency.AtomicStaticBitSet(num_channels){};
-const MaskType = std.meta.Int(.unsigned, num_channels);
+const MaskType = @Int(.unsigned, num_channels);
 
 pub fn channel(n: u4) Channel {
     assert(n < num_channels);

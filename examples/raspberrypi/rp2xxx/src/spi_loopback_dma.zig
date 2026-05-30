@@ -32,8 +32,12 @@ pub fn main() !void {
 
     rp2xxx.uart.init_logger(uart);
 
-    var in_buf: [BUF_LEN]u8 = .{ 'h', 'e', 'y', ' ', 'y', 'o', 'u', '!' } ** (BUF_LEN / 8);
     var out_buf = std.mem.zeroes([BUF_LEN]u8);
+    var in_buf: [BUF_LEN]u8 = undefined;
+    for (0..8) |i| {
+        for (in_buf[(8 * i)..(8 * (i + 1))], "hey you!") |*dst, c|
+            dst.* = c;
+    }
 
     try spi.apply(.{ .clock_config = rp2xxx.clock_config });
     spi.set_loopback_mode(true);
