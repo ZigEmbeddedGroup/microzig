@@ -23,6 +23,13 @@ fn id_from_handle(handle: std.posix.fd_t) ID {
     };
 }
 
+fn handle_from_id(id: ID) std.posix.fd_t {
+    return switch (builtin.os.tag) {
+        .windows => @ptrFromInt(@intFromEnum(id)),
+        else => @intFromEnum(id),
+    };
+}
+
 pub const Kind = enum {
     file,
     directory,
@@ -48,7 +55,7 @@ pub const Dir = struct {
             error.OutOfMemory => return error.NoSpaceLeft,
         };
         return .{
-            .handle = @intFromEnum(id),
+            .handle = handle_from_id(id),
             .flags = .{
                 .nonblocking = false,
             },
@@ -67,7 +74,7 @@ pub const Dir = struct {
         const id = vfs.create_dir(parent, sub_path) catch return error.NoSpaceLeft;
 
         return .{
-            .handle = @intFromEnum(id),
+            .handle = handle_from_id(id),
         };
     }
 
@@ -90,7 +97,7 @@ fn operate(userdata: ?*anyopaque, op: std.Io.Operation) std.Io.Cancelable!std.Io
     const vfs: *VirtualFilesystem = @ptrCast(@alignCast(userdata.?));
     return switch (op) {
         .file_write_streaming => |write_op| blk: {
-            const file = vfs.files.getPtr(@enumFromInt(write_op.file.handle)).?;
+            const file = vfs.files.getPtr(id_from_handle(write_op.file.handle)).?;
             const header = write_op.header;
             const data = write_op.data;
             const splat = write_op.splat;
@@ -127,7 +134,7 @@ pub fn deinit(fs: *VirtualFilesystem) void {
 
 pub fn root_dir(fs: *VirtualFilesystem) std.Io.Dir {
     _ = fs;
-    return .{ .handle = @intFromEnum(ID.root) };
+    return .{ .handle = handle_from_id(ID.root) };
 }
 
 pub fn get_file(fs: *VirtualFilesystem, path: []const u8) !?ID {
