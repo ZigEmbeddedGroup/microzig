@@ -4,7 +4,7 @@ directories: Map(ID, Dir) = .empty,
 files: Map(ID, File) = .empty,
 // child -> parent
 hierarchy: Map(ID, ID) = .empty,
-next_id: u16 = 1,
+next_id: u16 = 2,
 
 const VirtualFilesystem = @This();
 
@@ -113,7 +113,11 @@ fn operate(userdata: ?*anyopaque, op: std.Io.Operation) std.Io.Cancelable!std.Io
 }
 
 pub const ID = enum(u16) {
-    root = 0,
+    // Don't use this one, because on windows, fd_t is actually a *anyopaque,
+    // and setting that null under the hood is ILLEGAL, and I don't want to go
+    // to jail.
+    invalid = 0,
+    root = 1,
     _,
 };
 
