@@ -164,6 +164,14 @@ jobs:
       - name: Build
         run: zig build -Doptimize=ReleaseSmall
 
+  # Make sure that we are building examples and invoking tests for each port
+  validate-ports-checks:
+    name: Validate Port Checks
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    steps:
+    - run: apt install -y yq
+
   unit-test-ports:
     name: Unit Test Ports
     continue-on-error: true
