@@ -170,7 +170,7 @@ jobs:
     continue-on-error: true
     runs-on: ubuntu-latest
     steps:
-    - run: apt install -y yq
+    - run: sudo apt install -y yq
 
   unit-test-ports:
     name: Unit Test Ports

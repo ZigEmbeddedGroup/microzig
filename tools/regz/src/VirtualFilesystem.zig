@@ -12,8 +12,16 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const Map = std.AutoArrayHashMapUnmanaged;
 const assert = std.debug.assert;
-
 const log = std.log.scoped(.vfs);
+
+const builtin = @import("builtin");
+
+fn id_from_handle(handle: std.posix.fd_t) ID {
+    return switch (builtin.os.tag) {
+        .windows => @enumFromInt(@intFromPtr(handle)),
+        else => @enumFromInt(handle),
+    };
+}
 
 pub const Kind = enum {
     file,
@@ -29,7 +37,7 @@ pub const Dir = struct {
 
     fn create_file(userdata: ?*anyopaque, dir: std.Io.Dir, sub_path: []const u8, _: std.Io.Dir.CreateFileOptions) std.Io.File.OpenError!std.Io.File {
         const vfs: *VirtualFilesystem = @ptrCast(@alignCast(userdata.?));
-        const dir_id: ID = @enumFromInt(dir.handle);
+        const dir_id = id_from_handle(dir.handle);
 
         if (std.mem.findScalar(u8, sub_path, '/') != null) {
             log.err("path includes '/': '{s}'", .{sub_path});
@@ -55,7 +63,7 @@ pub const Dir = struct {
         _: std.Io.Dir.OpenOptions,
     ) std.Io.Dir.CreateDirPathOpenError!std.Io.Dir {
         const vfs: *VirtualFilesystem = @ptrCast(@alignCast(userdata.?));
-        const parent: ID = @enumFromInt(parent_dir.handle);
+        const parent = id_from_handle(parent_dir.handle);
         const id = vfs.create_dir(parent, sub_path) catch return error.NoSpaceLeft;
 
         return .{

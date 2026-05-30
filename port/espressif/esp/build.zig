@@ -208,6 +208,7 @@ fn make_esp_wifi_driver_module(
         .root_source_file = esp_wifi_sys_dep.path("c/include/include.h"),
         .target = esp32_c3_resolved_zig_target,
         .optimize = .Debug,
+        .link_libc = false,
     });
 
     translate_c.addIncludePath(b.path("src/hal/radio/libc_dummy_include"));
