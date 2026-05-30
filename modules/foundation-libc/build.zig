@@ -6,6 +6,14 @@ pub fn build(b: *std.Build) void {
 
     const single_threaded = b.option(bool, "single_threaded", "Create a single-threaded libc implementation (default: false)") orelse false;
 
+    const translate_c = b.addTranslateC(.{
+        .root_source_file = b.path("include/foundation/libc.h"),
+        .target = target,
+        .optimize = optimize,
+        .link_libc = false,
+    });
+    translate_c.addIncludePath(b.path("include"));
+
     const libc = b.addLibrary(.{
         .name = "foundation",
         .root_module = b.createModule(.{
@@ -13,6 +21,9 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
             .root_source_file = b.path("src/libc.zig"),
             .single_threaded = single_threaded,
+            .imports = &.{
+                .{ .name = "h", .module = translate_c.createModule() },
+            },
         }),
     });
 

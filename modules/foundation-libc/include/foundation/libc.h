@@ -1,7 +1,17 @@
 #ifndef _FOUNDATION_LIBC_INTERNALS_H_
 #define _FOUNDATION_LIBC_INTERNALS_H_
 
+#include <assert.h>
+#include <ctype.h>
+#include <errno.h>
+#include <inttypes.h>
+#include <math.h>
+#include <setjmp.h>
 #include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
+#include <tgmath.h>
+#include <uchar.h>
 
 ///
 /// Panic handler for undefined, but catchable behaviour in safe modes.
