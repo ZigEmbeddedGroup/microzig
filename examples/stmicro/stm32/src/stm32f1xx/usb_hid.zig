@@ -139,7 +139,7 @@ const ReportDescriptor = [63]u8{
 //=============== USB DATA =================
 var EP0_RX_BUFFER: [64]u8 = undefined;
 var USB_RX_BUFFER: [64]u8 = undefined;
-var HID_send: [8]u8 = @splat(0);
+var hid_send: [8]u8 = @splat(0);
 var to_report: bool = false;
 var device_addr: ?u7 = null;
 var config: bool = false;
@@ -254,9 +254,9 @@ fn report(keys: []const u8) void {
     const report_flag: *volatile bool = &to_report;
     if (!config) return;
     while (report_flag.*) {}
-    std.mem.copyForwards(u8, HID_send[3..], keys[0..len]);
+    std.mem.copyForwards(u8, hid_send[3..], keys[0..len]);
     report_flag.* = true;
-    epc.USB_send(&HID_send, .no_change) catch unreachable;
+    epc.USB_send(&hid_send, .no_change) catch unreachable;
 }
 
 pub fn main() !void {
