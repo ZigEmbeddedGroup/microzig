@@ -10,7 +10,6 @@ pub fn build(b: *Build) !void {
     const libxml2_dep = b.dependency("libxml2", .{
         .target = target,
         .optimize = .ReleaseSafe,
-        .iconv = false,
     });
 
     const zqlite_dep = b.dependency("zqlite", .{
