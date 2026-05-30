@@ -63,10 +63,9 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(cli_exe);
 
     const run_cli_cmd = b.addRunArtifact(cli_exe);
+    run_cli_cmd.addPassThruArgs();
     run_cli_cmd.step.dependOn(b.getInstallStep());
-    if (b.args) |args| {
-        run_cli_cmd.addArgs(args);
-    }
+
     const run_cli_step = b.step("run-cli", "Run the CLI tool");
     run_cli_step.dependOn(&run_cli_cmd.step);
 
@@ -153,16 +152,13 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(exe);
 
     const run_cmd = b.addRunArtifact(exe);
+    run_cmd.addPassThruArgs();
 
     // I only want the path to the register schema file, not the lazy path,
     // because I want to be able to refresh it with `zig build` while sorcerer
     // is running. Sorcerer will watch the file for changes and update itself
     // automatically.
     run_cmd.step.dependOn(b.getInstallStep());
-
-    if (b.args) |args| {
-        run_cmd.addArgs(args);
-    }
 
     const run_step = b.step("run", "Run the GUI app");
     run_step.dependOn(&run_cmd.step);

@@ -73,9 +73,7 @@ pub fn build(b: *Build) !void {
 
     const run_cmd = b.addRunArtifact(aviron_exe);
     run_cmd.step.dependOn(b.getInstallStep());
-    if (b.args) |args| {
-        run_cmd.addArgs(args);
-    }
+    run_cmd.addPassthruArgs();
     run_step.dependOn(&run_cmd.step);
 
     const avr_target = b.resolveTargetQuery(avr_target_query);
