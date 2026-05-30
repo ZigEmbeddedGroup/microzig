@@ -112,20 +112,20 @@ pub const RegCtrl = microzig.mmio.Mmio(packed struct(u8) {
     _reserved1: u2 = 0,
 });
 
-fn baseAddr() usize {
+fn base_addr() usize {
     return @intFromPtr(peripherals.USBHS);
 }
 fn mmio_u32(off: usize) *volatile RegU32 {
-    return @ptrFromInt(baseAddr() + off);
+    return @ptrFromInt(base_addr() + off);
 }
 fn mmio_u16(off: usize) *volatile RegU16 {
-    return @ptrFromInt(baseAddr() + off);
+    return @ptrFromInt(base_addr() + off);
 }
 fn mmio_tx_ctrl(off: usize) *volatile RegCtrl {
-    return @ptrFromInt(baseAddr() + off);
+    return @ptrFromInt(base_addr() + off);
 }
 fn mmio_rx_ctrl(off: usize) *volatile RegCtrl {
-    return @ptrFromInt(baseAddr() + off);
+    return @ptrFromInt(base_addr() + off);
 }
 
 // RX DMA: 0x20 + (ep-1)*4  (EP1..EP15)

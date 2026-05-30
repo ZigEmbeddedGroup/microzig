@@ -32,4 +32,5 @@ test "hal tests" {
     _ = i2c;
     _ = usart;
     _ = spi;
+    _ = usb;
 }
