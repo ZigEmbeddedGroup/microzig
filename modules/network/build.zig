@@ -37,16 +37,6 @@ pub fn build(b: *std.Build) void {
         @panic("Invalid lwip packet buffer length");
     }
 
-    const net_mod = b.addModule("net", .{
-        .target = target,
-        .optimize = optimize,
-        .root_source_file = b.path("src/root.zig"),
-        .imports = &.{.{
-            .name = "link",
-            .module = b.dependency("link", .{}).module("link"),
-        }},
-    });
-
     var buf: [32]u8 = undefined;
 
     const foundation_dep = b.dependency("foundationlibc", .{
@@ -54,32 +44,35 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .single_threaded = true,
     });
+
     const lwip_dep = b.dependency("lwip", .{
         .target = target,
         .optimize = optimize,
         .include_dir = b.path("src/include"),
     });
-    const lwip_lib = lwip_dep.artifact("lwip");
 
-    lwip_lib.root_module.linkLibrary(foundation_dep.artifact("foundation"));
-    net_mod.linkLibrary(lwip_lib);
+    const lwip = lwip_dep.module("lwip");
+    lwip.linkLibrary(foundation_dep.artifact("foundation"));
 
-    const lwip_mod = lwip_lib.root_module;
     // MEM_ALIGNMENT of 4 bytes allows us to use packet buffers in u32 dma.
-    lwip_mod.addCMacro("MEM_ALIGNMENT", "4");
-    lwip_mod.addCMacro("MEM_SIZE", to_s(&buf, mem_size));
-    lwip_mod.addCMacro("PBUF_POOL_SIZE", to_s(&buf, pbuf_pool_size));
-    lwip_mod.addCMacro("PBUF_LINK_HLEN", to_s(&buf, ethernet_header));
-    lwip_mod.addCMacro("PBUF_POOL_BUFSIZE", to_s(&buf, pbuf_length));
-    lwip_mod.addCMacro("PBUF_LINK_ENCAPSULATION_HLEN", to_s(&buf, pbuf_header_length));
+    lwip.addCMacro("MEM_ALIGNMENT", "4");
+    lwip.addCMacro("MEM_SIZE", to_s(&buf, mem_size));
+    lwip.addCMacro("PBUF_POOL_SIZE", to_s(&buf, pbuf_pool_size));
+    lwip.addCMacro("PBUF_LINK_HLEN", to_s(&buf, ethernet_header));
+    lwip.addCMacro("PBUF_POOL_BUFSIZE", to_s(&buf, pbuf_length));
+    lwip.addCMacro("PBUF_LINK_ENCAPSULATION_HLEN", to_s(&buf, pbuf_header_length));
     // 40 bytes IPv6 header, 20 bytes TCP header
-    lwip_mod.addCMacro("TCP_MSS", to_s(&buf, mtu - 40 - 20));
+    lwip.addCMacro("TCP_MSS", to_s(&buf, mtu - 40 - 20));
 
-    // Copy macros from lwip to net, so we have same values when calling
-    // translate-c from cImport.
-    for (lwip_mod.c_macros.items) |m| {
-        net_mod.c_macros.append(b.allocator, m) catch @panic("out of memory");
-    }
+    const net_mod = b.addModule("net", .{
+        .target = target,
+        .optimize = optimize,
+        .root_source_file = b.path("src/root.zig"),
+        .imports = &.{
+            .{ .name = "link", .module = b.dependency("link", .{}).module("link") },
+            .{ .name = "lwip", .module = lwip },
+        },
+    });
 
     const options = b.addOptions();
     options.addOption(u16, "mtu", mtu);
