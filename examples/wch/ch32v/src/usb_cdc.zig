@@ -15,9 +15,6 @@ const PFIC = microzig.chip.peripherals.PFIC;
 const usart = hal.usart.instance.USART1;
 
 const usart_tx_pin = gpio.Pin.init(0, 9); // PA9
-const func_pin = gpio.Pin.init(0, 10); // PA10
-const tog_pin = gpio.Pin.init(0, 14);
-const mco_pin = gpio.Pin.init(0, 8);
 
 pub const microzig_options = microzig.Options{
     .logFn = hal.usart.log,
@@ -46,9 +43,7 @@ const USBController = usb.DeviceController(.{
     .serial = .{ .itf_notifi = "Board CDC", .itf_data = "Board CDC Data" },
 }});
 
-pub var usb_dev: hal.usb.Polled(
-    .{},
-) = undefined;
+pub var usb_dev: hal.usb.Polled(.{}) = undefined;
 
 var usb_controller: USBController = .init;
 
@@ -111,9 +106,7 @@ pub fn usb_cdc_write(serial: *USB_Serial, comptime fmt: []const u8, args: anytyp
     while (write_buff.len > 0) {
         write_buff = write_buff[serial.write(write_buff)..];
         while (!serial.flush()) {
-            // pins.tog.put(0);
             usb_dev.poll(false, &usb_controller);
-            // pins.tog.put(1);
         }
     }
 }
