@@ -9,8 +9,6 @@ const usb = microzig.core.usb;
 const USB_Serial = usb.drivers.CDC;
 
 const RCC = microzig.chip.peripherals.RCC;
-const AFIO = microzig.chip.peripherals.AFIO;
-const PFIC = microzig.chip.peripherals.PFIC;
 
 const usart = hal.usart.instance.USART1;
 
@@ -20,9 +18,9 @@ pub const std_options = microzig.std_options(.{
     .logFn = hal.usart.log,
     .log_level = .debug,
     .log_scope_levels = &.{
-        .{ .scope = .usb_dev, .level = .warn },
-        .{ .scope = .usb_ctrl, .level = .warn },
-        .{ .scope = .usb_cdc, .level = .warn },
+        .{ .scope = .usb_dev, .level = .info },
+        .{ .scope = .usb_ctrl, .level = .info },
+        .{ .scope = .usb_cdc, .level = .info },
     },
 });
 
@@ -80,8 +78,9 @@ pub fn main() !void {
     var new: u64 = 0;
 
     while (true) {
+        new = time.get_time_since_boot().to_us();
+
         if (usb_controller.drivers()) |drivers| {
-            new = time.get_time_since_boot().to_us();
             if (new - old > 500000) {
                 old = new;
                 i += 1;

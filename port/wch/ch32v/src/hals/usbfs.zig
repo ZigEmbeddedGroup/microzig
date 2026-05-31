@@ -47,19 +47,7 @@ fn PerEndpointArray(comptime N: comptime_int) type {
 fn epn(ep: types.Endpoint.Num) u4 {
     return @as(u4, @intCast(@intFromEnum(ep)));
 }
-fn speed_type(comptime cfg: Config) u2 {
-    if (!cfg.prefer_high_speed) return 0; // FS
-    return 1;
-}
-
 // --- USBHD token encodings ---
-const Token = enum(u2) {
-    Out = 0,
-    Sof = 1,
-    In = 2,
-    Setup = 3,
-};
-
 const TOKEN_OUT: u2 = 0;
 const TOKEN_SOF: u2 = 1;
 const TOKEN_IN: u2 = 2;
@@ -80,19 +68,8 @@ const RES_ACK: u2 = 0;
 const RES_NAK: u2 = 2;
 const RES_STALL: u2 = 3;
 
-const Res = enum(u2) {
-    ACK = 0,
-    NAK = 2,
-    STALL = 3,
-};
-
 const TOG_DATA0: u1 = 0;
 const TOG_DATA1: u1 = 1;
-
-const Tog = enum(u1) {
-    DATA0 = 0,
-    DATA1 = 0b1,
-};
 
 fn toggle_next(tog: u1) u1 {
     return if (tog == TOG_DATA0) TOG_DATA1 else TOG_DATA0;
@@ -135,16 +112,13 @@ fn uep_dma(ep: u4) *volatile RegU32 {
     return mmio_u32(0x10 + (@as(usize, ep) * 4));
 }
 
-// var pins: *Pins.Pins(pin_config) = undefined;
-
 // T_LEN: EP0..EP7 at 0x30 + ep*4
 fn uep_t_len(ep: u4) *volatile RegU8 {
     return @ptrFromInt(baseAddr() + 0x30 + (@as(usize, ep) * 4));
 }
-// TX_CTRL: 0xDA + ep*4, RX_CTRL: 0xDB + ep*4
+// TX_CTRL: 0x32 + ep*4, RX_CTRL: 0x33 + ep*4
 pub fn uep_tx_ctrl(ep: u4) *volatile RegCtrl {
-    const ret: *volatile RegCtrl = mmio_tx_ctrl(0x32 + (@as(usize, ep) * 4));
-    return ret;
+    return mmio_tx_ctrl(0x32 + (@as(usize, ep) * 4));
 }
 
 fn uep_rx_ctrl(ep: u4) *volatile RegCtrl {
@@ -161,7 +135,6 @@ fn set_tx_ctrl(ep: u4, res: u2, tog: u1, auto: bool) void {
     });
 }
 fn set_rx_ctrl(ep: u4, res: u2, tog: u1, auto: bool) void {
-    // std.log.debug("ch32: set_rx_ctrl ep={} res={} tog={} auto={}", .{ ep, res, tog, auto });
     const ctrl: *volatile RegCtrl = uep_rx_ctrl(ep);
     ctrl.write(.{
         .RES = res,
@@ -237,14 +210,9 @@ pub fn Polled(comptime cfg: Config) type {
 
             // Enable D+ pull-up to signal device presence to host.
             // Must happen AFTER EP0 is configured.
-            Regs.UDEV_CTRL__UHOST_CTRL.modify(.{
-                .RB_UH_PORT_EN__RB_UD_PORT_EN = 1,
-                .RB_UH_DP_PIN__RB_UD_DP_PIN = 1,
-            });
-
-            Regs.R8_USB_CTRL.modify(.{
-                .RB_UC_CLR_ALL = 0,
-                .MASK_UC_SYS_CTRL_RB_UC_DEV_PU_EN = 2,
+            Regs.R8_USB_CTRL.write(.{
+                .RB_UC_DMA_EN = 1,
+                .MASK_UC_SYS_CTRL_RB_UC_DEV_PU_EN = 0b10, // DEV_PU_EN
             });
         }
 
@@ -262,12 +230,7 @@ pub fn Polled(comptime cfg: Config) type {
 
         fn arm_ep0_out_always(self: *Self) void {
             _ = self;
-            // EP0 OUT is always ACK.
-            // pin.put(1);
-            // Regs.R8_UEP0_T_CTRL.modify(.{ .MASK_UEP_T_RES = RES_NAK, .RB_UEP_T_TOG = TOG_DATA0 });
             set_rx_ctrl(0, RES_ACK, TOG_DATA0, false);
-            // EP0 IN remains NAK until data is queued.
-            // set_tx_ctrl(0, RES_NAK, TOG_DATA1, false);
         }
 
         fn on_bus_reset_local(self: *Self) void {
@@ -320,46 +283,34 @@ pub fn Polled(comptime cfg: Config) type {
 
         pub fn poll(self: *Self, in_isr: bool, controller: anytype) void {
             _ = in_isr;
-            while (true) {
-                const mask = UIF_IS_NAK | UIF_SIE_FREE | UIF_TOG_OK;
-                const fg: u8 = Regs.R8_USB_INT_FG.raw & ~mask;
-                if (fg == 0) break;
+            // Mask out read-only status bits and SOF (reasserts every 1 ms).
+            const ignore = UIF_IS_NAK | UIF_SIE_FREE | UIF_TOG_OK | UIF_HST_SOF;
+            const fg: u8 = Regs.R8_USB_INT_FG.raw & ~ignore;
+            if (fg == 0) return;
 
-                if ((fg & UIF_HST_SOF) != 0) {
-                    // acknowledge SOF but ignore
-                    Regs.R8_USB_INT_FG.raw = UIF_HST_SOF;
-                }
-                if ((fg & UIF_SUSPEND) != 0) {
-                    // acknowledge SUSPEND but ignore
-                    Regs.R8_USB_INT_FG.raw = UIF_SUSPEND;
-                }
+            if ((fg & UIF_SUSPEND) != 0) {
+                Regs.R8_USB_INT_FG.raw = UIF_SUSPEND;
+            }
 
-                if (fg & UIF_FIFO_OV != 0) {
-                    log.warn("FIFO overflow!", .{});
-                    Regs.R8_USB_INT_FG.raw = UIF_FIFO_OV;
-                }
+            if ((fg & UIF_FIFO_OV) != 0) {
+                log.warn("FIFO overflow!", .{});
+                Regs.R8_USB_INT_FG.raw = UIF_FIFO_OV;
+            }
 
-                if ((fg & UIF_BUS_RST) != 0) {
-                    log.info("bus reset\n\n\n", .{});
-                    // clear
-                    Regs.R8_USB_INT_FG.raw = UIF_BUS_RST;
+            if ((fg & UIF_BUS_RST) != 0) {
+                log.debug("bus reset", .{});
+                Regs.R8_USB_INT_FG.raw = UIF_BUS_RST;
+                set_address(&self.interface, 0);
+                self.on_bus_reset_local();
+                controller.on_bus_reset(&self.interface);
+            }
 
-                    // address back to 0
-                    set_address(&self.interface, 0);
-
-                    self.on_bus_reset_local();
-                    controller.on_bus_reset(&self.interface);
-                }
-
-                if ((fg & UIF_TRANSFER) != 0) {
-                    log.debug("TRANSFER received", .{});
-                    // clear transfer
-                    const stv = Regs.R8_USB_INT_ST.read();
-                    const ep: u4 = @as(u4, stv.MASK_UIS_H_RES__MASK_UIS_ENDP);
-                    const token: u2 = @as(u2, stv.MASK_UIS_TOKEN);
-                    self.handle_transfer(ep, token, controller);
-                    Regs.R8_USB_INT_FG.raw = UIF_TRANSFER;
-                }
+            if ((fg & UIF_TRANSFER) != 0) {
+                const stv = Regs.R8_USB_INT_ST.read();
+                const ep: u4 = @as(u4, stv.MASK_UIS_H_RES__MASK_UIS_ENDP);
+                const token: u2 = @as(u2, stv.MASK_UIS_TOKEN);
+                self.handle_transfer(ep, token, controller);
+                Regs.R8_USB_INT_FG.raw = UIF_TRANSFER;
             }
         }
 
@@ -372,7 +323,6 @@ pub fn Polled(comptime cfg: Config) type {
                 TOKEN_SOF => {},
                 TOKEN_IN => self.handle_in(ep, controller),
                 TOKEN_SETUP => {
-                    // OTG_FS peripheral doesn't have the SETUP_ACT interrupt, so we handle like so
                     const setup: types.SetupPacket = self.read_setup_from_ep0();
                     Regs.R8_UEP0_T_CTRL.modify(.{ .RB_UEP_T_TOG = TOG_DATA1 });
                     set_rx_ctrl(0, RES_ACK, TOG_DATA1, false);
@@ -426,10 +376,7 @@ pub fn Polled(comptime cfg: Config) type {
             const num: types.Endpoint.Num = @enumFromInt(ep);
             const st_in = self.st(num, .In);
 
-            if (!st_in.tx_busy) {
-                // set_tx_ctrl(ep, RES_NAK, current_tx_tog(ep), false);
-                return;
-            }
+            if (!st_in.tx_busy) return;
 
             // Mark free before calling on_buffer(), so EP0_IN logic can immediately queue next chunk.
             st_in.tx_busy = false;
@@ -438,12 +385,19 @@ pub fn Polled(comptime cfg: Config) type {
 
             // Notify controller/drivers of IN completion.
             self.call_on_buffer(.In, ep, controller);
+
+            // After EP0 IN completes, re-arm EP0 OUT for the next SETUP.
+            // SETUP packets always use DATA0 toggle; the WCH USBFS hardware
+            // checks the toggle even for SETUP, so we must reset to DATA0.
+            if (ep == 0) {
+                self.arm_ep0_out_always();
+            }
         }
 
         // ---- VTable functions ------------------------------------------------
 
         fn set_address(_: *usb.DeviceInterface, addr: u7) void {
-            log.info("set_address to {}", .{addr});
+            log.debug("set_address to {}", .{addr});
             Regs.R8_USB_DEV_AD.modify(.{ .MASK_USB_ADDR = addr });
         }
 
@@ -454,12 +408,11 @@ pub fn Polled(comptime cfg: Config) type {
             const e = desc.endpoint;
             const ep_i: u4 = epn(e.num);
             assert(ep_i < cfg.max_endpoints_count);
-            log.info("ep_open called for ep{}", .{ep_i});
+            log.debug("ep_open ep{} dir={}", .{ ep_i, e.dir });
 
             const mps: u16 = desc.max_packet_size.into();
             assert(mps > 0 and mps <= 2047);
 
-            log.debug("ep_open ep{} dir={}", .{ ep_i, e.dir });
             const out_st = self.st(e.num, .Out);
             const in_st = self.st(e.num, .In);
 
@@ -486,11 +439,8 @@ pub fn Polled(comptime cfg: Config) type {
             const ptr_val: u32 = @as(u32, @intCast(@intFromPtr(out_st.buf.ptr)));
 
             uep_dma(ep_i).raw = ptr_val;
-            // uep_max_len(ep_i).raw = mps;
             set_rx_ctrl(ep_i, RES_NAK, TOG_DATA1, false);
             set_tx_ctrl(ep_i, RES_NAK, TOG_DATA1, false);
-
-            log.debug("allocation and DMA setup done for ep{}", .{ep_i});
 
             uep_t_len(ep_i).raw = 0;
 
@@ -498,12 +448,10 @@ pub fn Polled(comptime cfg: Config) type {
             if (e.num == .ep0) {
                 self.arm_ep0_out_always();
             }
-
-            log.debug("ep_open completed for ep{}", .{ep_i});
         }
 
         fn ep_listen(itf: *usb.DeviceInterface, ep_num: types.Endpoint.Num, len: types.Len) void {
-            log.info("ep_listen called for ep{} len={}", .{ ep_num, len });
+            log.debug("ep_listen ep{} len={}", .{ ep_num, len });
             const self: *Self = @fieldParentPtr("interface", itf);
 
             // EP0 OUT is always armed; ignore listen semantics here.
@@ -529,8 +477,6 @@ pub fn Polled(comptime cfg: Config) type {
             st_out.rx_limit = @as(u16, @intCast(limit));
             st_out.rx_armed = true;
             st_out.rx_last_len = 0;
-
-            // uep_max_len(ep_i).raw = @as(u16, @intCast(limit));
 
             asm volatile ("");
             set_rx_ctrl(ep_i, RES_ACK, current_rx_tog(ep_i), false);
@@ -592,12 +538,6 @@ pub fn Polled(comptime cfg: Config) type {
             uep_t_len(ep_i).raw = @as(u8, @intCast(w));
 
             st_in.tx_busy = true;
-            // Arm IN
-            // uep_tx_ctrl(ep_i).raw = 0x6;
-            // if (ep_i == 0) {
-            //     set_tx_ctrl(ep_i, RES_ACK, TOG_DATA1, false);
-            //     Regs.R8_UEP0_T_CTRL.modify(.{ .MASK_UEP_T_RES = RES_ACK, .RB_UEP_T_TOG = TOG_DATA1 });
-            // } else
             set_tx_ctrl(ep_i, RES_ACK, current_tx_tog(ep_i), false);
 
             // For ZLP ACK, usb.DeviceInterface.ep_ack() expects ep_writev() returns 0.
@@ -607,50 +547,55 @@ pub fn Polled(comptime cfg: Config) type {
         // ---- HW init ---------------------------------------------------------
 
         fn usbhd_hw_init() void {
-            // Reset SIE and clear FIFO
-            Regs.UDEV_CTRL__UHOST_CTRL.raw = 0;
-            Regs.UDEV_CTRL__UHOST_CTRL.modify(.{
-                .RB_UH_PORT_EN__RB_UD_PORT_EN = 1,
-                .RB_UH_PD_DIS__RB_UD_PD_DIS = 1,
-            });
-            Regs.R8_USB_CTRL.raw = 0; // not sure if writing zero then val is ok?
-            Regs.R8_USB_CTRL.modify(.{
-                .RB_UC_CLR_ALL = 1,
+            // 1. SIE reset + FIFO clear
+            Regs.R8_USB_CTRL.write(.{
                 .RB_UC_RST_SIE = 1,
-                .RB_UC_INT_BUSY = 1,
-                .RB_UC_HOST_MODE = 0,
+                .RB_UC_CLR_ALL = 1,
             });
-            // wait 10us, TODO: replace with timer delay
             var i: u32 = 0;
-            while (i < 1440) : (i += 1) {
+            while (i < 1440) : (i += 1) { // ~10us at 144MHz
                 asm volatile ("nop");
             }
+            Regs.R8_USB_CTRL.write(.{}); // release reset
 
-            Regs.R8_USB_CTRL.modify(.{
-                .RB_UC_RST_SIE = 0,
-            });
-
-            Regs.R8_USB_CTRL.modify(.{
-                .RB_UC_DMA_EN = 1,
-                .RB_UC_INT_BUSY = 1,
-                .RB_UC_LOW_SPEED = 0, // Full speed
-                .MASK_UC_SYS_CTRL_RB_UC_DEV_PU_EN = 3,
-            });
-
-            // Enable source interrupts (we poll these flags, interrupt disabled)
-            Regs.R8_USB_INT_EN.modify(.{
+            // 2. Enable interrupt flags (polled, not NVIC-enabled)
+            Regs.R8_USB_INT_EN.write(.{
                 .RB_UIE_BUS_RST__RB_UIE_DETECT = 1,
                 .RB_UIE_TRANSFER = 1,
                 .RB_UIE_SUSPEND = 1,
             });
 
-            // enable all the endpoints, leave them as NAK unless used
-            Regs.R8_UEP4_1_MOD.raw = 0xCC;
-            Regs.R8_UEP2_3_MOD__R8_UH_EP_MOD.raw = 0xCC;
-            Regs.R8_UEP5_6_MOD.raw = 0xCC;
-            Regs.R8_UEP7_MOD.raw = 0xC;
+            // 3. Enable endpoint modes.
+            // EP4 shares its DMA buffer with EP0 — enabling EP4 causes
+            // DMA conflicts that prevent EP0 SETUP after SET_ADDRESS.
+            // Only enable endpoints used by CDC-ACM (EP1-EP3).
+            Regs.R8_UEP4_1_MOD.write(.{
+                .RB_UEP1_TX_EN = 1,
+                .RB_UEP1_RX_EN = 1,
+            });
+            Regs.R8_UEP2_3_MOD__R8_UH_EP_MOD.write(.{
+                .RB_UEP2_TX_EN = 1,
+                .RB_UEP2_RX_EN__RB_UH_EP_RX_EN = 1,
+                .RB_UEP3_TX_EN__RB_UH_EP_TX_EN = 1,
+                .RB_UEP3_RX_EN = 1,
+            });
+            Regs.R8_UEP5_6_MOD.write(.{});
+            Regs.R8_UEP7_MOD.write(.{});
 
-            Regs.R8_USB_INT_FG.raw = 0xFF; // clear all flags
+            // 4. Clear all pending flags, reset address
+            Regs.R8_USB_INT_FG.raw = 0xFF; // W1C: clear all
+            Regs.R8_USB_DEV_AD.write(.{});
+
+            // 5. Enable DMA, no pull-up yet (enabled after EP0 setup)
+            Regs.R8_USB_CTRL.write(.{
+                .RB_UC_DMA_EN = 1,
+            });
+
+            // 6. Enable USB port with pull-down disabled
+            Regs.UDEV_CTRL__UHOST_CTRL.write(.{
+                .RB_UH_PORT_EN__RB_UD_PORT_EN = 1,
+                .RB_UH_PD_DIS__RB_UD_PD_DIS = 1,
+            });
         }
     };
 }
