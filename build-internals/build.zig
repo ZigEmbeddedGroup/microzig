@@ -210,7 +210,7 @@ pub const BinaryFormat = union(enum) {
     elf,
 
     /// A flat binary, contains only the loaded portions of the firmware with an unspecified base offset.
-    bin,
+    binary,
 
     /// The [Intel HEX](https://en.wikipedia.org/wiki/Intel_HEX) format, contains
     /// an ASCII description of what memory to load where.
@@ -233,7 +233,7 @@ pub const BinaryFormat = union(enum) {
     pub fn get_extension(format: BinaryFormat) []const u8 {
         return switch (format) {
             .elf => ".elf",
-            .bin, .esp => ".bin",
+            .binary, .esp => ".bin",
             .hex => ".hex",
             .dfu => ".dfu",
             .uf2 => ".uf2",

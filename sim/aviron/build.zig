@@ -156,7 +156,7 @@ fn add_test_suite(
     // Scan the testsuite directory for files. Based on the extension, either load or compile them.
     // Files in testsuite.avr-gcc will be compiled with avr-gcc and have the output copied to
     // this directory.
-    var walkdir = try b.build_root.handle.openDir(io, "testsuite", .{ .iterate = true });
+    var walkdir = try b.root.root_dir.handle.openDir(io, "testsuite", .{ .iterate = true });
     defer walkdir.close(io);
 
     var walker = try walkdir.walk(b.allocator);
@@ -331,19 +331,12 @@ fn add_test_suite_update(
     b: *Build,
     invoke_step: *Build.Step,
 ) !void {
-    const avr_gcc = if (b.findProgram(&.{"avr-gcc"}, &.{})) |path| LazyPath{
-        .cwd_relative = path,
-    } else |_| b.addExecutable(.{
-        .name = "no-avr-gcc",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("tools/no-avr-gcc.zig"),
-            .target = b.graph.host,
-        }),
-        .use_llvm = true,
-    }).getEmittedBin();
+    const avr_gcc = b.findProgramLazy(.{
+        .names = &.{"avr-gcc"},
+    });
 
     const io = b.graph.io;
-    var walkdir = try b.build_root.handle.openDir(io, "testsuite.avr-gcc", .{ .iterate = true });
+    var walkdir = try b.root.root_dir.handle.openDir(io, "testsuite.avr-gcc", .{ .iterate = true });
     defer walkdir.close(io);
 
     var walker = try walkdir.walk(b.allocator);

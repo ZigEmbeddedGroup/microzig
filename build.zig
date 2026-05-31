@@ -601,10 +601,10 @@ pub fn MicroBuild(port_select: PortSelect) type {
                     result.value_ptr.* = switch (resolved_format) {
                         .elf => elf_file,
 
-                        .bin => blk: {
+                        .binary => blk: {
                             const objcopy = fw.mb.builder.addObjCopy(elf_file, .{
                                 .basename = basename,
-                                .format = .bin,
+                                .format = .binary,
                             });
 
                             break :blk objcopy.getOutput();

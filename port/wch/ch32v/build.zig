@@ -40,7 +40,7 @@ const BaseChip = struct {
         const ret = b.allocator.create(microzig.Target) catch @panic("out of memory");
         ret.* = .{
             .dep = dep,
-            .preferred_binary_format = .bin,
+            .preferred_binary_format = .binary,
             .zig_target = std.Target.Query{
                 .cpu_arch = .riscv32,
                 .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic },

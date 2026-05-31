@@ -89,7 +89,7 @@ pub const TestSuiteConfig = struct {
         }) catch @panic("oom");
     }
 
-    pub fn load(allocator: std.mem.Allocator, io: std.Io, file: *std.Io.File) !TestSuiteConfig {
+    pub fn load(allocator: std.mem.Allocator, io: std.Io, file: std.Io.File) !TestSuiteConfig {
         var buf: [4096]u8 = undefined;
         var file_reader = file.reader(io, &buf);
         var json_reader = std.json.Reader.init(allocator, &file_reader.interface);
