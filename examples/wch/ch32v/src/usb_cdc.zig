@@ -73,7 +73,7 @@ pub fn main() !void {
 
     std.log.info("Initializing USB device.", .{});
 
-    usb_dev = .init();
+    usb_dev.init();
 
     var i: u32 = 0;
     var old: u64 = time.get_time_since_boot().to_us();

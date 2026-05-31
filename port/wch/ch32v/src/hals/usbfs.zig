@@ -207,31 +207,15 @@ pub fn Polled(comptime cfg: Config) type {
 
         interface: usb.DeviceInterface,
 
-        pub fn init() Self {
-            var self: Self = .{
-                .endpoints = undefined,
-                .buffer_pool = undefined,
-                .interface = .{ .vtable = &vtable },
-            };
+        pub fn init(self: *Self) void {
+            self.interface = .{ .vtable = &vtable };
             @memset(std.mem.asBytes(&self.endpoints), 0);
             @memset(self.pool[0..64], 0x7e);
             @memset(self.pool[64..], 0);
 
             self.buffer_pool = @alignCast(self.pool[64..]);
-            // pin.enable_clock();
-            // pin.set_output_mode(.general_purpose_push_pull, .max_50MHz);
-
-            // pin.put(0);
-            // pin.put(1);
 
             usbhd_hw_init();
-            // pin.put(0);
-            // pin.put(1);
-            // var i: u32 = 0;
-            // while (i < 1440) : (i += 1) {
-            //     asm volatile ("nop");
-            // }
-            // pin.put(0);
 
             // EP0 is required; open OUT then IN (or vice versa), we will share buffer.
             self.interface.ep_open(&.{
@@ -251,7 +235,8 @@ pub fn Polled(comptime cfg: Config) type {
             // So keep EP0 RX in ACK state permanently.
             self.arm_ep0_out_always();
 
-            // Connect pull-up to signal device ready
+            // Enable D+ pull-up to signal device presence to host.
+            // Must happen AFTER EP0 is configured.
             Regs.UDEV_CTRL__UHOST_CTRL.modify(.{
                 .RB_UH_PORT_EN__RB_UD_PORT_EN = 1,
                 .RB_UH_DP_PIN__RB_UD_DP_PIN = 1,
@@ -261,8 +246,6 @@ pub fn Polled(comptime cfg: Config) type {
                 .RB_UC_CLR_ALL = 0,
                 .MASK_UC_SYS_CTRL_RB_UC_DEV_PU_EN = 2,
             });
-
-            return self;
         }
 
         // TODO: replace with fixedbuffer allocator?

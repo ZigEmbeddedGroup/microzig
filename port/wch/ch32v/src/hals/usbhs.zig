@@ -212,12 +212,8 @@ pub fn Polled(comptime cfg: Config) type {
 
         interface: usb.DeviceInterface,
 
-        pub fn init() Self {
-            var self: Self = .{
-                .endpoints = undefined,
-                .buffer_pool = undefined,
-                .interface = .{ .vtable = &vtable },
-            };
+        pub fn init(self: *Self) void {
+            self.interface = .{ .vtable = &vtable };
             @memset(std.mem.asBytes(&self.endpoints), 0);
             @memset(self.pool[0..64], 0x7e);
             @memset(self.pool[64..], 0);
@@ -250,8 +246,6 @@ pub fn Polled(comptime cfg: Config) type {
             Regs.USB_CTRL.modify(.{
                 .RB_UC_CLR_ALL = 0,
             });
-
-            return self;
         }
 
         // TODO: replace with fixedbuffer allocator?
