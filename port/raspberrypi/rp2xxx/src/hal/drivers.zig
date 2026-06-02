@@ -344,6 +344,7 @@ pub const SPI_Device = struct {
         .disconnect_fn = disconnect_fn,
         .writev_fn = writev_fn,
         .readv_fn = readv_fn,
+        .writev_then_readv_fn = writev_then_readv_fn,
     };
 
     fn connect_fn(dd: *anyopaque) ConnectError!void {
@@ -365,6 +366,15 @@ pub const SPI_Device = struct {
         const dev: *SPI_Device = @ptrCast(@alignCast(dd));
         dev.bus.readv_blocking(u8, dev.rx_dummy_data, chunks);
         return microzig.utilities.SliceVector([]u8).init(chunks).size();
+    }
+
+    fn writev_then_readv_fn(
+        dd: *anyopaque,
+        write_chunks: []const []const u8,
+        read_chunks: []const []u8,
+    ) (WriteError || ReadError)!void {
+        const dev: *SPI_Device = @ptrCast(@alignCast(dd));
+        dev.bus.transceive_vecs_blocking(u8, write_chunks, read_chunks);
     }
 };
 
