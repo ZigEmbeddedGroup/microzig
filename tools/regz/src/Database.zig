@@ -423,9 +423,9 @@ fn gen_sql_table_impl(comptime name: []const u8, comptime T: type) ![:0]const u8
     var primary_key_found = T.sql_opts.primary_key == null;
 
     const info = @typeInfo(T);
-    inline for (info.@"struct".fields) |field| {
+    inline for (info.@"struct".field_names) |field_name| {
         if (T.sql_opts.primary_key) |primary_key| {
-            if (std.mem.eql(u8, primary_key.name, field.name))
+            if (std.mem.eql(u8, primary_key.name, field_name))
                 primary_key_found = true;
         }
     }
@@ -434,21 +434,21 @@ fn gen_sql_table_impl(comptime name: []const u8, comptime T: type) ![:0]const u8
 
     try fbs.print("CREATE TABLE {s} (\n", .{name});
     var first = true;
-    inline for (info.@"struct".fields) |field| {
+    inline for (info.@"struct".field_names, info.@"struct".field_types) |field_name, field_type| {
         if (first) {
             first = false;
         } else {
             try fbs.writeAll(",\n");
         }
-        try fbs.print("  {s}", .{field.name});
-        try fbs.print(" {s}", .{zig_type_to_sql_type(field.type)});
+        try fbs.print("  {s}", .{field_name});
+        try fbs.print(" {s}", .{zig_type_to_sql_type(field_type)});
 
-        const field_type_info = @typeInfo(field.type);
+        const field_type_info = @typeInfo(field_type);
         if (field_type_info != .optional)
             try fbs.writeAll(" NOT NULL");
 
         if (T.sql_opts.primary_key) |primary_key| {
-            if (std.mem.eql(u8, primary_key.name, field.name)) {
+            if (std.mem.eql(u8, primary_key.name, field_name)) {
                 try fbs.writeAll(" PRIMARY KEY");
 
                 if (primary_key.autoincrement)
@@ -474,16 +474,16 @@ fn gen_sql_table_impl(comptime name: []const u8, comptime T: type) ![:0]const u8
     for (T.sql_opts.foreign_keys) |foreign_key| {
         try fbs.writeAll(",\n");
 
-        const field = for (@typeInfo(T).@"struct".fields) |field| {
-            if (std.mem.eql(u8, field.name, foreign_key.name))
-                break field;
+        const field_type = for (@typeInfo(T).@"struct".field_names, @typeInfo(T).@"struct".field_types) |field_name, field_type| {
+            if (std.mem.eql(u8, field_name, foreign_key.name))
+                break field_type;
         } else unreachable;
 
         try fbs.print("  FOREIGN KEY ({s}) REFERENCES {s}(id) ON DELETE {s} ON UPDATE {s}\n", .{
             foreign_key.name,
-            (switch (@typeInfo(field.type)) {
+            (switch (@typeInfo(field_type)) {
                 .optional => |opt| opt.child,
-                else => field.type,
+                else => field_type,
             }).table,
             foreign_key.on_delete.to_string(),
             foreign_key.on_update.to_string(),
@@ -775,31 +775,32 @@ pub fn get_device_id_by_name(db: *Database, name: []const u8) !?DeviceID {
 
 fn scan_row(comptime T: type, allocator: Allocator, row: zqlite.Row) !T {
     var entry: T = undefined;
-    inline for (@typeInfo(T).@"struct".fields, 0..) |field, i| {
-        if (@typeInfo(field.type) == .@"enum") {
-            if (@hasDecl(field.type, "to_string"))
-                @field(entry, field.name) = std.meta.stringToEnum(field.type, row.text(i)) orelse return error.Unknown
+    const info = @typeInfo(T).@"struct";
+    inline for (info.field_names, info.field_types, 0..) |field_name, field_type, i| {
+        if (@typeInfo(field_type) == .@"enum") {
+            if (@hasDecl(field_type, "to_string"))
+                @field(entry, field_name) = std.meta.stringToEnum(field_type, row.text(i)) orelse return error.Unknown
             else
-                @field(entry, field.name) = @enumFromInt(row.int(i));
-        } else if (@typeInfo(field.type) == .int) {
-            @field(entry, field.name) = @intCast(row.int(i));
-        } else switch (field.type) {
+                @field(entry, field_name) = @enumFromInt(row.int(i));
+        } else if (@typeInfo(field_type) == .int) {
+            @field(entry, field_name) = @intCast(row.int(i));
+        } else switch (field_type) {
             []const u8 => {
-                @field(entry, field.name) = try allocator.dupe(u8, row.text(i));
+                @field(entry, field_name) = try allocator.dupe(u8, row.text(i));
             },
             ?[]const u8 => {
-                @field(entry, field.name) = if (row.nullableText(i)) |text| try allocator.dupe(u8, text) else null;
+                @field(entry, field_name) = if (row.nullableText(i)) |text| try allocator.dupe(u8, text) else null;
             },
             ?u64, ?u16, ?u8 => {
-                @field(entry, field.name) = if (row.nullableInt(i)) |value| @intCast(value) else null;
+                @field(entry, field_name) = if (row.nullableInt(i)) |value| @intCast(value) else null;
             },
             ?StructID, ?EnumID => {
-                @field(entry, field.name) = if (row.nullableInt(i)) |value| @enumFromInt(value) else null;
+                @field(entry, field_name) = if (row.nullableInt(i)) |value| @enumFromInt(value) else null;
             },
             ?Access => {
-                @field(entry, field.name) = if (row.nullableText(i)) |text| (std.meta.stringToEnum(Access, text) orelse return error.Unknown) else null;
+                @field(entry, field_name) = if (row.nullableText(i)) |text| (std.meta.stringToEnum(Access, text) orelse return error.Unknown) else null;
             },
-            else => @compileError(std.fmt.comptimePrint("unhandled column type: {s}", .{@typeName(field.type)})),
+            else => @compileError(std.fmt.comptimePrint("unhandled column type: {s}", .{@typeName(field_type)})),
         }
     }
 

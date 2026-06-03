@@ -50,8 +50,8 @@ pub fn Mmio(comptime Packed: type) type {
         /// Set field `Field` of this register to `value`.
         pub inline fn modify(addr: *volatile Self, fields: anytype) void {
             var val = read(addr);
-            inline for (@typeInfo(@TypeOf(fields)).@"struct".fields) |field| {
-                @field(val, field.name) = @field(fields, field.name);
+            inline for (@typeInfo(@TypeOf(fields)).@"struct".field_names) |field_name| {
+                @field(val, field_name) = @field(fields, field_name);
             }
             write(addr, val);
         }
@@ -88,8 +88,8 @@ pub fn Mmio(comptime Packed: type) type {
         /// In field `F` of this register, toggle (only) all bits that are set in `value`.
         pub inline fn toggle(addr: *volatile Self, fields: anytype) void {
             var val = read(addr);
-            inline for (@typeInfo(@TypeOf(fields)).@"struct".fields) |field| {
-                toggle_field(&val, field.name, @field(fields, field.name));
+            inline for (@typeInfo(@TypeOf(fields)).@"struct".field_names) |field_name| {
+                toggle_field(&val, field_name, @field(fields, field_name));
             }
             write(addr, val);
         }

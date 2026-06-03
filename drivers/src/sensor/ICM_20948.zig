@@ -441,8 +441,8 @@ pub const ICM_20948 = struct {
 
         // Cast to the correct type and modify the named fields
         var val: T = @bitCast(current_val);
-        inline for (@typeInfo(@TypeOf(fields)).@"struct".fields) |field| {
-            @field(val, field.name) = @field(fields, field.name);
+        inline for (@typeInfo(@TypeOf(fields)).@"struct".field_names) |field_name| {
+            @field(val, field_name) = @field(fields, field_name);
         }
 
         // Write back the modified value

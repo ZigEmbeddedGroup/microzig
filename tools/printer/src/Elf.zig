@@ -82,14 +82,15 @@ pub fn init(allocator: std.mem.Allocator, file_reader: *std.Io.File.Reader) !Elf
     var section_header_it = elf_header.iterateSectionHeaders(file_reader);
     while (try section_header_it.next()) |shdr| {
         const name = std.mem.span(@as([*:0]const u8, @ptrCast(string_table_data[shdr.sh_name..])));
-        inline for (@typeInfo(SectionTypes).@"enum".fields) |section_field| {
-            if (std.mem.eql(u8, name, section_field.name)) {
+        const info = @typeInfo(SectionTypes).@"enum";
+        inline for (info.field_names, info.field_values) |section_field_name, section_field_value| {
+            if (std.mem.eql(u8, name, section_field_name)) {
                 try file_reader.seekTo(shdr.sh_offset);
 
                 const section_data = try file_reader.interface.readAlloc(allocator, shdr.sh_size);
                 errdefer allocator.free(section_data);
 
-                sections.put(@enumFromInt(section_field.value), section_data);
+                sections.put(@enumFromInt(section_field_value), section_data);
             }
         }
     }

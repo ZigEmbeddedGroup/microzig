@@ -458,8 +458,8 @@ pub const csr = struct {
                 switch (@typeInfo(T)) {
                     .@"struct" => {
                         var value = read();
-                        inline for (@typeInfo(@TypeOf(modifier)).Struct.fields) |field| {
-                            @field(value, field.name) = @field(modifier, field.name);
+                        inline for (@typeInfo(@TypeOf(modifier)).Struct.field_names) |field_name| {
+                            @field(value, field_name) = @field(modifier, field_name);
                         }
                         write(value);
                     },
@@ -530,8 +530,8 @@ pub const csr = struct {
                 return switch (@typeInfo(T)) {
                     .@"struct" => blk: {
                         var bits: T = @bitCast(@as(u32, 0));
-                        inline for (@typeInfo(@TypeOf(fields)).@"struct".fields) |field| {
-                            @field(bits, field.name) = @field(fields, field.name);
+                        inline for (@typeInfo(@TypeOf(fields)).@"struct".field_names) |field_name| {
+                            @field(bits, field_name) = @field(fields, field_name);
                         }
                         break :blk @bitCast(bits);
                     },
@@ -546,8 +546,8 @@ pub const csr = struct {
                     // For anonymous tuple types,
                     // if the value of a field is comptime known,
                     // then the corresponding field in that tuple's type is comptime.
-                    const field = @typeInfo(@TypeOf(.{x})).@"struct".fields[0];
-                    break :check field.is_comptime;
+                    const field_attr = @typeInfo(@TypeOf(.{x})).@"struct".field_attrs[0];
+                    break :check field_attr.is_comptime;
                 };
             }
         };

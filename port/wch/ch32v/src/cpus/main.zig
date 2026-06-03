@@ -340,9 +340,9 @@ const vector_table_offset = 1; // First entry is reserved for the _reset_vector.
 fn vector_table_size() usize {
     const type_info = @typeInfo(Interrupt);
 
-    const interrupts_list = type_info.@"enum".fields;
+    const interrupts_list = type_info.@"enum".field_values;
     const last_interrupt = interrupts_list[interrupts_list.len - 1];
-    const last_interrupt_idx = last_interrupt.value;
+    const last_interrupt_idx = last_interrupt;
 
     return last_interrupt_idx + 1 - vector_table_offset;
 }

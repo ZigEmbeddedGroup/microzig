@@ -74,18 +74,19 @@ pub const PortSelect = struct {
 
     pub const all: PortSelect = blk: {
         var ret: PortSelect = undefined;
-        for (@typeInfo(PortSelect).@"struct".fields) |field| {
-            @field(ret, field.name) = true;
+        for (@typeInfo(PortSelect).@"struct".fieldNames) |name| {
+            @field(ret, name) = true;
         }
 
         break :blk ret;
     };
 
     comptime {
+        const info = @typeInfo(PortSelect).@"struct";
         // assumes fields are in the same order as the port list
-        for (port_list, @typeInfo(PortSelect).@"struct".fields) |port_entry, field| {
-            assert(std.mem.eql(u8, port_entry.name, field.name));
-            const default_value_ptr: *const bool = @ptrCast(field.default_value_ptr);
+        for (port_list, info.field_names, info.field_attrs) |port_entry, field_name, field_attr| {
+            assert(std.mem.eql(u8, port_entry.name, field_name));
+            const default_value_ptr: *const bool = @ptrCast(field_attr.default_value_ptr);
             assert(false == default_value_ptr.*);
         }
     }
@@ -143,7 +144,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
 
             var field_names: [count][]const u8 = undefined;
             var field_types: [count]type = undefined;
-            var field_attrs: [count]std.builtin.Type.StructField.Attributes = undefined;
+            var field_attrs: [count]std.builtin.Type.Struct.FieldAttributes = undefined;
 
             if (count > 0) {
                 var i: usize = 0;
@@ -774,9 +775,9 @@ pub inline fn custom_lazy_import(
     const deps = build_runner.dependencies;
     const pkg_hash = custom_find_import_pkg_hash_or_fatal(dep_name);
 
-    inline for (@typeInfo(deps.packages).@"struct".decls) |decl| {
-        if (comptime std.mem.eql(u8, decl.name, pkg_hash)) {
-            const pkg = @field(deps.packages, decl.name);
+    inline for (@typeInfo(deps.packages).@"struct".decl_names) |decl_name| {
+        if (comptime std.mem.eql(u8, decl_name, pkg_hash)) {
+            const pkg = @field(deps.packages, decl_name);
             const available = !@hasDecl(pkg, "available") or pkg.available;
             if (!available) {
                 return null;
@@ -796,8 +797,8 @@ inline fn custom_find_import_pkg_hash_or_fatal(comptime dep_name: []const u8) []
     const build_runner = @import("root");
     const deps = build_runner.dependencies;
 
-    const pkg_deps = comptime for (@typeInfo(deps.packages).@"struct".decls) |decl| {
-        const pkg_hash = decl.name;
+    const pkg_deps = comptime for (@typeInfo(deps.packages).@"struct".decl_names) |decl_name| {
+        const pkg_hash = decl_name;
         const pkg = @field(deps.packages, pkg_hash);
         if (@hasDecl(pkg, "build_zig") and pkg.build_zig == @This()) break pkg.deps;
     } else deps.root_deps;

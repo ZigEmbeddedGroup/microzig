@@ -137,9 +137,9 @@ pub fn EndpointHandler(Driver: type) type {
 pub fn DriverHandlers(Driver: type) type {
     var field_names: []const [:0]const u8 = &.{};
 
-    const desc_fields = @typeInfo(Driver.Descriptor).@"struct".fields;
-    for (desc_fields) |fld| switch (fld.type) {
-        descriptor.Endpoint => field_names = field_names ++ .{fld.name},
+    const info = @typeInfo(Driver.Descriptor).@"struct";
+    for (info.field_names, info.field_types) |field_name, field_type| switch (field_type) {
+        descriptor.Endpoint => field_names = field_names ++ .{field_name},
         else => {},
     };
 
@@ -161,14 +161,15 @@ pub const Config = struct {
         /// Generate A struct with a field for each field in Drivers, where the type is the third
         /// arg of the Drivers' Descriptor's 'create' method.
         pub fn Args(self: @This()) type {
-            const fields = @typeInfo(self.Drivers).@"struct".fields;
-            var field_names: [fields.len][:0]const u8 = undefined;
-            var field_types: [fields.len]type = undefined;
-            for (fields, 0..) |fld, i| {
+            const info = @typeInfo(self.Drivers).@"struct";
+            const count = info.field_names.len;
+            var field_names: [count][:0]const u8 = undefined;
+            var field_types: [count]type = undefined;
+            for (info.field_names, info.field_types, 0..) |field_name, field_type, i| {
                 // Collect field names
-                field_names[i] = fld.name;
+                field_names[i] = field_name;
                 // Collect the type info  for the Descriptor.create function parameter
-                const params = @typeInfo(@TypeOf(fld.type.Descriptor.create)).@"fn".params;
+                const params = @typeInfo(@TypeOf(field_type.Descriptor.create)).@"fn".params;
                 // Ensure it takes 3 parameters
                 assert(params.len == 3);
                 // The first must be a DescriptorAllocator
@@ -300,14 +301,15 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
 
                 // Collect handler types, names, and drivers, to later be bound to the appropriate
                 // endpoints
-                for (@typeInfo(Descriptors).@"struct".fields, 0..) |fld, desc_num| {
-                    const desc = @field(descriptors, fld.name);
+                const info = @typeInfo(Descriptors).@"struct";
+                for (info.field_names, info.field_types, 0..) |field_name, field_type, desc_num| {
+                    const desc = @field(descriptors, field_name);
 
                     // Determine which interface numbers this driver owns. If it is an
                     // InterfaceAssociation, then use the interface count. If it is an Interface,
                     // then the driver owns just that one interface.
                     if (desc_num == 0) {
-                        const itf_start, const itf_count = switch (fld.type) {
+                        const itf_start, const itf_count = switch (field_type) {
                             descriptor.InterfaceAssociation => .{ desc.first_interface, desc.interface_count },
                             descriptor.Interface => .{ desc.interface_number, 1 },
                             else => |T| @compileError(
@@ -323,7 +325,7 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
                         itf_handlers = itf_handlers ++ @as([itf_count]DriverEnum, @splat(@field(DriverEnum, drv.name)));
                     }
 
-                    switch (fld.type) {
+                    switch (field_type) {
                         // Register handler for endpoints
                         descriptor.Endpoint => {
                             const ep_dir = @intFromEnum(desc.endpoint.dir);
@@ -337,7 +339,7 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
 
                             ep_handler_types[ep_dir][ep_num] = EndpointHandler(drv.type);
                             ep_handler_drivers[ep_dir][ep_num] = drv_id;
-                            ep_handler_names[ep_dir][ep_num] = fld.name;
+                            ep_handler_names[ep_dir][ep_num] = field_name;
                         },
                         // Interface association must be first
                         descriptor.InterfaceAssociation => assert(desc_num == 0),
