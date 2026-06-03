@@ -237,9 +237,9 @@ pub fn max_enum_tag(T: type) @typeInfo(T).@"enum".tag_type {
 
     const tag_type = @typeInfo(T).@"enum".tag_type;
     var max_tag: tag_type = std.math.minInt(tag_type);
-    for (@typeInfo(T).@"enum".fields) |field| {
-        if (field.value > max_tag) {
-            max_tag = field.value;
+    for (@typeInfo(T).@"enum".field_values) |field_value| {
+        if (field_value > max_tag) {
+            max_tag = field_value;
         }
     }
     return max_tag;
@@ -272,9 +272,7 @@ pub fn GenerateInterruptOptions(sources: []const Source) type {
         for (sources) |source| {
             if (@typeInfo(source.InterruptEnum) != .@"enum") @compileError("expected an enum type");
 
-            for (@typeInfo(source.InterruptEnum).@"enum".fields) |_| {
-                count += 1;
-            }
+            count += @typeInfo(source.InterruptEnum).@"enum".field_names.len;
         }
 
         break :blk count;
@@ -286,8 +284,8 @@ pub fn GenerateInterruptOptions(sources: []const Source) type {
 
     var i: usize = 0;
     for (sources) |source| {
-        for (@typeInfo(source.InterruptEnum).@"enum".fields) |enum_field| {
-            field_names[i] = enum_field.name;
+        for (@typeInfo(source.InterruptEnum).@"enum".field_names) |field_name| {
+            field_names[i] = field_name;
             field_types[i] = ?source.HandlerFn;
             field_attrs[i] = .{ .default_value_ptr = @ptrCast(&@as(?source.HandlerFn, null)) };
 

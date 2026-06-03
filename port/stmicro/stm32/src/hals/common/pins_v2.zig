@@ -205,8 +205,8 @@ pub const Port = enum {
         PIN15: ?Pin.Configuration = null,
 
         comptime {
-            const pin_field_count = @typeInfo(Pin).@"enum".fields.len;
-            const config_field_count = @typeInfo(Configuration).@"struct".fields.len;
+            const pin_field_count = @typeInfo(Pin).@"enum".field_names.len;
+            const config_field_count = @typeInfo(Configuration).@"struct".field_names.len;
             if (pin_field_count != config_field_count)
                 @compileError(comptimePrint("{} {}", .{ pin_field_count, config_field_count }));
         }
@@ -223,8 +223,8 @@ pub const GlobalConfiguration = struct {
     GPIOG: ?Port.Configuration = null,
 
     comptime {
-        const port_field_count = @typeInfo(Port).@"enum".fields.len;
-        const config_field_count = @typeInfo(GlobalConfiguration).@"struct".fields.len;
+        const port_field_count = @typeInfo(Port).@"enum".field_names.len;
+        const config_field_count = @typeInfo(GlobalConfiguration).@"struct".field_names.len;
         if (port_field_count != config_field_count)
             @compileError(comptimePrint("{} {}", .{ port_field_count, config_field_count }));
     }

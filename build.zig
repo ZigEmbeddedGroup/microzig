@@ -74,8 +74,8 @@ pub const PortSelect = struct {
 
     pub const all: PortSelect = blk: {
         var ret: PortSelect = undefined;
-        for (@typeInfo(PortSelect).@"struct".fieldNames) |name| {
-            @field(ret, name) = true;
+        for (@typeInfo(PortSelect).@"struct".field_names) |field_name| {
+            @field(ret, field_name) = true;
         }
 
         break :blk ret;

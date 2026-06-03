@@ -83,11 +83,11 @@ pub fn GPIO(comptime port: u3, comptime num: u4, comptime mode: gpio.Mode) type 
 }
 
 fn get_tag_name_by_index(comptime T: type, comptime index: usize) []const u8 {
-    const fields = @typeInfo(T).@"enum".fields;
-    if (index >= fields.len) {
+    const field_names = @typeInfo(T).@"enum".field_names;
+    if (index >= field_names.len) {
         @compileError("Index is out of enum members.");
     }
-    return fields[index].name;
+    return field_names[index];
 }
 
 pub fn Pins(comptime config: GlobalConfiguration) type {

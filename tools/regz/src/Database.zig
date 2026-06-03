@@ -364,9 +364,9 @@ pub const Access = enum {
     pub const default = .read_write;
 
     pub fn to_string(access: Access) []const u8 {
-        return inline for (@typeInfo(Access).@"enum".fields) |field| {
-            if (@field(Access, field.name) == access)
-                break field.name;
+        return inline for (@typeInfo(Access).@"enum".field_names) |field_name| {
+            if (@field(Access, field_name) == access)
+                break field_name;
         } else unreachable;
     }
 };

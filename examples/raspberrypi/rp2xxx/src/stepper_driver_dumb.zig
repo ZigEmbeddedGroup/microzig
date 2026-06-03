@@ -39,10 +39,10 @@ pub fn main() !void {
         in3: GPIO_Device,
         in4: GPIO_Device,
     } = undefined;
-    inline for (std.meta.fields(@TypeOf(pins)), .{ 17, 16, 14, 15 }) |field, num| {
+    inline for (@typeInfo(@TypeOf(pins)).@"struct".field_names, .{ 17, 16, 14, 15 }) |field_name, num| {
         const pin = gpio.num(num);
         pin.set_function(.sio);
-        @field(pins, field.name) = GPIO_Device.init(pin);
+        @field(pins, field_name) = GPIO_Device.init(pin);
     }
 
     var stepper = ULN2003.init(.{

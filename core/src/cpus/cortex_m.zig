@@ -58,11 +58,10 @@ pub const ExternalInterrupt = blk: {
     //       not the offset into the whole vector table.
 
     const vector_info = @typeInfo(Interrupt).@"enum";
-    const vector_fields = vector_info.fields;
     var result_len: usize = 0;
 
-    for (vector_fields) |field| {
-        if (field.value >= 0) result_len += 1;
+    for (vector_info.field_values) |field_value| {
+        if (field_value >= 0) result_len += 1;
     }
 
     if (result_len == 0) break :blk enum {};
@@ -87,11 +86,10 @@ pub const Exception = blk: {
     //       vector table, not the negative offset from VTOR.
 
     const vector_info = @typeInfo(Interrupt).@"enum";
-    const vector_fields = vector_info.fields;
     var result_len: usize = 0;
 
-    for (vector_fields) |field| {
-        if (field.value < 0)
+    for (vector_info.field_values) |field_value| {
+        if (field_value < 0)
             result_len += 1;
     }
 

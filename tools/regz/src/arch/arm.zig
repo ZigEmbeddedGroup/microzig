@@ -53,10 +53,10 @@ const system_interrupts = struct {
 pub fn load_system_interrupts(db: *Database, device_id: DeviceID, arch: Arch) !void {
     assert(arch.is_arm());
 
-    inline for (@typeInfo(Arch).@"enum".fields) |field| {
-        if (arch == @field(Arch, field.name)) {
-            if (@hasDecl(system_interrupts, field.name)) {
-                for (@field(system_interrupts, field.name)) |interrupt| {
+    inline for (@typeInfo(Arch).@"enum".field_names) |field_name| {
+        if (arch == @field(Arch, field_name)) {
+            if (@hasDecl(system_interrupts, field_name)) {
+                for (@field(system_interrupts, field_name)) |interrupt| {
                     _ = try db.create_interrupt(device_id, .{
                         .name = interrupt.name,
                         .idx = interrupt.index,

@@ -69,16 +69,16 @@ pub const JumpInstruction = enum {
 /// Zig's comptime helps because we generate the assembly at comptime, and it is
 /// later instantiated using inline asm.
 pub fn generate_vector_table_asm(comptime jump_insn: JumpInstruction) []const u8 {
-    const fields = std.meta.fields(microzig.chip.VectorTable);
-    std.debug.assert(std.mem.eql(u8, "RESET", fields[0].name));
+    const field_names = @typeInfo(microzig.chip.VectorTable).@"struct".field_names;
+    std.debug.assert(std.mem.eql(u8, "RESET", field_names[0]));
     var asm_str: []const u8 = jump_insn.to_string() ++ " microzig_start\n";
 
     const interrupt_options = microzig.options.interrupts;
 
-    for (fields[1..]) |field| {
-        const handler = @field(interrupt_options, field.name);
+    for (field_names[1..]) |field_name| {
+        const handler = @field(interrupt_options, field_name);
         if (handler) |func| {
-            const isr = make_isr_handler(field.name, func);
+            const isr = make_isr_handler(field_name, func);
             asm_str = asm_str ++ jump_insn.to_string() ++ isr.exported_name ++ "\n";
         } else {
             asm_str = asm_str ++ jump_insn.to_string() ++ " microzig_unhandled_vector\n";

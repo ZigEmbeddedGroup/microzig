@@ -352,7 +352,7 @@ pub fn generate_vector_table() VectorTable {
     var tmp: VectorTable = @splat(microzig.options.interrupts.Exception orelse unhandled);
 
     const type_info = @typeInfo(Interrupt);
-    const interrupts_list = type_info.@"enum".fields;
+    const interrupts_list = type_info.@"enum".field_names;
 
     // Apply interrupts
     for (&tmp, vector_table_offset..) |_, idx| {

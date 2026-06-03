@@ -5,9 +5,9 @@ const isa = @import("isa");
 const BoundedArray = @import("bounded-array").BoundedArray;
 
 fn string_to_enum(comptime T: type, str: []const u8) ?T {
-    inline for (@typeInfo(T).@"enum".fields) |enumField| {
-        if (std.mem.eql(u8, str, enumField.name)) {
-            return @field(T, enumField.name);
+    inline for (@typeInfo(T).@"enum".field_names) |field_name| {
+        if (std.mem.eql(u8, str, field_name)) {
+            return @field(T, field_name);
         }
     }
     return null;
