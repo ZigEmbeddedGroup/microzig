@@ -101,14 +101,14 @@ fn run_test(
     io.sreg = &cpu.sreg;
 
     // Initialize CPU state
-    inline for (comptime std.meta.fields(aviron.Cpu.SREG)) |fld| {
-        if (@field(test_config.precondition.sreg, fld.name)) |init_value| {
-            @field(cpu.sreg, fld.name) = init_value;
+    inline for (@typeInfo(aviron.Cpu.SREG).@"struct".field_names) |field_name| {
+        if (@field(test_config.precondition.sreg, field_name)) |init_value| {
+            @field(cpu.sreg, field_name) = init_value;
         }
     }
-    inline for (comptime std.enums.values(aviron.Register)) |reg| {
-        if (@field(test_config.precondition, @tagName(reg))) |init_value| {
-            cpu.regs[reg.num()] = init_value;
+    inline for (@typeInfo(aviron.Register).@"enum".field_values) |field_value| {
+        if (@field(test_config.precondition, @tagName(field_value))) |init_value| {
+            cpu.regs[field_value] = init_value;
         }
     }
 

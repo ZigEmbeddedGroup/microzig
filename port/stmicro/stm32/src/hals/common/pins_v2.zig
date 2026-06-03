@@ -147,10 +147,10 @@ pub fn GPIO(comptime mode: gpio.Mode) type {
 
 pub fn Pins(comptime config: GlobalConfiguration) type {
     var count: usize = 0;
-    for (@typeInfo(GlobalConfiguration).@"struct".fields) |port_field| {
-        if (@field(config, port_field.name)) |port_config| {
-            for (@typeInfo(Port.Configuration).@"struct".fields) |field| {
-                if (@field(port_config, field.name) != null) {
+    for (@typeInfo(GlobalConfiguration).@"struct".field_names) |port_field_name| {
+        if (@field(config, port_field_name)) |port_config| {
+            for (@typeInfo(Port.Configuration).@"struct".field_names) |field_name| {
+                if (@field(port_config, field_name) != null) {
                     count += 1;
                 }
             }
@@ -161,11 +161,11 @@ pub fn Pins(comptime config: GlobalConfiguration) type {
     var field_types: [count]type = undefined;
     var field_attrs: [count]std.builtin.Type.StructField.Attributes = undefined;
     var i: usize = 0;
-    for (@typeInfo(GlobalConfiguration).@"struct".fields) |port_field| {
-        if (@field(config, port_field.name)) |port_config| {
-            for (@typeInfo(Port.Configuration).@"struct".fields) |field| {
-                if (@field(port_config, field.name)) |pin_config| {
-                    const default_name = "P" ++ port_field.name[4..5] ++ field.name[3..];
+    for (@typeInfo(GlobalConfiguration).@"struct".field_names) |port_field_name| {
+        if (@field(config, port_field_name)) |port_config| {
+            for (@typeInfo(Port.Configuration).@"struct".field_names) |field_name| {
+                if (@field(port_config, field_name)) |pin_config| {
+                    const default_name = "P" ++ port_field_name[4..5] ++ field_name[3..];
                     field_names[i] = pin_config.name orelse default_name;
                     field_types[i] = GPIO(pin_config.mode orelse .{ .input = .{.floating} });
                     field_attrs[i] = .{};
@@ -205,8 +205,8 @@ pub const Port = enum {
         PIN15: ?Pin.Configuration = null,
 
         comptime {
-            const pin_field_count = @typeInfo(Pin).@"enum".fields.len;
-            const config_field_count = @typeInfo(Configuration).@"struct".fields.len;
+            const pin_field_count = @typeInfo(Pin).@"enum".field_names.len;
+            const config_field_count = @typeInfo(Configuration).@"struct".field_names.len;
             if (pin_field_count != config_field_count)
                 @compileError(comptimePrint("{} {}", .{ pin_field_count, config_field_count }));
         }
@@ -223,8 +223,8 @@ pub const GlobalConfiguration = struct {
     GPIOG: ?Port.Configuration = null,
 
     comptime {
-        const port_field_count = @typeInfo(Port).@"enum".fields.len;
-        const config_field_count = @typeInfo(GlobalConfiguration).@"struct".fields.len;
+        const port_field_count = @typeInfo(Port).@"enum".field_names.len;
+        const config_field_count = @typeInfo(GlobalConfiguration).@"struct".field_names.len;
         if (port_field_count != config_field_count)
             @compileError(comptimePrint("{} {}", .{ port_field_count, config_field_count }));
     }
@@ -232,20 +232,20 @@ pub const GlobalConfiguration = struct {
     pub fn apply(comptime config: GlobalConfiguration) Pins(config) {
         var ret: Pins(config) = undefined;
 
-        inline for (@typeInfo(GlobalConfiguration).@"struct".fields) |port_field| {
-            if (@field(config, port_field.name)) |_| {
-                rcc.enable_clock(@field(enums.Peripherals, port_field.name));
+        inline for (@typeInfo(GlobalConfiguration).@"struct".field_names) |port_field_name| {
+            if (@field(config, port_field_name)) |_| {
+                rcc.enable_clock(@field(enums.Peripherals, port_field_name));
             }
         }
 
-        inline for (@typeInfo(GlobalConfiguration).@"struct".fields) |port_field| {
-            if (@field(config, port_field.name)) |port_config| {
-                inline for (@typeInfo(Port.Configuration).@"struct".fields) |field| {
-                    if (@field(port_config, field.name)) |pin_config| {
-                        const port = @intFromEnum(@field(Port, port_field.name));
-                        var pin = gpio.Pin.from_port(@enumFromInt(port), @intFromEnum(@field(Pin, field.name)));
+        inline for (@typeInfo(GlobalConfiguration).@"struct".field_names) |port_field_name| {
+            if (@field(config, port_field_name)) |port_config| {
+                inline for (@typeInfo(Port.Configuration).@"struct".field_names) |field_name| {
+                    if (@field(port_config, field_name)) |pin_config| {
+                        const port = @intFromEnum(@field(Port, port_field_name));
+                        var pin = gpio.Pin.from_port(@enumFromInt(port), @intFromEnum(@field(Pin, field_name)));
                         pin.write_pin_config(pin_config.mode.?);
-                        const default_name = "P" ++ port_field.name[4..5] ++ field.name[3..];
+                        const default_name = "P" ++ port_field_name[4..5] ++ field_name[3..];
 
                         switch (pin_config.mode orelse .input) {
                             .input => @field(ret, pin_config.name orelse default_name) = InputGPIO{ .pin = pin },

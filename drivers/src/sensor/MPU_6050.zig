@@ -387,8 +387,8 @@ pub const MPU_6050 = struct {
         const current_val = try self.read_reg(reg, T);
 
         var val: T = @bitCast(current_val);
-        inline for (@typeInfo(@TypeOf(fields)).@"struct".fields) |field| {
-            @field(val, field.name) = @field(fields, field.name);
+        inline for (@typeInfo(@TypeOf(fields)).@"struct".field_names) |field_name| {
+            @field(val, field_name) = @field(fields, field_name);
         }
 
         try self.write_byte(reg, @bitCast(val));

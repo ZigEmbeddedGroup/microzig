@@ -30,11 +30,14 @@ const TimingSpec_Standard = .{
     .t_min_af = 0.05,
 };
 
-const TIMINGR = blk: for (@typeInfo(I2C_Peripherals).@"struct".fields) |field| {
-    if (std.mem.eql(u8, "TIMINGR", field.name)) {
-        break :blk field.type;
-    }
-} else @compileError("No TIMINGR register");
+const TIMINGR = blk: {
+    const info = @typeInfo(I2C_Peripherals).strutct;
+    break :blk for (info.field_names, info.field_types) |field_name, field_type| {
+        if (std.mem.eql(u8, "TIMINGR", field_name)) {
+            break :blk field_type;
+        }
+    } else @compileError("No TIMINGR register");
+};
 
 const I2C = struct {
     regs: *volatile I2C_Peripherals,

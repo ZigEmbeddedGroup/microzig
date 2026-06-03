@@ -104,9 +104,9 @@ pub const Opcode = enum(u8) {
     unknown,
 
     pub fn to_string(opcode: Opcode) []const u8 {
-        inline for (@typeInfo(Opcode).@"enum".fields) |field| {
-            if (opcode == @field(Opcode, field.name))
-                return field.name;
+        inline for (@typeInfo(Opcode).@"enum".field_names) |field_name| {
+            if (opcode == @field(Opcode, field_name))
+                return field_name;
         }
 
         unreachable;

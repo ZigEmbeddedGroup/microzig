@@ -192,10 +192,10 @@ fn add_test_suite(
         };
 
         const ext = std.fs.path.extension(entry.basename);
-        const action: FileAction = inline for (std.meta.fields(@TypeOf(extension_to_action))) |fld| {
-            const action: FileAction = @field(extension_to_action, fld.name);
+        const action: FileAction = inline for (@typeInfo(@TypeOf(extension_to_action)).@"struct".field_names) |field_name| {
+            const action: FileAction = @field(extension_to_action, field_name);
 
-            if (std.mem.eql(u8, ext, "." ++ fld.name))
+            if (std.mem.eql(u8, ext, "." ++ field_name))
                 break action;
         } else .unknown;
 
@@ -364,9 +364,9 @@ fn add_test_suite_update(
         };
 
         const ext = std.fs.path.extension(entry.basename);
-        const action: FileAction = inline for (std.meta.fields(@TypeOf(extension_to_action))) |fld| {
-            const action: FileAction = @field(extension_to_action, fld.name);
-            if (std.mem.eql(u8, ext, "." ++ fld.name))
+        const action: FileAction = inline for (@typeInfo(@TypeOf(extension_to_action)).@"struct".field_names) |field_name| {
+            const action: FileAction = @field(extension_to_action, field_name);
+            if (std.mem.eql(u8, ext, "." ++ field_name))
                 break action;
         } else .unknown;
 
