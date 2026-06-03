@@ -103,9 +103,9 @@ pub const Target = struct {
         const ret = from.dep.builder.allocator.create(Target) catch @panic("out of memory");
         ret.* = from.*;
 
-        inline for (std.meta.fields(DeriveOptions)) |field| {
-            const value = @field(options, field.name);
-            if (value) |val| @field(ret, field.name) = val;
+        inline for (@typeInfo(DeriveOptions).@"struct".field_names) |field_name| {
+            const value = @field(options, field_name);
+            if (value) |val| @field(ret, field_name) = val;
         }
         ret.chip = chip;
         return ret;

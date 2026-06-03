@@ -1760,16 +1760,16 @@ fn format_instruction(inst: isa.Instruction, writer: *std.Io.Writer) !void {
             if (T != void) {
                 const info = @typeInfo(T).@"struct";
 
-                inline for (info.fields, 0..) |field, i| {
+                inline for (info.field_names, info.field_types, 0..) |field_name, field_type, i| {
                     if (i > 0) {
                         try writer.writeAll(", ");
                     }
 
-                    const field_info = @typeInfo(field.type);
+                    const field_info = @typeInfo(field_type);
                     if (field_info == .int) {
-                        try writer.print("{s}={}", .{ field.name, @field(args, field.name) });
+                        try writer.print("{s}={}", .{ field_name, @field(args, field_name) });
                     } else {
-                        try writer.print("{s}={f}", .{ field.name, @field(args, field.name) });
+                        try writer.print("{s}={f}", .{ field_name, @field(args, field_name) });
                     }
                 }
             }

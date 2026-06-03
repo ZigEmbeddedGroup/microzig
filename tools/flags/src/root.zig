@@ -33,9 +33,10 @@ pub fn parse(comptime Flags: type, arena: Allocator, args: []const []const u8) !
         const equals = std.mem.findScalar(u8, arg, '=');
         const key = arg[label_prefix.len .. equals orelse arg.len];
         const value = arg[if (equals) |eq| eq + 1 else arg.len..arg.len];
-        inline for (@typeInfo(Flags).@"struct".fields) |field| {
-            if (std.mem.eql(u8, key, field.name)) {
-                @field(flags, field.name) = try parse_value(field.type, key, value, equals);
+        const info = @typeInfo(Flags).@"struct";
+        inline for (info.field_names, info.field_types) |field_name, field_type| {
+            if (std.mem.eql(u8, key, field_name)) {
+                @field(flags, field_name) = try parse_value(field_type, key, value, equals);
                 continue :outer;
             }
         }

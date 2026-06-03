@@ -58,11 +58,10 @@ pub const ExternalInterrupt = blk: {
     //       not the offset into the whole vector table.
 
     const vector_info = @typeInfo(Interrupt).@"enum";
-    const vector_fields = vector_info.fields;
     var result_len: usize = 0;
 
-    for (vector_fields) |field| {
-        if (field.value >= 0) result_len += 1;
+    for (vector_info.field_values) |field_value| {
+        if (field_value >= 0) result_len += 1;
     }
 
     if (result_len == 0) break :blk enum {};
@@ -87,11 +86,10 @@ pub const Exception = blk: {
     //       vector table, not the negative offset from VTOR.
 
     const vector_info = @typeInfo(Interrupt).@"enum";
-    const vector_fields = vector_info.fields;
     var result_len: usize = 0;
 
-    for (vector_fields) |field| {
-        if (field.value < 0)
+    for (vector_info.field_values) |field_value| {
+        if (field_value < 0)
             result_len += 1;
     }
 
@@ -785,20 +783,20 @@ pub const startup_logic = struct {
         };
 
         // Apply interrupts
-        for (@typeInfo(@TypeOf(microzig.options.interrupts)).@"struct".fields) |field| {
-            const maybe_handler = @field(microzig.options.interrupts, field.name);
-            const maybe_default = get_hal_default_handler(field.name);
+        for (@typeInfo(@TypeOf(microzig.options.interrupts)).@"struct".field_names) |field_name| {
+            const maybe_handler = @field(microzig.options.interrupts, field_name);
+            const maybe_default = get_hal_default_handler(field_name);
 
-            @field(tmp, field.name) = blk: {
+            @field(tmp, field_name) = blk: {
                 if (maybe_handler) |handler| {
                     if (!microzig.options.overwrite_hal_interrupts and maybe_default != null)
                         @compileError(std.fmt.comptimePrint(
                             \\Interrupt {s} is used internally by the HAL; overriding it may cause malfunction.
                             \\If you are sure of what you are doing, set "overwrite_hal_interrupts" to true in: "microzig_options".
                             \\
-                        , .{field.name}));
+                        , .{field_name}));
                     break :blk handler;
-                } else break :blk maybe_default orelse default_exception_handler(field.name);
+                } else break :blk maybe_default orelse default_exception_handler(field_name);
             };
         }
 

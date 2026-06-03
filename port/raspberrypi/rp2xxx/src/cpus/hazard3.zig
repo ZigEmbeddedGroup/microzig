@@ -231,9 +231,10 @@ pub const startup_logic = struct {
         const vector_count = @sizeOf(microzig.chip.VectorTable) / @sizeOf(usize);
         var temp: [vector_count]Handler = @splat(microzig.interrupt.unhandled);
 
-        for (@typeInfo(ExternalInterrupt).@"enum".fields) |field| {
-            if (@field(microzig.options.interrupts, field.name)) |handler| {
-                temp[field.value] = handler;
+        const info = @typeInfo(ExternalInterrupt).@"enum";
+        for (info.field_names, info.values) |field_name, value| {
+            if (@field(microzig.options.interrupts, field_name)) |handler| {
+                temp[value] = handler;
             }
         }
 
