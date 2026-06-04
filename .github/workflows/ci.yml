@@ -23,6 +23,48 @@ jobs:
       - name: Run zig fmt
         run: zig fmt --check .
 
+  # Make sure that we are building examples and invoking tests for each port.
+  # Some may need to be skipped, but that's okay because then it's explicitly
+  # listed instead of forgotten.
+  validate-ports-checks:
+    name: Validate Port Checks
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    steps:
+      - run: sudo apt install -y yq
+      - name: Checkout
+        uses: actions/checkout@v4
+      - run: |
+          set -e
+
+          find port -mindepth 2 -maxdepth 2 -type d | sed 's|^port/||' | sort > ports
+          yq -r '.jobs["unit-test-ports"].strategy.matrix.port_dir.[]' .github/workflows/ci.yml | sort > unit_tested_ports
+          yq -r '.jobs["build-examples"].strategy.matrix.example_dir.[]' .github/workflows/ci.yml | grep -v no_hal | sort > exampled_ports
+
+          comm -23 ports unit_tested_ports > missing_unit_tests
+          comm -23 ports exampled_ports > missing_examples
+
+          EXIT_CODE=0
+          if [ -s missing_unit_tests ]
+          then
+            EXIT_CODE=1
+            echo "These port(s) are not running unit tests in CI:" >&2
+            echo "" >&2
+            cat missing_unit_tests >&2
+            echo "" >&2
+          fi
+
+          if [ -s missing_examples ]
+          then
+            EXIT_CODE=1
+            echo "These port(s) are not building examples in CI:" >&2
+            echo "" >&2
+            cat missing_examples >&2
+            echo "" >&2
+          fi
+
+          exit $EXIT_CODE
+
   unit-test-regz:
     name: Unit Test Regz
     continue-on-error: true
@@ -164,13 +206,7 @@ jobs:
       - name: Build
         run: zig build -Doptimize=ReleaseSmall
 
-  # Make sure that we are building examples and invoking tests for each port
-  validate-ports-checks:
-    name: Validate Port Checks
-    continue-on-error: true
-    runs-on: ubuntu-latest
-    steps:
-    - run: sudo apt install -y yq
+
 
   unit-test-ports:
     name: Unit Test Ports
@@ -224,7 +260,6 @@ jobs:
 
   validate-foundation-libc:
     name: Test Foundation Libc
-    if: false # TODO: investigate libc issues on master
     continue-on-error: true
     runs-on: ${{ matrix.os }}
     strategy:
