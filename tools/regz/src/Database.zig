@@ -383,14 +383,14 @@ fn gen_field_list(comptime T: type, opts: struct { prefix: ?[]const u8 = null })
     var buf: [4096]u8 = undefined;
     var fbs: std.Io.Writer = .fixed(&buf);
 
-    inline for (@typeInfo(T).@"struct".fields, 0..) |field, i| {
+    inline for (@typeInfo(T).@"struct".field_names, 0..) |field_name, i| {
         if (i != 0)
             fbs.writeAll(", ") catch unreachable;
 
         if (opts.prefix) |prefix|
             fbs.print("{s}.", .{prefix}) catch unreachable;
 
-        fbs.print("{s}", .{field.name}) catch unreachable;
+        fbs.print("{s}", .{field_name}) catch unreachable;
     }
 
     const buf_copy = buf;
