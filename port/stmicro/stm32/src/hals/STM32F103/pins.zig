@@ -80,10 +80,10 @@ pub fn GPIO(comptime port: u3, comptime num: u4, comptime mode: gpio.Mode) type 
 }
 
 pub fn Pins(comptime config: GlobalConfiguration) type {
-    const Attributes = std.builtin.Type.StructField.Attributes;
+    const Attributes = std.builtin.Type.Struct.FieldAttributes;
     var field_names: []const []const u8 = &.{};
     var field_types: []const type = &.{};
-    var field_attrs: []const std.builtin.Type.StructField.Attributes = &.{};
+    var field_attrs: []const std.builtin.Type.Struct.FieldAttributes = &.{};
     for (@typeInfo(GlobalConfiguration).@"struct".field_names) |port_field_name| {
         if (@field(config, port_field_name)) |port_config| {
             for (@typeInfo(Port.Configuration).@"struct".field_names) |field_name| {

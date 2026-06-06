@@ -1,5 +1,5 @@
-.{ .zig_version = "0.17.0-dev.657+2faf8debf", .tests = .{
-    .{ .address = 16928768, .expected = .{
+.{ .zig_version = "0.17.0-dev.1158+1d1193aa7", .tests = .{
+    .{ .address = 16941056, .expected = .{
         .line = 163,
         .column = 33,
         .file_path = "ubsan_rt.zig",

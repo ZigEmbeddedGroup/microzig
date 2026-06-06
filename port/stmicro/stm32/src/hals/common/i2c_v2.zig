@@ -31,7 +31,7 @@ const TimingSpec_Standard = .{
 };
 
 const TIMINGR = blk: {
-    const info = @typeInfo(I2C_Peripherals).strutct;
+    const info = @typeInfo(I2C_Peripherals).@"struct";
     break :blk for (info.field_names, info.field_types) |field_name, field_type| {
         if (std.mem.eql(u8, "TIMINGR", field_name)) {
             break :blk field_type;

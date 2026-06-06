@@ -425,7 +425,7 @@ fn BuildBufferStorageType(comptime up_channels: []const channel.Config, comptime
     const count = up_channels.len + down_channels.len;
     var field_names: [count][]const u8 = undefined;
     var field_types: [count]type = undefined;
-    var field_attrs: [count]std.builtin.Type.StructField.Attributes = undefined;
+    var field_attrs: [count]std.builtin.Type.Struct.FieldAttributes = undefined;
 
     var i: usize = 0;
     for (up_channels, 0..) |up_cfg, idx| {

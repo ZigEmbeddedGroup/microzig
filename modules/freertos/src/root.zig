@@ -16,14 +16,7 @@
 
 /// Direct access to all FreeRTOS C functions and types via `@cImport`.
 /// Use this for advanced use-cases not covered by the Zig wrappers.
-pub const c = @cImport({
-    @cInclude("FreeRTOS.h");
-    @cInclude("task.h");
-    @cInclude("queue.h");
-    @cInclude("semphr.h");
-    @cInclude("event_groups.h");
-    @cInclude("timers.h");
-});
+pub const c = @import("c");
 
 // ── Zig API Modules ─────────────────────────────────────────────────────
 
