@@ -32,7 +32,7 @@ jobs:
       - run: sudo apt install -y yq
       - name: Checkout
         uses: actions/checkout@v4
-      - run: find port -d 2
+      - run: find port -d=2
 
   unit-test-regz:
     name: Unit Test Regz
