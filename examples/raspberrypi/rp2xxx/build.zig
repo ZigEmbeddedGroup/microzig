@@ -23,15 +23,16 @@ pub fn build(b: *std.Build) void {
         .{ .target = raspberrypi.pico, .name = "pico_hd44780", .file = "src/rp2040_only/hd44780.zig" },
         .{ .target = raspberrypi.pico, .name = "pico_pcf8574", .file = "src/rp2040_only/pcf8574.zig" },
         .{ .target = raspberrypi.pico, .name = "pico_i2c_slave", .file = "src/rp2040_only/i2c_slave.zig" },
-        .{ .target = raspberrypi.pico, .name = "pico_freertos-hello-task", .file = "src/freertos/hello_task.zig" },
-        .{ .target = raspberrypi.pico, .name = "pico_freertos-queue-demo", .file = "src/freertos/queue_demo.zig" },
-        .{ .target = raspberrypi.pico, .name = "pico_freertos-multitask-demo", .file = "src/freertos/multitask_demo.zig" },
+        // TODO: fix freertos examples
+        //.{ .target = raspberrypi.pico, .name = "pico_freertos-hello-task", .file = "src/freertos/hello_task.zig" },
+        //.{ .target = raspberrypi.pico, .name = "pico_freertos-queue-demo", .file = "src/freertos/queue_demo.zig" },
+        //.{ .target = raspberrypi.pico, .name = "pico_freertos-multitask-demo", .file = "src/freertos/multitask_demo.zig" },
 
         .{ .target = raspberrypi.pico2_arm, .name = "pico2_arm_multicore", .file = "src/blinky_core1.zig" },
         .{ .target = raspberrypi.pico2_arm, .name = "pico2_arm_board_blinky", .file = "src/board_blinky.zig" },
-        .{ .target = raspberrypi.pico2_arm, .name = "pico2_arm_freertos-hello-task", .file = "src/freertos/hello_task.zig" },
-        .{ .target = raspberrypi.pico2_arm, .name = "pico2_arm_freertos-queue-demo", .file = "src/freertos/queue_demo.zig" },
-        .{ .target = raspberrypi.pico2_arm, .name = "pico2_arm_freertos-multitask-demo", .file = "src/freertos/multitask_demo.zig" },
+        //.{ .target = raspberrypi.pico2_arm, .name = "pico2_arm_freertos-hello-task", .file = "src/freertos/hello_task.zig" },
+        //.{ .target = raspberrypi.pico2_arm, .name = "pico2_arm_freertos-queue-demo", .file = "src/freertos/queue_demo.zig" },
+        //.{ .target = raspberrypi.pico2_arm, .name = "pico2_arm_freertos-multitask-demo", .file = "src/freertos/multitask_demo.zig" },
 
         .{ .target = raspberrypi.pico_flashless, .name = "pico_flashless_blinky", .file = "src/blinky.zig" },
 
@@ -59,8 +60,6 @@ pub fn build(b: *std.Build) void {
         // .{ .target = "board:waveshare/rp2040_plus_4m", .name = "rp2040-plus-4m" },
         // .{ .target = "board:waveshare/rp2040_plus_16m", .name = "rp2040-plus-16m" },
     };
-
-    const font8x8_dep = b.dependency("font8x8", .{});
 
     const chip_agnostic_examples: []const ChipAgnosticExample = &.{
         .{ .name = "adc", .file = "src/adc.zig" },
@@ -97,9 +96,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "mlx90640", .file = "src/mlx90640.zig" },
         .{ .name = "mlx90640-image", .file = "src/mlx90640_image.zig" },
         .{ .name = "mlx90640-hottest-point", .file = "src/mlx90640_hottest_point.zig" },
-        .{ .name = "ssd1306", .file = "src/ssd1306_oled.zig", .imports = &.{
-            .{ .name = "font8x8", .module = font8x8_dep.module("font8x8") },
-        } },
+        //.{ .name = "ssd1306", .file = "src/ssd1306_oled.zig" },
         .{ .name = "st7789", .file = "src/st7789_lcd.zig" },
         .{ .name = "net-pong", .file = "src/net/pong.zig" },
         .{ .name = "net-irq", .file = "src/net/irq.zig" },

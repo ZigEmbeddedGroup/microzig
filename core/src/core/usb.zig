@@ -169,15 +169,15 @@ pub const Config = struct {
                 // Collect field names
                 field_names[i] = field_name;
                 // Collect the type info  for the Descriptor.create function parameter
-                const params = @typeInfo(@TypeOf(field_type.Descriptor.create)).@"fn".params;
+                const param_types = @typeInfo(@TypeOf(field_type.Descriptor.create)).@"fn".param_types;
                 // Ensure it takes 3 parameters
-                assert(params.len == 3);
+                assert(param_types.len == 3);
                 // The first must be a DescriptorAllocator
-                assert(params[0].type == *DescriptorAllocator);
+                assert(param_types[0] == *DescriptorAllocator);
                 // The second is usb.types.Len
-                assert(params[1].type == types.Len);
+                assert(param_types[1] == types.Len);
                 // And save the type of the third
-                field_types[i] = params[2].type.?;
+                field_types[i] = param_types[2].?;
             }
             return @Struct(.auto, null, &field_names, &field_types, &@splat(.{}));
         }
@@ -217,7 +217,7 @@ pub const Config = struct {
 pub fn validate_controller(T: type) void {
     comptime {
         const info = @typeInfo(T);
-        if (info != .pointer or info.pointer.is_const or info.pointer.size != .one)
+        if (info != .pointer or info.pointer.attrs.@"const" or info.pointer.size != .one)
             @compileError("Expected a mutable pointer to the usb controller, got: " ++ @typeName(T));
         const Controller = info.pointer.child;
         _ = Controller;
@@ -270,14 +270,14 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
             var size = @sizeOf(descriptor.Configuration);
             var field_names: [driver_info.field_names.len][:0]const u8 = undefined;
             var field_types: [driver_info.field_names.len]type = undefined;
-            var field_attrs: [driver_info.field_names.len]std.builtin.Type.StructField.Attributes = undefined;
+            var field_attrs: [driver_info.field_names.len]std.builtin.Type.Struct.FieldAttributes = undefined;
             var ep_handler_types: [2][16]type = @splat(@splat(void));
             var ep_handler_names: [2][16][:0]const u8 = undefined;
             var ep_handler_drivers: [2][16]?usize = @splat(@splat(null));
             var itf_handlers: []const DriverEnum = &.{};
             var driver_alloc_names: []const [:0]const u8 = &.{};
             var driver_alloc_types: []const type = &.{};
-            var driver_alloc_attrs: []const std.builtin.Type.StructField.Attributes = &.{};
+            var driver_alloc_attrs: []const std.builtin.Type.Struct.FieldAttributes = &.{};
 
             for (driver_info.field_names, driver_info.field_types, 0..) |driver_field_name, driver_field_type, drv_id| {
                 // Get descriptor type for the current driver
@@ -291,7 +291,7 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
                 if (result.alloc_bytes) |len| {
                     driver_alloc_names = driver_alloc_names ++ &[_][:0]const u8{driver_field_name};
                     driver_alloc_types = driver_alloc_types ++ &[_]type{[len]u8};
-                    driver_alloc_attrs = driver_alloc_attrs ++ &[_]std.builtin.Type.StructField.Attributes{.{ .@"align" = result.alloc_align }};
+                    driver_alloc_attrs = driver_alloc_attrs ++ &[_]std.builtin.Type.Struct.FieldAttributes{.{ .@"align" = result.alloc_align }};
                 } else {
                     assert(result.alloc_align == null);
                 }

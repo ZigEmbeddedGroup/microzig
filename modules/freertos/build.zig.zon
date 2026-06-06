@@ -19,6 +19,10 @@
         .foundationlibc = .{
             .path = "../foundation-libc/",
         },
+        .translate_c = .{
+            .url = "git+https://codeberg.org/ziglang/translate-c#3c14149bd7b660136cf2bfe430da53a512b1800c",
+            .hash = "translate_c-0.0.0-Q_BUWr4UBwC72C2njDOHFiidoSd0xGJtRa6Rt3ZJNIyH",
+        },
     },
     .paths = .{ "build.zig", "build.zig.zon", "src", "config" },
 }

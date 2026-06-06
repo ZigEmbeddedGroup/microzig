@@ -162,10 +162,11 @@ fn microzig_main() callconv(.c) noreturn {
             if (!options.simple_panic_if_main_errors) {
                 const max_error_size = comptime blk: {
                     var max: usize = 0;
-                    const err_type = @typeInfo(return_type).error_union.error_set;
-                    if (@typeInfo(err_type).error_set) |err_set| {
-                        for (err_set) |current_err| {
-                            max = @max(max, current_err.name.len);
+                    const error_set = @typeInfo(return_type).error_union.error_set;
+
+                    if (@typeInfo(error_set).error_set.error_names) |error_names| {
+                        for (error_names) |error_name| {
+                            max = @max(max, error_name.len);
                         }
                     }
                     break :blk max;

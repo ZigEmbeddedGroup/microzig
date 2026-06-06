@@ -232,9 +232,9 @@ pub const startup_logic = struct {
         var temp: [vector_count]Handler = @splat(microzig.interrupt.unhandled);
 
         const info = @typeInfo(ExternalInterrupt).@"enum";
-        for (info.field_names, info.values) |field_name, value| {
+        for (info.field_names, info.field_values) |field_name, field_value| {
             if (@field(microzig.options.interrupts, field_name)) |handler| {
-                temp[value] = handler;
+                temp[field_value] = handler;
             }
         }
 
