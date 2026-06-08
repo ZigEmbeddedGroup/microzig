@@ -1,4 +1,3 @@
-const builtin = @import("builtin");
 const std = @import("std");
 
 pub const Exception = enum(u32) {
@@ -547,7 +546,7 @@ pub const csr = struct {
                     // if the value of a field is comptime known,
                     // then the corresponding field in that tuple's type is comptime.
                     const field_attr = @typeInfo(@TypeOf(.{x})).@"struct".field_attrs[0];
-                    break :check field_attr.is_comptime;
+                    break :check field_attr.@"comptime";
                 };
             }
         };

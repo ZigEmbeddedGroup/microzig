@@ -91,7 +91,7 @@ fn get_tag_name_by_index(comptime T: type, comptime index: usize) []const u8 {
 }
 
 pub fn Pins(comptime config: GlobalConfiguration) type {
-    const Attributes = std.builtin.Type.StructField.Attributes;
+    const Attributes = std.builtin.Type.Struct.FieldAttributes;
 
     var field_names: []const []const u8 = &.{};
     var field_types: []const type = &.{};

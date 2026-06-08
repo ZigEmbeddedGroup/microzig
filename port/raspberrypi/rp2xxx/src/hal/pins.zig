@@ -764,7 +764,7 @@ pub const GlobalConfiguration = struct {
     }
 
     pub fn PinsType(self: GlobalConfiguration) type {
-        const Attributes = std.builtin.Type.StructField.Attributes;
+        const Attributes = std.builtin.Type.Struct.FieldAttributes;
 
         var field_names: []const []const u8 = &.{};
         var field_types: []const type = &.{};

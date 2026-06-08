@@ -40,7 +40,7 @@ pub fn main() !void {
         dir: GPIO_Device,
         step: GPIO_Device,
     } = undefined;
-    inline for (@typeInfo(@TypeOf(pins).@"struct".field_names), .{ 2, 3, 4, 14, 15 }) |field_name, num| {
+    inline for (@typeInfo(@TypeOf(pins)).@"struct".field_names, .{ 2, 3, 4, 14, 15 }) |field_name, num| {
         const pin = gpio.num(num);
         pin.set_function(.sio);
         @field(pins, field_name) = GPIO_Device.init(pin);

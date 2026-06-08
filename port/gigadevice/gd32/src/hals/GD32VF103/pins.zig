@@ -94,7 +94,7 @@ pub fn Pins(comptime config: GlobalConfiguration) type {
 
     var field_names: [count][]const u8 = undefined;
     var field_types: [count]type = undefined;
-    var field_attrs: [count]std.builtin.Type.StructField.Attributes = undefined;
+    var field_attrs: [count]std.builtin.Type.Struct.FieldAttributes = undefined;
 
     var i: usize = 0;
     for (@typeInfo(GlobalConfiguration).@"struct".field_names) |port_field_name| {

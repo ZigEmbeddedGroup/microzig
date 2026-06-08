@@ -65,11 +65,11 @@ pub fn SliceVector(comptime Slice: type) type {
 
         pub const Item = type_info.pointer.child;
         pub const ItemPtr = @Pointer(.one, .{
-            .@"align" = type_info.pointer.alignment orelse @alignOf(type_info.pointer.child),
-            .@"addrspace" = type_info.pointer.address_space,
-            .@"const" = type_info.pointer.is_const,
-            .@"volatile" = type_info.pointer.is_volatile,
-            .@"allowzero" = type_info.pointer.is_allowzero,
+            .@"align" = type_info.pointer.attrs.@"align" orelse @alignOf(type_info.pointer.child),
+            .@"addrspace" = type_info.pointer.attrs.@"addrspace",
+            .@"const" = type_info.pointer.attrs.@"const",
+            .@"volatile" = type_info.pointer.attrs.@"volatile",
+            .@"allowzero" = type_info.pointer.attrs.@"allowzero",
         }, type_info.pointer.child, null);
 
         /// The slice of slices. The first and the last slice of this slice must
@@ -280,7 +280,7 @@ pub fn GenerateInterruptOptions(sources: []const Source) type {
 
     var field_names: [count][]const u8 = undefined;
     var field_types: [count]type = undefined;
-    var field_attrs: [count]std.builtin.Type.StructField.Attributes = undefined;
+    var field_attrs: [count]std.builtin.Type.Struct.FieldAttributes = undefined;
 
     var i: usize = 0;
     for (sources) |source| {
