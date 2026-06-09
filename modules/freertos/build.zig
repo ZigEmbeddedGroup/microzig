@@ -1,4 +1,5 @@
 const std = @import("std");
+const Translator = @import("translate_c").Translator;
 
 const FreeRTOS_Port = enum {
     RP2040,
@@ -15,6 +16,8 @@ const FreeRTOS_Config = struct {
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
+
+    const translate_c = b.dependency("translate_c", .{});
 
     // Configurable options
     const port_name = b.option(
@@ -118,7 +121,25 @@ pub fn build(b: *std.Build) void {
     freertos_lib.addCMacro("PICO_NO_RAM_VECTOR_TABLE", "0");
     freertos_lib.addCMacro("PICO_SDK_VERSION_MAJOR", "2");
 
-    const mod = b.addModule("freertos", .{ .root_source_file = b.path("src/root.zig"), .target = target, .optimize = optimize });
+    const t: Translator = .init(translate_c, .{
+        .c_source_file = b.path("include/freertos.h"),
+        .target = target,
+        .optimize = optimize,
+    });
+    t.addConfigHeader(config_header);
+    t.addIncludePath(freertos_kernel_dep.path("include"));
+
+    const mod = b.addModule("freertos", .{
+        .root_source_file = b.path("src/root.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = &.{
+            .{
+                .name = "c",
+                .module = t.mod,
+            },
+        },
+    });
     mod.addImport("freertos_lib", freertos_lib);
 
     for (freertos_lib.c_macros.items) |m| {

@@ -14,8 +14,8 @@
             .hash = "libxml2-2.15.1-2-qHdjhjJXAAD98vpy0IF6EsCNQUd8BBloVE-kCqbk1njK",
         },
         .zqlite = .{
-            .url = "git+https://github.com/karlseguin/zqlite.zig#5ac4cabe95a6d7faa7baf0da8057a8e6e8a227a1",
-            .hash = "zqlite-0.0.1-RWLaY64xnAAxsD2YNT8QqPMJUuaFv2GOzFRR4aGypJv3",
+            .url = "git+https://github.com/karlseguin/zqlite.zig#3cbe6a9473872efde0c7e0bb996e5595c76ab282",
+            .hash = "zqlite-0.0.1-RWLaY9UynABmwfHlRcRhjzL8NzgXqkADoqKtlfaGpZB2",
         },
     },
 }

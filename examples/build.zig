@@ -22,7 +22,7 @@ pub fn build(b: *std.Build) void {
         });
 
         const example_dep_install_step = example_dep.builder.getInstallStep();
-        example_dep.builder.install_path = b.pathJoin(&.{ b.install_path, example_dep_name }); // HACK: install in the current directory
+        //example_dep.builder.install_path = b.pathJoin(&.{ b.install_path, example_dep_name }); // HACK: install in the current directory
         b.getInstallStep().dependOn(example_dep_install_step);
     }
 }
