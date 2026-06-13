@@ -3,14 +3,14 @@ const microzig = @import("microzig");
 const RCC = microzig.chip.peripherals.RCC;
 const EXTEND = microzig.chip.peripherals.EXTEND;
 
-const gpioBlock = enum {
+pub const GPIO_Block = enum {
     A,
     B,
     C,
     D,
 };
 
-pub fn enable_gpio_clock(block: gpioBlock) void {
+pub fn enable_gpio_clock(block: GPIO_Block) void {
     // TODO: How do we know if we need to set the AFIOEN?
     switch (block) {
         .A => RCC.APB2PCENR.modify(.{

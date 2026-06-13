@@ -96,6 +96,15 @@ pub const Pin = packed struct(u8) {
         };
     }
 
+    pub fn get_block(gpio: Pin) clocks.GPIO_Block {
+        return switch (gpio.port) {
+            0 => .A,
+            1 => .B,
+            2 => .C,
+            3 => .D,
+        };
+    }
+
     pub inline fn set_mode(gpio: Pin, mode: Mode) void {
         switch (mode) {
             .input => |in| gpio.set_input_mode(in),
@@ -117,14 +126,7 @@ pub const Pin = packed struct(u8) {
     }
 
     pub inline fn enable_clock(gpio: Pin) void {
-        // TODO: Cleanup!
-        clocks.enable_gpio_clock(switch (gpio.get_port()) {
-            GPIOA => .A,
-            GPIOB => .B,
-            GPIOC => .C,
-            GPIOD => .D,
-            else => unreachable,
-        });
+        clocks.enable_gpio_clock(gpio.get_block());
     }
 
     /// Configure pin for alternate function use (e.g., USART, I2C, SPI)
