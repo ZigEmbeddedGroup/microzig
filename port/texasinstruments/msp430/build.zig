@@ -64,4 +64,6 @@ pub fn build(b: *std.Build) void {
 
         b.getInstallStep().dependOn(&generate_run.step);
     }
+
+    _ = b.step("test", "Run platform agnostic unit tests");
 }

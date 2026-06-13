@@ -72,6 +72,8 @@ pub fn build(b: *std.Build) void {
         }),
     });
     b.installArtifact(lpc176x5x_patch_elf_exe);
+
+    _ = b.step("test", "Run platform agnostic unit tests");
 }
 
 /// Patch an ELF file to add a checksum over the first 8 words so the
