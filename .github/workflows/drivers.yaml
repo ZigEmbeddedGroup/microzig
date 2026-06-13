@@ -1,4 +1,4 @@
-name: drivers
+name: Drivers
 on:
   push:
     branches: [main]
