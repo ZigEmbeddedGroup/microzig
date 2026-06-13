@@ -5,7 +5,9 @@ pub fn build(b: *Build) void {
     const validation_step = b.step("test", "Runs the test suite and validates everything. Automatically triggered in Debug builds.");
 
     //const maybe_gcc = b.findProgram(&.{"gcc"}, &.{}) catch null;
-    const maybe_clang = b.findProgram(&.{"clang"}, &.{}) catch null;
+    const maybe_clang = b.findProgram(.{
+        .names = &.{"clang"},
+    }) catch null;
 
     // Compile for huge amount of targets to detect breakage early on:
     for ([_]bool{ false, true }) |validation_single_threaded| {
