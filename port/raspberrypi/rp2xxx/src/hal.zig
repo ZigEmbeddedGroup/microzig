@@ -58,11 +58,6 @@ pub const HAL_Options = switch (compatibility.chip) {
     .RP2350 => struct {
         bootmeta: struct {
             image_def_exe_security: bootmeta.ImageDef.ImageTypeFlags.ExeSecurity = .secure,
-
-            /// Next metadata block to link after image_def. **Last block in
-            /// the chain must link back to the first one** (to
-            /// `bootmeta.image_def_block`).
-            next_block: ?*const anyopaque = null,
         } = .{},
 
         /// Enable the DCP and export intrinsics. Leads to faster double
