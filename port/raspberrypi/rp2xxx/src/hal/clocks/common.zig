@@ -16,9 +16,13 @@ pub const xosc_freq = microzig.board.xosc_freq;
 pub const rosc_freq = 6_500_000;
 
 pub const xosc = struct {
+    const startup_delay_multiplier: comptime_int = if (@hasDecl(microzig.board, "xosc_startup_delay_multiplier"))
+        microzig.board.xosc_startup_delay_multiplier
+    else
+        1;
     const startup_delay_ms = 1;
 
-    const startup_delay_value = xosc_freq * startup_delay_ms / 1000 / 256;
+    const startup_delay_value = xosc_freq * startup_delay_ms / 1000 / 256 * startup_delay_multiplier;
     comptime {
         assert(startup_delay_value < (1 << 13));
     }
