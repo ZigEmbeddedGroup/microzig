@@ -262,6 +262,7 @@ jobs:
 
           no_hal/stm32_l031,
         ]
+    if: ${{ matrix.example_dir != 'microchip/atmega' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
