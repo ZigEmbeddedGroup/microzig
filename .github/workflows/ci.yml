@@ -35,9 +35,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - run: |
-          find port -maxdepth 2 | sed 's|^port/||' | sort > ports
-          yq '.jobs.unit-test-ports.strategy.matrix.port_dir.[]' .github/workflows/ci.yml | sort > unit_tested_ports
-          yq '.jobs.build-examples.strategy.matrix.example_dir.[]' .github/workflows/ci.yml | grep -v no_hal | sort > exampled_ports
+          set -e
+
+          find port -mindepth 2 -maxdepth 2 -type d | sed 's|^port/||' | sort > ports
+          yq -r '.jobs["unit-test-ports"].strategy.matrix.port_dir.[]' .github/workflows/ci.yml | sort > unit_tested_ports
+          yq -r '.jobs["build-examples"].strategy.matrix.example_dir.[]' .github/workflows/ci.yml | grep -v no_hal | sort > exampled_ports
 
           comm -23 ports unit_tested_ports > missing_unit_tests
           comm -23 ports exampled_ports > missing_examples
