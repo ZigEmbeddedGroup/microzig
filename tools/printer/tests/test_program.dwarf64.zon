@@ -1,1 +1,72 @@
-.{ .zig_version = "0.17.0-dev.704+b8cb78023", .tests = .{} }
+.{ .zig_version = "0.17.0-dev.813+2153f8143", .tests = .{
+    .{ .address = 16969728, .expected = .{
+        .line = 163,
+        .column = 33,
+        .file_path = "ubsan_rt.zig",
+        .function_name = null,
+        .module_name = "ubsan_rt.zig",
+    } },
+    .{ .address = 16969801, .expected = .{
+        .line = 164,
+        .column = 13,
+        .file_path = "ubsan_rt.zig",
+        .function_name = null,
+        .module_name = "ubsan_rt.zig",
+    } },
+    .{ .address = 16969809, .expected = .{
+        .line = 164,
+        .column = 67,
+        .file_path = "ubsan_rt.zig",
+        .function_name = null,
+        .module_name = "ubsan_rt.zig",
+    } },
+    .{ .address = 16969829, .expected = .{
+        .line = 165,
+        .column = 13,
+        .file_path = "ubsan_rt.zig",
+        .function_name = null,
+        .module_name = "ubsan_rt.zig",
+    } },
+    .{ .address = 16969837, .expected = .{
+        .line = 165,
+        .column = 67,
+        .file_path = "ubsan_rt.zig",
+        .function_name = null,
+        .module_name = "ubsan_rt.zig",
+    } },
+    .{ .address = 16969857, .expected = .{
+        .line = 166,
+        .column = 40,
+        .file_path = "ubsan_rt.zig",
+        .function_name = null,
+        .module_name = "ubsan_rt.zig",
+    } },
+    .{ .address = 16969857, .expected = .{
+        .line = 166,
+        .column = 40,
+        .file_path = "ubsan_rt.zig",
+        .function_name = null,
+        .module_name = "ubsan_rt.zig",
+    } },
+    .{ .address = 16969865, .expected = .{
+        .line = 166,
+        .column = 52,
+        .file_path = "ubsan_rt.zig",
+        .function_name = null,
+        .module_name = "ubsan_rt.zig",
+    } },
+    .{ .address = 16969871, .expected = .{
+        .line = 166,
+        .column = 52,
+        .file_path = "ubsan_rt.zig",
+        .function_name = null,
+        .module_name = "ubsan_rt.zig",
+    } },
+    .{ .address = 16969974, .expected = .{
+        .line = 167,
+        .column = 18,
+        .file_path = "ubsan_rt.zig",
+        .function_name = null,
+        .module_name = "ubsan_rt.zig",
+    } },
+} }

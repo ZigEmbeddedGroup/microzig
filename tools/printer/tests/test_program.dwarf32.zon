@@ -1,68 +1,68 @@
-.{ .zig_version = "0.17.0-dev.704+b8cb78023", .tests = .{
-    .{ .address = 16928768, .expected = .{
+.{ .zig_version = "0.17.0-dev.813+2153f8143", .tests = .{
+    .{ .address = 16941056, .expected = .{
         .line = 163,
         .column = 33,
         .file_path = "ubsan_rt.zig",
         .function_name = null,
         .module_name = "ubsan_rt.zig",
     } },
-    .{ .address = 16928841, .expected = .{
+    .{ .address = 16941129, .expected = .{
         .line = 164,
         .column = 13,
         .file_path = "ubsan_rt.zig",
         .function_name = null,
         .module_name = "ubsan_rt.zig",
     } },
-    .{ .address = 16928849, .expected = .{
+    .{ .address = 16941137, .expected = .{
         .line = 164,
         .column = 67,
         .file_path = "ubsan_rt.zig",
         .function_name = null,
         .module_name = "ubsan_rt.zig",
     } },
-    .{ .address = 16928869, .expected = .{
+    .{ .address = 16941157, .expected = .{
         .line = 165,
         .column = 13,
         .file_path = "ubsan_rt.zig",
         .function_name = null,
         .module_name = "ubsan_rt.zig",
     } },
-    .{ .address = 16928877, .expected = .{
+    .{ .address = 16941165, .expected = .{
         .line = 165,
         .column = 67,
         .file_path = "ubsan_rt.zig",
         .function_name = null,
         .module_name = "ubsan_rt.zig",
     } },
-    .{ .address = 16928897, .expected = .{
+    .{ .address = 16941185, .expected = .{
         .line = 166,
         .column = 40,
         .file_path = "ubsan_rt.zig",
         .function_name = null,
         .module_name = "ubsan_rt.zig",
     } },
-    .{ .address = 16928897, .expected = .{
+    .{ .address = 16941185, .expected = .{
         .line = 166,
         .column = 40,
         .file_path = "ubsan_rt.zig",
         .function_name = null,
         .module_name = "ubsan_rt.zig",
     } },
-    .{ .address = 16928905, .expected = .{
+    .{ .address = 16941193, .expected = .{
         .line = 166,
         .column = 52,
         .file_path = "ubsan_rt.zig",
         .function_name = null,
         .module_name = "ubsan_rt.zig",
     } },
-    .{ .address = 16928911, .expected = .{
+    .{ .address = 16941199, .expected = .{
         .line = 166,
         .column = 52,
         .file_path = "ubsan_rt.zig",
         .function_name = null,
         .module_name = "ubsan_rt.zig",
     } },
-    .{ .address = 16929014, .expected = .{
+    .{ .address = 16941302, .expected = .{
         .line = 167,
         .column = 18,
         .file_path = "ubsan_rt.zig",

@@ -713,6 +713,10 @@ const Parser = struct {
                 FORM.implicit_const => .{ .sdata = implicit_const_val orelse return bad() },
                 FORM.loclistx => .{ .loclistx = try reader.takeLeb128(u64) },
                 FORM.rnglistx => .{ .rnglistx = try reader.takeLeb128(u64) },
+                FORM.indirect => blk: {
+                    const indirect = try reader.takeLeb128(u64);
+                    break :blk try parse(reader, indirect, elf, dwarf_format, implicit_const_val);
+                },
                 else => {
                     std.log.err("unimplemented form id: 0x{x}", .{form_id});
                     return unimplemented();
