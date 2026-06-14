@@ -147,20 +147,20 @@ pub const UART = enum(u1) {
     pub const Writer = struct {
         uart: UART,
         deadline: mdf.time.Deadline,
-        intf: std.Io.Writer,
+        interface: std.Io.Writer,
     };
 
     pub const Reader = struct {
         uart: UART,
         deadline: mdf.time.Deadline,
-        intf: std.Io.Reader,
+        interface: std.Io.Reader,
     };
 
     pub fn writer(uart: UART, deadline: mdf.time.Deadline, buffer: []u8) Writer {
         return .{
             .uart = uart,
             .deadline = deadline,
-            .intf = .{
+            .interface = .{
                 .buffer = buffer,
                 .vtable = &.{
                     .drain = drain,
@@ -173,7 +173,7 @@ pub const UART = enum(u1) {
         return .{
             .uart = uart,
             .deadline = deadline,
-            .intf = .{
+            .interface = .{
                 .buffer = buffer,
                 .vtable = &.{
                     .stream = stream,
@@ -183,7 +183,7 @@ pub const UART = enum(u1) {
     }
 
     fn drain(w: *std.Io.Writer, data: []const []const u8, splat: usize) std.Io.Writer.Error!usize {
-        const uart_writer: *Writer = @alignCast(@fieldParentPtr("intf", w));
+        const uart_writer: *Writer = @alignCast(@fieldParentPtr("interface", w));
         const uart = uart_writer.uart;
 
         // bytes from buffer are not included in count.
@@ -205,7 +205,7 @@ pub const UART = enum(u1) {
     }
 
     fn stream(io_reader: *std.Io.Reader, w: *std.Io.Writer, limit: std.Io.Limit) std.Io.Reader.StreamError!usize {
-        const r: *Reader = @fieldParentPtr("intf", io_reader);
+        const r: *Reader = @fieldParentPtr("interface", io_reader);
         return switch (limit) {
             .nothing => 0,
             else => blk: {
@@ -555,7 +555,7 @@ var uart_logger: ?UART.Writer = null;
 /// };
 pub fn init_logger(uart: UART) void {
     uart_logger = uart.writer(.no_deadline, &.{});
-    uart_logger.?.intf.writeAll("\r\n================ STARTING NEW LOGGER ================\r\n") catch {};
+    uart_logger.?.interface.writeAll("\r\n================ STARTING NEW LOGGER ================\r\n") catch {};
 }
 
 /// Disables logging via the uart instance.
@@ -580,7 +580,7 @@ pub fn log(
         const seconds = current_time.to_us() / std.time.us_per_s;
         const microseconds = current_time.to_us() % std.time.us_per_s;
 
-        writer.intf.print(prefix ++ format ++ "\r\n", .{ seconds, microseconds } ++ args) catch {};
+        writer.interface.print(prefix ++ format ++ "\r\n", .{ seconds, microseconds } ++ args) catch {};
     }
 }
 
