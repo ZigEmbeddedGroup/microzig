@@ -1,4 +1,4 @@
-name: "Port: Unit Tests"
+name: "Ports"
 on:
   push:
     branches: [main, zig-master]
@@ -7,7 +7,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
+  unit-test:
+    name: "Unit Test"
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -35,9 +36,9 @@ jobs:
     - name: microchip/samd51
       run: zig build test
       working-directory: port/microchip/samd51
-    - name: nordic/nrfx
+    - name: nordic/nrf5x
       run: zig build test
-      working-directory: port/nordic/nrfx
+      working-directory: port/nordic/nrf5x
     - name: nxp/lpc
       run: zig build test
       working-directory: port/nxp/lpc
