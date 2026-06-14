@@ -12,6 +12,11 @@ const CLI_Args = struct {
     config: ?[]const u8 = null,
 
     pub const default: CLI_Args = .{};
+
+    const usage =
+        \\[--help] [--trace] [--name=<value>] [--config=<config>] <file> ...
+        \\
+    ;
 };
 
 const ExitMode = union(testconfig.ExitType) {
@@ -265,7 +270,8 @@ pub fn main(init: std.process.Init) !u8 {
     const cli_args, const positionals = try flags.parse(CLI_Args, arena.allocator(), args);
 
     if (cli_args.help) {
-        // TODO: usage
+        const stdout = std.Io.File.stdout().writer(&.{});
+        try stdout.interface.print("{s}", .{CLI_Args.usage});
         return 0;
     }
 
