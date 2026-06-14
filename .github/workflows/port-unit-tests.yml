@@ -1,0 +1,63 @@
+name: "Port: Unit Tests"
+on:
+  push:
+    branches: [main, zig-master]
+  pull_request:
+    branches: [main, zig-master]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Setup Zig
+      uses: mlugg/setup-zig@v2
+      with:
+        version: master
+
+    - name: espressif/esp
+      run: zig build test
+      working-directory: port/espressif/esp
+    - name: gigadevice/gd32
+      run: zig build test
+      working-directory: port/gigadevice/gd32
+    - name: microchip/atmega
+      run: zig build test
+      working-directory: port/microchip/atmega
+    - name: microchip/attiny
+      run: zig build test
+      working-directory: port/microchip/attiny
+    - name: microchip/samd51
+      run: zig build test
+      working-directory: port/microchip/samd51
+    - name: nordic/nrfx
+      run: zig build test
+      working-directory: port/nordic/nrfx
+    - name: nxp/lpc
+      run: zig build test
+      working-directory: port/nxp/lpc
+    - name: nxp/mcx
+      run: zig build test
+      working-directory: port/nxp/mcx
+    - name: raspberrypi/rp2xxx
+      run: zig build test
+      working-directory: port/raspberrypi/rp2xxx
+    - name: stmicro/stm32
+      run: zig build test
+      working-directory: port/stmicro/stm32
+    - name: texasinstruments/msp430
+      run: zig build test
+      working-directory: port/texasinstruments/msp430
+    - name: texasinstruments/tm4c
+      run: zig build test
+      working-directory: port/texasinstruments/tm4c
+    - name: wch/ch32v
+      run: zig build test
+      working-directory: port/wch/ch32v
+
+
