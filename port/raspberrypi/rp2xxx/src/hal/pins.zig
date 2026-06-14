@@ -779,8 +779,6 @@ pub const GlobalConfiguration = struct {
                 else if (pin_config.function.is_adc())
                     adc.Input
                 else
-                    // TODO: what does this mean? should this be a compilation
-                    // error?
                     continue;
 
                 field_names = field_names ++ .{name};
