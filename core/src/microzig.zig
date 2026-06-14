@@ -39,23 +39,15 @@ pub const panic = std.debug.FullPanic(struct {
         std.log.err("panic: {s}", .{message});
         _ = first_trace_address;
 
-        // TODO: sit down and determine if we want to provide our own SelfInfo.
-        // Is that what plugs into the standard panic?
+        // TODO: we no longer have StackIterator available to us, so we need to
+        // create our own.
 
-        //var frame_index: usize = 0;
-        //if (@errorReturnTrace()) |trace| frame_index = utilities.dump_stack_trace(trace);
-
-        //var iter = std.debug.StackIterator.init(first_trace_address orelse @returnAddress(), null);
-        //while (iter.next()) |address| : (frame_index += 1) {
-        //    std.log.err("{d: >3}: 0x{X:0>8}", .{ frame_index, address });
-        //}
-
-        //// Attach a breakpoint. this might trigger another panic internally, so
-        //// only do that if requested.
-        //if (options.breakpoint_in_panic) {
-        //    std.log.info("triggering breakpoint...", .{});
-        //    @breakpoint();
-        //}
+        // Attach a breakpoint. this might trigger another panic internally, so
+        // only do that if requested.
+        if (options.breakpoint_in_panic) {
+            std.log.info("triggering breakpoint...", .{});
+            @breakpoint();
+        }
 
         hang();
     }
