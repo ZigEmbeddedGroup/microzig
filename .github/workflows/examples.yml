@@ -1,0 +1,67 @@
+name: "Examples"
+on:
+  push:
+    branches: [main, zig-master]
+  pull_request:
+    branches: [main, zig-master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: "Build"
+    runs-on: ${{ matrix.os }}
+    stategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Setup Zig
+      uses: mlugg/setup-zig@v2
+      with:
+        version: master
+
+    - name: espressif/esp
+      run: zig build -Doptimize=ReleaseSmall
+      working-directory: examples/espressif/esp
+    - name: gigadevice/gd32
+      run: zig build -Doptimize=ReleaseSmall
+      working-directory: examples/gigadevice/gd32
+    - name: microchip/atmega
+      run: zig build -Doptimize=ReleaseSmall
+      working-directory: examples/microchip/atmega
+    - name: microchip/attiny
+      run: zig build -Doptimize=ReleaseSmall
+      working-directory: examples/microchip/attiny
+    - name: microchip/samd51
+      run: zig build -Doptimize=ReleaseSmall
+      working-directory: examples/microchip/samd51
+    - name: nordic/nrf5x
+      run: zig build -Doptimize=ReleaseSmall
+      working-directory: examples/nordic/nrf5x
+    - name: nxp/lpc
+      run: zig build -Doptimize=ReleaseSmall
+      working-directory: examples/nxp/lpc
+    - name: nxp/mcx
+      run: zig build -Doptimize=ReleaseSmall
+      working-directory: examples/nxp/mcx
+    - name: raspberrypi/rp2xxx
+      run: zig build -Doptimize=ReleaseSmall
+      working-directory: examples/raspberrypi/rp2xxx
+    - name: stmicro/stm32
+      run: zig build -Doptimize=ReleaseSmall
+      working-directory: examples/stmicro/stm32
+    - name: texasinstruments/msp430
+      run: zig build -Doptimize=ReleaseSmall
+      working-directory: examples/texasinstruments/msp430
+    - name: texasinstruments/tm4c
+      run: zig build -Doptimize=ReleaseSmall
+      working-directory: examples/texasinstruments/tm4c
+    - name: wch/ch32v
+      run: zig build -Doptimize=ReleaseSmall
+      working-directory: examples/wch/ch32v
+    - name: no_hal/stm32_l031
+      run: zig build -Doptimize=ReleaseSmall
+      working-directory: examples/no_hal/stm32_l031
+
+

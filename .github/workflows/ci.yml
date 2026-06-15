@@ -39,7 +39,7 @@ jobs:
 
           find port -mindepth 2 -maxdepth 2 -type d | sed 's|^port/||' | sort > ports
           yq -r '.jobs.unit-test.steps[] | select(.run == "zig build test") | .working-directory' .github/workflows/ports.yml | sed 's|^port/||' | sort > unit_tested_ports
-          yq -r '.jobs["build-examples"].strategy.matrix.example_dir.[]' .github/workflows/ci.yml | grep -v no_hal | sort > exampled_ports
+          yq -r '.jobs.unit-test.steps[] | select(.run == "zig build -Doptimize=ReleaseSmall") | .working-directory' .github/workflows/examples.yml | grep -v no_hal | sed 's|^port/||' | sort > exampled_ports
 
           comm -23 ports unit_tested_ports > missing_unit_tests
           comm -23 ports exampled_ports > missing_examples
@@ -238,40 +238,6 @@ jobs:
       - name: Unit Test Ports
         run: zig build test
         working-directory: port/${{ matrix.port_dir }}
-
-  build-examples:
-    name: Build Examples
-    continue-on-error: true
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        example_dir: [
-          espressif/esp,
-          gigadevice/gd32,
-          microchip/atmega,
-          microchip/attiny,
-          microchip/samd51,
-          nordic/nrf5x,
-          nxp/lpc,
-          nxp/mcx,
-          raspberrypi/rp2xxx,
-          stmicro/stm32,
-          texasinstruments/msp430,
-          texasinstruments/tm4c,
-          wch/ch32v,
-
-          no_hal/stm32_l031,
-        ]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Zig
-        uses: mlugg/setup-zig@v2
-        with:
-          version: ${{ env.ZIG_VERSION }}
-      - name: Build Examples
-        run: zig build -Doptimize=ReleaseSmall --summary all
-        working-directory: examples/${{ matrix.example_dir }}
 
   validate-foundation-libc:
     name: Test Foundation Libc
