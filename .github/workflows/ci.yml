@@ -38,7 +38,7 @@ jobs:
           set -e
 
           find port -mindepth 2 -maxdepth 2 -type d | sed 's|^port/||' | sort > ports
-          yq -r '.jobs["unit-test-ports"].strategy.matrix.port_dir.[]' .github/workflows/ci.yml | sort > unit_tested_ports
+          yq -r '.jobs.unit-test.steps[] | select(.run == "zig build test") | .working-directory' .github/workflows/ports.yml | sed 's|^port/||' | sort > unit_tested_ports
           yq -r '.jobs["build-examples"].strategy.matrix.example_dir.[]' .github/workflows/ci.yml | grep -v no_hal | sort > exampled_ports
 
           comm -23 ports unit_tested_ports > missing_unit_tests
@@ -262,7 +262,6 @@ jobs:
 
           no_hal/stm32_l031,
         ]
-    if: ${{ matrix.example_dir != 'microchip/atmega' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
