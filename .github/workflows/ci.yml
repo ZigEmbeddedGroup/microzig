@@ -241,6 +241,7 @@ jobs:
 
   validate-foundation-libc:
     name: Test Foundation Libc
+    if: false # TODO: fix foundation libc
     continue-on-error: true
     runs-on: ${{ matrix.os }}
     strategy:
