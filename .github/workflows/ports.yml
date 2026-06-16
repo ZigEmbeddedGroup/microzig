@@ -76,7 +76,7 @@ jobs:
   build:
     name: "Build"
     runs-on: ${{ matrix.os }}
-    stategy:
+    strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
