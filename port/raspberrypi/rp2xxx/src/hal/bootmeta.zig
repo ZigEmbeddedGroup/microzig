@@ -3,7 +3,7 @@ const std = @import("std");
 const microzig = @import("microzig");
 const arch = @import("compatibility.zig").arch;
 
-pub const image_def_block = if (microzig.config.ram_image and arch == .arm) Block(packed struct {
+pub const image_def_block = if (microzig.config.ram_image and arch == .arm) Block(packed struct(u128) {
     image_def: ImageDef,
     entry_point: EntryPoint(false),
 }){
@@ -24,7 +24,7 @@ pub const image_def_block = if (microzig.config.ram_image and arch == .arm) Bloc
             .sp = microzig.utilities.get_end_of_stack(),
         },
     },
-} else Block(packed struct {
+} else Block(packed struct(u32) {
     image_def: ImageDef,
 }){
     .items = .{
