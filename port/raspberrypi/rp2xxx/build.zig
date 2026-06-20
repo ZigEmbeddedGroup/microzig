@@ -60,7 +60,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .name = "RP2040",
             .register_definition = .{ .svd = pico_sdk.path("src/rp2040/hardware_regs/RP2040.svd") },
             .memory_regions = &.{
-                .{ .tag = .flash, .offset = 0x10000000, .length = 2048 * 1024, .access = .rx },
+                .{ .tag = .flash, .offset = 0x10000000, .length = 2 * 1024 * 1024, .access = .rx },
                 .{ .tag = .ram, .offset = 0x20000000, .length = 256 * 1024, .access = .rwx },
             },
             .patch_files = &.{b.path("patches/rp2040.zon")},
@@ -87,7 +87,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .name = "RP2350",
             .register_definition = .{ .svd = pico_sdk.path("src/rp2350/hardware_regs/RP2350.svd") },
             .memory_regions = &.{
-                .{ .tag = .flash, .offset = 0x10000000, .length = 2048 * 1024, .access = .rx },
+                .{ .tag = .flash, .offset = 0x10000000, .length = 4 * 1024 * 1024, .access = .rx },
                 .{ .tag = .ram, .offset = 0x20000000, .length = 512 * 1024, .access = .rwx },
                 // TODO: maybe these can be used for stacks
                 .{ .tag = .ram, .offset = 0x20080000, .length = 4 * 1024, .access = .rwx },
@@ -139,7 +139,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .name = "RP2350",
             .register_definition = .{ .svd = pico_sdk.path("src/rp2350/hardware_regs/RP2350.svd") },
             .memory_regions = &.{
-                .{ .tag = .flash, .offset = 0x10000000, .length = 2048 * 1024, .access = .rx },
+                .{ .tag = .flash, .offset = 0x10000000, .length = 4 * 1024 * 1024, .access = .rx },
                 .{ .tag = .ram, .offset = 0x20000000, .length = 512 * 1024, .access = .rwx },
                 // TODO: maybe these can be used for stacks
                 .{ .tag = .ram, .offset = 0x20080000, .length = 4 * 1024, .access = .rwx },
@@ -170,6 +170,17 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .boards = .{
             .adafruit = .{
                 .feather_rp2350 = chip_rp2350_arm.derive(.{
+                    .chip = .{
+                        .name = "RP2350",
+                        .register_definition = .{ .svd = pico_sdk.path("src/rp2350/hardware_regs/RP2350.svd") },
+                        .memory_regions = &.{
+                            .{ .tag = .flash, .offset = 0x10000000, .length = 8 * 1024 * 1024, .access = .rx },
+                            .{ .tag = .ram, .offset = 0x20000000, .length = 512 * 1024, .access = .rwx },
+                            .{ .tag = .ram, .offset = 0x20080000, .length = 4 * 1024, .access = .rwx },
+                            .{ .tag = .ram, .offset = 0x20081000, .length = 4 * 1024, .access = .rwx },
+                        },
+                        .patch_files = &.{b.path("patches/rp2350.zon")},
+                    },
                     .board = .{
                         .name = "Adafruit Feather RP2350",
                         .url = "https://www.adafruit.com/product/6000",
@@ -177,6 +188,17 @@ pub fn init(dep: *std.Build.Dependency) Self {
                     },
                 }),
                 .metro_rp2350 = chip_rp2350_arm.derive(.{
+                    .chip = .{
+                        .name = "RP2350",
+                        .register_definition = .{ .svd = pico_sdk.path("src/rp2350/hardware_regs/RP2350.svd") },
+                        .memory_regions = &.{
+                            .{ .tag = .flash, .offset = 0x10000000, .length = 16 * 1024 * 1024, .access = .rx },
+                            .{ .tag = .ram, .offset = 0x20000000, .length = 512 * 1024, .access = .rwx },
+                            .{ .tag = .ram, .offset = 0x20080000, .length = 4 * 1024, .access = .rwx },
+                            .{ .tag = .ram, .offset = 0x20081000, .length = 4 * 1024, .access = .rwx },
+                        },
+                        .patch_files = &.{b.path("patches/rp2350.zon")},
+                    },
                     .board = .{
                         .name = "Adafruit Metro RP2350",
                         .url = "https://www.adafruit.com/product/6267",
