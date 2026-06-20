@@ -20,6 +20,9 @@ boards: struct {
         microbit_v1: *const microzig.Target,
         microbit_v2: *const microzig.Target,
     },
+    nicekeyboards: struct {
+        nice_nano: *const microzig.Target,
+    },
 },
 
 pub fn init(dep: *std.Build.Dependency) Self {
@@ -188,6 +191,30 @@ pub fn init(dep: *std.Build.Dependency) Self {
                         .name = "micro:bit v2",
                         .url = "https://tech.microbit.org/hardware/2-2-revision",
                         .root_source_file = b.path("src/boards/microbit.zig"),
+                    },
+                }),
+            },
+            .nicekeyboards = .{
+                .nice_nano = chip_nrf52840.derive(.{
+                    .preferred_binary_format = .{ .uf2 = .{ .family_id = .NRF52840 } },
+                    .chip = .{
+                        .name = "nrf52840",
+                        .url = "https://www.nordicsemi.com/products/nrf52840",
+                        .register_definition = .{
+                            .svd = nrfx.path("mdk/nrf52840.svd"),
+                        },
+                        .memory_regions = &.{
+                            .{ .tag = .flash, .offset = 0x00026000, .length = 0x100000 - 0x26000, .access = .rx },
+                            .{ .tag = .ram, .offset = 0x20002800, .length = 0x40000 - 0x2800, .access = .rwx },
+                        },
+                        .patch_files = &.{
+                            b.path("patches/nrf528xx.zon"),
+                        },
+                    },
+                    .board = .{
+                        .name = "nice!nano",
+                        .url = "https://nicekeyboards.com/docs/nice-nano",
+                        .root_source_file = b.path("src/boards/nice_nano.zig"),
                     },
                 }),
             },
