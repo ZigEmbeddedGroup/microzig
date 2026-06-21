@@ -205,7 +205,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                         },
                         .memory_regions = &.{
                             .{ .tag = .flash, .offset = 0x00026000, .length = 0x100000 - 0x26000, .access = .rx },
-                            .{ .tag = .ram, .offset = 0x20002800, .length = 0x40000 - 0x2800, .access = .rwx },
+                            .{ .tag = .ram, .offset = 0x20000008, .length = 0x40000 - 8, .access = .rwx },
                         },
                         .patch_files = &.{
                             b.path("patches/nrf528xx.zon"),
