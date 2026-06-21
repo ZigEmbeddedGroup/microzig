@@ -19,7 +19,7 @@
 
         // modules
         .@"modules/foundation-libc" = .{ .path = "modules/foundation-libc" },
-        .@"modules/freertos" = .{ .path = "modules/freertos" },
+        //.@"modules/freertos" = .{ .path = "modules/freertos" },
         .@"modules/lwip" = .{ .path = "modules/lwip" },
         .@"modules/network" = .{ .path = "modules/network" },
         .@"modules/riscv32-common" = .{ .path = "modules/riscv32-common" },

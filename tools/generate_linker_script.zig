@@ -10,6 +10,7 @@ pub const Args = struct {
     memory_regions: []const MemoryRegion,
     generate: GenerateOptions,
     ram_image: bool,
+    assert_microzig_main: bool,
 };
 
 var writer_buf: [1024]u8 = undefined;
@@ -296,11 +297,12 @@ pub fn main(init: std.process.Init) !void {
         try writer.interface.writeAll(user_linker_script);
     }
 
-    try writer.interface.writeAll(
-        \\
-        \\ASSERT(DEFINED(microzig_main), "microzig: microzig_main is not defined. Add `comptime { _ = microzig.export_startup(); }` to your root source file. See https://microzig.tech/docs/boilerplate for details.")
-        \\
-    );
+    if (parsed_args.assert_microzig_main)
+        try writer.interface.writeAll(
+            \\
+            \\ASSERT(DEFINED(microzig_main), "microzig: microzig_main is not defined. Add `comptime { _ = microzig.export_startup(); }` to your root source file. See https://microzig.tech/docs/boilerplate for details.")
+            \\
+        );
 
     try writer.interface.flush();
 }

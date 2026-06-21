@@ -256,6 +256,8 @@ pub const LinkerScript = struct {
     generate: GenerateOptions = .{ .memory_regions_and_sections = .{} },
     /// Linker script path. Will be appended after what is auto-generated if it's not null.
     file: ?LazyPath = null,
+    /// Generate assert for existence of microzig_main
+    assert_microzig_main: bool = true,
 
     pub const GenerateOptions = union(enum) {
         /// Only generates a comment with target info.
