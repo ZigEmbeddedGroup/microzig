@@ -1,0 +1,7 @@
+.{
+    .name = .mz_sim_msp430,
+    .version = "0.0.1",
+    .minimum_zig_version = "0.17.0-dev.931+84f84267c",
+    .paths = .{""},
+    .fingerprint = 0x80aaa75215d26a54,
+}
