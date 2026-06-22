@@ -20,8 +20,8 @@
             .path = "../foundation-libc/",
         },
         .translate_c = .{
-            .url = "git+https://codeberg.org/ziglang/translate-c#bc2ec06df25c62ae5c73370aa3d55abefbc68980",
-            .hash = "translate_c-0.0.0-Q_BUWps2BwDfa_7-TcPhOQMr-g9DqzKG_6uvo5K5MFbw",
+            .url = "git+https://codeberg.org/ziglang/translate-c#1b33d1d273f7035a16c45457efdf2afda7cf0925",
+            .hash = "translate_c-0.0.0-Q_BUWrI7BwCBn0jcYDTs1UP047kxSYoFpV6vD6Vuy9Vo",
         },
     },
     .paths = .{ "build.zig", "build.zig.zon", "src", "config" },
