@@ -10,8 +10,8 @@
     },
     .dependencies = .{
         .libxml2 = .{
-            .url = "git+https://github.com/allyourcodebase/libxml2.git#215ef60bb2a82386b2d90631142ecaf5069d9793",
-            .hash = "libxml2-2.15.1-2-qHdjhjJXAAD98vpy0IF6EsCNQUd8BBloVE-kCqbk1njK",
+            .url = "git+https://github.com/allyourcodebase/libxml2.git#e2c881ccb72dc96b03bb80f1f4c4b386969b76f7",
+            .hash = "libxml2-2.15.1-2-qHdjhjJXAAAF6fWNrfH_GFaXDHRNjlYQoeKF_RBnWtVu",
         },
         .zqlite = .{
             .url = "git+https://github.com/karlseguin/zqlite.zig#3cbe6a9473872efde0c7e0bb996e5595c76ab282",
