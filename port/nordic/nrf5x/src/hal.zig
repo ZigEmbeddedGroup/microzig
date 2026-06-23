@@ -8,6 +8,7 @@ pub const i2cdma = @import("hal/i2cdma.zig");
 pub const spim = @import("hal/spim.zig");
 pub const time = @import("hal/time.zig");
 pub const uart = @import("hal/uart.zig");
+pub const usbd = @import("hal/usbd.zig");
 pub const drivers = @import("hal/drivers.zig");
 // TODO: adc, timers, pwm, rng, rtc alarms, interrupts, wdt, wifi, nfc, bt, zigbee
 
@@ -28,6 +29,7 @@ test "hal tests" {
     _ = spim;
     _ = time;
     _ = uart;
+    _ = usbd;
 
     _ = drivers;
 }
