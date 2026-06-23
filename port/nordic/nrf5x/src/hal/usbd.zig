@@ -53,12 +53,12 @@ const PowerState = union(enum) {
     connected,
 };
 
-const EP0State = struct {
+const EP0_State = struct {
     direction: usb.types.Dir = .Out,
     remaining_size: u16 = 0,
 };
 
-const EPConfig = struct {
+const EP_Config = struct {
     max_packet_size: u16 = MAX_PACKET_SIZE,
 };
 
@@ -67,9 +67,9 @@ pub const USBD = struct {
 
     bufs_in: [NUM_EP][MAX_PACKET_SIZE]u8 align(4) = @splat(@splat(0)),
     bufs_out: [NUM_EP][MAX_PACKET_SIZE]u8 align(4) = @splat(@splat(0)),
-    eps_in: [NUM_EP]EPConfig = @splat(.{}),
-    eps_out: [NUM_EP]EPConfig = @splat(.{}),
-    ep0_state: EP0State = .{},
+    eps_in: [NUM_EP]EP_Config = @splat(.{}),
+    eps_out: [NUM_EP]EP_Config = @splat(.{}),
+    ep0_state: EP0_State = .{},
 
     interface: usb.DeviceInterface,
 
