@@ -9,7 +9,6 @@ const usb = microzig.core.usb;
 const time = nrf.time;
 const USBD = nrf.usbd.USBD;
 const clocks = nrf.clocks;
-const gpio = nrf.gpio;
 const uart = nrf.uart.num(0);
 
 const USB_Serial = usb.drivers.CDC;

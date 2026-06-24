@@ -6,13 +6,9 @@
 
 const std = @import("std");
 const log = std.log.scoped(.usb_dev);
-const assert = std.debug.assert;
-
 const microzig = @import("microzig");
 const cpu = microzig.cpu;
 const peripherals = microzig.chip.peripherals;
-const chip = microzig.hal.compatibility.chip;
-const compatibility = microzig.hal.compatibility;
 const usb = microzig.core.usb;
 
 const errata = @import("./usbd/errata.zig");
