@@ -896,7 +896,7 @@ fn load_patch_files(wnd: *RegzWindow) void {
         };
 
         // Read and parse ZON file
-        const file = std.fs.cwd().openFile(path, .{}) catch |err| {
+        const reader = (std.fs.cwd().openFile(path, .{}) catch |err| {
             const owned_path = alloc.dupe(u8, path) catch continue;
             const error_msg = std.fmt.allocPrint(alloc, "Failed to open file: {s}", .{@errorName(err)}) catch continue;
             wnd.loaded_patches.put(wnd.gpa, owned_path, .{
@@ -908,10 +908,10 @@ fn load_patch_files(wnd: *RegzWindow) void {
                 .is_editable = is_editable,
             }) catch {};
             continue;
-        };
-        defer file.close();
+        }).reader("");
+        defer reader.file.close();
 
-        const content = file.readToEndAllocOptions(alloc, 10 * 1024 * 1024, null, .of(u8), 0) catch |err| {
+        const content = reader.file.readToEndAllocOptions(alloc, 10 * 1024 * 1024, null, .of(u8), 0) catch |err| {
             const owned_path = alloc.dupe(u8, path) catch continue;
             const error_msg = std.fmt.allocPrint(alloc, "Failed to read file: {s}", .{@errorName(err)}) catch continue;
             wnd.loaded_patches.put(wnd.gpa, owned_path, .{
@@ -1247,22 +1247,17 @@ fn display_diff(wnd: *RegzWindow, file_diffs: []const FileDiff, sel: SelectedPat
         _ = dvui.label(@src(), "No changes detected", .{}, .{});
         return;
     }
-
-    // Build unified diff format text
-    var diff_text: std.ArrayList(u8) = .empty;
-    defer diff_text.deinit(wnd.gpa);
+    var writer: std.Io.Writer.Allocating = .init(wnd.gpa);
+    var w = &writer.writer;
 
     for (file_diffs) |fd| {
-        // Unified diff file headers
-        diff_text.appendSlice(wnd.gpa, "--- a/") catch continue;
-        diff_text.appendSlice(wnd.gpa, fd.filename) catch continue;
-        diff_text.append(wnd.gpa, '\n') catch continue;
-        diff_text.appendSlice(wnd.gpa, "+++ b/") catch continue;
-        diff_text.appendSlice(wnd.gpa, fd.filename) catch continue;
-        diff_text.append(wnd.gpa, '\n') catch continue;
-
-        // Hunk header (simplified - just use @@ -1 +1 @@)
-        diff_text.appendSlice(wnd.gpa, "@@ -1 +1 @@\n") catch continue;
+        // Unified diff file headers wunk header (simplified - just use @@ -1 +1 @@)
+        w.print(
+            \\--- a {s}
+            \\+++ b {s}
+            \\@@ -1 +1 @@
+            \\
+        , .{ fd.filename, fd.filename }) catch continue;
 
         // Diff lines
         for (fd.lines) |line| {
@@ -1271,16 +1266,16 @@ fn display_diff(wnd: *RegzWindow, file_diffs: []const FileDiff, sel: SelectedPat
                 .added => '+',
                 .removed => '-',
             };
-            diff_text.append(wnd.gpa, prefix) catch continue;
-            diff_text.appendSlice(wnd.gpa, line.text) catch continue;
-            diff_text.append(wnd.gpa, '\n') catch continue;
+            w.writeByte(prefix) catch continue;
+            w.writeAll(line.text) catch continue;
+            w.writeByte('\n') catch continue;
         }
-        diff_text.append(wnd.gpa, '\n') catch continue;
+        w.writeByte('\n') catch continue;
     }
 
     // Copy button at the top
     if (dvui.button(@src(), "Copy Diff", .{}, .{})) {
-        dvui.clipboardTextSet(diff_text.items);
+        dvui.clipboardTextSet(writer.written());
     }
 
     _ = dvui.spacer(@src(), .{ .min_size_content = .{ .h = 8 } });
@@ -1305,7 +1300,7 @@ fn display_diff(wnd: *RegzWindow, file_diffs: []const FileDiff, sel: SelectedPat
 
         // Always set text content on first frame of this widget (unique per patch)
         if (dvui.firstFrame(te.data().id)) {
-            te.textSet(diff_text.items, false);
+            te.textSet(writer.written(), false);
             te.textLayout.selection.moveCursor(0, false);
         }
 
@@ -1847,9 +1842,10 @@ fn save_vfs_recursive(wnd: *RegzWindow, output_dir: std.fs.Dir, parent_id: Virtu
             },
             .file => {
                 const content = wnd.vfs.get_content(entry.id);
-                const file = try output_dir.createFile(name, .{});
-                defer file.close();
-                try file.writeAll(content);
+                var writer = (try output_dir.createFile(name, .{}))
+                    .writer("");
+                defer writer.file.close();
+                try writer.interface.writeAll(content);
             },
         }
     }
@@ -2479,9 +2475,9 @@ fn save_all_patches(wnd: *RegzWindow, arena: Allocator) !void {
         try wnd.write_patch_file(path, loaded.*);
 
         // Reload patches from the saved file to update loaded.patches
-        const file = try std.fs.cwd().openFile(path, .{});
-        defer file.close();
-        const content = try file.readToEndAllocOptions(alloc, 10 * 1024 * 1024, null, .of(u8), 0);
+        const reader = (try std.fs.cwd().openFile(path, .{})).reader("");
+        defer reader.file.close();
+        const content = try reader.file.readToEndAllocOptions(alloc, 10 * 1024 * 1024, null, .of(u8), 0);
         const new_patches = std.zon.parse.fromSlice([]const regz.Patch, alloc, content, null, .{}) catch null;
 
         // Update the loaded state
@@ -2614,16 +2610,18 @@ fn write_patch_file(wnd: *RegzWindow, path: []const u8, loaded: LoadedPatchFile)
     }
 
     // Serialize to ZON
-    var zon_buf: std.Io.Writer.Allocating = .init(wnd.arena.allocator());
-    try std.zon.stringify.serialize(all_patches, .{
-        .emit_default_optional_fields = false,
-    }, &zon_buf.writer);
+    var writer = (try std.fs.cwd().createFile(path, .{}))
+        .writer(try wnd.arena.allocator().alloc(u8, 1024));
+    defer writer.file.close();
+    const w = &writer.interface;
 
-    // Write to file
-    const file = try std.fs.cwd().createFile(path, .{});
-    defer file.close();
-    try file.writeAll(zon_buf.written());
-    try file.writeAll("\n");
+    try std.zon.stringify.serialize(
+        all_patches,
+        .{ .emit_default_optional_fields = false },
+        w,
+    );
+    try w.writeByte('\n');
+    try w.flush();
 }
 
 // Unit tests for line diff computation

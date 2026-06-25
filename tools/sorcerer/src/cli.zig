@@ -14,31 +14,18 @@ const RegisterSchemaUsage = @import("RegisterSchemaUsage");
 
 const Allocator = std.mem.Allocator;
 
-const StdoutWriter = struct {
-    buf: [4096]u8 = undefined,
-    file_writer: ?std.fs.File.Writer = null,
-
-    fn writer(self: *StdoutWriter) *std.Io.Writer {
-        if (self.file_writer == null) {
-            self.file_writer = std.fs.File.stdout().writer(&self.buf);
-        }
-        return &self.file_writer.?.interface;
-    }
-};
-
-const StderrWriter = struct {
-    buf: [4096]u8 = undefined,
-    file_writer: ?std.fs.File.Writer = null,
-
-    fn writer(self: *StderrWriter) *std.Io.Writer {
-        if (self.file_writer == null) {
-            self.file_writer = std.fs.File.stderr().writer(&self.buf);
-        }
-        return &self.file_writer.?.interface;
-    }
-};
+var w_stdout: *std.Io.Writer = undefined;
+var w_stderr: *std.Io.Writer = undefined;
 
 pub fn main() !void {
+    var buf_stdout: [4096]u8 = undefined;
+    var writer_stdout = std.fs.File.stdout().writer(&buf_stdout);
+    w_stdout = &writer_stdout.interface;
+
+    var buf_stderr: [4096]u8 = undefined;
+    var writer_stderr = std.fs.File.stderr().writer(&buf_stderr);
+    w_stderr = &writer_stderr.interface;
+
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
@@ -69,19 +56,15 @@ fn run(allocator: Allocator) !void {
     } else if (std.mem.eql(u8, command, "-h") or std.mem.eql(u8, command, "--help")) {
         try print_usage();
     } else {
-        var stderr_writer: StderrWriter = .{};
-        const stderr = stderr_writer.writer();
-        try stderr.print("Unknown command: {s}\n\n", .{command});
-        try stderr.flush();
+        try w_stderr.print("Unknown command: {s}\n\n", .{command});
+        try w_stderr.flush();
         try print_usage();
         return error.Explained;
     }
 }
 
 fn print_usage() !void {
-    var stdout_writer: StdoutWriter = .{};
-    const stdout = stdout_writer.writer();
-    try stdout.writeAll(
+    try w_stdout.writeAll(
         \\sorcerer-cli - MicroZig Register Definition Tool
         \\
         \\Usage:
@@ -108,7 +91,7 @@ fn print_usage() !void {
         \\  sorcerer-cli generate RP2040 -o ./my-regs/
         \\
     );
-    try stdout.flush();
+    try w_stdout.flush();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -125,10 +108,8 @@ fn run_list(allocator: Allocator, args: []const []const u8) !void {
         if (std.mem.eql(u8, arg, "--port")) {
             i += 1;
             if (i >= args.len) {
-                var stderr_writer: StderrWriter = .{};
-                const stderr = stderr_writer.writer();
-                try stderr.writeAll("Error: --port requires a value\n");
-                try stderr.flush();
+                try w_stderr.writeAll("Error: --port requires a value\n");
+                try w_stderr.flush();
                 return error.Explained;
             }
             port_filter = args[i];
@@ -138,10 +119,8 @@ fn run_list(allocator: Allocator, args: []const []const u8) !void {
             try print_usage();
             return;
         } else {
-            var stderr_writer: StderrWriter = .{};
-            const stderr = stderr_writer.writer();
-            try stderr.print("Unknown option: {s}\n", .{arg});
-            try stderr.flush();
+            try w_stderr.print("Unknown option: {s}\n", .{arg});
+            try w_stderr.flush();
             return error.Explained;
         }
     }
@@ -154,16 +133,13 @@ fn run_list(allocator: Allocator, args: []const []const u8) !void {
 }
 
 fn print_list_table(allocator: Allocator, port_filter: ?[]const u8) !void {
-    var stdout_writer: StdoutWriter = .{};
-    const stdout = stdout_writer.writer();
-
     // Track seen chip names to deduplicate display
     var seen_chips = std.StringHashMap(void).init(allocator);
     defer seen_chips.deinit();
 
     // Print header
-    stdout.print("{s:<24} {s}\n", .{ "CHIP", "PORT" }) catch |err| return handle_write_error(err);
-    stdout.print("{s:-<24} {s:-<24}\n", .{ "", "" }) catch |err| return handle_write_error(err);
+    w_stdout.print("{s:<24} {s}\n", .{ "CHIP", "PORT" }) catch |err| return handle_write_error(err);
+    w_stdout.print("{s:-<24} {s:-<24}\n", .{ "", "" }) catch |err| return handle_write_error(err);
 
     // Print entries (one line per unique chip)
     for (schemas.schemas) |schema| {
@@ -183,10 +159,10 @@ fn print_list_table(allocator: Allocator, port_filter: ?[]const u8) !void {
             }
             seen_chips.put(chip.name, {}) catch {};
 
-            stdout.print("{s:<24} {s}\n", .{ chip.name, port_name }) catch |err| return handle_write_error(err);
+            w_stdout.print("{s:<24} {s}\n", .{ chip.name, port_name }) catch |err| return handle_write_error(err);
         }
     }
-    stdout.flush() catch |err| return handle_write_error(err);
+    w_stdout.flush() catch |err| return handle_write_error(err);
 }
 
 /// Handle write errors - exit silently on BrokenPipe so that we can e.g. pipe to `more`.
@@ -237,11 +213,9 @@ fn print_list_json(allocator: Allocator, port_filter: ?[]const u8) !void {
     const json_str = try std.json.Stringify.valueAlloc(allocator, entries.items, .{ .whitespace = .indent_2 });
     defer allocator.free(json_str);
 
-    var stdout_writer: StdoutWriter = .{};
-    const stdout = stdout_writer.writer();
-    stdout.writeAll(json_str) catch |err| return handle_write_error(err);
-    stdout.writeByte('\n') catch |err| return handle_write_error(err);
-    stdout.flush() catch |err| return handle_write_error(err);
+    w_stdout.writeAll(json_str) catch |err| return handle_write_error(err);
+    w_stdout.writeByte('\n') catch |err| return handle_write_error(err);
+    w_stdout.flush() catch |err| return handle_write_error(err);
 }
 
 const JsonEntry = struct {
@@ -271,10 +245,8 @@ fn run_generate(allocator: Allocator, args: []const []const u8) !void {
         if (std.mem.eql(u8, arg, "-o") or std.mem.eql(u8, arg, "--output")) {
             i += 1;
             if (i >= args.len) {
-                var stderr_writer: StderrWriter = .{};
-                const stderr = stderr_writer.writer();
-                try stderr.writeAll("Error: --output requires a value\n");
-                try stderr.flush();
+                try w_stderr.writeAll("Error: --output requires a value\n");
+                try w_stderr.flush();
                 return error.Explained;
             }
             output_path = args[i];
@@ -284,30 +256,24 @@ fn run_generate(allocator: Allocator, args: []const []const u8) !void {
         } else if (!std.mem.startsWith(u8, arg, "-")) {
             chip_name = arg;
         } else {
-            var stderr_writer: StderrWriter = .{};
-            const stderr = stderr_writer.writer();
-            try stderr.print("Unknown option: {s}\n", .{arg});
-            try stderr.flush();
+            try w_stderr.print("Unknown option: {s}\n", .{arg});
+            try w_stderr.flush();
             return error.Explained;
         }
     }
 
     const chip = chip_name orelse {
-        var stderr_writer: StderrWriter = .{};
-        const stderr = stderr_writer.writer();
-        try stderr.writeAll("Error: chip name is required\n");
-        try stderr.writeAll("Usage: sorcerer-cli generate <chip> [-o <dir>]\n");
-        try stderr.flush();
+        try w_stderr.writeAll("Error: chip name is required\n");
+        try w_stderr.writeAll("Usage: sorcerer-cli generate <chip> [-o <dir>]\n");
+        try w_stderr.flush();
         return error.Explained;
     };
 
     // Find matching schema
     const schema = find_schema(chip) orelse {
-        var stderr_writer: StderrWriter = .{};
-        const stderr = stderr_writer.writer();
-        try stderr.print("Error: chip '{s}' not found\n", .{chip});
-        try stderr.writeAll("Use 'sorcerer-cli list' to see available chips\n");
-        try stderr.flush();
+        try w_stderr.print("Error: chip '{s}' not found\n", .{chip});
+        try w_stderr.writeAll("Use 'sorcerer-cli list' to see available chips\n");
+        try w_stderr.flush();
         return error.Explained;
     };
 
@@ -331,19 +297,14 @@ fn generate_code(
     chip_name: []const u8,
     output_path: []const u8,
 ) !void {
-    var stderr_writer: StderrWriter = .{};
-    const stderr = stderr_writer.writer();
-    var stdout_writer: StdoutWriter = .{};
-    const stdout = stdout_writer.writer();
-
     // Get full path to register definition file
     const input_path = try get_full_path(allocator, schema.location);
     defer allocator.free(input_path);
 
-    try stdout.print("Generating register definitions for {s}...\n", .{chip_name});
-    try stdout.print("  Input: {s}\n", .{input_path});
-    try stdout.print("  Output: {s}/\n", .{output_path});
-    try stdout.flush();
+    try w_stdout.print("Generating register definitions for {s}...\n", .{chip_name});
+    try w_stdout.print("  Input: {s}\n", .{input_path});
+    try w_stdout.print("  Output: {s}/\n", .{output_path});
+    try w_stdout.flush();
 
     // Map format
     const format: regz.Database.Format = switch (schema.format) {
@@ -355,8 +316,8 @@ fn generate_code(
 
     // Create database from register definition file
     var db = regz.Database.create_from_path(allocator, format, input_path, chip_name) catch |err| {
-        try stderr.print("Error loading register definition: {}\n", .{err});
-        try stderr.flush();
+        try w_stderr.print("Error loading register definition: {}\n", .{err});
+        try w_stderr.flush();
         return error.Explained;
     };
     defer db.destroy();
@@ -366,23 +327,23 @@ fn generate_code(
     defer vfs.deinit();
 
     db.to_zig(vfs.dir(), .{}) catch |err| {
-        try stderr.print("Error generating Zig code: {}\n", .{err});
-        try stderr.flush();
+        try w_stderr.print("Error generating Zig code: {}\n", .{err});
+        try w_stderr.flush();
         return error.Explained;
     };
 
     // Write virtual filesystem contents to actual directory
     var output_dir = std.fs.cwd().makeOpenPath(output_path, .{}) catch |err| {
-        try stderr.print("Error creating output directory: {}\n", .{err});
-        try stderr.flush();
+        try w_stderr.print("Error creating output directory: {}\n", .{err});
+        try w_stderr.flush();
         return error.Explained;
     };
     defer output_dir.close();
 
     const files_written = try write_vfs_to_dir(allocator, &vfs, output_dir, .root, "");
 
-    try stdout.print("Generated {d} file(s)\n", .{files_written});
-    try stdout.flush();
+    try w_stdout.print("Generated {d} file(s)\n", .{files_written});
+    try w_stdout.flush();
 }
 
 fn get_full_path(allocator: Allocator, location: RegisterSchemaUsage.Location) ![]const u8 {
@@ -421,9 +382,10 @@ fn write_vfs_to_dir(
                     try output_dir.makePath(dirname);
                 }
 
-                const file = try output_dir.createFile(full_path, .{});
-                defer file.close();
-                try file.writeAll(content);
+                var writer = (try output_dir.createFile(full_path, .{})).writer("");
+                defer writer.file.close();
+                try writer.interface.writeAll(content);
+                try writer.interface.flush();
 
                 files_written += 1;
             },
