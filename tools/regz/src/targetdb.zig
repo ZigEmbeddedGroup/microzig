@@ -24,11 +24,8 @@ fn parse_isa_to_arch(isa: []const u8) Arch {
     const lower = std.ascii.lowerString(&buf, isa);
 
     // Try to match against all Arch enum values
-    inline for (@typeInfo(Arch).@"enum".field_names) |field_name| {
-        if (std.mem.eql(u8, lower, field_name)) {
-            return @field(Arch, field_name);
-        }
-    }
+    if (std.meta.stringToEnum(Arch, lower)) |ret|
+        return ret;
 
     log.warn("Unknown ISA: {s}, defaulting to unknown arch", .{isa});
     return .unknown;
