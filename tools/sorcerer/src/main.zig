@@ -36,7 +36,7 @@ pub const std_options: std.Options = .{
     .log_level = .info,
 };
 
-var gpa_instance = std.heap.GeneralPurposeAllocator(.{}){};
+var gpa_instance: std.heap.DebugAllocator(.{}) = .init;
 const gpa = gpa_instance.allocator();
 var arena: std.heap.ArenaAllocator = .init(gpa);
 
@@ -44,7 +44,7 @@ var state: State = .{};
 
 const State = struct {
     orig_content_scale: f32 = 1.0,
-    regz_windows: std.StringArrayHashMapUnmanaged(*RegzWindow) = .{},
+    regz_windows: std.StringArrayHashMapUnmanaged(*RegzWindow) = .empty,
     show_from_microzig_window: bool = false,
     show_stats_window: bool = true,
     show_search_chips_window: bool = false,

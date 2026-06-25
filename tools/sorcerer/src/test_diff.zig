@@ -10,11 +10,11 @@ const DiffLine = struct {
 
 fn compute_line_diff(arena: std.mem.Allocator, old_content: []const u8, new_content: []const u8) ![]const DiffLine {
     const Kind = DiffLine.Kind;
-    var result: std.ArrayList(DiffLine) = .{};
+    var result: std.ArrayList(DiffLine) = .empty;
 
     // Split content into lines
-    var old_lines: std.ArrayList([]const u8) = .{};
-    var new_lines: std.ArrayList([]const u8) = .{};
+    var old_lines: std.ArrayList([]const u8) = .empty;
+    var new_lines: std.ArrayList([]const u8) = .empty;
 
     var old_iter = std.mem.splitScalar(u8, old_content, '\n');
     while (old_iter.next()) |line| {
@@ -28,11 +28,11 @@ fn compute_line_diff(arena: std.mem.Allocator, old_content: []const u8, new_cont
 
     // Encode lines as single characters for diffz (line-mode diffing)
     var line_to_char: std.StringHashMap(u8) = .init(arena);
-    var char_to_line: std.ArrayList([]const u8) = .{};
+    var char_to_line: std.ArrayList([]const u8) = .empty;
     var next_char: u8 = 1;
 
-    var old_chars: std.ArrayList(u8) = .{};
-    var new_chars: std.ArrayList(u8) = .{};
+    var old_chars: std.ArrayList(u8) = .empty;
+    var new_chars: std.ArrayList(u8) = .empty;
 
     // Encode old lines
     for (old_lines.items) |line| {

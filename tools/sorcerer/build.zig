@@ -284,7 +284,7 @@ fn find_target_location(b: *std.Build, lazy_path: LazyPath) RegisterSchemaUsage.
 }
 
 fn convert_patch_files(b: *std.Build, patch_files: []const LazyPath) ![]const RegisterSchemaUsage.PatchFile {
-    var result: std.ArrayList(RegisterSchemaUsage.PatchFile) = .{};
+    var result: std.ArrayList(RegisterSchemaUsage.PatchFile) = .empty;
     for (patch_files) |patch_file| {
         const converted: RegisterSchemaUsage.PatchFile = switch (patch_file) {
             .src_path => |src_path| .{
@@ -365,29 +365,29 @@ const LazyPathContext = struct {
 };
 
 fn LazyPathHashMap(comptime Value: type) type {
-    return std.ArrayHashMap(std.Build.LazyPath, Value, LazyPathContext, true);
+    return std.ArrayHashMapUnmanaged(std.Build.LazyPath, Value, LazyPathContext, true);
 }
 
 fn get_register_schemas(b: *std.Build, mb: *MicroBuild) ![]const RegisterSchemaUsage {
     const targets = get_targets(mb);
-    var deduped_targets: LazyPathHashMap(RegisterSchemaUsage.Format) = .init(b.allocator);
-    var chips: LazyPathHashMap(std.ArrayList(RegisterSchemaUsage.Chip)) = .init(b.allocator);
-    var boards: LazyPathHashMap(std.ArrayList(RegisterSchemaUsage.Board)) = .init(b.allocator);
-    var locations: LazyPathHashMap(RegisterSchemaUsage.Location) = .init(b.allocator);
+    var deduped_targets: LazyPathHashMap(RegisterSchemaUsage.Format) = .empty;
+    var chips: LazyPathHashMap(std.ArrayList(RegisterSchemaUsage.Chip)) = .empty;
+    var boards: LazyPathHashMap(std.ArrayList(RegisterSchemaUsage.Board)) = .empty;
+    var locations: LazyPathHashMap(RegisterSchemaUsage.Location) = .empty;
 
     for (targets) |twp| {
         const t = twp.target;
         const lazy_path = switch (t.chip.register_definition) {
             .targetdb => |targetdb| blk: {
-                try deduped_targets.put(targetdb.path, .targetdb);
+                try deduped_targets.put(b.allocator, targetdb.path, .targetdb);
                 break :blk targetdb.path;
             },
             .embassy => |embassy| blk: {
-                try deduped_targets.put(embassy.path, .embassy);
+                try deduped_targets.put(b.allocator, embassy.path, .embassy);
                 break :blk embassy.path;
             },
             inline else => |lazy_path| blk: {
-                try deduped_targets.put(lazy_path, switch (t.chip.register_definition) {
+                try deduped_targets.put(b.allocator, lazy_path, switch (t.chip.register_definition) {
                     .svd => .svd,
                     .atdf => .atdf,
                     .embassy, .targetdb => unreachable,
@@ -407,13 +407,13 @@ fn get_register_schemas(b: *std.Build, mb: *MicroBuild) ![]const RegisterSchemaU
                 .patch_files = patch_files,
             });
         } else {
-            var chip_list: std.ArrayList(RegisterSchemaUsage.Chip) = .{};
+            var chip_list: std.ArrayList(RegisterSchemaUsage.Chip) = .empty;
             try chip_list.append(b.allocator, .{
                 .name = t.chip.name,
                 .target_name = twp.path,
                 .patch_files = patch_files,
             });
-            try chips.put(lazy_path, chip_list);
+            try chips.put(b.allocator, lazy_path, chip_list);
         }
 
         if (t.board) |board| if (boards.getEntry(lazy_path)) |entry| {
@@ -428,20 +428,20 @@ fn get_register_schemas(b: *std.Build, mb: *MicroBuild) ![]const RegisterSchemaU
                 });
             }
         } else {
-            var board_list: std.ArrayList(RegisterSchemaUsage.Board) = .{};
+            var board_list: std.ArrayList(RegisterSchemaUsage.Board) = .empty;
             try board_list.append(b.allocator, .{
                 .name = board.name,
             });
-            try boards.put(lazy_path, board_list);
+            try boards.put(b.allocator, lazy_path, board_list);
         };
     }
 
     for (deduped_targets.keys()) |lazy_path| {
         const location = find_target_location(b, lazy_path);
-        try locations.put(lazy_path, location);
+        try locations.put(b.allocator, lazy_path, location);
     }
 
-    var ret: std.ArrayList(RegisterSchemaUsage) = .{};
+    var ret: std.ArrayList(RegisterSchemaUsage) = .empty;
     for (deduped_targets.keys(), deduped_targets.values()) |lazy_path, format| {
         var chip_list = chips.get(lazy_path).?;
         var board_list = boards.get(lazy_path);

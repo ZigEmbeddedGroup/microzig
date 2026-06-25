@@ -10,7 +10,7 @@ selected_file: ?VirtualFilesystem.ID = null,
 displayed_file: ?VirtualFilesystem.ID = null,
 active_view: View = .code_generation,
 chip_info: ?ChipInfo = null,
-loaded_patches: std.StringArrayHashMapUnmanaged(LoadedPatchFile) = .{},
+loaded_patches: std.StringArrayHashMapUnmanaged(LoadedPatchFile) = .empty,
 selected_patch: ?SelectedPatch = null,
 patches_loaded: bool = false,
 format: regz.Database.Format,
@@ -902,8 +902,8 @@ fn load_patch_files(w: *RegzWindow) void {
             w.loaded_patches.put(w.gpa, owned_path, .{
                 .path = owned_path,
                 .patches = null,
-                .pending_patches = .{},
-                .deleted_patch_indices = .{},
+                .pending_patches = .empty,
+                .deleted_patch_indices = .empty,
                 .parse_error = error_msg,
                 .is_editable = is_editable,
             }) catch {};
@@ -917,8 +917,8 @@ fn load_patch_files(w: *RegzWindow) void {
             w.loaded_patches.put(w.gpa, owned_path, .{
                 .path = owned_path,
                 .patches = null,
-                .pending_patches = .{},
-                .deleted_patch_indices = .{},
+                .pending_patches = .empty,
+                .deleted_patch_indices = .empty,
                 .parse_error = error_msg,
                 .is_editable = is_editable,
             }) catch {};
@@ -931,8 +931,8 @@ fn load_patch_files(w: *RegzWindow) void {
             w.loaded_patches.put(w.gpa, owned_path, .{
                 .path = owned_path,
                 .patches = null,
-                .pending_patches = .{},
-                .deleted_patch_indices = .{},
+                .pending_patches = .empty,
+                .deleted_patch_indices = .empty,
                 .parse_error = error_msg,
                 .is_editable = is_editable,
             }) catch {};
@@ -948,8 +948,8 @@ fn load_patch_files(w: *RegzWindow) void {
         w.loaded_patches.put(w.gpa, owned_path, .{
             .path = owned_path,
             .patches = patches,
-            .pending_patches = .{},
-            .deleted_patch_indices = .{},
+            .pending_patches = .empty,
+            .deleted_patch_indices = .empty,
             .is_editable = is_editable,
         }) catch {};
     }
@@ -1249,7 +1249,7 @@ fn display_diff(w: *RegzWindow, file_diffs: []const FileDiff, sel: SelectedPatch
     }
 
     // Build unified diff format text
-    var diff_text: std.ArrayList(u8) = .{};
+    var diff_text: std.ArrayList(u8) = .empty;
     defer diff_text.deinit(w.gpa);
 
     for (file_diffs) |fd| {
@@ -1475,7 +1475,7 @@ fn compute_patch_diff(w: *RegzWindow, temp_arena: Allocator, sel: SelectedPatch,
     };
 
     // Compare files and build diffs (before vs after)
-    var file_diffs: std.ArrayList(FileDiff) = .{};
+    var file_diffs: std.ArrayList(FileDiff) = .empty;
 
     // Recursively compare all files
     compare_vfs_files(arena, &before_vfs, &after_vfs, &file_diffs, .root, "") catch {
@@ -1553,11 +1553,11 @@ fn compare_vfs_files(
 }
 
 fn compute_line_diff(arena: Allocator, old_content: []const u8, new_content: []const u8) ![]const DiffLine {
-    var result: std.ArrayList(DiffLine) = .{};
+    var result: std.ArrayList(DiffLine) = .empty;
 
     // Split content into lines
-    var old_lines: std.ArrayList([]const u8) = .{};
-    var new_lines: std.ArrayList([]const u8) = .{};
+    var old_lines: std.ArrayList([]const u8) = .empty;
+    var new_lines: std.ArrayList([]const u8) = .empty;
 
     var old_iter = std.mem.splitScalar(u8, old_content, '\n');
     while (old_iter.next()) |line| {
@@ -1669,7 +1669,7 @@ fn compute_lcs(arena: Allocator, old_lines: []const []const u8, new_lines: []con
     }
 
     // Backtrack
-    var lcs_result: std.ArrayList(LCS_Entry) = .{};
+    var lcs_result: std.ArrayList(LCS_Entry) = .empty;
     var i = m;
     var j = n;
     while (i > 0 and j > 0) {

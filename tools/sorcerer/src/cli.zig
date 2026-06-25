@@ -201,7 +201,7 @@ fn handle_write_error(err: anyerror) error{Explained} {
 }
 
 fn print_list_json(allocator: Allocator, port_filter: ?[]const u8) !void {
-    var entries: std.ArrayList(JsonEntry) = .{};
+    var entries: std.ArrayList(JsonEntry) = .empty;
     defer entries.deinit(allocator);
 
     // Track seen chip names to deduplicate
