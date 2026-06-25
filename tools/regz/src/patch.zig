@@ -3,22 +3,20 @@ const Allocator = std.mem.Allocator;
 const Database = @import("Database.zig");
 const Arch = @import("arch.zig").Arch;
 
-pub const Type = struct {
-    pub const EnumField = struct {
-        name: []const u8,
-        description: ?[]const u8 = null,
-        value: u32,
-    };
-
+pub const Patch = union(enum) {
     pub const Enum = struct {
+        pub const Field = struct {
+            name: []const u8,
+            description: ?[]const u8 = null,
+            value: u32,
+        };
+
         name: []const u8,
         description: ?[]const u8 = null,
         bitsize: u8,
-        fields: []const EnumField = &.{},
+        fields: []const Field = &.{},
     };
-};
 
-pub const Patch = union(enum) {
     override_arch: struct {
         device_name: []const u8,
         arch: Arch,
@@ -31,7 +29,7 @@ pub const Patch = union(enum) {
     },
     add_enum: struct {
         parent: []const u8,
-        @"enum": Type.Enum,
+        @"enum": Enum,
     },
     /// The replaced type MUST be the same size. Bit or Byte size depends on the
     /// context
@@ -50,7 +48,7 @@ pub const Patch = union(enum) {
     /// combines `add_enum` with multiple `set_enum_type` operations.
     add_enum_and_apply: struct {
         parent: []const u8,
-        @"enum": Type.Enum,
+        @"enum": Enum,
         apply_to: []const []const u8,
     },
 
