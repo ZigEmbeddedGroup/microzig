@@ -1,4 +1,5 @@
 const std = @import("std");
+const anyverz = @import("anyverz");
 const LazyPath = std.Build.LazyPath;
 const microzig = @import("microzig");
 const RegisterSchemaUsage = @import("src/RegisterSchemaUsage.zig");
@@ -63,7 +64,7 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(cli_exe);
 
     const run_cli_cmd = b.addRunArtifact(cli_exe);
-    run_cli_cmd.addPassthruArgs();
+    anyverz.addPassthruArgs(b, run_cli_cmd);
     run_cli_cmd.step.dependOn(b.getInstallStep());
 
     const run_cli_step = b.step("run-cli", "Run the CLI tool");
@@ -119,11 +120,6 @@ pub fn build(b: *std.Build) void {
     });
     if (tree_sitter_zig_dep) |tsd| {
         exe_mod.addIncludePath(tsd.path("src"));
-        exe_mod.addCSourceFiles(.{
-            .root = tsd.path(""),
-            .files = &.{"src/parser.c"},
-            .flags = &.{"-std=c11"},
-        });
     }
 
     const tree_sitter_diff_dep = b.lazyDependency("tree_sitter_diff", .{
@@ -152,7 +148,7 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(exe);
 
     const run_cmd = b.addRunArtifact(exe);
-    run_cmd.addPassthruArgs();
+    anyverz.addPassthruArgs(b, run_cmd);
 
     // I only want the path to the register schema file, not the lazy path,
     // because I want to be able to refresh it with `zig build` while sorcerer

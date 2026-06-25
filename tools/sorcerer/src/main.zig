@@ -127,7 +127,7 @@ pub fn frame() !dvui.App.Result {
     // Stats floating window
     show_stats_window();
 
-    dvui.Examples.demo();
+    dvui.Examples.demo(.lite);
 
     from_microzig_menu();
     search_chips_window();

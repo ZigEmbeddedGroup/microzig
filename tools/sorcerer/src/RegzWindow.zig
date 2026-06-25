@@ -238,7 +238,7 @@ pub fn create(
     const window = try gpa.create(RegzWindow);
     errdefer gpa.destroy(window);
 
-    var db = try regz.Database.create_from_path(gpa, format, path, device);
+    var db = try regz.Database.create_from_path(gpa, dvui.io, format, path, device);
     errdefer db.destroy();
 
     var arena: std.heap.ArenaAllocator = .init(gpa);
@@ -268,7 +268,7 @@ pub fn create(
         .register_schema_usages = register_schema_usages,
     };
 
-    try db.to_zig(window.vfs.dir(), .{});
+    try db.to_zig(window.vfs.io(), window.vfs.root_dir(), .{});
 
     count += 1;
 
@@ -896,7 +896,7 @@ fn load_patch_files(wnd: *RegzWindow) void {
         };
 
         // Read and parse ZON file
-        const reader = (std.fs.cwd().openFile(path, .{}) catch |err| {
+        var reader = (std.Io.Dir.cwd().openFile(dvui.io, path, .{}) catch |err| {
             const owned_path = alloc.dupe(u8, path) catch continue;
             const error_msg = std.fmt.allocPrint(alloc, "Failed to open file: {s}", .{@errorName(err)}) catch continue;
             wnd.loaded_patches.put(wnd.gpa, owned_path, .{
@@ -908,10 +908,10 @@ fn load_patch_files(wnd: *RegzWindow) void {
                 .is_editable = is_editable,
             }) catch {};
             continue;
-        }).reader("");
-        defer reader.file.close();
+        }).reader(dvui.io, "");
+        defer reader.file.close(dvui.io);
 
-        const content = reader.file.readToEndAllocOptions(alloc, 10 * 1024 * 1024, null, .of(u8), 0) catch |err| {
+        const content = reader.interface.allocRemainingAlignedSentinel(alloc, .limited(10 * 1024 * 1024), .of(u8), 0) catch |err| {
             const owned_path = alloc.dupe(u8, path) catch continue;
             const error_msg = std.fmt.allocPrint(alloc, "Failed to read file: {s}", .{@errorName(err)}) catch continue;
             wnd.loaded_patches.put(wnd.gpa, owned_path, .{
@@ -925,7 +925,7 @@ fn load_patch_files(wnd: *RegzWindow) void {
             continue;
         };
 
-        const patches = std.zon.parse.fromSlice([]const regz.Patch, alloc, content, null, .{}) catch |err| {
+        const patches = std.zon.parse.fromSliceAlloc([]const regz.Patch, alloc, content, null, .{}) catch |err| {
             const owned_path = alloc.dupe(u8, path) catch continue;
             const error_msg = std.fmt.allocPrint(alloc, "Failed to parse ZON: {s}", .{@errorName(err)}) catch continue;
             wnd.loaded_patches.put(wnd.gpa, owned_path, .{
@@ -1348,7 +1348,7 @@ fn compute_patch_diff(wnd: *RegzWindow, temp_arena: Allocator, sel: SelectedPatc
     // 2. after_db - with all patches UP TO AND INCLUDING the selected one applied
 
     // Create before database
-    var before_db = regz.Database.create_from_path(wnd.gpa, wnd.format, wnd.path, wnd.device) catch |err| {
+    var before_db = regz.Database.create_from_path(wnd.gpa, dvui.io, wnd.format, wnd.path, wnd.device) catch |err| {
         wnd.cached_diff = .{
             .file_index = sel.file_index,
             .patch_index = sel.patch_index,
@@ -1360,7 +1360,7 @@ fn compute_patch_diff(wnd: *RegzWindow, temp_arena: Allocator, sel: SelectedPatc
     defer before_db.destroy();
 
     // Create after database
-    var after_db = regz.Database.create_from_path(wnd.gpa, wnd.format, wnd.path, wnd.device) catch |err| {
+    var after_db = regz.Database.create_from_path(wnd.gpa, dvui.io, wnd.format, wnd.path, wnd.device) catch |err| {
         wnd.cached_diff = .{
             .file_index = sel.file_index,
             .patch_index = sel.patch_index,
@@ -1445,7 +1445,7 @@ fn compute_patch_diff(wnd: *RegzWindow, temp_arena: Allocator, sel: SelectedPatc
     var before_vfs: VirtualFilesystem = .init(wnd.gpa);
     defer before_vfs.deinit();
 
-    before_db.to_zig(before_vfs.dir(), .{}) catch |err| {
+    before_db.to_zig(wnd.vfs.io(), before_vfs.root_dir(), .{}) catch |err| {
         wnd.cached_diff = .{
             .file_index = sel.file_index,
             .patch_index = sel.patch_index,
@@ -1459,7 +1459,7 @@ fn compute_patch_diff(wnd: *RegzWindow, temp_arena: Allocator, sel: SelectedPatc
     var after_vfs: VirtualFilesystem = .init(wnd.gpa);
     defer after_vfs.deinit();
 
-    after_db.to_zig(after_vfs.dir(), .{}) catch |err| {
+    after_db.to_zig(wnd.vfs.io(), after_vfs.root_dir(), .{}) catch |err| {
         wnd.cached_diff = .{
             .file_index = sel.file_index,
             .patch_index = sel.patch_index,
@@ -1822,13 +1822,13 @@ fn labeled_field(label_text: []const u8, value: []const u8) void {
 }
 
 fn save_to_directory(wnd: *RegzWindow, folder_path: []const u8) !void {
-    var output_dir = try std.fs.cwd().makeOpenPath(folder_path, .{});
-    defer output_dir.close();
+    var output_dir = try std.Io.Dir.cwd().createDirPathOpen(dvui.io, folder_path, .{});
+    defer output_dir.close(dvui.io);
 
     try wnd.save_vfs_recursive(output_dir, .root);
 }
 
-fn save_vfs_recursive(wnd: *RegzWindow, output_dir: std.fs.Dir, parent_id: VirtualFilesystem.ID) !void {
+fn save_vfs_recursive(wnd: *RegzWindow, output_dir: std.Io.Dir, parent_id: VirtualFilesystem.ID) !void {
     const children = try wnd.vfs.get_children(wnd.gpa, parent_id);
     defer wnd.gpa.free(children);
 
@@ -1836,15 +1836,15 @@ fn save_vfs_recursive(wnd: *RegzWindow, output_dir: std.fs.Dir, parent_id: Virtu
         const name = wnd.vfs.get_name(entry.id);
         switch (entry.kind) {
             .directory => {
-                var subdir = try output_dir.makeOpenPath(name, .{});
-                defer subdir.close();
+                var subdir = try output_dir.createDirPathOpen(dvui.io, name, .{});
+                defer subdir.close(dvui.io);
                 try wnd.save_vfs_recursive(subdir, entry.id);
             },
             .file => {
                 const content = wnd.vfs.get_content(entry.id);
-                var writer = (try output_dir.createFile(name, .{}))
-                    .writer("");
-                defer writer.file.close();
+                var writer = (try output_dir.createFile(dvui.io, name, .{}))
+                    .writer(dvui.io, "");
+                defer writer.file.close(dvui.io);
                 try writer.interface.writeAll(content);
             },
         }
@@ -2237,7 +2237,7 @@ fn rebuild_database_with_patches(wnd: *RegzWindow) void {
     wnd.db.destroy();
 
     // Recreate database from source
-    wnd.db = regz.Database.create_from_path(wnd.gpa, wnd.format, wnd.path, wnd.device) catch |err| {
+    wnd.db = regz.Database.create_from_path(wnd.gpa, dvui.io, wnd.format, wnd.path, wnd.device) catch |err| {
         std.log.err("Failed to recreate database: {}", .{err});
         return;
     };
@@ -2270,7 +2270,7 @@ fn on_database_changed(wnd: *RegzWindow) void {
     // Deinit old VFS and create new one
     wnd.vfs.deinit();
     wnd.vfs = .init(wnd.gpa);
-    wnd.db.to_zig(wnd.vfs.dir(), .{}) catch |err| {
+    wnd.db.to_zig(wnd.vfs.io(), wnd.vfs.root_dir(), .{}) catch |err| {
         std.log.err("Failed to regenerate code: {}", .{err});
     };
 
@@ -2295,13 +2295,8 @@ fn create_add_enum_and_apply_patch(
     // Build parent path: "types.peripherals.{peripheral_name}"
     const parent = try std.fmt.allocPrint(alloc, "types.peripherals.{s}", .{peripheral_name});
 
-    // Get the EnumField type from the Patch type using type introspection
-    const AddEnumAndApply = std.meta.TagPayload(regz.Patch, .add_enum_and_apply);
-    const EnumType = @TypeOf(@as(AddEnumAndApply, undefined).@"enum");
-    const EnumFieldType = std.meta.Child(@TypeOf(@as(EnumType, undefined).fields));
-
     // Convert fields (note: Database.EnumField.value is u64, Patch.EnumField.value is u32)
-    var fields = try alloc.alloc(EnumFieldType, group.fields.len);
+    var fields = try alloc.alloc(regz.Patch.Enum.Field, group.fields.len);
     for (group.fields, 0..) |field, i| {
         fields[i] = .{
             .name = try alloc.dupe(u8, field.name),
@@ -2475,10 +2470,11 @@ fn save_all_patches(wnd: *RegzWindow, arena: Allocator) !void {
         try wnd.write_patch_file(path, loaded.*);
 
         // Reload patches from the saved file to update loaded.patches
-        const reader = (try std.fs.cwd().openFile(path, .{})).reader("");
-        defer reader.file.close();
-        const content = try reader.file.readToEndAllocOptions(alloc, 10 * 1024 * 1024, null, .of(u8), 0);
-        const new_patches = std.zon.parse.fromSlice([]const regz.Patch, alloc, content, null, .{}) catch null;
+        var reader = (try std.Io.Dir.cwd().openFile(dvui.io, path, .{}))
+            .reader(dvui.io, "");
+        defer reader.file.close(dvui.io);
+        const content = try reader.interface.allocRemainingAlignedSentinel(alloc, .limited(10 * 1024 * 1024), .of(u8), 0);
+        const new_patches = std.zon.parse.fromSliceAlloc([]const regz.Patch, alloc, content, null, .{}) catch null;
 
         // Update the loaded state
         loaded.patches = new_patches;
@@ -2546,7 +2542,7 @@ fn validate_patch_file(wnd: *RegzWindow, arena: Allocator, patch_path: []const u
 
     const chip_name = if (target.chip_idx < rsu.chips.len) rsu.chips[target.chip_idx].name else null;
 
-    const db = try regz.Database.create_from_path(wnd.gpa, format, schema_path, chip_name);
+    const db = try regz.Database.create_from_path(wnd.gpa, dvui.io, format, schema_path, chip_name);
     defer db.destroy();
 
     // Get the loaded patch data
@@ -2610,9 +2606,9 @@ fn write_patch_file(wnd: *RegzWindow, path: []const u8, loaded: LoadedPatchFile)
     }
 
     // Serialize to ZON
-    var writer = (try std.fs.cwd().createFile(path, .{}))
-        .writer(try wnd.arena.allocator().alloc(u8, 1024));
-    defer writer.file.close();
+    var writer = (try std.Io.Dir.cwd().createFile(dvui.io, path, .{}))
+        .writer(dvui.io, try wnd.arena.allocator().alloc(u8, 1024));
+    defer writer.file.close(dvui.io);
     const w = &writer.interface;
 
     try std.zon.stringify.serialize(
