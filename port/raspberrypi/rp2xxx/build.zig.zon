@@ -11,6 +11,7 @@
             .lazy = true,
         },
         .@"bounded-array" = .{ .path = "../../../modules/bounded-array" },
+        .anyverz = .{ .path = "../../../modules/anyverz" },
     },
     .paths = .{
         "README.md",

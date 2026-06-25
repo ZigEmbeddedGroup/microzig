@@ -7,6 +7,7 @@
         .uf2 = .{ .path = "../tools/uf2" },
         .@"esp-image" = .{ .path = "../tools/esp-image" },
         .dfu = .{ .path = "../tools/dfu" },
+        .anyverz = .{ .path = "../modules/anyverz" },
     },
     .paths = .{
         "build.zig",

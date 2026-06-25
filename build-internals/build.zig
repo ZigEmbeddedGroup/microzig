@@ -3,6 +3,8 @@ const Build = std.Build;
 const LazyPath = Build.LazyPath;
 const Module = Build.Module;
 
+const anyverz = @import("anyverz");
+
 const regz = @import("regz");
 pub const Patch = regz.patch.Patch;
 const uf2 = @import("uf2");
@@ -103,7 +105,7 @@ pub const Target = struct {
         const ret = from.dep.builder.allocator.create(Target) catch @panic("out of memory");
         ret.* = from.*;
 
-        inline for (@typeInfo(DeriveOptions).@"struct".field_names) |field_name| {
+        inline for (comptime anyverz.fieldNames(DeriveOptions)) |field_name| {
             const value = @field(options, field_name);
             if (value) |val| @field(ret, field_name) = val;
         }

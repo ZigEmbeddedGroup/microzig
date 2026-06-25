@@ -1,5 +1,6 @@
 const std = @import("std");
 const microzig = @import("microzig/build-internals");
+const anyverz = @import("anyverz");
 
 const Self = @This();
 
@@ -365,7 +366,10 @@ fn get_bootrom(b: *std.Build, target: *const microzig.Target, rom: BootROM) std.
 
     const rom_objcopy = b.addObjCopy(rom_exe.getEmittedBin(), .{
         .basename = b.fmt("{s}.bin", .{@tagName(rom)}),
-        .format = .binary,
+        .format = switch (anyverz.zig_version) {
+            .@"0.17" => .binary,
+            .@"0.16" => .bin,
+        },
     });
 
     return rom_objcopy.getOutput();

@@ -1,6 +1,8 @@
 const std = @import("std");
 const Build = std.Build;
 
+const anyverz = @import("anyverz");
+
 pub const patch = @import("src/patch.zig");
 
 pub fn build(b: *Build) !void {
@@ -67,7 +69,7 @@ pub fn build(b: *Build) !void {
     b.installArtifact(regz);
 
     const run_cmd = b.addRunArtifact(regz);
-    run_cmd.addPassthruArgs();
+    anyverz.addPassthruArgs(b, run_cmd);
     run_cmd.step.dependOn(b.getInstallStep());
 
     const run_step = b.step("run", "Run the app");

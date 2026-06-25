@@ -10,12 +10,13 @@
     },
     .dependencies = .{
         .libxml2 = .{
-            .url = "git+https://github.com/allyourcodebase/libxml2.git#215ef60bb2a82386b2d90631142ecaf5069d9793",
-            .hash = "libxml2-2.15.1-2-qHdjhjJXAAD98vpy0IF6EsCNQUd8BBloVE-kCqbk1njK",
+            .url = "git+https://github.com/piotrfila/libxml2.git#6e7036d5e52aef1dd1ff99ba7083df16754e94af",
+            .hash = "libxml2-2.15.1-2-qHdjhtlVAAASX3jLnB19epDXk1zTG0OnIMvY799BTg6b",
         },
         .zqlite = .{
-            .url = "git+https://github.com/karlseguin/zqlite.zig#3cbe6a9473872efde0c7e0bb996e5595c76ab282",
-            .hash = "zqlite-0.0.1-RWLaY9UynABmwfHlRcRhjzL8NzgXqkADoqKtlfaGpZB2",
+            .url = "git+https://github.com/karlseguin/zqlite.zig#5ac4cabe95a6d7faa7baf0da8057a8e6e8a227a1",
+            .hash = "zqlite-0.0.1-RWLaY64xnAAxsD2YNT8QqPMJUuaFv2GOzFRR4aGypJv3",
         },
+        .anyverz = .{ .path = "../../modules/anyverz" },
     },
 }

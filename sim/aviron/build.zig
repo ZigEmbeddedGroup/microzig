@@ -3,6 +3,8 @@ const Build = std.Build;
 const LazyPath = Build.LazyPath;
 const ResolvedTarget = Build.ResolvedTarget;
 
+const anyverz = @import("anyverz");
+
 const TestSuiteConfig = @import("src/testconfig.zig").TestSuiteConfig;
 
 const samples = [_][]const u8{
@@ -73,7 +75,7 @@ pub fn build(b: *Build) !void {
 
     const run_cmd = b.addRunArtifact(aviron_exe);
     run_cmd.step.dependOn(b.getInstallStep());
-    run_cmd.addPassthruArgs();
+    anyverz.addPassthruArgs(b, run_cmd);
     run_step.dependOn(&run_cmd.step);
 
     const avr_target = b.resolveTargetQuery(avr_target_query);
@@ -156,7 +158,7 @@ fn add_test_suite(
     // Scan the testsuite directory for files. Based on the extension, either load or compile them.
     // Files in testsuite.avr-gcc will be compiled with avr-gcc and have the output copied to
     // this directory.
-    var walkdir = try b.root.root_dir.handle.openDir(io, "testsuite", .{ .iterate = true });
+    var walkdir = try anyverz.buildRoot(b).openDir(io, "testsuite", .{ .iterate = true });
     defer walkdir.close(io);
 
     var walker = try walkdir.walk(b.allocator);
@@ -192,7 +194,7 @@ fn add_test_suite(
         };
 
         const ext = std.fs.path.extension(entry.basename);
-        const action: FileAction = inline for (@typeInfo(@TypeOf(extension_to_action)).@"struct".field_names) |field_name| {
+        const action: FileAction = inline for (comptime anyverz.fieldNames(@TypeOf(extension_to_action))) |field_name| {
             const action: FileAction = @field(extension_to_action, field_name);
 
             if (std.mem.eql(u8, ext, "." ++ field_name))
@@ -331,12 +333,10 @@ fn add_test_suite_update(
     b: *Build,
     invoke_step: *Build.Step,
 ) !void {
-    const avr_gcc = b.findProgramLazy(.{
-        .names = &.{"avr-gcc"},
-    });
+    const avr_gcc = anyverz.findProgramLazy(b, &.{"avr-gcc"});
 
     const io = b.graph.io;
-    var walkdir = try b.root.root_dir.handle.openDir(io, "testsuite.avr-gcc", .{ .iterate = true });
+    var walkdir = try anyverz.buildRoot(b).openDir(io, "testsuite.avr-gcc", .{ .iterate = true });
     defer walkdir.close(io);
 
     var walker = try walkdir.walk(b.allocator);
@@ -364,7 +364,7 @@ fn add_test_suite_update(
         };
 
         const ext = std.fs.path.extension(entry.basename);
-        const action: FileAction = inline for (@typeInfo(@TypeOf(extension_to_action)).@"struct".field_names) |field_name| {
+        const action: FileAction = inline for (comptime anyverz.fieldNames(@TypeOf(extension_to_action))) |field_name| {
             const action: FileAction = @field(extension_to_action, field_name);
             if (std.mem.eql(u8, ext, "." ++ field_name))
                 break action;

@@ -24,6 +24,7 @@
         .@"modules/network" = .{ .path = "modules/network" },
         .@"modules/riscv32-common" = .{ .path = "modules/riscv32-common" },
         .@"modules/rtt" = .{ .path = "modules/rtt" },
+        .anyverz = .{ .path = "modules/anyverz" },
 
         // simulators
         .@"sim/aviron" = .{ .path = "sim/aviron", .lazy = true },
