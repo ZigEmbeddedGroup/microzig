@@ -275,26 +275,26 @@ pub fn create(
     return window;
 }
 
-pub fn destroy(w: *RegzWindow) void {
+pub fn destroy(wnd: *RegzWindow) void {
     // Clean up pending_patches and deleted_patch_indices ArrayLists
-    for (w.loaded_patches.values()) |*loaded| {
-        loaded.pending_patches.deinit(w.gpa);
-        loaded.deleted_patch_indices.deinit(w.gpa);
+    for (wnd.loaded_patches.values()) |*loaded| {
+        loaded.pending_patches.deinit(wnd.gpa);
+        loaded.deleted_patch_indices.deinit(wnd.gpa);
     }
 
-    // Clean up loaded patches hashmap (strings are in w.arena, freed below)
-    w.loaded_patches.deinit(w.gpa);
+    // Clean up loaded patches hashmap (strings are in wnd.arena, freed below)
+    wnd.loaded_patches.deinit(wnd.gpa);
 
-    w.vfs.deinit();
-    w.arena.deinit();
-    w.db.destroy();
+    wnd.vfs.deinit();
+    wnd.arena.deinit();
+    wnd.db.destroy();
 }
 
-pub fn show(w: *RegzWindow) !void {
-    if (!w.show_window)
+pub fn show(wnd: *RegzWindow) !void {
+    if (!wnd.show_window)
         return;
 
-    var arena: std.heap.ArenaAllocator = .init(w.gpa);
+    var arena: std.heap.ArenaAllocator = .init(wnd.gpa);
     defer arena.deinit();
 
     // Use a local flag for the window header close button
@@ -304,19 +304,19 @@ pub fn show(w: *RegzWindow) !void {
     var float = dvui.floatingWindow(@src(), .{}, .{
         .min_size_content = .{ .w = 400, .h = 400 },
         .max_size_content = .width(400),
-        .id_extra = w.id_extra,
+        .id_extra = wnd.id_extra,
     });
     defer float.deinit();
 
-    float.dragAreaSet(dvui.windowHeader("Regz", w.title, &header_close_flag));
+    float.dragAreaSet(dvui.windowHeader("Regz", wnd.title, &header_close_flag));
 
     // Check if user clicked the X button
     if (!header_close_flag) {
-        if (w.has_unsaved_patches) {
-            w.show_unsaved_warning = true;
+        if (wnd.has_unsaved_patches) {
+            wnd.show_unsaved_warning = true;
             // Don't actually close yet
         } else {
-            w.show_window = false;
+            wnd.show_window = false;
         }
     }
 
@@ -340,7 +340,7 @@ pub fn show(w: *RegzWindow) !void {
                 if (dvui.dialogNativeFolderSelect(dvui.currentWindow().arena(), .{
                     .title = "Save Generated Code To...",
                 }) catch null) |folder_path| {
-                    w.save_to_directory(folder_path) catch |err| {
+                    wnd.save_to_directory(folder_path) catch |err| {
                         std.log.err("Failed to save: {}", .{err});
                     };
                 }
@@ -349,20 +349,20 @@ pub fn show(w: *RegzWindow) !void {
             // Save Patches - only enabled when has_unsaved_patches
             if (dvui.menuItemLabel(@src(), "Save Patches", .{}, .{
                 .expand = .horizontal,
-                .color_text = if (!w.has_unsaved_patches) dvui.Color.fromHex("918175") else null,
-            }) != null and w.has_unsaved_patches) {
-                w.save_all_patches(arena.allocator()) catch |err| {
-                    w.validation_error_message = std.fmt.allocPrint(w.arena.allocator(), "Failed to save patches: {s}", .{@errorName(err)}) catch "Save failed";
-                    w.show_validation_error = true;
+                .color_text = if (!wnd.has_unsaved_patches) dvui.Color.fromHex("918175") else null,
+            }) != null and wnd.has_unsaved_patches) {
+                wnd.save_all_patches(arena.allocator()) catch |err| {
+                    wnd.validation_error_message = std.fmt.allocPrint(wnd.arena.allocator(), "Failed to save patches: {s}", .{@errorName(err)}) catch "Save failed";
+                    wnd.show_validation_error = true;
                 };
                 m.close();
             }
 
             if (dvui.menuItemLabel(@src(), "Close", .{}, .{ .expand = .horizontal }) != null) {
-                if (w.has_unsaved_patches) {
-                    w.show_unsaved_warning = true;
+                if (wnd.has_unsaved_patches) {
+                    wnd.show_unsaved_warning = true;
                 } else {
-                    w.show_window = false;
+                    wnd.show_window = false;
                 }
                 m.close();
             }
@@ -373,35 +373,35 @@ pub fn show(w: *RegzWindow) !void {
             defer fw.deinit();
 
             if (dvui.menuItemLabel(@src(), "Code Generation", .{}, .{ .expand = .horizontal }) != null) {
-                w.active_view = .code_generation;
+                wnd.active_view = .code_generation;
                 m.close();
             }
 
             if (dvui.menuItemLabel(@src(), "Patches", .{}, .{ .expand = .horizontal }) != null) {
-                w.active_view = .patches;
+                wnd.active_view = .patches;
                 m.close();
             }
 
             if (dvui.menuItemLabel(@src(), "Analysis", .{}, .{ .expand = .horizontal }) != null) {
-                w.active_view = .analysis;
+                wnd.active_view = .analysis;
                 m.close();
             }
         }
     }
 
-    switch (w.active_view) {
-        .code_generation => w.show_code_generation(arena.allocator()),
-        .patches => w.show_patches(arena.allocator()),
-        .analysis => w.show_analysis(arena.allocator()),
+    switch (wnd.active_view) {
+        .code_generation => wnd.show_code_generation(arena.allocator()),
+        .patches => wnd.show_patches(arena.allocator()),
+        .analysis => wnd.show_analysis(arena.allocator()),
     }
 
     // Render dialogs
-    w.show_create_patch_dialog_ui(arena.allocator());
-    w.show_unsaved_warning_dialog();
-    w.show_validation_error_dialog();
+    wnd.show_create_patch_dialog_ui(arena.allocator());
+    wnd.show_unsaved_warning_dialog();
+    wnd.show_validation_error_dialog();
 }
 
-fn show_code_generation(w: *RegzWindow, arena: Allocator) void {
+fn show_code_generation(wnd: *RegzWindow, arena: Allocator) void {
     var hbox = dvui.box(@src(), .{ .dir = .horizontal }, .{ .expand = .both });
     defer hbox.deinit();
 
@@ -409,7 +409,7 @@ fn show_code_generation(w: *RegzWindow, arena: Allocator) void {
         const scroll_arena = dvui.scrollArea(@src(), .{}, .{});
         defer scroll_arena.deinit();
 
-        w.show_file_tree(
+        wnd.show_file_tree(
             arena,
             @src(),
             .{},
@@ -450,12 +450,12 @@ fn show_code_generation(w: *RegzWindow, arena: Allocator) void {
         }, .{ .expand = .both });
         defer te.deinit();
 
-        if (w.selected_file) |id| {
+        if (wnd.selected_file) |id| {
             // Update text when file selection changes
-            if (w.displayed_file != id or dvui.firstFrame(te.data().id)) {
-                te.textSet(w.vfs.get_content(id), false);
+            if (wnd.displayed_file != id or dvui.firstFrame(te.data().id)) {
+                te.textSet(wnd.vfs.get_content(id), false);
                 te.textLayout.selection.moveCursor(0, false);
-                w.displayed_file = id;
+                wnd.displayed_file = id;
             }
         }
 
@@ -470,16 +470,16 @@ fn show_code_generation(w: *RegzWindow, arena: Allocator) void {
         var tl = dvui.textLayout(@src(), .{}, .{ .expand = .horizontal });
         defer tl.deinit();
 
-        if (w.selected_file) |id|
-            tl.addText(w.vfs.get_content(id), .{});
+        if (wnd.selected_file) |id|
+            tl.addText(wnd.vfs.get_content(id), .{});
     }
 }
 
-fn show_patches(w: *RegzWindow, arena: Allocator) void {
+fn show_patches(wnd: *RegzWindow, arena: Allocator) void {
     // Load patches on first view
-    if (!w.patches_loaded) {
-        w.load_patch_files();
-        w.patches_loaded = true;
+    if (!wnd.patches_loaded) {
+        wnd.load_patch_files();
+        wnd.patches_loaded = true;
     }
 
     var hbox = dvui.box(@src(), .{ .dir = .horizontal }, .{ .expand = .both });
@@ -498,7 +498,7 @@ fn show_patches(w: *RegzWindow, arena: Allocator) void {
         var scroll = dvui.scrollArea(@src(), .{}, .{ .expand = .vertical });
         defer scroll.deinit();
 
-        w.show_patch_tree(arena);
+        wnd.show_patch_tree(arena);
     }
 
     // Right panel: Patch details
@@ -506,11 +506,11 @@ fn show_patches(w: *RegzWindow, arena: Allocator) void {
         var scroll = dvui.scrollArea(@src(), .{}, .{ .expand = .both });
         defer scroll.deinit();
 
-        w.show_patch_details(arena);
+        wnd.show_patch_details(arena);
     }
 }
 
-fn show_analysis(w: *RegzWindow, arena: Allocator) void {
+fn show_analysis(wnd: *RegzWindow, arena: Allocator) void {
     var hbox = dvui.box(@src(), .{ .dir = .horizontal }, .{ .expand = .both });
     defer hbox.deinit();
 
@@ -527,7 +527,7 @@ fn show_analysis(w: *RegzWindow, arena: Allocator) void {
         var scroll = dvui.scrollArea(@src(), .{}, .{ .expand = .vertical });
         defer scroll.deinit();
 
-        w.show_analysis_tree(arena);
+        wnd.show_analysis_tree(arena);
     }
 
     // Right panel: Equivalence group details
@@ -535,13 +535,13 @@ fn show_analysis(w: *RegzWindow, arena: Allocator) void {
         var scroll = dvui.scrollArea(@src(), .{}, .{ .expand = .both });
         defer scroll.deinit();
 
-        w.show_analysis_details(arena);
+        wnd.show_analysis_details(arena);
     }
 }
 
-fn show_analysis_tree(w: *RegzWindow, arena: Allocator) void {
+fn show_analysis_tree(wnd: *RegzWindow, arena: Allocator) void {
     // Run analysis on all peripherals if not cached
-    const cached = w.get_or_run_full_analysis() orelse {
+    const cached = wnd.get_or_run_full_analysis() orelse {
         _ = dvui.label(@src(), "Error running analysis", .{}, .{
             .color_text = dvui.Color.fromHex("EF2F27"),
         });
@@ -575,7 +575,7 @@ fn show_analysis_tree(w: *RegzWindow, arena: Allocator) void {
     defer tree.deinit();
 
     for (cached.peripheral_results, 0..) |periph_result, periph_idx| {
-        const is_selected = w.selected_analysis_peripheral != null and w.selected_analysis_peripheral.? == periph_idx;
+        const is_selected = wnd.selected_analysis_peripheral != null and wnd.selected_analysis_peripheral.? == periph_idx;
 
         var branch = tree.branch(@src(), .{ .expanded = is_selected }, .{ .id_extra = periph_idx });
         defer branch.deinit();
@@ -598,8 +598,8 @@ fn show_analysis_tree(w: *RegzWindow, arena: Allocator) void {
 
         // Handle click on peripheral to select
         if (branch.button.clicked()) {
-            w.selected_analysis_peripheral = periph_idx;
-            w.selected_equivalence_group = null;
+            wnd.selected_analysis_peripheral = periph_idx;
+            wnd.selected_equivalence_group = null;
         }
 
         if (branch.expander(@src(), .{ .indent = 14 }, .{ .margin = .{ .x = 14 } })) {
@@ -611,8 +611,8 @@ fn show_analysis_tree(w: *RegzWindow, arena: Allocator) void {
                 defer group_branch.deinit();
 
                 const is_group_selected = is_selected and
-                    w.selected_equivalence_group != null and
-                    w.selected_equivalence_group.? == group_idx;
+                    wnd.selected_equivalence_group != null and
+                    wnd.selected_equivalence_group.? == group_idx;
 
                 // Icon for group
                 dvui.icon(@src(), "GroupIcon", dvui.entypo.flow_tree, .{}, .{ .gravity_y = 0.5 });
@@ -626,8 +626,8 @@ fn show_analysis_tree(w: *RegzWindow, arena: Allocator) void {
                 });
 
                 if (group_branch.button.clicked()) {
-                    w.selected_analysis_peripheral = periph_idx;
-                    w.selected_equivalence_group = group_idx;
+                    wnd.selected_analysis_peripheral = periph_idx;
+                    wnd.selected_equivalence_group = group_idx;
                 }
             }
 
@@ -645,9 +645,9 @@ fn show_analysis_tree(w: *RegzWindow, arena: Allocator) void {
     _ = arena;
 }
 
-fn show_analysis_details(w: *RegzWindow, arena: Allocator) void {
+fn show_analysis_details(wnd: *RegzWindow, arena: Allocator) void {
     // Check if a peripheral and group are selected
-    const periph_idx = w.selected_analysis_peripheral orelse {
+    const periph_idx = wnd.selected_analysis_peripheral orelse {
         var vbox = dvui.box(@src(), .{ .dir = .vertical }, .{
             .expand = .both,
             .padding = dvui.Rect.all(16),
@@ -658,7 +658,7 @@ fn show_analysis_details(w: *RegzWindow, arena: Allocator) void {
         return;
     };
 
-    const group_idx = w.selected_equivalence_group orelse {
+    const group_idx = wnd.selected_equivalence_group orelse {
         var vbox = dvui.box(@src(), .{ .dir = .vertical }, .{
             .expand = .both,
             .padding = dvui.Rect.all(16),
@@ -670,7 +670,7 @@ fn show_analysis_details(w: *RegzWindow, arena: Allocator) void {
     };
 
     // Get cached analysis result
-    const cached = w.cached_analysis orelse {
+    const cached = wnd.cached_analysis orelse {
         _ = dvui.label(@src(), "No analysis data available", .{}, .{});
         return;
     };
@@ -724,7 +724,7 @@ fn show_analysis_details(w: *RegzWindow, arena: Allocator) void {
     _ = dvui.spacer(@src(), .{ .min_size_content = .{ .h = 12 } });
 
     // Create Patch from Group button
-    const has_editable_files = w.has_editable_patch_files();
+    const has_editable_files = wnd.has_editable_patch_files();
     if (has_editable_files) {
         if (dvui.button(@src(), "Create Patch from Group", .{}, .{
             .color_fill = dvui.Color.fromHex("98BC37"),
@@ -732,11 +732,11 @@ fn show_analysis_details(w: *RegzWindow, arena: Allocator) void {
             .color_text = dvui.Color.fromHex("1C1B19"),
         })) {
             // Initialize pending patch creation
-            w.pending_patch_creation = .{
+            wnd.pending_patch_creation = .{
                 .peripheral_name = periph_result.peripheral_name,
                 .group_idx = group_idx,
             };
-            w.show_create_patch_dialog = true;
+            wnd.show_create_patch_dialog = true;
         }
     } else {
         _ = dvui.label(@src(), "(No editable patch files)", .{}, .{
@@ -760,7 +760,7 @@ fn show_analysis_details(w: *RegzWindow, arena: Allocator) void {
             },
         };
 
-        var grid = dvui.grid(@src(), .{ .col_widths = &w.analysis_col_widths }, .{}, .{
+        var grid = dvui.grid(@src(), .{ .col_widths = &wnd.analysis_col_widths }, .{}, .{
             .expand = .both,
             .background = true,
             .padding = dvui.Rect.all(4),
@@ -769,19 +769,19 @@ fn show_analysis_details(w: *RegzWindow, arena: Allocator) void {
 
         // Headers with resize handles
         dvui.gridHeading(@src(), grid, 0, "Name", .{
-            .sizes = &w.analysis_col_widths,
+            .sizes = &wnd.analysis_col_widths,
             .num = 0,
             .min_size = 60,
             .max_size = 300,
         }, header_style);
         dvui.gridHeading(@src(), grid, 1, "Value", .{
-            .sizes = &w.analysis_col_widths,
+            .sizes = &wnd.analysis_col_widths,
             .num = 1,
             .min_size = 40,
             .max_size = 150,
         }, header_style);
         dvui.gridHeading(@src(), grid, 2, "Description", .{
-            .sizes = &w.analysis_col_widths,
+            .sizes = &wnd.analysis_col_widths,
             .num = 2,
             .min_size = 100,
             .max_size = 500,
@@ -836,27 +836,27 @@ fn show_analysis_details(w: *RegzWindow, arena: Allocator) void {
     }
 }
 
-fn get_or_run_full_analysis(w: *RegzWindow) ?*const CachedAnalysis {
+fn get_or_run_full_analysis(wnd: *RegzWindow) ?*const CachedAnalysis {
     // Ensure patches are loaded and applied before running analysis
-    if (!w.patches_loaded) {
-        w.load_patch_files();
-        w.patches_loaded = true;
+    if (!wnd.patches_loaded) {
+        wnd.load_patch_files();
+        wnd.patches_loaded = true;
     }
 
     // Return cached if available
-    if (w.cached_analysis != null) {
-        return &w.cached_analysis.?;
+    if (wnd.cached_analysis != null) {
+        return &wnd.cached_analysis.?;
     }
 
     // Run analysis on all peripherals
-    const alloc = w.arena.allocator();
+    const alloc = wnd.arena.allocator();
 
-    const peripherals = w.db.get_peripherals(alloc) catch {
+    const peripherals = wnd.db.get_peripherals(alloc) catch {
         return null;
     };
 
     var results: std.ArrayList(PeripheralAnalysisResult) = .empty;
-    var analysis = regz.Analysis.init(w.db);
+    var analysis = regz.Analysis.init(wnd.db);
 
     for (peripherals) |peripheral| {
         const result = analysis.find_equivalent_enums(alloc, peripheral.id) catch {
@@ -873,18 +873,18 @@ fn get_or_run_full_analysis(w: *RegzWindow) ?*const CachedAnalysis {
     }
 
     // Cache result in window's arena (persists across frames)
-    w.cached_analysis = .{
+    wnd.cached_analysis = .{
         .peripheral_results = results.toOwnedSlice(alloc) catch &.{},
     };
 
-    return &w.cached_analysis.?;
+    return &wnd.cached_analysis.?;
 }
 
-fn load_patch_files(w: *RegzWindow) void {
-    const chip = w.chip_info orelse return;
+fn load_patch_files(wnd: *RegzWindow) void {
+    const chip = wnd.chip_info orelse return;
 
     // Use window's arena for persistent storage across frames
-    const alloc = w.arena.allocator();
+    const alloc = wnd.arena.allocator();
 
     for (chip.patch_files) |pf| {
         const path_result = construct_patch_path(alloc, pf);
@@ -899,7 +899,7 @@ fn load_patch_files(w: *RegzWindow) void {
         const file = std.fs.cwd().openFile(path, .{}) catch |err| {
             const owned_path = alloc.dupe(u8, path) catch continue;
             const error_msg = std.fmt.allocPrint(alloc, "Failed to open file: {s}", .{@errorName(err)}) catch continue;
-            w.loaded_patches.put(w.gpa, owned_path, .{
+            wnd.loaded_patches.put(wnd.gpa, owned_path, .{
                 .path = owned_path,
                 .patches = null,
                 .pending_patches = .empty,
@@ -914,7 +914,7 @@ fn load_patch_files(w: *RegzWindow) void {
         const content = file.readToEndAllocOptions(alloc, 10 * 1024 * 1024, null, .of(u8), 0) catch |err| {
             const owned_path = alloc.dupe(u8, path) catch continue;
             const error_msg = std.fmt.allocPrint(alloc, "Failed to read file: {s}", .{@errorName(err)}) catch continue;
-            w.loaded_patches.put(w.gpa, owned_path, .{
+            wnd.loaded_patches.put(wnd.gpa, owned_path, .{
                 .path = owned_path,
                 .patches = null,
                 .pending_patches = .empty,
@@ -928,7 +928,7 @@ fn load_patch_files(w: *RegzWindow) void {
         const patches = std.zon.parse.fromSlice([]const regz.Patch, alloc, content, null, .{}) catch |err| {
             const owned_path = alloc.dupe(u8, path) catch continue;
             const error_msg = std.fmt.allocPrint(alloc, "Failed to parse ZON: {s}", .{@errorName(err)}) catch continue;
-            w.loaded_patches.put(w.gpa, owned_path, .{
+            wnd.loaded_patches.put(wnd.gpa, owned_path, .{
                 .path = owned_path,
                 .patches = null,
                 .pending_patches = .empty,
@@ -941,11 +941,11 @@ fn load_patch_files(w: *RegzWindow) void {
 
         // Apply patches to the database so analysis reflects them
         for (patches) |patch| {
-            apply_single_patch(w.db, alloc, patch) catch continue;
+            apply_single_patch(wnd.db, alloc, patch) catch continue;
         }
 
         const owned_path = alloc.dupe(u8, path) catch continue;
-        w.loaded_patches.put(w.gpa, owned_path, .{
+        wnd.loaded_patches.put(wnd.gpa, owned_path, .{
             .path = owned_path,
             .patches = patches,
             .pending_patches = .empty,
@@ -955,7 +955,7 @@ fn load_patch_files(w: *RegzWindow) void {
     }
 
     // Regenerate VFS and invalidate caches since patches were applied
-    w.on_database_changed();
+    wnd.on_database_changed();
 }
 
 fn construct_patch_path(arena: Allocator, pf: RegisterSchemaUsage.PatchFile) ?[]const u8 {
@@ -965,8 +965,8 @@ fn construct_patch_path(arena: Allocator, pf: RegisterSchemaUsage.PatchFile) ?[]
     };
 }
 
-fn show_patch_tree(w: *RegzWindow, arena: Allocator) void {
-    if (w.loaded_patches.count() == 0) {
+fn show_patch_tree(wnd: *RegzWindow, arena: Allocator) void {
+    if (wnd.loaded_patches.count() == 0) {
         _ = dvui.label(@src(), "No patch files", .{}, .{});
         return;
     }
@@ -978,7 +978,7 @@ fn show_patch_tree(w: *RegzWindow, arena: Allocator) void {
     defer tree.deinit();
 
     var file_idx: usize = 0;
-    for (w.loaded_patches.keys(), w.loaded_patches.values()) |path, loaded| {
+    for (wnd.loaded_patches.keys(), wnd.loaded_patches.values()) |path, loaded| {
         defer file_idx += 1;
 
         var branch = tree.branch(@src(), .{ .expanded = true }, .{ .id_extra = file_idx });
@@ -1027,7 +1027,7 @@ fn show_patch_tree(w: *RegzWindow, arena: Allocator) void {
                         }
 
                         if (op_branch.button.clicked() and !is_deleted) {
-                            w.selected_patch = .{ .file_index = file_idx, .patch_index = patch_idx };
+                            wnd.selected_patch = .{ .file_index = file_idx, .patch_index = patch_idx };
                         }
                     }
                 }
@@ -1046,7 +1046,7 @@ fn show_patch_tree(w: *RegzWindow, arena: Allocator) void {
                     });
 
                     if (op_branch.button.clicked()) {
-                        w.selected_patch = .{ .file_index = file_idx, .patch_index = full_idx };
+                        wnd.selected_patch = .{ .file_index = file_idx, .patch_index = full_idx };
                     }
                 }
             }
@@ -1065,9 +1065,9 @@ fn get_patch_label(patch: regz.Patch, arena: Allocator) []const u8 {
     };
 }
 
-fn show_patch_details(w: *RegzWindow, arena: Allocator) void {
+fn show_patch_details(wnd: *RegzWindow, arena: Allocator) void {
     // Empty state - no patches available
-    if (w.loaded_patches.count() == 0) {
+    if (wnd.loaded_patches.count() == 0) {
         var vbox = dvui.box(@src(), .{ .dir = .vertical }, .{
             .expand = .both,
             .padding = dvui.Rect.all(16),
@@ -1079,7 +1079,7 @@ fn show_patch_details(w: *RegzWindow, arena: Allocator) void {
         return;
     }
 
-    const sel = w.selected_patch orelse {
+    const sel = wnd.selected_patch orelse {
         var vbox = dvui.box(@src(), .{ .dir = .vertical }, .{
             .expand = .both,
             .padding = dvui.Rect.all(16),
@@ -1090,11 +1090,11 @@ fn show_patch_details(w: *RegzWindow, arena: Allocator) void {
         return;
     };
 
-    const keys = w.loaded_patches.keys();
+    const keys = wnd.loaded_patches.keys();
     if (sel.file_index >= keys.len) return;
 
     const path = keys[sel.file_index];
-    const loaded = w.loaded_patches.get(path) orelse return;
+    const loaded = wnd.loaded_patches.get(path) orelse return;
 
     if (loaded.parse_error != null) {
         _ = dvui.label(@src(), "Cannot display details: file has parse errors", .{}, .{
@@ -1118,9 +1118,9 @@ fn show_patch_details(w: *RegzWindow, arena: Allocator) void {
     };
 
     // Invalidate cache if selected patch changed
-    if (w.cached_diff) |cached| {
+    if (wnd.cached_diff) |cached| {
         if (cached.file_index != sel.file_index or cached.patch_index != sel.patch_index) {
-            w.cached_diff = null;
+            wnd.cached_diff = null;
         }
     }
 
@@ -1154,7 +1154,7 @@ fn show_patch_details(w: *RegzWindow, arena: Allocator) void {
                 .color_fill = dvui.Color.fromHex("EF2F27"),
                 .color_text = dvui.Color.fromHex("FFFFFF"),
             })) {
-                w.delete_patch(sel.file_index, sel.patch_index, is_pending);
+                wnd.delete_patch(sel.file_index, sel.patch_index, is_pending);
             }
         }
     }
@@ -1169,30 +1169,30 @@ fn show_patch_details(w: *RegzWindow, arena: Allocator) void {
         defer tab_bar.deinit();
 
         // Fields tab button
-        const fields_selected = w.patch_detail_tab == .fields;
+        const fields_selected = wnd.patch_detail_tab == .fields;
         if (dvui.button(@src(), "Fields", .{}, .{
             .background = fields_selected,
             .border = if (fields_selected) dvui.Rect.all(1) else dvui.Rect.all(0),
             .padding = dvui.Rect.all(4),
         })) {
-            w.patch_detail_tab = .fields;
+            wnd.patch_detail_tab = .fields;
         }
 
         // Diff tab button
-        const diff_selected = w.patch_detail_tab == .diff;
+        const diff_selected = wnd.patch_detail_tab == .diff;
         if (dvui.button(@src(), "Diff", .{}, .{
             .background = diff_selected,
             .border = if (diff_selected) dvui.Rect.all(1) else dvui.Rect.all(0),
             .padding = dvui.Rect.all(4),
         })) {
-            w.patch_detail_tab = .diff;
+            wnd.patch_detail_tab = .diff;
         }
     }
 
     _ = dvui.spacer(@src(), .{ .min_size_content = .{ .h = 8 } });
 
     // Tab content
-    switch (w.patch_detail_tab) {
+    switch (wnd.patch_detail_tab) {
         .fields => {
             switch (patch) {
                 .override_arch => |p| show_override_arch_widget(p),
@@ -1204,14 +1204,14 @@ fn show_patch_details(w: *RegzWindow, arena: Allocator) void {
             }
         },
         .diff => {
-            w.show_patch_diff(arena, sel, patch);
+            wnd.show_patch_diff(arena, sel, patch);
         },
     }
 }
 
-fn show_patch_diff(w: *RegzWindow, arena: Allocator, sel: SelectedPatch, patch: regz.Patch) void {
+fn show_patch_diff(wnd: *RegzWindow, arena: Allocator, sel: SelectedPatch, patch: regz.Patch) void {
     // Check if cache is valid
-    if (w.cached_diff) |cached| {
+    if (wnd.cached_diff) |cached| {
         if (cached.file_index == sel.file_index and cached.patch_index == sel.patch_index) {
             // Display cached diff
             if (cached.error_message) |err| {
@@ -1221,16 +1221,16 @@ fn show_patch_diff(w: *RegzWindow, arena: Allocator, sel: SelectedPatch, patch: 
                 return;
             }
 
-            w.display_diff(cached.file_diffs, sel);
+            wnd.display_diff(cached.file_diffs, sel);
             return;
         }
     }
 
     // Compute new diff
-    w.compute_patch_diff(arena, sel, patch);
+    wnd.compute_patch_diff(arena, sel, patch);
 
     // Display the newly computed diff
-    if (w.cached_diff) |cached| {
+    if (wnd.cached_diff) |cached| {
         if (cached.error_message) |err| {
             _ = dvui.label(@src(), "Error computing diff: {s}", .{err}, .{
                 .color_text = dvui.Color.fromHex("EF2F27"),
@@ -1238,11 +1238,11 @@ fn show_patch_diff(w: *RegzWindow, arena: Allocator, sel: SelectedPatch, patch: 
             return;
         }
 
-        w.display_diff(cached.file_diffs, sel);
+        wnd.display_diff(cached.file_diffs, sel);
     }
 }
 
-fn display_diff(w: *RegzWindow, file_diffs: []const FileDiff, sel: SelectedPatch) void {
+fn display_diff(wnd: *RegzWindow, file_diffs: []const FileDiff, sel: SelectedPatch) void {
     if (file_diffs.len == 0) {
         _ = dvui.label(@src(), "No changes detected", .{}, .{});
         return;
@@ -1250,19 +1250,19 @@ fn display_diff(w: *RegzWindow, file_diffs: []const FileDiff, sel: SelectedPatch
 
     // Build unified diff format text
     var diff_text: std.ArrayList(u8) = .empty;
-    defer diff_text.deinit(w.gpa);
+    defer diff_text.deinit(wnd.gpa);
 
     for (file_diffs) |fd| {
         // Unified diff file headers
-        diff_text.appendSlice(w.gpa, "--- a/") catch continue;
-        diff_text.appendSlice(w.gpa, fd.filename) catch continue;
-        diff_text.append(w.gpa, '\n') catch continue;
-        diff_text.appendSlice(w.gpa, "+++ b/") catch continue;
-        diff_text.appendSlice(w.gpa, fd.filename) catch continue;
-        diff_text.append(w.gpa, '\n') catch continue;
+        diff_text.appendSlice(wnd.gpa, "--- a/") catch continue;
+        diff_text.appendSlice(wnd.gpa, fd.filename) catch continue;
+        diff_text.append(wnd.gpa, '\n') catch continue;
+        diff_text.appendSlice(wnd.gpa, "+++ b/") catch continue;
+        diff_text.appendSlice(wnd.gpa, fd.filename) catch continue;
+        diff_text.append(wnd.gpa, '\n') catch continue;
 
         // Hunk header (simplified - just use @@ -1 +1 @@)
-        diff_text.appendSlice(w.gpa, "@@ -1 +1 @@\n") catch continue;
+        diff_text.appendSlice(wnd.gpa, "@@ -1 +1 @@\n") catch continue;
 
         // Diff lines
         for (fd.lines) |line| {
@@ -1271,11 +1271,11 @@ fn display_diff(w: *RegzWindow, file_diffs: []const FileDiff, sel: SelectedPatch
                 .added => '+',
                 .removed => '-',
             };
-            diff_text.append(w.gpa, prefix) catch continue;
-            diff_text.appendSlice(w.gpa, line.text) catch continue;
-            diff_text.append(w.gpa, '\n') catch continue;
+            diff_text.append(wnd.gpa, prefix) catch continue;
+            diff_text.appendSlice(wnd.gpa, line.text) catch continue;
+            diff_text.append(wnd.gpa, '\n') catch continue;
         }
-        diff_text.append(w.gpa, '\n') catch continue;
+        diff_text.append(wnd.gpa, '\n') catch continue;
     }
 
     // Copy button at the top
@@ -1343,18 +1343,18 @@ fn display_diff(w: *RegzWindow, file_diffs: []const FileDiff, sel: SelectedPatch
     }
 }
 
-fn compute_patch_diff(w: *RegzWindow, temp_arena: Allocator, sel: SelectedPatch, patch: regz.Patch) void {
+fn compute_patch_diff(wnd: *RegzWindow, temp_arena: Allocator, sel: SelectedPatch, patch: regz.Patch) void {
     _ = patch; // We'll get the patch from the loaded patches instead
     // Use window's persistent arena for cached data
-    const arena = w.arena.allocator();
+    const arena = wnd.arena.allocator();
 
     // Create TWO fresh databases:
     // 1. before_db - with all patches BEFORE the selected one applied
     // 2. after_db - with all patches UP TO AND INCLUDING the selected one applied
 
     // Create before database
-    var before_db = regz.Database.create_from_path(w.gpa, w.format, w.path, w.device) catch |err| {
-        w.cached_diff = .{
+    var before_db = regz.Database.create_from_path(wnd.gpa, wnd.format, wnd.path, wnd.device) catch |err| {
+        wnd.cached_diff = .{
             .file_index = sel.file_index,
             .patch_index = sel.patch_index,
             .file_diffs = &.{},
@@ -1365,8 +1365,8 @@ fn compute_patch_diff(w: *RegzWindow, temp_arena: Allocator, sel: SelectedPatch,
     defer before_db.destroy();
 
     // Create after database
-    var after_db = regz.Database.create_from_path(w.gpa, w.format, w.path, w.device) catch |err| {
-        w.cached_diff = .{
+    var after_db = regz.Database.create_from_path(wnd.gpa, wnd.format, wnd.path, wnd.device) catch |err| {
+        wnd.cached_diff = .{
             .file_index = sel.file_index,
             .patch_index = sel.patch_index,
             .file_diffs = &.{},
@@ -1379,8 +1379,8 @@ fn compute_patch_diff(w: *RegzWindow, temp_arena: Allocator, sel: SelectedPatch,
     // Apply patches to both databases
     // For before_db: apply all patches from files [0..sel.file_index) and patches [0..sel.patch_index) from sel.file_index
     // For after_db: apply all patches from files [0..sel.file_index] and patches [0..sel.patch_index] from sel.file_index
-    const keys = w.loaded_patches.keys();
-    const values = w.loaded_patches.values();
+    const keys = wnd.loaded_patches.keys();
+    const values = wnd.loaded_patches.values();
 
     for (keys, values, 0..) |_, loaded, file_idx| {
         const orig_count = if (loaded.patches) |p| p.len else 0;
@@ -1447,11 +1447,11 @@ fn compute_patch_diff(w: *RegzWindow, temp_arena: Allocator, sel: SelectedPatch,
     }
 
     // Generate code for before state
-    var before_vfs: VirtualFilesystem = .init(w.gpa);
+    var before_vfs: VirtualFilesystem = .init(wnd.gpa);
     defer before_vfs.deinit();
 
     before_db.to_zig(before_vfs.dir(), .{}) catch |err| {
-        w.cached_diff = .{
+        wnd.cached_diff = .{
             .file_index = sel.file_index,
             .patch_index = sel.patch_index,
             .file_diffs = &.{},
@@ -1461,11 +1461,11 @@ fn compute_patch_diff(w: *RegzWindow, temp_arena: Allocator, sel: SelectedPatch,
     };
 
     // Generate code for after state
-    var after_vfs: VirtualFilesystem = .init(w.gpa);
+    var after_vfs: VirtualFilesystem = .init(wnd.gpa);
     defer after_vfs.deinit();
 
     after_db.to_zig(after_vfs.dir(), .{}) catch |err| {
-        w.cached_diff = .{
+        wnd.cached_diff = .{
             .file_index = sel.file_index,
             .patch_index = sel.patch_index,
             .file_diffs = &.{},
@@ -1479,7 +1479,7 @@ fn compute_patch_diff(w: *RegzWindow, temp_arena: Allocator, sel: SelectedPatch,
 
     // Recursively compare all files
     compare_vfs_files(arena, &before_vfs, &after_vfs, &file_diffs, .root, "") catch {
-        w.cached_diff = .{
+        wnd.cached_diff = .{
             .file_index = sel.file_index,
             .patch_index = sel.patch_index,
             .file_diffs = &.{},
@@ -1488,7 +1488,7 @@ fn compute_patch_diff(w: *RegzWindow, temp_arena: Allocator, sel: SelectedPatch,
         return;
     };
 
-    w.cached_diff = .{
+    wnd.cached_diff = .{
         .file_index = sel.file_index,
         .patch_index = sel.patch_index,
         .file_diffs = file_diffs.toOwnedSlice(arena) catch &.{},
@@ -1826,27 +1826,27 @@ fn labeled_field(label_text: []const u8, value: []const u8) void {
     _ = dvui.label(@src(), " {s}", .{value}, .{});
 }
 
-fn save_to_directory(w: *RegzWindow, folder_path: []const u8) !void {
+fn save_to_directory(wnd: *RegzWindow, folder_path: []const u8) !void {
     var output_dir = try std.fs.cwd().makeOpenPath(folder_path, .{});
     defer output_dir.close();
 
-    try w.save_vfs_recursive(output_dir, .root);
+    try wnd.save_vfs_recursive(output_dir, .root);
 }
 
-fn save_vfs_recursive(w: *RegzWindow, output_dir: std.fs.Dir, parent_id: VirtualFilesystem.ID) !void {
-    const children = try w.vfs.get_children(w.gpa, parent_id);
-    defer w.gpa.free(children);
+fn save_vfs_recursive(wnd: *RegzWindow, output_dir: std.fs.Dir, parent_id: VirtualFilesystem.ID) !void {
+    const children = try wnd.vfs.get_children(wnd.gpa, parent_id);
+    defer wnd.gpa.free(children);
 
     for (children) |entry| {
-        const name = w.vfs.get_name(entry.id);
+        const name = wnd.vfs.get_name(entry.id);
         switch (entry.kind) {
             .directory => {
                 var subdir = try output_dir.makeOpenPath(name, .{});
                 defer subdir.close();
-                try w.save_vfs_recursive(subdir, entry.id);
+                try wnd.save_vfs_recursive(subdir, entry.id);
             },
             .file => {
-                const content = w.vfs.get_content(entry.id);
+                const content = wnd.vfs.get_content(entry.id);
                 const file = try output_dir.createFile(name, .{});
                 defer file.close();
                 try file.writeAll(content);
@@ -1856,7 +1856,7 @@ fn save_vfs_recursive(w: *RegzWindow, output_dir: std.fs.Dir, parent_id: Virtual
 }
 
 fn show_file_tree(
-    w: *RegzWindow,
+    wnd: *RegzWindow,
     arena: Allocator,
     src: std.builtin.SourceLocation,
     tree_init_options: dvui.TreeWidget.InitOptions,
@@ -1869,12 +1869,12 @@ fn show_file_tree(
     var tree = dvui.TreeWidget.tree(src, tree_init_options, tree_options);
     defer tree.deinit();
 
-    const children = try w.vfs.get_children(arena, .root);
-    try w.show_file_tree_recursive(arena, .root, children, tree, unique_id, branch_options, expander_options);
+    const children = try wnd.vfs.get_children(arena, .root);
+    try wnd.show_file_tree_recursive(arena, .root, children, tree, unique_id, branch_options, expander_options);
 }
 
 fn show_file_tree_recursive(
-    w: *RegzWindow,
+    wnd: *RegzWindow,
     arena: Allocator,
     directory: VirtualFilesystem.ID,
     children: []const VirtualFilesystem.Entry,
@@ -1885,8 +1885,8 @@ fn show_file_tree_recursive(
 ) !void {
     var id_extra: usize = 0;
     for (children, 0..) |child_entry, i| {
-        if (directory == .root and w.selected_file == null and i == 0) {
-            w.selected_file = child_entry.id;
+        if (directory == .root and wnd.selected_file == null and i == 0) {
+            wnd.selected_file = child_entry.id;
         }
         id_extra += 1;
         var branch_opts_override = dvui.Options{
@@ -1894,7 +1894,7 @@ fn show_file_tree_recursive(
             .expand = .horizontal,
         };
         const expanded = true;
-        //oconst branch_id = tree.data().id.update(w.vfs.get_name(directory));
+        //oconst branch_id = tree.data().id.update(wnd.vfs.get_name(directory));
 
         const branch = tree.branch(@src(), .{ .expanded = expanded }, branch_opts_override.override(branch_options));
         defer branch.deinit();
@@ -1910,7 +1910,7 @@ fn show_file_tree_recursive(
                     },
                 );
 
-                const name = w.vfs.get_name(child_entry.id);
+                const name = wnd.vfs.get_name(child_entry.id);
                 _ = dvui.label(@src(), "{s}", .{name}, .{});
 
                 dvui.icon(
@@ -1947,19 +1947,19 @@ fn show_file_tree_recursive(
                     defer box.deinit();
                 }
 
-                const grandchildren = try w.vfs.get_children(arena, child_entry.id);
-                try w.show_file_tree_recursive(arena, child_entry.id, grandchildren, tree, unique_id, branch_options, expander_options);
+                const grandchildren = try wnd.vfs.get_children(arena, child_entry.id);
+                try wnd.show_file_tree_recursive(arena, child_entry.id, grandchildren, tree, unique_id, branch_options, expander_options);
             },
             .file => {
                 dvui.icon(@src(), "FileIcon", dvui.entypo.text_document, .{}, .{
                     .gravity_y = 0.5,
                 });
 
-                const name = w.vfs.get_name(child_entry.id);
+                const name = wnd.vfs.get_name(child_entry.id);
                 _ = dvui.label(@src(), "{s}", .{name}, .{});
 
                 if (branch.button.clicked()) {
-                    w.selected_file = child_entry.id;
+                    wnd.selected_file = child_entry.id;
                     std.log.info("Clicked: {s}", .{name});
                 }
             },
@@ -2027,14 +2027,14 @@ fn process_read_only_events(te: *dvui.TextEntryWidget) void {
 }
 
 /// Check if there are any editable patch files loaded
-fn has_editable_patch_files(w: *RegzWindow) bool {
+fn has_editable_patch_files(wnd: *RegzWindow) bool {
     // Ensure patches are loaded first
-    if (!w.patches_loaded) {
-        w.load_patch_files();
-        w.patches_loaded = true;
+    if (!wnd.patches_loaded) {
+        wnd.load_patch_files();
+        wnd.patches_loaded = true;
     }
 
-    for (w.loaded_patches.values()) |loaded| {
+    for (wnd.loaded_patches.values()) |loaded| {
         if (loaded.is_editable and loaded.parse_error == null) {
             return true;
         }
@@ -2043,18 +2043,18 @@ fn has_editable_patch_files(w: *RegzWindow) bool {
 }
 
 /// Show the create patch dialog UI
-fn show_create_patch_dialog_ui(w: *RegzWindow, arena: Allocator) void {
-    if (!w.show_create_patch_dialog) return;
+fn show_create_patch_dialog_ui(wnd: *RegzWindow, arena: Allocator) void {
+    if (!wnd.show_create_patch_dialog) return;
 
-    const pending = &(w.pending_patch_creation orelse return);
+    const pending = &(wnd.pending_patch_creation orelse return);
 
-    var float = dvui.floatingWindow(@src(), .{ .open_flag = &w.show_create_patch_dialog }, .{
+    var float = dvui.floatingWindow(@src(), .{ .open_flag = &wnd.show_create_patch_dialog }, .{
         .min_size_content = .{ .w = 350, .h = 250 },
         .tag = "create_patch_dialog",
     });
     defer float.deinit();
 
-    float.dragAreaSet(dvui.windowHeader("Create Patch", "", &w.show_create_patch_dialog));
+    float.dragAreaSet(dvui.windowHeader("Create Patch", "", &wnd.show_create_patch_dialog));
 
     var vbox = dvui.box(@src(), .{ .dir = .vertical }, .{
         .expand = .both,
@@ -2084,7 +2084,7 @@ fn show_create_patch_dialog_ui(w: *RegzWindow, arena: Allocator) void {
 
     // List of patch files
     var file_idx: usize = 0;
-    for (w.loaded_patches.keys(), w.loaded_patches.values()) |path, loaded| {
+    for (wnd.loaded_patches.keys(), wnd.loaded_patches.values()) |path, loaded| {
         defer file_idx += 1;
 
         const basename = std.fs.path.basename(path);
@@ -2118,8 +2118,8 @@ fn show_create_patch_dialog_ui(w: *RegzWindow, arena: Allocator) void {
 
         // Cancel button
         if (dvui.button(@src(), "Cancel", .{}, .{})) {
-            w.show_create_patch_dialog = false;
-            w.pending_patch_creation = null;
+            wnd.show_create_patch_dialog = false;
+            wnd.pending_patch_creation = null;
         }
 
         _ = dvui.spacer(@src(), .{ .min_size_content = .{ .w = 8 } });
@@ -2133,20 +2133,20 @@ fn show_create_patch_dialog_ui(w: *RegzWindow, arena: Allocator) void {
             .color_text = if (can_create) dvui.Color.fromHex("1C1B19") else dvui.Color.fromHex("918175"),
         }) and can_create) {
             // Create the patch
-            w.create_patch_from_group(arena, pending.*) catch |err| {
-                w.validation_error_message = std.fmt.allocPrint(w.arena.allocator(), "Failed to create patch: {s}", .{@errorName(err)}) catch "Failed to create patch";
-                w.show_validation_error = true;
+            wnd.create_patch_from_group(arena, pending.*) catch |err| {
+                wnd.validation_error_message = std.fmt.allocPrint(wnd.arena.allocator(), "Failed to create patch: {s}", .{@errorName(err)}) catch "Failed to create patch";
+                wnd.show_validation_error = true;
             };
-            w.show_create_patch_dialog = false;
-            w.pending_patch_creation = null;
+            wnd.show_create_patch_dialog = false;
+            wnd.pending_patch_creation = null;
         }
     }
 }
 
 /// Create a patch from an equivalence group
-fn create_patch_from_group(w: *RegzWindow, arena: Allocator, pending: PendingPatchCreation) !void {
+fn create_patch_from_group(wnd: *RegzWindow, arena: Allocator, pending: PendingPatchCreation) !void {
     // Get the cached analysis result
-    const cached = w.cached_analysis orelse return error.NoAnalysis;
+    const cached = wnd.cached_analysis orelse return error.NoAnalysis;
 
     // Find the peripheral result
     const periph_idx = blk: {
@@ -2171,7 +2171,7 @@ fn create_patch_from_group(w: *RegzWindow, arena: Allocator, pending: PendingPat
 
     // Create the add_enum_and_apply patch
     const patch = try create_add_enum_and_apply_patch(
-        w.arena.allocator(),
+        wnd.arena.allocator(),
         pending.peripheral_name,
         enum_name,
         group,
@@ -2179,30 +2179,30 @@ fn create_patch_from_group(w: *RegzWindow, arena: Allocator, pending: PendingPat
 
     // Add to the selected patch file
     const file_index = pending.selected_file_index orelse return error.NoFileSelected;
-    const keys = w.loaded_patches.keys();
+    const keys = wnd.loaded_patches.keys();
     if (file_index >= keys.len) return error.InvalidFileIndex;
 
     const path = keys[file_index];
-    const loaded = w.loaded_patches.getPtr(path) orelse return error.FileNotFound;
+    const loaded = wnd.loaded_patches.getPtr(path) orelse return error.FileNotFound;
 
-    try loaded.pending_patches.append(w.gpa, patch);
+    try loaded.pending_patches.append(wnd.gpa, patch);
     loaded.is_dirty = true;
-    w.has_unsaved_patches = true;
+    wnd.has_unsaved_patches = true;
 
     // Apply the patch to the database so analysis reflects the change
-    try apply_single_patch(w.db, arena, patch);
+    try apply_single_patch(wnd.db, arena, patch);
 
     // Refresh all views that depend on the database
-    w.on_database_changed();
+    wnd.on_database_changed();
 }
 
 /// Delete a patch from a patch file
-fn delete_patch(w: *RegzWindow, file_idx: usize, patch_idx: usize, is_pending: bool) void {
-    const keys = w.loaded_patches.keys();
+fn delete_patch(wnd: *RegzWindow, file_idx: usize, patch_idx: usize, is_pending: bool) void {
+    const keys = wnd.loaded_patches.keys();
     if (file_idx >= keys.len) return;
 
     const path = keys[file_idx];
-    const loaded = w.loaded_patches.getPtr(path) orelse return;
+    const loaded = wnd.loaded_patches.getPtr(path) orelse return;
 
     if (!loaded.is_editable) return;
 
@@ -2217,76 +2217,76 @@ fn delete_patch(w: *RegzWindow, file_idx: usize, patch_idx: usize, is_pending: b
     } else {
         // Mark original patch as deleted
         if (patch_idx < orig_count) {
-            loaded.deleted_patch_indices.append(w.gpa, patch_idx) catch return;
+            loaded.deleted_patch_indices.append(wnd.gpa, patch_idx) catch return;
         }
     }
 
     loaded.is_dirty = true;
-    w.has_unsaved_patches = true;
+    wnd.has_unsaved_patches = true;
 
     // Clear selected patch if it was the deleted one
-    if (w.selected_patch) |sel| {
+    if (wnd.selected_patch) |sel| {
         if (sel.file_index == file_idx and sel.patch_index == patch_idx) {
-            w.selected_patch = null;
+            wnd.selected_patch = null;
         }
     }
 
     // Rebuild database and reapply remaining patches
-    w.rebuild_database_with_patches();
+    wnd.rebuild_database_with_patches();
 }
 
 /// Rebuild the database from scratch and reapply all non-deleted patches
-fn rebuild_database_with_patches(w: *RegzWindow) void {
+fn rebuild_database_with_patches(wnd: *RegzWindow) void {
     // Destroy current database
-    w.db.destroy();
+    wnd.db.destroy();
 
     // Recreate database from source
-    w.db = regz.Database.create_from_path(w.gpa, w.format, w.path, w.device) catch |err| {
+    wnd.db = regz.Database.create_from_path(wnd.gpa, wnd.format, wnd.path, wnd.device) catch |err| {
         std.log.err("Failed to recreate database: {}", .{err});
         return;
     };
 
-    const alloc = w.arena.allocator();
+    const alloc = wnd.arena.allocator();
 
     // Reapply all non-deleted patches from all files
-    for (w.loaded_patches.values()) |loaded| {
+    for (wnd.loaded_patches.values()) |loaded| {
         if (loaded.patches) |patches| {
             for (patches, 0..) |patch, idx| {
                 if (!loaded.is_patch_deleted(idx)) {
-                    apply_single_patch(w.db, alloc, patch) catch continue;
+                    apply_single_patch(wnd.db, alloc, patch) catch continue;
                 }
             }
         }
         // Reapply pending patches
         for (loaded.pending_patches.items) |patch| {
-            apply_single_patch(w.db, alloc, patch) catch continue;
+            apply_single_patch(wnd.db, alloc, patch) catch continue;
         }
     }
 
     // Refresh all views that depend on the database
-    w.on_database_changed();
+    wnd.on_database_changed();
 }
 
 /// Called when the database changes (patches added/deleted)
 /// Regenerates VFS and invalidates all cached views
-fn on_database_changed(w: *RegzWindow) void {
+fn on_database_changed(wnd: *RegzWindow) void {
     // Regenerate the virtual file system with new code
     // Deinit old VFS and create new one
-    w.vfs.deinit();
-    w.vfs = .init(w.gpa);
-    w.db.to_zig(w.vfs.dir(), .{}) catch |err| {
+    wnd.vfs.deinit();
+    wnd.vfs = .init(wnd.gpa);
+    wnd.db.to_zig(wnd.vfs.dir(), .{}) catch |err| {
         std.log.err("Failed to regenerate code: {}", .{err});
     };
 
     // Reset displayed file to force refresh in code view
-    w.displayed_file = null;
-    w.selected_file = null;
+    wnd.displayed_file = null;
+    wnd.selected_file = null;
 
     // Invalidate cached analysis
-    w.cached_analysis = null;
+    wnd.cached_analysis = null;
 
     // Invalidate cached diff
-    w.cached_diff = null;
+    wnd.cached_diff = null;
 }
 
 /// Create an add_enum_and_apply patch from an equivalence group
@@ -2339,16 +2339,16 @@ fn create_add_enum_and_apply_patch(
 }
 
 /// Show the unsaved warning dialog
-fn show_unsaved_warning_dialog(w: *RegzWindow) void {
-    if (!w.show_unsaved_warning) return;
+fn show_unsaved_warning_dialog(wnd: *RegzWindow) void {
+    if (!wnd.show_unsaved_warning) return;
 
-    var float = dvui.floatingWindow(@src(), .{ .open_flag = &w.show_unsaved_warning }, .{
+    var float = dvui.floatingWindow(@src(), .{ .open_flag = &wnd.show_unsaved_warning }, .{
         .min_size_content = .{ .w = 300, .h = 120 },
         .tag = "unsaved_warning_dialog",
     });
     defer float.deinit();
 
-    float.dragAreaSet(dvui.windowHeader("Unsaved Changes", "", &w.show_unsaved_warning));
+    float.dragAreaSet(dvui.windowHeader("Unsaved Changes", "", &wnd.show_unsaved_warning));
 
     var vbox = dvui.box(@src(), .{ .dir = .vertical }, .{
         .expand = .both,
@@ -2376,17 +2376,17 @@ fn show_unsaved_warning_dialog(w: *RegzWindow) void {
             .color_text = dvui.Color.fromHex("1C1B19"),
         })) {
             // Try to save
-            var temp_arena: std.heap.ArenaAllocator = .init(w.gpa);
+            var temp_arena: std.heap.ArenaAllocator = .init(wnd.gpa);
             defer temp_arena.deinit();
 
-            w.save_all_patches(temp_arena.allocator()) catch |err| {
-                w.validation_error_message = std.fmt.allocPrint(w.arena.allocator(), "Failed to save patches: {s}", .{@errorName(err)}) catch "Save failed";
-                w.show_validation_error = true;
-                w.show_unsaved_warning = false;
+            wnd.save_all_patches(temp_arena.allocator()) catch |err| {
+                wnd.validation_error_message = std.fmt.allocPrint(wnd.arena.allocator(), "Failed to save patches: {s}", .{@errorName(err)}) catch "Save failed";
+                wnd.show_validation_error = true;
+                wnd.show_unsaved_warning = false;
                 return;
             };
-            w.show_unsaved_warning = false;
-            w.show_window = false;
+            wnd.show_unsaved_warning = false;
+            wnd.show_window = false;
         }
 
         _ = dvui.spacer(@src(), .{ .min_size_content = .{ .w = 8 } });
@@ -2396,30 +2396,30 @@ fn show_unsaved_warning_dialog(w: *RegzWindow) void {
             .color_fill = dvui.Color.fromHex("EF2F27"),
             .color_text = dvui.Color.fromHex("FCE8C3"),
         })) {
-            w.show_unsaved_warning = false;
-            w.show_window = false;
+            wnd.show_unsaved_warning = false;
+            wnd.show_window = false;
         }
 
         _ = dvui.spacer(@src(), .{ .min_size_content = .{ .w = 8 } });
 
         // Cancel button
         if (dvui.button(@src(), "Cancel", .{}, .{})) {
-            w.show_unsaved_warning = false;
+            wnd.show_unsaved_warning = false;
         }
     }
 }
 
 /// Show the validation error dialog
-fn show_validation_error_dialog(w: *RegzWindow) void {
-    if (!w.show_validation_error) return;
+fn show_validation_error_dialog(wnd: *RegzWindow) void {
+    if (!wnd.show_validation_error) return;
 
-    var float = dvui.floatingWindow(@src(), .{ .open_flag = &w.show_validation_error }, .{
+    var float = dvui.floatingWindow(@src(), .{ .open_flag = &wnd.show_validation_error }, .{
         .min_size_content = .{ .w = 350, .h = 100 },
         .tag = "validation_error_dialog",
     });
     defer float.deinit();
 
-    float.dragAreaSet(dvui.windowHeader("Error", "", &w.show_validation_error));
+    float.dragAreaSet(dvui.windowHeader("Error", "", &wnd.show_validation_error));
 
     var vbox = dvui.box(@src(), .{ .dir = .vertical }, .{
         .expand = .both,
@@ -2427,7 +2427,7 @@ fn show_validation_error_dialog(w: *RegzWindow) void {
     });
     defer vbox.deinit();
 
-    if (w.validation_error_message) |msg| {
+    if (wnd.validation_error_message) |msg| {
         _ = dvui.label(@src(), "{s}", .{msg}, .{
             .color_text = dvui.Color.fromHex("EF2F27"),
         });
@@ -2445,38 +2445,38 @@ fn show_validation_error_dialog(w: *RegzWindow) void {
         _ = dvui.spacer(@src(), .{ .expand = .horizontal });
 
         if (dvui.button(@src(), "OK", .{}, .{})) {
-            w.show_validation_error = false;
-            w.validation_error_message = null;
+            wnd.show_validation_error = false;
+            wnd.validation_error_message = null;
         }
     }
 }
 
 /// Save all dirty patch files
-fn save_all_patches(w: *RegzWindow, arena: Allocator) !void {
+fn save_all_patches(wnd: *RegzWindow, arena: Allocator) !void {
     // First, validate all patches against targets
-    for (w.loaded_patches.keys(), w.loaded_patches.values()) |path, loaded| {
+    for (wnd.loaded_patches.keys(), wnd.loaded_patches.values()) |path, loaded| {
         if (!loaded.is_dirty) continue;
 
         // Get targets using this patch file
-        const targets = w.get_targets_using_patch_file(arena, path);
+        const targets = wnd.get_targets_using_patch_file(arena, path);
 
         // Validate against each target
         for (targets) |target| {
-            w.validate_patch_file(arena, path, target) catch |err| {
-                w.validation_error_message = std.fmt.allocPrint(w.arena.allocator(), "Validation failed for target '{s}': {s}", .{ target.name, @errorName(err) }) catch "Validation failed";
-                w.show_validation_error = true;
+            wnd.validate_patch_file(arena, path, target) catch |err| {
+                wnd.validation_error_message = std.fmt.allocPrint(wnd.arena.allocator(), "Validation failed for target '{s}': {s}", .{ target.name, @errorName(err) }) catch "Validation failed";
+                wnd.show_validation_error = true;
                 return err;
             };
         }
     }
 
     // All validations passed, write files and reload
-    const alloc = w.arena.allocator();
-    for (w.loaded_patches.keys()) |path| {
-        const loaded = w.loaded_patches.getPtr(path) orelse continue;
+    const alloc = wnd.arena.allocator();
+    for (wnd.loaded_patches.keys()) |path| {
+        const loaded = wnd.loaded_patches.getPtr(path) orelse continue;
         if (!loaded.is_dirty) continue;
 
-        try w.write_patch_file(path, loaded.*);
+        try wnd.write_patch_file(path, loaded.*);
 
         // Reload patches from the saved file to update loaded.patches
         const file = try std.fs.cwd().openFile(path, .{});
@@ -2491,7 +2491,7 @@ fn save_all_patches(w: *RegzWindow, arena: Allocator) !void {
         loaded.deleted_patch_indices.clearRetainingCapacity();
     }
 
-    w.has_unsaved_patches = false;
+    wnd.has_unsaved_patches = false;
 }
 
 const TargetInfo = struct {
@@ -2501,8 +2501,8 @@ const TargetInfo = struct {
 };
 
 /// Get all targets that use a specific patch file
-fn get_targets_using_patch_file(w: *RegzWindow, arena: Allocator, patch_path: []const u8) []const TargetInfo {
-    const rsus = w.register_schema_usages orelse return &.{};
+fn get_targets_using_patch_file(wnd: *RegzWindow, arena: Allocator, patch_path: []const u8) []const TargetInfo {
+    const rsus = wnd.register_schema_usages orelse return &.{};
 
     var targets: std.ArrayList(TargetInfo) = .empty;
 
@@ -2526,8 +2526,8 @@ fn get_targets_using_patch_file(w: *RegzWindow, arena: Allocator, patch_path: []
 }
 
 /// Validate a patch file against a target by attempting to apply all patches
-fn validate_patch_file(w: *RegzWindow, arena: Allocator, patch_path: []const u8, target: TargetInfo) !void {
-    const rsus = w.register_schema_usages orelse return error.NoSchemaUsages;
+fn validate_patch_file(wnd: *RegzWindow, arena: Allocator, patch_path: []const u8, target: TargetInfo) !void {
+    const rsus = wnd.register_schema_usages orelse return error.NoSchemaUsages;
     if (target.rsu_idx >= rsus.len) return error.InvalidTarget;
 
     const rsu = rsus[target.rsu_idx];
@@ -2550,11 +2550,11 @@ fn validate_patch_file(w: *RegzWindow, arena: Allocator, patch_path: []const u8,
 
     const chip_name = if (target.chip_idx < rsu.chips.len) rsu.chips[target.chip_idx].name else null;
 
-    const db = try regz.Database.create_from_path(w.gpa, format, schema_path, chip_name);
+    const db = try regz.Database.create_from_path(wnd.gpa, format, schema_path, chip_name);
     defer db.destroy();
 
     // Get the loaded patch data
-    const loaded = w.loaded_patches.get(patch_path) orelse return error.PatchFileNotFound;
+    const loaded = wnd.loaded_patches.get(patch_path) orelse return error.PatchFileNotFound;
 
     // Apply original patches (excluding deleted ones)
     if (loaded.patches) |patches| {
@@ -2583,7 +2583,7 @@ fn apply_single_patch(db: *regz.Database, arena: Allocator, patch: regz.Patch) !
 }
 
 /// Write a patch file combining original (non-deleted) and pending patches
-fn write_patch_file(w: *RegzWindow, path: []const u8, loaded: LoadedPatchFile) !void {
+fn write_patch_file(wnd: *RegzWindow, path: []const u8, loaded: LoadedPatchFile) !void {
     // Count non-deleted original patches
     var non_deleted_count: usize = 0;
     if (loaded.patches) |patches| {
@@ -2596,8 +2596,8 @@ fn write_patch_file(w: *RegzWindow, path: []const u8, loaded: LoadedPatchFile) !
 
     const total_len = non_deleted_count + loaded.pending_patches.items.len;
 
-    var all_patches = try w.gpa.alloc(regz.Patch, total_len);
-    defer w.gpa.free(all_patches);
+    var all_patches = try wnd.gpa.alloc(regz.Patch, total_len);
+    defer wnd.gpa.free(all_patches);
 
     var idx: usize = 0;
     if (loaded.patches) |patches| {
@@ -2614,7 +2614,7 @@ fn write_patch_file(w: *RegzWindow, path: []const u8, loaded: LoadedPatchFile) !
     }
 
     // Serialize to ZON
-    var zon_buf: std.Io.Writer.Allocating = .init(w.arena.allocator());
+    var zon_buf: std.Io.Writer.Allocating = .init(wnd.arena.allocator());
     try std.zon.stringify.serialize(all_patches, .{
         .emit_default_optional_fields = false,
     }, &zon_buf.writer);
