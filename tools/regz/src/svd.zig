@@ -2,6 +2,7 @@ const std = @import("std");
 const ArenaAllocator = std.heap.ArenaAllocator;
 const Allocator = std.mem.Allocator;
 
+const anyverz = @import("anyverz");
 const xml = @import("xml");
 const Arch = @import("arch.zig").Arch;
 
@@ -33,7 +34,7 @@ const Context = struct {
     ) !RegisterProperties {
         const register_props = try RegisterProperties.parse(node);
         var base_register_props = ctx.register_props.get(from) orelse unreachable;
-        inline for (@typeInfo(RegisterProperties).@"struct".field_names) |field_name| {
+        inline for (comptime anyverz.fieldNames(RegisterProperties)) |field_name| {
             if (@field(register_props, field_name)) |value|
                 @field(base_register_props, field_name) = value;
         }

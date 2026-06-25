@@ -3,6 +3,8 @@ const std = @import("std");
 const assert = std.debug.assert;
 const Allocator = std.mem.Allocator;
 
+const anyverz = @import("anyverz");
+
 const Database = @import("../Database.zig");
 const Arch = @import("../arch.zig").Arch;
 const DeviceID = Database.DeviceID;
@@ -53,7 +55,7 @@ const system_interrupts = struct {
 pub fn load_system_interrupts(db: *Database, device_id: DeviceID, arch: Arch) !void {
     assert(arch.is_arm());
 
-    inline for (@typeInfo(Arch).@"enum".field_names) |field_name| {
+    inline for (comptime anyverz.fieldNames(Arch)) |field_name| {
         if (arch == @field(Arch, field_name)) {
             if (@hasDecl(system_interrupts, field_name)) {
                 for (@field(system_interrupts, field_name)) |interrupt| {

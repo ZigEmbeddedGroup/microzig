@@ -9,6 +9,11 @@ pub fn build(b: *Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    const anyverz_dep = b.dependency("anyverz", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     const libxml2_dep = b.dependency("libxml2", .{
         .target = target,
         .optimize = .ReleaseSafe,
@@ -18,8 +23,6 @@ pub fn build(b: *Build) !void {
         .target = target,
         .optimize = optimize,
     });
-
-    const zqlite = zqlite_dep.module("zqlite");
 
     const xml_module = b.createModule(.{
         .root_source_file = b.path("src/xml.zig"),
@@ -35,14 +38,9 @@ pub fn build(b: *Build) !void {
         .target = target,
         .optimize = optimize,
         .imports = &.{
-            .{
-                .name = "zqlite",
-                .module = zqlite,
-            },
-            .{
-                .name = "xml",
-                .module = xml_module,
-            },
+            .{ .name = "zqlite", .module = zqlite_dep.module("zqlite") },
+            .{ .name = "xml", .module = xml_module },
+            .{ .name = "anyverz", .module = anyverz_dep.module("anyverz") },
         },
     });
     regz_module.linkLibrary(libxml2_dep.artifact("xml"));
@@ -54,14 +52,9 @@ pub fn build(b: *Build) !void {
             .target = target,
             .optimize = optimize,
             .imports = &.{
-                .{
-                    .name = "regz",
-                    .module = regz_module,
-                },
-                .{
-                    .name = "xml",
-                    .module = xml_module,
-                },
+                .{ .name = "regz", .module = regz_module },
+                .{ .name = "xml", .module = xml_module },
+                .{ .name = "anyverz", .module = anyverz_dep.module("anyverz") },
             },
         }),
         .use_llvm = true,

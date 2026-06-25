@@ -6,6 +6,8 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
 
+const anyverz = @import("anyverz");
+
 const zqlite = @import("zqlite");
 const c = zqlite.c;
 
@@ -380,7 +382,7 @@ fn gen_field_list(comptime T: type, opts: struct { prefix: ?[]const u8 = null })
     var buf: [4096]u8 = undefined;
     var fbs: std.Io.Writer = .fixed(&buf);
 
-    inline for (@typeInfo(T).@"struct".field_names, 0..) |field_name, i| {
+    inline for (comptime anyverz.fieldNames(T), 0..) |field_name, i| {
         if (i != 0)
             fbs.writeAll(", ") catch unreachable;
 
@@ -419,8 +421,7 @@ fn gen_sql_table_impl(comptime name: []const u8, comptime T: type) ![:0]const u8
     // check that primary key and foreign keys exist
     var primary_key_found = T.sql_opts.primary_key == null;
 
-    const info = @typeInfo(T);
-    inline for (info.@"struct".field_names) |field_name| {
+    inline for (comptime anyverz.fieldNames(T)) |field_name| {
         if (T.sql_opts.primary_key) |primary_key| {
             if (std.mem.eql(u8, primary_key.name, field_name))
                 primary_key_found = true;
@@ -431,7 +432,7 @@ fn gen_sql_table_impl(comptime name: []const u8, comptime T: type) ![:0]const u8
 
     try fbs.print("CREATE TABLE {s} (\n", .{name});
     var first = true;
-    inline for (info.@"struct".field_names, info.@"struct".field_types) |field_name, field_type| {
+    inline for (comptime anyverz.fieldNames(T), anyverz.fieldTypes(T)) |field_name, field_type| {
         if (first) {
             first = false;
         } else {
@@ -471,7 +472,7 @@ fn gen_sql_table_impl(comptime name: []const u8, comptime T: type) ![:0]const u8
     for (T.sql_opts.foreign_keys) |foreign_key| {
         try fbs.writeAll(",\n");
 
-        const field_type = for (@typeInfo(T).@"struct".field_names, @typeInfo(T).@"struct".field_types) |field_name, field_type| {
+        const field_type = for (comptime anyverz.fieldNames(T), anyverz.fieldTypes(T)) |field_name, field_type| {
             if (std.mem.eql(u8, field_name, foreign_key.name))
                 break field_type;
         } else unreachable;
@@ -772,8 +773,11 @@ pub fn get_device_id_by_name(db: *Database, name: []const u8) !?DeviceID {
 
 fn scan_row(comptime T: type, allocator: Allocator, row: zqlite.Row) !T {
     var entry: T = undefined;
-    const info = @typeInfo(T).@"struct";
-    inline for (info.field_names, info.field_types, 0..) |field_name, field_type, i| {
+    inline for (
+        comptime anyverz.fieldNames(T),
+        anyverz.fieldTypes(T),
+        0..,
+    ) |field_name, field_type, i| {
         if (@typeInfo(field_type) == .@"enum") {
             if (@hasDecl(field_type, "to_string"))
                 @field(entry, field_name) = std.meta.stringToEnum(field_type, row.text(i)) orelse return error.Unknown
