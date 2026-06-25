@@ -108,7 +108,7 @@ fn operate(userdata: ?*anyopaque, op: std.Io.Operation) std.Io.Cancelable!std.Io
         .file_read_streaming => unreachable,
         .device_io_control => unreachable,
         .net_receive => unreachable,
-        .net_read => unreachable,
+        // .net_read => unreachable,
     };
 }
 
@@ -261,132 +261,19 @@ fn get_child(fs: *VirtualFilesystem, parent: ID, component: []const u8) ?ID {
     } else null;
 }
 
+const vtable = blk: {
+    var ret = std.Io.failing.vtable.*;
+    ret.operate = operate;
+    ret.dirClose = Dir.close;
+    ret.dirCreateDirPathOpen = Dir.create_dir_path_open;
+    ret.dirCreateFile = Dir.create_file;
+    ret.fileClose = File.close;
+    break :blk ret;
+};
+
 pub fn io(vfs: *VirtualFilesystem) std.Io {
     return .{
         .userdata = vfs,
-        .vtable = &.{
-            .dirCreateFile = Dir.create_file,
-            .operate = operate,
-
-            // Default/failing/unimplemented handlers
-            .crashHandler = std.Io.noCrashHandler,
-            .async = std.Io.noAsync,
-            .concurrent = std.Io.failingConcurrent,
-            .await = std.Io.unreachableAwait,
-            .cancel = std.Io.unreachableCancel,
-            .groupAsync = std.Io.noGroupAsync,
-            .groupConcurrent = std.Io.failingGroupConcurrent,
-            .groupAwait = std.Io.unreachableGroupAwait,
-            .groupCancel = std.Io.unreachableGroupCancel,
-
-            .recancel = std.Io.unreachableRecancel,
-            .swapCancelProtection = std.Io.unreachableSwapCancelProtection,
-            .checkCancel = std.Io.unreachableCheckCancel,
-
-            .futexWait = std.Io.noFutexWait,
-            .futexWaitUncancelable = std.Io.noFutexWaitUncancelable,
-            .futexWake = std.Io.noFutexWake,
-
-            .batchAwaitAsync = std.Io.unreachableBatchAwaitAsync,
-            .batchAwaitConcurrent = std.Io.unreachableBatchAwaitConcurrent,
-            .batchCancel = std.Io.unreachableBatchCancel,
-
-            .dirCreateDir = std.Io.failingDirCreateDir,
-            .dirCreateDirPath = std.Io.failingDirCreateDirPath,
-            .dirCreateDirPathOpen = Dir.create_dir_path_open,
-            .dirOpenDir = std.Io.failingDirOpenDir,
-            .dirStat = std.Io.failingDirStat,
-            .dirStatFile = std.Io.failingDirStatFile,
-            .dirAccess = std.Io.failingDirAccess,
-            .dirCreateFileAtomic = std.Io.failingDirCreateFileAtomic,
-            .dirOpenFile = std.Io.failingDirOpenFile,
-            .dirClose = Dir.close,
-            .dirRead = std.Io.noDirRead,
-            .dirRealPath = std.Io.failingDirRealPath,
-            .dirRealPathFile = std.Io.failingDirRealPathFile,
-            .dirDeleteFile = std.Io.failingDirDeleteFile,
-            .dirDeleteDir = std.Io.failingDirDeleteDir,
-            .dirRename = std.Io.failingDirRename,
-            .dirRenamePreserve = std.Io.failingDirRenamePreserve,
-            .dirSymLink = std.Io.failingDirSymLink,
-            .dirReadLink = std.Io.failingDirReadLink,
-            .dirSetOwner = std.Io.failingDirSetOwner,
-            .dirSetFileOwner = std.Io.failingDirSetFileOwner,
-            .dirSetPermissions = std.Io.failingDirSetPermissions,
-            .dirSetFilePermissions = std.Io.failingDirSetFilePermissions,
-            .dirSetTimestamps = std.Io.noDirSetTimestamps,
-            .dirHardLink = std.Io.failingDirHardLink,
-
-            .fileStat = std.Io.failingFileStat,
-            .fileLength = std.Io.failingFileLength,
-            .fileClose = File.close,
-            .fileWritePositional = std.Io.failingFileWritePositional,
-            .fileWriteFileStreaming = std.Io.noFileWriteFileStreaming,
-            .fileWriteFilePositional = std.Io.noFileWriteFilePositional,
-            .fileReadPositional = std.Io.failingFileReadPositional,
-            .fileSeekBy = std.Io.failingFileSeekBy,
-            .fileSeekTo = std.Io.failingFileSeekTo,
-            .fileSync = std.Io.failingFileSync,
-            .fileIsTty = std.Io.unreachableFileIsTty,
-            .fileEnableAnsiEscapeCodes = std.Io.unreachableFileEnableAnsiEscapeCodes,
-            .fileSupportsAnsiEscapeCodes = std.Io.unreachableFileSupportsAnsiEscapeCodes,
-            .fileSetLength = std.Io.failingFileSetLength,
-            .fileSetOwner = std.Io.failingFileSetOwner,
-            .fileSetPermissions = std.Io.failingFileSetPermissions,
-            .fileSetTimestamps = std.Io.noFileSetTimestamps,
-            .fileLock = std.Io.failingFileLock,
-            .fileTryLock = std.Io.failingFileTryLock,
-            .fileUnlock = std.Io.unreachableFileUnlock,
-            .fileDowngradeLock = std.Io.failingFileDowngradeLock,
-            .fileRealPath = std.Io.failingFileRealPath,
-            .fileHardLink = std.Io.failingFileHardLink,
-
-            .fileMemoryMapCreate = std.Io.failingFileMemoryMapCreate,
-            .fileMemoryMapDestroy = std.Io.unreachableFileMemoryMapDestroy,
-            .fileMemoryMapSetLength = std.Io.unreachableFileMemoryMapSetLength,
-            .fileMemoryMapRead = std.Io.unreachableFileMemoryMapRead,
-            .fileMemoryMapWrite = std.Io.unreachableFileMemoryMapWrite,
-
-            .processExecutableOpen = std.Io.failingProcessExecutableOpen,
-            .processExecutablePath = std.Io.failingProcessExecutablePath,
-            .lockStderr = std.Io.unreachableLockStderr,
-            .tryLockStderr = std.Io.noTryLockStderr,
-            .unlockStderr = std.Io.unreachableUnlockStderr,
-            .processCurrentPath = std.Io.failingProcessCurrentPath,
-            .processSetCurrentDir = std.Io.failingProcessSetCurrentDir,
-            .processSetCurrentPath = std.Io.failingProcessSetCurrentPath,
-            .processReplace = std.Io.failingProcessReplace,
-            .processReplacePath = std.Io.failingProcessReplacePath,
-            .processSpawn = std.Io.failingProcessSpawn,
-            .processSpawnPath = std.Io.failingProcessSpawnPath,
-            .childWait = std.Io.unreachableChildWait,
-            .childKill = std.Io.unreachableChildKill,
-
-            .progressParentFile = std.Io.failingProgressParentFile,
-
-            .now = std.Io.noNow,
-            .clockResolution = std.Io.failingClockResolution,
-            .sleep = std.Io.noSleep,
-
-            .random = std.Io.noRandom,
-            .randomSecure = std.Io.failingRandomSecure,
-
-            .netListenIp = std.Io.failingNetListenIp,
-            .netAccept = std.Io.failingNetAccept,
-            .netBindIp = std.Io.failingNetBindIp,
-            .netConnectIp = std.Io.failingNetConnectIp,
-            .netListenUnix = std.Io.failingNetListenUnix,
-            .netConnectUnix = std.Io.failingNetConnectUnix,
-            .netSocketCreatePair = std.Io.failingNetSocketCreatePair,
-            .netSend = std.Io.failingNetSend,
-
-            .netWrite = std.Io.failingNetWrite,
-            .netWriteFile = std.Io.failingNetWriteFile,
-            .netClose = std.Io.unreachableNetClose,
-            .netShutdown = std.Io.failingNetShutdown,
-            .netInterfaceNameResolve = std.Io.failingNetInterfaceNameResolve,
-            .netInterfaceName = std.Io.unreachableNetInterfaceName,
-            .netLookup = std.Io.failingNetLookup,
-        },
+        .vtable = &vtable,
     };
 }
