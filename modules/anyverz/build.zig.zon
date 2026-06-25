@@ -1,0 +1,10 @@
+.{
+    .name = .anyverz,
+    .version = "0.0.1",
+    .minimum_zig_version = "0.16.0",
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+    },
+    .fingerprint = 0xdb00016624a5ee02,
+}
