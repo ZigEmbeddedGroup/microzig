@@ -207,3 +207,80 @@ pub const AddressingMode = enum {
     /// Indirect Autoincrement @PC+ is used.
     immediate,
 };
+
+/// Bit manipulations of the SR should be done by: MOV, BIS, BIC
+pub const Status = packed struct(u16) {
+    carry: bool,
+    zero: bool,
+    negative: bool,
+    /// General Interrupt Enable
+    gie: bool,
+    /// When this bit is set, it turns off the CPU.
+    cpuoff: bool,
+    /// When this bit is set, it turnes off the LFXT1 crystal oscillator when
+    /// LFXT1CLK is not used for MCLK or SMCLK
+    oscoff: bool,
+    /// System clock generator 0. Depends on device family.
+    scg0: bool,
+    /// System clock generator 1. Depends on device family.
+    scg1: bool,
+    overflow: bool,
+};
+
+// Interrupts
+//
+// - Vectored interrupts with no polling necessary
+// - interrupt vectors are located downward from address 0xFFFE.
+//
+// During an interrupt, the PC and status register are pushed onto the stack. It
+// stores the high bits of the PC appended to the SR value on the stack.
+//
+// When the RETI instruction is executed, the full 20-bit PC is restored making
+// it return from the interrupt to any address in the memory range possible.
+
+// The BR and CALL instructions reset the upper four PC bits to 0. only
+// addresses in the lower 64KB address range can be reached with the BR or CALL
+// instruction.
+//
+// Addresses beyond 64KB can only be reached using BRA or CALLA instructions.
+//
+// The PC is automatically stored on the stack with CALL or CALLA instructions
+// and during an interrupt service routine. CALLA uses two words on the stack
+// to store the 20-bit address, but CALL only needs one.
+//
+// The RETA instruction restores bits 19:0 of the PC and adds 4 to the stack
+// pointer, the RET instruction restores bits 15:0 and adds 2.
+
+// The 20-bit stack pointer is used by the CPU to store the return addresses of
+// subroutine calls and interrupts.
+//
+// It uses a predecrement, postincrement scheme. The SP is initialized into RAM
+// by the user and is always aligned to even addresses.
+
+// Constant generator registers R2 and R3. The constants are selected using the
+// addressing modes. They have things like 0, +4, +8. This way there's no code
+// memory access required to retrieve the constant
+
+// The 12 CPU registers contain 8, 16, or 20-bit values. Any byte write to a CPU
+// register clears the upper bits. Same goes for a workd write.
+//
+// The only exception is the SXT instruction, which extends the sign through the
+// entire register.
+
+pub const DoubleOperandInstruction = packed struct(u16) {
+    rdst: u4,
+    as: u2,
+    bw: u1,
+    ad: u1,
+    rsrc: u4,
+    opcode: u4,
+};
+
+pub const SingleOperandInstruction = packed struct(u16) {
+    rdst: u4,
+    ad: u2,
+    bw: u1,
+    opcode: u9,
+};
+
+pub const JumpInstruction = packed struct(u16) { offset: i10, s: u1, condition: u3, opcode: u3 };
