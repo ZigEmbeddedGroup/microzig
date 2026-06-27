@@ -60,7 +60,7 @@ pub fn fieldAttrs(T: type) [fieldsLen(T)]StructFieldAttributes {
             return attrs;
         },
         .@"0.17" => switch (@typeInfo(T)) {
-            inline .@"struct", .@"union" => |info| return info.field_attrs,
+            inline .@"struct", .@"union" => |info| return info.field_attrs[0..fieldsLen(T)].*,
             else => @compileError("Expected struct or union type, found '" ++ @typeName(T) ++ "'"),
         },
     };
