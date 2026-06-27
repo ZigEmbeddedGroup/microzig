@@ -1061,7 +1061,7 @@ fn write_nested_struct_field(db: *Database, arena: Allocator, nsf: *const Nested
     if (try db.get_struct_decl_by_struct_id(arena, nsf.struct_id)) |struct_decl| {
         try writer.print("{f},\n", .{std.zig.fmtId(struct_decl.name)});
     } else {
-        try write_struct(db, arena, null, nsf.struct_id, writer);
+        try write_struct(db, arena, nsf.size_bytes, nsf.struct_id, writer);
         try writer.writeAll(",\n");
     }
 }
