@@ -16,6 +16,7 @@ pub const backup = @import("./STM32F103/backup.zig");
 pub const rtc = @import("./STM32F103/rtc.zig");
 pub const dma = @import("./STM32F103/dma.zig");
 pub const time = @import("./STM32F103/time.zig");
+pub const enums = @import("./common/enums.zig");
 const util = @import("./common/util.zig");
 
 //temporary solution
