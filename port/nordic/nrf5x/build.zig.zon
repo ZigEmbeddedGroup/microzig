@@ -4,6 +4,10 @@
     .version = "0.0.0",
     .dependencies = .{
         .@"microzig/build-internals" = .{ .path = "../../../build-internals" },
+        .@"nrf5-sdk" = .{
+            .url = "https://files.nordicsemi.com/artifactory/nRF5-SDK/external/nRF5_SDK_v17.x.x/nRF5_SDK_17.1.0_ddde560.zip",
+            .hash = "N-V-__8AADqJIyI1rzA6qzQ55YKnO79GgguMYmJWscpjDvAk",
+        },
         .nrfx = .{
             .url = "https://github.com/NordicSemiconductor/nrfx/archive/refs/tags/v3.11.0.tar.gz",
             .hash = "N-V-__8AABC-kgxbmC3Prd8fgisfbLs1giU34ofX1vz9bwaA",
