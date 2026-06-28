@@ -6,14 +6,14 @@
 //! default AHB prescaler = /1 (= values 0..7):
 //!
 //! ```
-//! RCC.CFGR.modify(.{ .HPRE = 0 });
+//! RCC.CFGR.modify(.{ .HPRE = .Div1 });
 //! ```
 //!
 //! so also HCLK = 16 MHz.
 //! And with the default APB1 prescaler = /1:
 //!
 //! ```
-//! RCC.CFGR.modify(.{ .PPRE1 = 0 });
+//! RCC.CFGR.modify(.{ .PPRE1 = .Div1 });
 //! ```
 //!
 //! results in PCLK1 = 16 MHz.
@@ -22,8 +22,15 @@
 
 const std = @import("std");
 const microzig = @import("microzig");
-const peripherals = microzig.peripherals;
+const mmio = microzig.mmio;
+const peripherals = microzig.chip.peripherals;
 const RCC = peripherals.RCC;
+
+const Digital_IO = microzig.drivers.base.Digital_IO;
+
+const State = Digital_IO.State;
+
+pub const pins = @import("./common/pins_v2.zig");
 
 pub const clock = struct {
     pub const Domain = enum {
@@ -42,51 +49,63 @@ pub const clock_frequencies = .{
     .apb2 = 16_000_000,
 };
 
-pub fn parse_pin(comptime spec: []const u8) type {
-    const invalid_format_msg = "The given pin '" ++ spec ++ "' has an invalid format. Pins must follow the format \"P{Port}{Pin}\" scheme.";
+// TODO: There should be a common rcc with stuff like this, just like pins_v2.zig
+pub const rcc = struct {
+    const util = @import("common/util.zig");
+    const _rcc = microzig.chip.peripherals.RCC;
 
-    if (spec[0] != 'P')
-        @compileError(invalid_format_msg);
-    if (spec[1] < 'A' or spec[1] > 'K')
-        @compileError(invalid_format_msg);
+    // Any peripheral that must be enable in RCC.
+    pub const Peripherals = util.create_peripheral_enum(&.{
+        "GPIO",
+    });
 
-    const pin_number: comptime_int = std.fmt.parseInt(u4, spec[2..], 10) catch @compileError(invalid_format_msg);
-
-    return struct {
-        /// 'A'...'K'
-        const gpio_port_name = spec[1..2];
-        const gpio_port = @field(peripherals, "GPIO" ++ gpio_port_name);
-        const suffix = std.fmt.comptimePrint("{d}", .{pin_number});
-    };
-}
-
-fn set_reg_field(reg: anytype, comptime field_name: anytype, value: anytype) void {
-    var temp = reg.read();
-    @field(temp, field_name) = value;
-    reg.write(temp);
-}
-
-pub const gpio = struct {
-    pub fn set_output(comptime pin: type) void {
-        set_reg_field(RCC.AHB1ENR, "GPIO" ++ pin.gpio_port_name ++ "EN", 1);
-        set_reg_field(@field(pin.gpio_port, "MODER"), "MODER" ++ pin.suffix, 0b01);
+    ///configure the power and clock registers before enabling the RTC
+    ///this function also can be called from `rtc.enable()`
+    pub fn enable_rtc(on: bool) void {
+        _rcc.BDCR.modify(.{ .RTCEN = @intFromBool(on) });
     }
 
-    pub fn set_input(comptime pin: type) void {
-        set_reg_field(RCC.AHB1ENR, "GPIO" ++ pin.gpio_port_name ++ "EN", 1);
-        set_reg_field(@field(pin.gpio_port, "MODER"), "MODER" ++ pin.suffix, 0b00);
-    }
-
-    pub fn read(comptime pin: type) microzig.gpio.State {
-        const idr_reg = pin.gpio_port.IDR;
-        const reg_value = @field(idr_reg.read(), "IDR" ++ pin.suffix); // TODO extract to getRegField()?
-        return @as(microzig.gpio.State, @enumFromInt(reg_value));
-    }
-
-    pub fn write(comptime pin: type, state: microzig.gpio.State) void {
-        switch (state) {
-            .low => set_reg_field(pin.gpio_port.BSRR, "BR" ++ pin.suffix, 1),
-            .high => set_reg_field(pin.gpio_port.BSRR, "BS" ++ pin.suffix, 1),
+    pub fn set_clock(comptime peri: Peripherals, state: u1) void {
+        const peri_name = @tagName(peri);
+        const field = peri_name ++ "EN";
+        if (util.match_name(peri_name, &.{"RTC"})) {
+            enable_rtc(state != 0);
+            return;
         }
+        const rcc_register_name = comptime if (util.match_name(peri_name, &.{
+            "OTGHSULPI",
+            "OTGHS",
+            "ETHMACPTP",
+            "ETHMACRX",
+            "ETHMACTX",
+            "ETHMAC",
+            "DMA2D",
+            "DMA2",
+            "DMA1",
+            "CCMDATARAM",
+            "BKPSRAM",
+            "CRC",
+            "GPIOK",
+            "GPIOJ",
+            "GPIOI",
+            "GPIOH",
+            "GPIOG",
+            "GPIOF",
+            "GPIOE",
+            "GPIOD",
+            "GPIOC",
+            "GPIOB",
+            "GPIOA",
+        })) "AHB1ENR" else "AHB1ENR";
+
+        @field(_rcc, rcc_register_name).modify_one(field, state);
+    }
+
+    pub fn enable_clock(comptime peri: Peripherals) void {
+        set_clock(peri, 1);
+    }
+
+    pub fn disable_clock(comptime peri: Peripherals) void {
+        set_clock(peri, 0);
     }
 };
