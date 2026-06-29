@@ -1,15 +1,20 @@
 const std = @import("std");
 
 const example_dep_names: []const []const u8 = &.{
-    "espressif/esp",
-    "gigadevice/gd32",
-    "microchip/samd51",
-    "microchip/atmega",
+    "texasinstruments/tm4c",
+    "texasinstruments/msp430",
     "nordic/nrf5x",
+    "nxp/mcx",
     "nxp/lpc",
-    "raspberrypi/rp2xxx",
-    "stmicro/stm32",
     "wch/ch32v",
+    "microchip/samd51",
+    //"microchip/atmega",
+    //"microchip/attiny",
+    "gigadevice/gd32",
+    "stmicro/stm32",
+    "no_hal/stm32_l031",
+    "espressif/esp",
+    "raspberrypi/rp2xxx",
 };
 
 pub fn build(b: *std.Build) void {

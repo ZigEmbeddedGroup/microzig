@@ -135,18 +135,28 @@ const BDC_Header = extern struct {
 // For data packet response, sdp padding is 2 bytes, ad bdc padding 4 bytes,
 // that gives 12 + 2 + 4 + 4 = 22 bytes of bus header, before data.
 //
+// TODO: this needs a complete rework. The serialization logic is fragile and
+// likely unsound in places.
 pub const Response = struct {
     const Self = @This();
 
-    sdp: SDP_Header,
-    buffer: []const u8,
+    reader: std.Io.Reader,
 
-    pub fn init(buf: []const u8) !Self {
-        const sdp: SDP_Header = @bitCast(buf[0..@sizeOf(SDP_Header)].*);
-        try sdp.validate(@intCast(buf.len));
+    sdp: SDP_Header,
+    cdc_hdr: ?CDC_Header = null,
+    bdc_hdr: ?BDC_Header = null,
+
+    pub fn init(payload: []const u8) !Self {
+        if (payload.len > std.math.maxInt(u16)) {
+            return error.TooBig;
+        }
+
+        var reader: std.Io.Reader = .fixed(payload);
+        const sdp = try reader.takeStruct(SDP_Header, .little);
+        try sdp.validate(@intCast(payload.len));
         return .{
+            .reader = reader,
             .sdp = sdp,
-            .buffer = buf[@sizeOf(SDP_Header)..],
         };
     }
 
@@ -155,17 +165,29 @@ pub const Response = struct {
         return self.sdp.hdrlen - @sizeOf(SDP_Header);
     }
 
-    pub fn cdc(self: Self) CDC_Header {
+    pub fn cdc(self: *Self) CDC_Header {
         assert(self.sdp.channel() == .control);
-        return @bitCast(self.buffer[self.padding()..][0..@sizeOf(CDC_Header)].*);
+        return if (self.cdc_hdr) |cdc_hdr|
+            cdc_hdr
+        else blk: {
+            _ = self.reader.discard(@enumFromInt(self.padding())) catch unreachable;
+            self.cdc_hdr = self.reader.takeStruct(CDC_Header, .little) catch unreachable;
+            break :blk self.cdc_hdr.?;
+        };
     }
 
-    pub fn bdc(self: Self) BDC_Header {
+    pub fn bdc(self: *Self) BDC_Header {
         assert(self.sdp.channel() != .control);
-        return @bitCast(self.buffer[self.padding()..][0..@sizeOf(BDC_Header)].*);
+        return if (self.bdc_hdr) |bdc_hdr|
+            bdc_hdr
+        else blk: {
+            _ = self.reader.discard(@enumFromInt(self.padding())) catch unreachable;
+            self.bdc_hdr = self.reader.takeStruct(BDC_Header, .little) catch unreachable;
+            break :blk self.bdc_hdr.?;
+        };
     }
 
-    pub fn data(self: Self) []const u8 {
+    pub fn data(self: *Self) []const u8 {
         const head: usize = self.padding() + switch (self.sdp.channel()) {
             .control => @sizeOf(CDC_Header),
             .event, .data => @sizeOf(BDC_Header) + self.bdc().padding(),
@@ -174,11 +196,12 @@ pub const Response = struct {
         if (head > tail) {
             return &.{};
         }
-        return self.buffer[head..tail];
+
+        return self.reader.buffer[self.reader.seek..self.reader.end];
     }
 
     // head position and length of the data in the buffer sent to init
-    pub fn data_pos(self: Self) struct { usize, usize } {
+    pub fn data_pos(self: *Self) struct { usize, usize } {
         const head: usize = self.sdp.hdrlen + switch (self.sdp.channel()) {
             .control => @sizeOf(CDC_Header),
             .event, .data => @sizeOf(BDC_Header) + self.bdc().padding(),
@@ -186,7 +209,7 @@ pub const Response = struct {
         return .{ head, self.sdp.len - head };
     }
 
-    pub fn event(self: Self) ?EventPacket {
+    pub fn event(self: *Self) ?EventPacket {
         assert(self.sdp.channel() == .event);
         const buf = self.data();
         if (buf.len < @sizeOf(EventPacket)) {
@@ -204,7 +227,7 @@ pub const Response = struct {
         return evt;
     }
 
-    pub fn event_scan_result(self: Self) !struct { EventScanResult, Security } {
+    pub fn event_scan_result(self: *Self) !struct { EventScanResult, Security } {
         var res: EventScanResult = undefined;
         var sec: Security = .{};
 
@@ -263,13 +286,13 @@ pub fn response(buf: []const u8) !Response {
 
 /// Format command request
 pub fn request(
-    buf: []u8,
+    writer: *std.Io.Writer,
     cmd: Cmd,
     name: []const u8,
     data: []const u8,
     request_id: u16,
     tx_sequence: u8,
-) []const u8 {
+) !void {
     // name length with sentinel
     const name_len: usize = name.len + if (name.len > 0) @as(usize, 1) else @as(usize, 0);
     // length of name and data rounded to 4 bytes
@@ -287,26 +310,24 @@ pub fn request(
         },
         .hdrlen = @sizeOf(SDP_Header),
     };
-    buf[0..@sizeOf(SDP_Header)].* = @bitCast(sdp);
+    try writer.writeStruct(sdp, .little);
     const cdc: CDC_Header = .{
         .cmd = cmd,
         .outlen = payload_len,
         .id = request_id,
         .flags = if (data.len > 0) 0x02 else 0,
     };
-    buf[@sizeOf(SDP_Header)..][0..@sizeOf(CDC_Header)].* = @bitCast(cdc);
+    try writer.writeStruct(cdc, .little);
     if (name_len > 0) {
-        @memcpy(buf[header_len..][0..name.len], name);
-        buf[header_len..][name.len] = 0; // sentinel
+        try writer.writeAll(name);
+        try writer.writeByte(0);
     }
     if (data.len > 0) {
-        @memcpy(buf[header_len + name_len ..][0..data.len], data);
+        try writer.writeAll(data);
     }
+
     // set paddnig bytes to 0
-    for (header_len + name_len + data.len..txlen) |i| {
-        buf[i] = 0;
-    }
-    return buf[0..txlen];
+    try writer.splatByteAll(0, txlen - (header_len + name_len + data.len));
 }
 
 pub const TxHeader = extern struct {
