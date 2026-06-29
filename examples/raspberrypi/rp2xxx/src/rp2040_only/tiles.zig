@@ -55,7 +55,7 @@ const brightness: [256]u8 = blk: {
     break :blk data;
 };
 
-const RGB = extern struct {
+const RGB = packed struct(u32) {
     x: u8 = 0x00,
     b: u8,
     g: u8,

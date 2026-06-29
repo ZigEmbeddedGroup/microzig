@@ -78,7 +78,6 @@ pub const wireless = struct {
     pub const CYW43_SPI = cyw43_bus.CYW43_SPI;
     pub const CYW43_Bus = cyw43_bus.CYW43_Bus;
     pub const CYW43_Runner = cyw43_runner.CYW43_Runner;
-    // pub const sx1278 = @import("wireless/sx1278.zig");
 
     pub const Cyw43439 = @import("wireless/cyw43439.zig");
 };

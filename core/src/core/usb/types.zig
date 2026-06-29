@@ -391,7 +391,7 @@ pub const RequestType = packed struct(u8) {
 };
 
 /// Layout of an 8-byte USB SETUP packet.
-pub const SetupPacket = extern struct {
+pub const SetupPacket = packed struct(u64) {
     /// Request metadata: recipient, type, direction.
     request_type: RequestType,
     /// Request. Standard setup requests are in the `SetupRequest` enum.
@@ -439,8 +439,8 @@ pub const Version = extern struct {
 pub const Len = u11;
 
 /// u16 value, little endian regardless of native endianness.
-pub const U16_Le = extern struct {
-    value_le: u16 align(1),
+pub const U16_Le = packed struct(u16) {
+    value_le: u16,
 
     pub fn from(val: u16) @This() {
         return .{ .value_le = std.mem.nativeToLittle(u16, val) };
@@ -452,8 +452,8 @@ pub const U16_Le = extern struct {
 };
 
 /// u32 value, little endian regardless of native endianness.
-pub const U32_Le = extern struct {
-    value_le: u32 align(1),
+pub const U32_Le = packed struct(u32) {
+    value_le: u32,
 
     pub fn from(val: u32) @This() {
         return .{ .value_le = std.mem.nativeToLittle(u32, val) };

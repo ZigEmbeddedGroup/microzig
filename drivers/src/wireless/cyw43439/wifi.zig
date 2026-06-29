@@ -297,41 +297,43 @@ pub fn log_read(self: *Self) void {
 }
 
 pub fn set_var(self: *Self, name: []const u8, data: []const u8) !void {
-    self.request(.set_var, name, data);
+    try self.request(.set_var, name, data);
     _ = try self.response_poll(.set_var, null);
 }
 
 pub fn set_cmd(self: *Self, cmd: ioctl.Cmd, data: []const u8) !void {
-    self.request(cmd, "", data);
+    try self.request(cmd, "", data);
     _ = try self.response_poll(cmd, null);
 }
 
 pub fn get_var(self: *Self, name: []const u8, data: []u8) !usize {
-    self.request(.get_var, name, data);
+    try self.request(.get_var, name, data);
     return try self.response_poll(.get_var, data);
 }
 
-fn request(self: *Self, cmd: ioctl.Cmd, name: []const u8, data: []const u8) void {
+fn request(self: *Self, cmd: ioctl.Cmd, name: []const u8, data: []const u8) !void {
     self.request_id +%= 1;
     self.tx_sequence +%= 1;
     var words: [ioctl_request_bytes_len / 4]u32 = undefined;
-    const bytes = ioctl.request(
-        mem.sliceAsBytes(words[1..]), // 1 word reserved for ioctl cmd
+    var writer: std.Io.Writer = .fixed(mem.sliceAsBytes(words[1..]));
+    try ioctl.request(
+        &writer,
         cmd,
         name,
         data,
         self.request_id,
         self.tx_sequence,
     );
-    const words_len = ((bytes.len + 3) >> 2) + 1;
-    self.bus.write(.wlan, 0, @intCast(bytes.len), words[0..words_len]);
+    const bytes_len = writer.buffered().len;
+    const words_len = ((bytes_len + 3) >> 2) + 1;
+    self.bus.write(.wlan, 0, @intCast(bytes_len), words[0..words_len]);
 }
 
 fn response_poll(self: *Self, cmd: ioctl.Cmd, data: ?[]u8) !usize {
     var bytes: [ioctl_request_bytes_len]u8 align(4) = undefined;
     var delay: usize = 0;
     while (delay < ioctl.response_wait) {
-        const rsp, _ = try self.read(&bytes) orelse {
+        var rsp, _ = try self.read(&bytes) orelse {
             self.sleep_ms(ioctl.response_poll_interval);
             delay += ioctl.response_poll_interval;
             continue;
@@ -353,7 +355,7 @@ fn response_poll(self: *Self, cmd: ioctl.Cmd, data: ?[]u8) !usize {
                     return error.Cyw43InvalidCommandStatus;
                 }
             },
-            else => self.log_response(rsp),
+            else => self.log_response(&rsp),
         }
     }
     log.err("ioctl: missing response in response_poll", .{});
@@ -512,14 +514,14 @@ pub const JoinPoller = struct {
 
 pub fn poll(self: *Self) !void {
     var bytes: [ioctl_request_bytes_len]u8 align(4) = undefined;
-    const rsp, _ = try self.read(&bytes) orelse return;
+    var rsp, _ = try self.read(&bytes) orelse return;
     switch (rsp.sdp.channel()) {
-        .event => self.handle_event(rsp),
-        else => self.log_response(rsp),
+        .event => self.handle_event(&rsp),
+        else => self.log_response(&rsp),
     }
 }
 
-fn handle_event(self: *Self, rsp: ioctl.Response) void {
+fn handle_event(self: *Self, rsp: *ioctl.Response) void {
     const evt = (rsp.event() orelse return).msg;
     const event_log = &self.event_log;
     const state = EventLog.EventState.from;
@@ -588,7 +590,7 @@ fn handle_event(self: *Self, rsp: ioctl.Response) void {
     self.join_state = new_state;
 }
 
-fn handle_scan_event(self: *Self, rsp: ioctl.Response) void {
+fn handle_scan_event(self: *Self, rsp: *ioctl.Response) void {
     const res, const security = rsp.event_scan_result() catch |err| {
         log.err("fail to parse event scan result {}", .{err});
         return;
@@ -679,7 +681,7 @@ pub const ScanPoller = struct {
 };
 
 // show unexpected command response
-fn log_response(self: Self, rsp: ioctl.Response) void {
+fn log_response(self: Self, rsp: *ioctl.Response) void {
     switch (rsp.sdp.channel()) {
         .event => {
             const evt = (rsp.event() orelse return).msg;
@@ -725,14 +727,14 @@ fn sleep_ms(self: Self, delay: u32) void {
 /// argument is start of that data in the buffer second is length.
 pub fn recv_zc(self: *Self, buffer: []u8) !struct { usize, usize, bool } {
     while (true) {
-        const rsp, const rx_ready = try self.read(buffer) orelse return .{ 0, 0, false };
+        var rsp, const rx_ready = try self.read(buffer) orelse return .{ 0, 0, false };
         switch (rsp.sdp.channel()) {
             .data => {
                 const head, const len = rsp.data_pos();
                 return .{ head, len, rx_ready };
             },
-            .event => self.handle_event(rsp),
-            else => self.log_response(rsp),
+            .event => self.handle_event(&rsp),
+            else => self.log_response(&rsp),
         }
     }
 }
@@ -752,13 +754,15 @@ pub fn send_zc(self: *Self, buffer: []u8) anyerror!void {
     const eth_frame_len = buffer.len - 22;
     // add bus header
     self.tx_sequence +%= 1;
-    buffer[4..][0..18].* = ioctl.tx_header(@intCast(eth_frame_len), self.tx_sequence);
+    const tx_header: ioctl.TxHeader = .init(@intCast(eth_frame_len), self.tx_sequence);
+    var writer: std.Io.Writer = .fixed(buffer[4..][0..18]);
+    try writer.writeStruct(tx_header, .little);
 
     // bus write
     const bytes_len = 18 + eth_frame_len;
     const words_len = ((bytes_len + 3) >> 2) + 1; // round and add 1 for bus command
 
-    self.bus.write(.wlan, 0, @intCast(bytes_len), as_words(buffer, words_len));
+    self.bus.write(.wlan, 0, @intCast(bytes_len), as_words(writer.buffered(), words_len));
 }
 
 pub fn has_credit(self: *Self) bool {

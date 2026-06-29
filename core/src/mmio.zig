@@ -16,7 +16,7 @@ pub fn Mmio(comptime Packed: type) type {
     if (@sizeOf(Packed) != (size / 8))
         @compileError(std.fmt.comptimePrint("Int and Packed must have the same size!, they are {} and {} bytes respectively", .{ size / 8, @sizeOf(Packed) }));
 
-    return extern struct {
+    return packed struct(Int) {
         const Self = @This();
 
         raw: Int,
