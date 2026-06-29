@@ -13,28 +13,6 @@ const usb = microzig.core.usb;
 
 const errata = @import("./usbd/errata.zig");
 
-/// TODO: https://github.com/ZigEmbeddedGroup/microzig/issues/962
-/// Temporary workaround: sizes of generated structs don't match
-const USBD_BASE: usize = @intFromPtr(peripherals.USBD);
-inline fn epin_ptr(i: u32) *volatile u32 {
-    return @ptrFromInt(USBD_BASE + 0x600 + i * 0x14);
-}
-inline fn epin_maxcnt(i: u32) *volatile u32 {
-    return @ptrFromInt(USBD_BASE + 0x604 + i * 0x14);
-}
-inline fn epin_amount(i: u32) *volatile u32 {
-    return @ptrFromInt(USBD_BASE + 0x608 + i * 0x14);
-}
-inline fn epout_ptr(i: u32) *volatile u32 {
-    return @ptrFromInt(USBD_BASE + 0x700 + i * 0x14);
-}
-inline fn epout_maxcnt(i: u32) *volatile u32 {
-    return @ptrFromInt(USBD_BASE + 0x704 + i * 0x14);
-}
-inline fn epout_amount(i: u32) *volatile u32 {
-    return @ptrFromInt(USBD_BASE + 0x708 + i * 0x14);
-}
-
 // +++++++++++++++++++++++++++++++++++++++++++++++++
 // Code
 // +++++++++++++++++++++++++++++++++++++++++++++++++
@@ -98,14 +76,10 @@ pub const USBD = struct {
         for (0..8) |i| {
             peripherals.USBD.EVENTS_ENDEPIN[i].write_raw(0);
             peripherals.USBD.EVENTS_ENDEPOUT[i].write_raw(0);
-            // peripherals.USBD.EPIN[i].PTR.write_raw(0);
-            // peripherals.USBD.EPIN[i].MAXCNT.write_raw(0);
-            // peripherals.USBD.EPOUT[i].PTR.write_raw(0);
-            // peripherals.USBD.EPOUT[i].MAXCNT.write_raw(0);
-            epin_ptr(i).* = 0;
-            epin_maxcnt(i).* = 0;
-            epout_ptr(i).* = 0;
-            epout_maxcnt(i).* = 0;
+            peripherals.USBD.EPIN[i].PTR.write_raw(0);
+            peripherals.USBD.EPIN[i].MAXCNT.write_raw(0);
+            peripherals.USBD.EPOUT[i].PTR.write_raw(0);
+            peripherals.USBD.EPOUT[i].MAXCNT.write_raw(0);
         }
         return .{
             .interface = .{ .vtable = &vtable },
@@ -253,14 +227,10 @@ pub const USBD = struct {
 
         for (1..NUM_EP) |i| {
             // NOTE: Data endpoints are automatically disabled on reset
-            // peripherals.USBD.EPIN[i].PTR.write_raw(0);
-            // peripherals.USBD.EPIN[i].MAXCNT.write_raw(0);
-            // peripherals.USBD.EPOUT[i].PTR.write_raw(0);
-            // peripherals.USBD.EPOUT[i].MAXCNT.write_raw(0);
-            epin_ptr(i).* = 0;
-            epin_maxcnt(i).* = 0;
-            epout_ptr(i).* = 0;
-            epout_maxcnt(i).* = 0;
+            peripherals.USBD.EPIN[i].PTR.write_raw(0);
+            peripherals.USBD.EPIN[i].MAXCNT.write_raw(0);
+            peripherals.USBD.EPOUT[i].PTR.write_raw(0);
+            peripherals.USBD.EPOUT[i].MAXCNT.write_raw(0);
 
             // When first enabled, bulk/interrupt endpoints
             // will return NAK until 0 is written to SIZE.EPOUT[n]
@@ -299,10 +269,8 @@ pub const USBD = struct {
         const len: usb.types.Len = @intCast(scratch_cap - scratch_slice.len);
 
         // Prepare DMA transfer
-        // peripherals.USBD.EPIN[i].PTR.write_raw(@intFromPtr(scratch));
-        // peripherals.USBD.EPIN[i].MAXCNT.write_raw(len);
-        epin_ptr(i).* = @intFromPtr(scratch);
-        epin_maxcnt(i).* = len;
+        peripherals.USBD.EPIN[i].PTR.write_raw(@intFromPtr(scratch));
+        peripherals.USBD.EPIN[i].MAXCNT.write_raw(len);
 
         if (ep_num == .ep0) {
             // EPIN0: a short packet (len < max_packet_size) indicates the end of the data
@@ -351,10 +319,8 @@ pub const USBD = struct {
         const scratch_buf = &self.bufs_out[i];
 
         // Prepare DMA transfer
-        // peripherals.USBD.EPOUT[i].PTR.write_raw(@intFromPtr(scratch_buf));
-        // peripherals.USBD.EPOUT[i].MAXCNT.write_raw(size);
-        epout_ptr(i).* = @intFromPtr(scratch_buf);
-        epout_maxcnt(i).* = size;
+        peripherals.USBD.EPOUT[i].PTR.write_raw(@intFromPtr(scratch_buf));
+        peripherals.USBD.EPOUT[i].MAXCNT.write_raw(size);
 
         // Start DMA
         const was_enabled = cpu.interrupt.is_enabled(.USBD);
