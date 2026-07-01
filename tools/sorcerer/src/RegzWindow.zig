@@ -120,7 +120,6 @@ const Allocator = std.mem.Allocator;
 const regz = @import("regz");
 const VirtualFilesystem = regz.VirtualFilesystem;
 const RegisterSchemaUsage = @import("RegisterSchemaUsage");
-const diffz = @import("diffz");
 
 const dvui = @import("dvui");
 

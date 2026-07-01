@@ -19,9 +19,14 @@ pub const Spi = struct {
         self.vtable.write(self.ptr, buffer);
     }
 
+    pub fn irq_cleared(self: *@This()) void {
+        self.vtable.irq_cleared(self.ptr);
+    }
+
     pub const VTable = struct {
         read: *const fn (*anyopaque, []u32) void,
         write: *const fn (*anyopaque, []u32) void,
+        irq_cleared: *const fn (*anyopaque) void,
     };
 };
 
@@ -68,7 +73,7 @@ pub fn init(self: *Self) !void {
                 .wake_up = true,
             },
             .response_delay = .{
-                .unknown = 0x4, // 32-bit response delay?
+                .unknown = 0,
             },
             .status_enable = .{
                 .status_enable = true,
@@ -354,11 +359,8 @@ pub const Irq = packed struct {
     f2_packet_available: bool = false,
     f3_packet_available: bool = false,
     f1_overflow: bool = false, // Due to last write. Bkplane has pending write requests
-    misc_intr0: bool = false,
-    misc_intr1: bool = false,
-    misc_intr2: bool = false,
-    misc_intr3: bool = false,
-    misc_intr4: bool = false,
+
+    _reserved1: u5 = 0,
     f1_intr: bool = false,
     f2_intr: bool = false,
     f3_intr: bool = false,

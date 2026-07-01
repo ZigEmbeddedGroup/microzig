@@ -12,10 +12,16 @@ const uart_tx_pin = gpio.num(0);
 const BUF_LEN = 0x100;
 const spi = rp2xxx.spi.instance.SPI0;
 
-pub const microzig_options = microzig.Options{
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{
     .log_level = .debug,
     .logFn = rp2xxx.uart.log,
-};
+});
+
+comptime {
+    _ = microzig.export_startup();
+}
 
 pub fn main() !void {
     uart_tx_pin.set_function(.uart);

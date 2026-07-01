@@ -43,8 +43,9 @@
  /* Scheduler Related */
  #define configUSE_PREEMPTION                    1
  #define configUSE_TICKLESS_IDLE                 0
- #define configUSE_IDLE_HOOK                     0
- #define configUSE_TICK_HOOK                     0
+// FIXME: must be without indent to work, please fix (add indent) after Zig 0.16 release: https://codeberg.org/ziglang/zig/issues/31164
+#cmakedefine01 configUSE_IDLE_HOOK
+#cmakedefine01 configUSE_TICK_HOOK
  #define configTICK_RATE_HZ                      ( ( TickType_t ) 1000 )
  #define configMAX_PRIORITIES                    32
  #define configMINIMAL_STACK_SIZE                ( uint32_t ) 256
@@ -75,7 +76,7 @@
  #define configAPPLICATION_ALLOCATED_HEAP        0
  
  /* Hook function related definitions. */
- #define configCHECK_FOR_STACK_OVERFLOW          0
+ #define configCHECK_FOR_STACK_OVERFLOW          2
  #define configUSE_MALLOC_FAILED_HOOK            0
  #define configUSE_DAEMON_TASK_STARTUP_HOOK      0
  
@@ -108,11 +109,17 @@
  #define configUSE_CORE_AFFINITY                 0
  #define configUSE_PASSIVE_IDLE_HOOK             0
  
- /* PicoSDK specific */
- #define configSUPPORT_PICO_SYNC_INTEROP         1
- #define configSUPPORT_PICO_TIME_INTEROP         1
+ /* PicoSDK interop — DISABLED because MicroZig does not run .init_array
+  * constructors.  The FreeRTOS RP2350 (and RP2040) port relies on a
+  * __attribute__((constructor)) function (prvRuntimeInitializer in port.c) to
+  * initialise pxCrossCoreSpinLock and an internal xEventGroup *before* main().
+  * Without that, the doorbell ISR dereferences a NULL spin-lock pointer and
+  * triggers a Usage Fault immediately after the scheduler starts.
+  * Re-enable these only after adding .init_array support to MicroZig startup. */
+ #define configSUPPORT_PICO_SYNC_INTEROP         0
+ #define configSUPPORT_PICO_TIME_INTEROP         0
  
- /* RP2350 required */
+ /* Dependent on processor */
  #define configENABLE_FPU                        1
  #define configENABLE_MPU                        0
  #define configENABLE_TRUSTZONE                  0

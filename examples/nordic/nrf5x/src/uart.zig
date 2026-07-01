@@ -5,10 +5,16 @@ const nrf = microzig.hal;
 
 const uart = nrf.uart.num(0);
 
-pub const microzig_options = microzig.Options{
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{
     .log_level = .debug,
     .logFn = nrf.uart.log,
-};
+});
+
+comptime {
+    _ = microzig.export_startup();
+}
 
 pub fn main() !void {
     board.init();

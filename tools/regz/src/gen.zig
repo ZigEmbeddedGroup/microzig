@@ -1149,6 +1149,12 @@ fn write_register(
 
         try write_fields(db, arena, fields, register.size_bits, register_reset, writer);
         try writer.writeAll("}),\n");
+    } else if (register.ref_type) |ref_type| {
+        try writer.print("{f}: {s}{s},\n", .{
+            std.zig.fmtId(register.name),
+            array_prefix,
+            ref_type,
+        });
     } else if (array_prefix.len != 0) {
         try writer.print("{f}: {s}u{},\n", .{
             std.zig.fmtId(register.name),
@@ -1473,6 +1479,7 @@ test "gen.StructFieldIterator.single register" {
         .struct_id = @enumFromInt(1),
         .description = "This is a description",
         .name = "TEST_REGISTER",
+        .ref_type = null,
         .size_bits = 32,
         .offset_bytes = 0,
         .access = .read_write,
@@ -1500,6 +1507,7 @@ test "gen.StructFieldIterator.two registers perfect overlap" {
             .struct_id = @enumFromInt(1),
             .description = "This is a description",
             .name = "TEST_REGISTER1",
+            .ref_type = null,
             .size_bits = 32,
             .offset_bytes = 0,
             .access = .read_write,
@@ -1512,6 +1520,7 @@ test "gen.StructFieldIterator.two registers perfect overlap" {
             .struct_id = @enumFromInt(2),
             .description = "This is a description",
             .name = "TEST_REGISTER2",
+            .ref_type = null,
             .size_bits = 32,
             .offset_bytes = 0,
             .access = .read_write,
@@ -1541,6 +1550,7 @@ test "gen.StructFieldIterator.two registers overlap but one is smaller" {
             .struct_id = @enumFromInt(1),
             .description = "This is a description",
             .name = "TEST_REGISTER1",
+            .ref_type = null,
             .size_bits = 32,
             .offset_bytes = 0,
             .access = .read_write,
@@ -1553,6 +1563,7 @@ test "gen.StructFieldIterator.two registers overlap but one is smaller" {
             .struct_id = @enumFromInt(2),
             .description = "This is a description",
             .name = "TEST_REGISTER2",
+            .ref_type = null,
             .size_bits = 16,
             .offset_bytes = 0,
             .access = .read_write,
@@ -1582,6 +1593,7 @@ test "gen.StructFieldIterator.two registers overlap with different offsets" {
             .struct_id = @enumFromInt(1),
             .description = "This is a description",
             .name = "TEST_REGISTER1",
+            .ref_type = null,
             .size_bits = 32,
             .offset_bytes = 0,
             .access = .read_write,
@@ -1594,6 +1606,7 @@ test "gen.StructFieldIterator.two registers overlap with different offsets" {
             .struct_id = @enumFromInt(2),
             .description = "This is a description",
             .name = "TEST_REGISTER2",
+            .ref_type = null,
             .size_bits = 16,
             .offset_bytes = 2,
             .access = .read_write,
@@ -1645,6 +1658,7 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
         .struct_id = @enumFromInt(3),
         .description = "This is a description",
         .name = "TEST_REGISTER",
+        .ref_type = null,
         .size_bits = 32,
         .offset_bytes = 0,
         .access = .read_write,

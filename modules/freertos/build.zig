@@ -1,9 +1,15 @@
 const std = @import("std");
 
-const FreeRTOSPort = enum {
+const FreeRTOS_Port = enum {
     RP2040,
     RP2350_ARM,
     RP2350_RISCV,
+};
+
+const FreeRTOS_Config = struct {
+    // Scheduler related
+    configUSE_IDLE_HOOK: bool = false,
+    configUSE_TICK_HOOK: bool = false,
 };
 
 pub fn build(b: *std.Build) void {
@@ -12,14 +18,28 @@ pub fn build(b: *std.Build) void {
 
     // Configurable options
     const port_name = b.option(
-        FreeRTOSPort,
+        FreeRTOS_Port,
         "port_name",
         "FreeRTOS port to use",
     ) orelse .RP2040;
 
+    const cfg_idle_hook = b.option(bool, "idle_hook", "Enable FreeRTOS idle hook") orelse false;
+    const cfg_tick_hook = b.option(bool, "tick_hook", "Enable FreeRTOS tick hook") orelse false;
+
     if (port_name != .RP2040 and port_name != .RP2350_ARM) {
         @panic("Right now only RP2040 and RP2350_ARM ports are supported");
     }
+
+    // In future this config might be validated against port-specific capabilities
+    const config = FreeRTOS_Config{
+        .configUSE_IDLE_HOOK = cfg_idle_hook,
+        .configUSE_TICK_HOOK = cfg_tick_hook,
+    };
+
+    const config_header = b.addConfigHeader(.{
+        .style = .{ .cmake = b.path("config/FreeRTOSConfig.h.cmake") },
+        .include_path = "FreeRTOSConfig.h",
+    }, config);
 
     const foundationlibc_dep = b.dependency("foundationlibc", .{
         .target = target,
@@ -34,6 +54,8 @@ pub fn build(b: *std.Build) void {
 
     // Link libc
     freertos_lib.linkLibrary(foundationlibc_dep.artifact("foundation"));
+    // Add generated configuration header
+    freertos_lib.addConfigHeader(config_header);
 
     const freertos_kernel_dep = b.dependency("freertos_kernel", .{});
     const freertos_kernel_community_dep = b.dependency("freertos_kernel_community", .{});
@@ -56,7 +78,6 @@ pub fn build(b: *std.Build) void {
             .flags = &flags,
         });
 
-        freertos_lib.addIncludePath(b.path("config/RP2040/"));
         freertos_lib.addIncludePath(freertos_kernel_dep.path("./portable/ThirdParty/GCC/RP2040/include/"));
     } else if (port_name == .RP2350_ARM) {
         freertos_lib.addCSourceFiles(.{
@@ -65,16 +86,14 @@ pub fn build(b: *std.Build) void {
             .flags = &flags,
         });
 
-        freertos_lib.addIncludePath(b.path("config/RP2350_ARM/"));
         freertos_lib.addIncludePath(freertos_kernel_community_dep.path("./GCC/RP2350_ARM_NTZ/non_secure/"));
     }
 
-    // Add some Pico SDK glue code
-    // TODO: maybe we should use Pico source files directly?
-    // but current way - we know what is internaly used by FreeRTOS port
+    // Pico SDK glue code: partial re-implementations of SDK functions that
+    // the FreeRTOS port references but MicroZig does not provide.
     freertos_lib.addCSourceFiles(.{
         .root = b.path("."),
-        .files = &[_][]const u8{ "src/picosdk_irq.c", "src/picosdk_exception.c" },
+        .files = &[_][]const u8{ "src/picosdk_irq.c", "src/picosdk_exception.c", "src/picosdk_stubs.c" },
         .flags = &flags,
     });
 

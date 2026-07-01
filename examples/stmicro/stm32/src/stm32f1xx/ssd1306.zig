@@ -1,11 +1,9 @@
-const std = @import("std");
 const microzig = @import("microzig");
 
 const stm32 = microzig.hal;
 const gpio = stm32.gpio;
 const rcc = stm32.rcc;
 const time = stm32.time;
-const Duration = microzig.drivers.time.Duration;
 
 const drivers = microzig.drivers;
 const lcd_driver = drivers.display.SSD1306_I2C;
@@ -25,9 +23,15 @@ const config = I2C.Config{
     .mode = .standard,
 };
 
-pub const microzig_options = microzig.Options{
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{
     .logFn = stm32.uart.log,
-};
+});
+
+comptime {
+    _ = microzig.export_startup();
+}
 
 const i2c_device = I2C_Datagram_Device.init(i2c, I2C.Address.new(0x3c), null);
 

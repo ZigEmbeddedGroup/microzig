@@ -3,9 +3,22 @@ const microzig = @import("microzig");
 
 const rp2xxx = microzig.hal;
 const time = rp2xxx.time;
-const gpio = rp2xxx.gpio;
 const usb = microzig.core.usb;
 const USB_Device = rp2xxx.usb.Polled(.{});
+
+pub const std_options = microzig.std_options(.{
+    .log_level = .debug,
+    .log_scope_levels = &.{
+        .{ .scope = .usb_dev, .level = .warn },
+        .{ .scope = .usb_ctrl, .level = .warn },
+        .{ .scope = .usb_hid_int_driver, .level = .warn },
+    },
+    .logFn = rp2xxx.uart.log,
+});
+
+comptime {
+    _ = microzig.export_startup();
+}
 
 pub const Modifiers = packed struct(u8) {
     lctrl: bool,
@@ -131,16 +144,6 @@ pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noretu
     while (true) {}
 }
 
-pub const microzig_options = microzig.Options{
-    .log_level = .debug,
-    .log_scope_levels = &.{
-        .{ .scope = .usb_dev, .level = .warn },
-        .{ .scope = .usb_ctrl, .level = .warn },
-        .{ .scope = .usb_hid_int_driver, .level = .warn },
-    },
-    .logFn = rp2xxx.uart.log,
-};
-
 const pin_config: rp2xxx.pins.GlobalConfiguration = .{
     .GPIO0 = .{ .function = .UART0_TX },
     .GPIO25 = .{ .name = "led", .direction = .out },
@@ -171,17 +174,16 @@ pub fn main() !void {
 
         if (usb_controller.drivers()) |drivers| {
             new = time.get_time_since_boot().to_us();
-            const time_since_last = new - old;
-            if (time_since_last < 2_000_000) {
+            if (new - old > 2_000_000) {
+                old = new;
+                idx = 0;
+            } else {
                 idx += @intFromBool(if (idx & 1 == 0 and idx < 2 * message.len)
                     drivers.keyboard.send_report(
                         &.{ .modifiers = .none, .keys = .{message[@intCast(idx / 2)]} ++ .{.reserved} ** 5 },
                     )
                 else
                     drivers.keyboard.send_report(&.empty));
-            } else {
-                old = new;
-                idx = 0;
             }
 
             if (drivers.keyboard.receive_report()) |report|

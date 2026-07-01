@@ -1,7 +1,6 @@
 const std = @import("std");
 const microzig = @import("microzig");
 
-const PPB = microzig.chip.peripherals.PPB;
 const hal = microzig.hal;
 
 const time = hal.time;
@@ -34,11 +33,15 @@ const baud_rate = 115200;
 
 // ---- MicroZig Options --------------------------------
 
-pub const microzig_options = microzig.Options{
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{
     .log_level = .debug,
-    //.logFn      = hal.uart.logFn,
-    .logFn = hal.uart.log_threadsafe,
-};
+});
+
+comptime {
+    _ = microzig.export_startup();
+}
 
 pub fn main() !void {
 

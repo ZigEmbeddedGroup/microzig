@@ -1,12 +1,9 @@
-const std = @import("std");
 const microzig = @import("microzig");
 const rp2xxx = microzig.hal;
 const gpio = rp2xxx.gpio;
 const time = rp2xxx.time;
 const clocks = rp2xxx.clocks;
 const GlobalConfig = clocks.config.Global;
-const gpout0_pin = gpio.num(21);
-const Pin = gpio.Pin;
 
 /// The HAL provides a convenvience function for detecting which of the RP2XXX
 /// family you're currently compiling for.
@@ -110,6 +107,14 @@ const system_clock_cfg: GlobalConfig = val: {
 };
 
 // Have to override init() so we can apply our own custom pre-main startup procedure
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
 pub fn init() void {
     // The default init_sequence works fine here, we just want to swap in our own clock config
     rp2xxx.init_sequence(system_clock_cfg);

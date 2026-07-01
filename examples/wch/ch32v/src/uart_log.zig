@@ -10,10 +10,16 @@ const AFIO = microzig.chip.peripherals.AFIO;
 const usart = hal.usart.instance.USART2;
 const usart_tx_pin = gpio.Pin.init(0, 2); // PA2
 
-pub const microzig_options = microzig.Options{
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{
     .log_level = .debug,
     .logFn = hal.usart.log,
-};
+});
+
+comptime {
+    _ = microzig.export_startup();
+}
 
 pub fn main() !void {
     // Board brings up clocks and time

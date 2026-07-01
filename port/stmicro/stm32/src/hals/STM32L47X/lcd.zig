@@ -22,6 +22,8 @@ const LCD_RAM = extern struct {
     COM3H: LCD_COM_H,
 };
 
+// LCD RAM is not correctly defined in the stm32-data from embassy
+// The high segments occupy the full 32 bit but is limited a few lsb.
 const ram: *volatile LCD_RAM = @ptrCast(&LCD.RAM_COM);
 
 pub fn init_lcd() void {

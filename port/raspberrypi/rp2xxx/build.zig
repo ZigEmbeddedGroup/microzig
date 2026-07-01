@@ -171,7 +171,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .adafruit = .{
                 .feather_rp2350 = chip_rp2350_arm.derive(.{
                     .board = .{
-                        .name = "Adafruit Faether RP2350",
+                        .name = "Adafruit Feather RP2350",
                         .url = "https://www.adafruit.com/product/6000",
                         .root_source_file = b.path("src/boards/adafruit_feather_rp2350.zig"),
                     },
@@ -202,8 +202,6 @@ pub fn init(dep: *std.Build.Dependency) Self {
                         .name = "RaspberryPi Pico (ram image)",
                         .url = "https://www.raspberrypi.com/products/raspberry-pi-pico/",
                         .root_source_file = b.path("src/boards/raspberry_pi_pico.zig"),
-                        // needed by the flash hal
-                        .imports = rp2040_bootrom_imports,
                     },
                 }),
                 .pico2_arm = chip_rp2350_arm.derive(.{

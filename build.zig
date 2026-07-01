@@ -14,8 +14,6 @@ pub const LinkerScript = internals.LinkerScript;
 pub const Stack = internals.Stack;
 pub const MemoryRegion = internals.MemoryRegion;
 
-const regz = @import("tools/regz");
-
 // If more ports are available, the error "error: evaluation exceeded 1000 backwards branches" may occur.
 // In such cases, consider increasing the argument value for @setEvalBranchQuota().
 const port_list: []const struct {
@@ -26,6 +24,7 @@ const port_list: []const struct {
     .{ .name = "gd32", .dep_name = "port/gigadevice/gd32" },
     .{ .name = "samd51", .dep_name = "port/microchip/samd51" },
     .{ .name = "atmega", .dep_name = "port/microchip/atmega" },
+    .{ .name = "attiny", .dep_name = "port/microchip/attiny" },
     .{ .name = "nrf5x", .dep_name = "port/nordic/nrf5x" },
     .{ .name = "lpc", .dep_name = "port/nxp/lpc" },
     .{ .name = "mcx", .dep_name = "port/nxp/mcx" },
@@ -34,15 +33,6 @@ const port_list: []const struct {
     .{ .name = "ch32v", .dep_name = "port/wch/ch32v" },
     .{ .name = "msp430", .dep_name = "port/texasinstruments/msp430" },
     .{ .name = "tm4c", .dep_name = "port/texasinstruments/tm4c" },
-};
-
-const exe_targets: []const std.Target.Query = &.{
-    .{ .cpu_arch = .aarch64, .os_tag = .macos },
-    .{ .cpu_arch = .aarch64, .os_tag = .linux },
-    .{ .cpu_arch = .aarch64, .os_tag = .windows },
-    .{ .cpu_arch = .x86_64, .os_tag = .macos },
-    .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .musl },
-    .{ .cpu_arch = .x86_64, .os_tag = .windows },
 };
 
 pub fn build(b: *Build) void {
@@ -81,6 +71,7 @@ pub const PortSelect = struct {
     gd32: bool = false,
     samd51: bool = false,
     atmega: bool = false,
+    attiny: bool = false,
     nrf5x: bool = false,
     lpc: bool = false,
     mcx: bool = false,
@@ -485,47 +476,39 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 core_mod.addImport("board", board_mod);
             }
 
-            const app_mod = mb.builder.createModule(.{
+            const root_mod = mb.builder.createModule(.{
                 .root_source_file = options.root_source_file,
                 .imports = options.imports,
                 .target = zig_resolved_target,
+                .optimize = options.optimize,
+                .single_threaded = options.single_threaded orelse target.single_threaded,
+                .strip = options.strip,
+                .unwind_tables = options.unwind_tables,
+                .error_tracing = options.error_tracing,
+                .dwarf_format = options.dwarf_format,
             });
-            app_mod.addImport("microzig", core_mod);
-            core_mod.addImport("app", app_mod);
+            root_mod.addImport("microzig", core_mod);
 
             const fw = mb.builder.allocator.create(Firmware) catch @panic("out of memory");
             fw.* = .{
                 .mb = mb,
                 .core_mod = core_mod,
-                .artifact = mb.builder.addExecutable(.{
+                .exe = mb.builder.addExecutable(.{
                     .name = options.name,
-                    .root_module = b.createModule(.{
-                        .optimize = options.optimize,
-                        .target = zig_resolved_target,
-                        .root_source_file = mb.core_dep.path("src/start.zig"),
-                        .single_threaded = options.single_threaded orelse target.single_threaded,
-                        .strip = options.strip,
-                        .unwind_tables = options.unwind_tables,
-                        .error_tracing = options.error_tracing,
-                        .dwarf_format = options.dwarf_format,
-                    }),
+                    .root_module = root_mod,
                     .linkage = .static,
                 }),
-                .app_mod = app_mod,
                 .target = target,
                 .emitted_files = Firmware.EmittedFiles.init(mb.builder.allocator),
             };
 
-            fw.artifact.bundle_compiler_rt = options.bundle_compiler_rt orelse target.bundle_compiler_rt;
-            fw.artifact.bundle_ubsan_rt = options.bundle_ubsan_rt orelse target.bundle_ubsan_rt;
+            fw.exe.bundle_compiler_rt = options.bundle_compiler_rt orelse target.bundle_compiler_rt;
+            fw.exe.bundle_ubsan_rt = options.bundle_ubsan_rt orelse target.bundle_ubsan_rt;
 
-            fw.artifact.link_gc_sections = options.strip_unused_symbols;
-            fw.artifact.link_function_sections = options.strip_unused_symbols;
-            fw.artifact.link_data_sections = options.strip_unused_symbols;
-            fw.artifact.entry = options.entry orelse target.entry orelse .default;
-
-            fw.artifact.root_module.addImport("microzig", core_mod);
-            fw.artifact.root_module.addImport("app", app_mod);
+            fw.exe.link_gc_sections = options.strip_unused_symbols;
+            fw.exe.link_function_sections = options.strip_unused_symbols;
+            fw.exe.link_data_sections = options.strip_unused_symbols;
+            fw.exe.entry = options.entry orelse target.entry orelse .default;
 
             const linker_script_options = options.linker_script orelse target.linker_script;
             const linker_script = blk: {
@@ -560,7 +543,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 }
                 break :blk output;
             };
-            fw.artifact.setLinkerScript(linker_script);
+            fw.exe.setLinkerScript(linker_script);
 
             return fw;
         }
@@ -588,7 +571,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
             const format = options.format orelse fw.target.preferred_binary_format orelse .elf;
 
             const basename = mb.builder.fmt("{s}{s}", .{
-                fw.artifact.name,
+                fw.exe.name,
                 format.get_extension(),
             });
 
@@ -602,10 +585,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
             mb: *Self,
 
             /// The artifact that is built by MicroZig.
-            artifact: *Build.Step.Compile,
-
-            /// The app module that is built by Zig.
-            app_mod: *Build.Module,
+            exe: *Build.Step.Compile,
 
             // The @import("microzig") module
             core_mod: *Build.Module,
@@ -624,7 +604,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
             ///           not include post processing of the ELF files necessary by certain targets.
             pub fn get_emitted_elf(fw: *Firmware) LazyPath {
                 if (fw.emitted_elf == null) {
-                    const raw_elf = fw.artifact.getEmittedBin();
+                    const raw_elf = fw.exe.getEmittedBin();
                     fw.emitted_elf = if (fw.target.patch_elf) |patch_elf|
                         patch_elf(fw.target.dep, raw_elf)
                     else
@@ -645,7 +625,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                     const elf_file = fw.get_emitted_elf();
 
                     const basename = fw.mb.builder.fmt("{s}{s}", .{
-                        fw.artifact.name,
+                        fw.exe.name,
                         resolved_format.get_extension(),
                     });
 
@@ -678,7 +658,13 @@ pub fn MicroBuild(port_select: PortSelect) type {
                             options,
                         ),
 
-                        .dfu => @panic("DFU is not implemented yet. See https://github.com/ZigEmbeddedGroup/microzig/issues/145 for more details!"),
+                        .dfu => |options| @import("tools/dfu").from_elf(
+                            fw.mb.dep.builder.dependency("tools/dfu", .{
+                                .optimize = .ReleaseSafe,
+                            }),
+                            elf_file,
+                            options,
+                        ),
 
                         .esp => |options| @import("tools/esp-image").from_elf(
                             fw.mb.dep.builder.dependency("tools/esp-image", .{
@@ -711,8 +697,8 @@ pub fn MicroBuild(port_select: PortSelect) type {
             pub fn get_emitted_docs(fw: *Firmware) LazyPath {
                 if (fw.emitted_docs == null) {
                     const docs_test = fw.mb.builder.addTest(.{
-                        .name = fw.artifact.name,
-                        .root_module = fw.app_mod,
+                        .name = fw.exe.name,
+                        .root_module = fw.exe.root_module,
                     });
 
                     fw.emitted_docs = docs_test.getEmittedDocs();
@@ -730,32 +716,32 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 if (options.depend_on_microzig) {
                     module.addImport("microzig", fw.core_mod);
                 }
-                fw.app_mod.addImport(name, module);
+                fw.exe.root_module.addImport(name, module);
             }
 
             /// Adds an include path to the firmware.
             pub fn add_include_path(fw: *Firmware, path: LazyPath) void {
-                fw.artifact.addIncludePath(path);
+                fw.exe.addIncludePath(path);
             }
 
             /// Adds a system include path to the firmware.
             pub fn add_system_include_path(fw: *Firmware, path: LazyPath) void {
-                fw.artifact.addSystemIncludePath(path);
+                fw.exe.addSystemIncludePath(path);
             }
 
             /// Adds a c source file to the firmware.
             pub fn add_c_source_file(fw: *Firmware, source: Build.Module.CSourceFile) void {
-                fw.artifact.addCSourceFile(source);
+                fw.exe.addCSourceFile(source);
             }
 
             /// Adds options to your application.
             pub fn add_options(fw: *Firmware, module_name: []const u8, options: *Build.Step.Options) void {
-                fw.app_mod.addOptions(module_name, options);
+                fw.exe.root_module.addOptions(module_name, options);
             }
 
             /// Adds an object file to the firmware.
             pub fn add_object_file(fw: *Firmware, source: LazyPath) void {
-                fw.artifact.addObjectFile(source);
+                fw.exe.addObjectFile(source);
             }
         };
 
@@ -764,6 +750,11 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 return .{
                     .name = "avr5",
                     .root_source_file = mb.core_dep.namedLazyPath("cpu_avr5"),
+                };
+            } else if (std.mem.eql(u8, target.cpu.model.name, "avr25")) {
+                return .{
+                    .name = "avr25",
+                    .root_source_file = mb.core_dep.namedLazyPath("cpu_avr25"),
                 };
             } else if (std.mem.startsWith(u8, target.cpu.model.name, "cortex_m")) {
                 return .{

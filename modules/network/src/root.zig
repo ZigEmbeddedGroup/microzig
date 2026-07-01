@@ -29,6 +29,16 @@ pub const Interface = struct {
     netif: lwip.netif = .{},
     dhcp: lwip.dhcp = .{},
     link: Link,
+    status_flags: u16 = 0,
+
+    stat: struct {
+        poll_count: usize = 0,
+        tick_count: usize = 0,
+        recv_packets: usize = 0,
+        recv_bytes: usize = 0,
+        send_packets: usize = 0,
+        send_bytes: usize = 0,
+    } = .{},
 
     pub const Options = struct {
         fixed: ?Fixed = null,
@@ -75,16 +85,17 @@ pub const Interface = struct {
         std.mem.copyForwards(u8, &netif.hwaddr, &mac);
         lwip.netif_create_ip6_linklocal_address(netif, 1);
         netif.ip6_autoconfig_enabled = 1;
-        lwip.netif_set_status_callback(netif, c_on_netif_status);
         lwip.netif_set_default(netif);
         lwip.netif_set_up(netif);
+        lwip.netif_set_status_callback(netif, c_on_netif_status);
+        lwip.netif_set_link_callback(netif, c_on_netif_status);
         if (opt.fixed == null) {
             lwip.dhcp_set_struct(netif, &self.dhcp);
             try c_err(lwip.dhcp_start(netif));
         }
-        lwip.netif_set_link_up(netif);
     }
 
+    // synchronously called from init (during netif_add)
     fn c_netif_init(netif_c: [*c]lwip.netif) callconv(.c) lwip.err_t {
         const netif: *lwip.netif = netif_c;
         netif.linkoutput = c_netif_linkoutput;
@@ -100,7 +111,11 @@ pub const Interface = struct {
     fn c_on_netif_status(netif_c: [*c]lwip.netif) callconv(.c) void {
         const netif: *lwip.netif = netif_c;
         const self: *Self = @fieldParentPtr("netif", netif);
-        log.debug("netif status callback is_link_up: {}, is_up: {}, ready: {}, ip: {s}", .{
+
+        const new_flags: u16 = (if (self.ready()) @as(u16, 1) else 0) << 8 | netif.flags;
+        if (self.status_flags == new_flags) return;
+        self.status_flags = new_flags;
+        log.debug("netif status callback is_link_up: {:<5} is_up: {:<5} ready: {:<5} ip: {s}", .{
             netif.flags & lwip.NETIF_FLAG_LINK_UP > 0,
             netif.flags & lwip.NETIF_FLAG_UP > 0,
             self.ready(),
@@ -130,13 +145,14 @@ pub const Interface = struct {
         }
 
         self.link.vtable.send(self.link.ptr, payload_bytes(pbuf)) catch |err| {
-            log.err("link send {}", .{err});
             return switch (err) {
                 error.OutOfMemory => lwip.ERR_MEM,
                 error.LinkDown => lwip.ERR_IF,
                 else => lwip.ERR_ARG,
             };
         };
+        self.stat.send_packets +%= 1;
+        self.stat.send_bytes +%= pbuf.len;
         return lwip.ERR_OK;
     }
 
@@ -147,10 +163,19 @@ pub const Interface = struct {
             (netif.ip_addr.u_addr.ip4.addr != 0 or netif.ip_addr.u_addr.ip6.addr[0] != 0);
     }
 
-    pub fn poll(self: *Self) !void {
+    /// Must be called periodically if poll is not called (e.g when using rx
+    /// interrupt). Good rule of thumb seems to be every 10-50 ms.
+    pub fn tick(self: *Self) void {
+        self.stat.tick_count +%= 1;
         lwip.sys_check_timeouts();
-        var packets: usize = 0;
-        while (true) : (packets += 1) {
+    }
+
+    /// Poll underlying link layer for data packet.
+    pub fn poll(self: *Self) !void {
+        self.stat.poll_count +%= 1;
+        lwip.sys_check_timeouts();
+        const netif = &self.netif;
+        while (true) {
             // get packet buffer of the max size
             const pbuf: *lwip.pbuf = lwip.pbuf_alloc(
                 lwip.PBUF_RAW,
@@ -162,23 +187,35 @@ pub const Interface = struct {
                 "net.Interface.pool invalid pbuf allocation",
             );
             // receive into that buffer
-            const head, const len = try self.link.vtable.recv(self.link.ptr, payload_bytes(pbuf)) orelse {
-                // no data release packet buffer and exit loop
+            const rsp = try self.link.vtable.recv(self.link.ptr, payload_bytes(pbuf));
+            // sync link state
+            const link_state: Link.RecvResponse.LinkState =
+                if (netif.flags & lwip.NETIF_FLAG_LINK_UP > 0) .up else .down;
+            if (rsp.link_state != link_state) {
+                switch (rsp.link_state) {
+                    .up => lwip.netif_set_link_up(netif),
+                    .down => lwip.netif_set_link_down(netif),
+                }
+            }
+
+            if (rsp.len == 0) { // no data release packet buffer and exit loop
                 _ = lwip.pbuf_free(pbuf);
                 break;
-            };
+            }
+
             errdefer _ = lwip.pbuf_free(pbuf); // netif.input: takes ownership of pbuf on success
             // set payload header and len
-            if (head > 0 and lwip.pbuf_header(pbuf, -@as(lwip.s16_t, @intCast(head))) != 0) {
+            if (rsp.head > 0 and lwip.pbuf_header(pbuf, -@as(lwip.s16_t, @intCast(rsp.head))) != 0) {
                 return error.InvalidPbufHead;
             }
-            pbuf.len = @intCast(len);
-            pbuf.tot_len = @intCast(len);
+            pbuf.len = @intCast(rsp.len);
+            pbuf.tot_len = @intCast(rsp.len);
             // pass data to the lwip input function
-            try c_err(self.netif.input.?(pbuf, &self.netif));
-        }
-        if (packets > 0) {
-            lwip.sys_check_timeouts();
+            try c_err(netif.input.?(pbuf, netif));
+            self.stat.recv_packets +%= 1;
+            self.stat.recv_bytes +%= rsp.len;
+
+            if (rsp.next_packet_available) |next_packet_available| if (!next_packet_available) break;
         }
     }
 
@@ -343,7 +380,6 @@ pub const tcp = struct {
             const self: *Self = @ptrCast(@alignCast(ptr.?));
             if (self.pcb != null) {
                 lwip.tcp_abort(c_pcb);
-                log.debug("c_on_connect already connected, aborting pcb", .{});
                 return lwip.ERR_ABRT;
             }
             assert_panic(

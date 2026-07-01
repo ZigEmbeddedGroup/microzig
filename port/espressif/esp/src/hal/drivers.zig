@@ -2,7 +2,6 @@
 //! This file implements driver abstractions based on HAL devices.
 //!
 
-const std = @import("std");
 const microzig = @import("microzig");
 const hal = microzig.hal;
 const mdf = microzig.drivers;

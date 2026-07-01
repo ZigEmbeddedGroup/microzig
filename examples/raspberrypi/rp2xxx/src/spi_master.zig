@@ -3,7 +3,6 @@ const microzig = @import("microzig");
 
 const rp2xxx = microzig.hal;
 const time = rp2xxx.time;
-const gpio = rp2xxx.gpio;
 
 const BUF_LEN = 0x100;
 const spi = rp2xxx.spi.instance.SPI0;
@@ -17,6 +16,14 @@ const SCK_PIN = 18;
 const TX_PIN = 19;
 
 // Communicate with another RP2040 over spi
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
 pub fn main() !void {
     // Set pin functions for CS, SCK, RX
     const csn = rp2xxx.gpio.num(CS_PIN);

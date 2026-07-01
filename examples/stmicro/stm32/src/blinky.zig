@@ -11,6 +11,14 @@ fn delay() void {
     }
 }
 
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
 pub fn main() !void {
     const pins, const all_leds = res: {
         if (comptime std.mem.eql(u8, microzig.config.chip_name, "STM32F103C8")) {

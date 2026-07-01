@@ -1,5 +1,4 @@
 //! Hello world for the PIO module: generating a square wave
-const std = @import("std");
 const microzig = @import("microzig");
 const rp2xxx = microzig.hal;
 const gpio = rp2xxx.gpio;
@@ -29,6 +28,14 @@ const squarewave_program = blk: {
 const pio: Pio = rp2xxx.pio.num(0);
 const sm: StateMachine = .sm0;
 const pin = gpio.num(2);
+
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
 
 pub fn main() !void {
     pio.gpio_init(pin);

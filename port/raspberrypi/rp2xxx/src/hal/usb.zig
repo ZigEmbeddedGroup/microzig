@@ -26,8 +26,10 @@ const HardwareEndpointData = struct {
 };
 
 const rp2xxx_buffers = struct {
-    // Address 0x100-0xfff (3840 bytes) can be used for data buffers
-    const USB_DPRAM_DATA_BUFFER_BASE = 0x50100100;
+    // Address 0x100-0xfff (3840 bytes) can be used for data buffers.
+    // The first 0x100 bytes are registers (last one at offset 0xfc), the rest is available for
+    // endpoint data buffers.
+    const USB_DPRAM_DATA_BUFFER_BASE = @intFromPtr(peripherals.USB_DPRAM) + 0x100;
 
     const CTRL_EP_BUFFER_SIZE = 64;
 
@@ -66,8 +68,8 @@ fn PerEndpoint(T: type) type {
 const BufferControlMmio = microzig.mmio.Mmio(@TypeOf(peripherals.USB_DPRAM.EP0_IN_BUFFER_CONTROL).underlying_type);
 const buffer_control: *volatile [16]PerEndpoint(BufferControlMmio) = @ptrCast(&peripherals.USB_DPRAM.EP0_IN_BUFFER_CONTROL);
 
-const EndpointControlMimo = microzig.mmio.Mmio(@TypeOf(peripherals.USB_DPRAM.EP1_IN_CONTROL).underlying_type);
-const endpoint_control: *volatile [15]PerEndpoint(EndpointControlMimo) = @ptrCast(&peripherals.USB_DPRAM.EP1_IN_CONTROL);
+const EndpointControlMmio = microzig.mmio.Mmio(@TypeOf(peripherals.USB_DPRAM.EP1_IN_CONTROL).underlying_type);
+const endpoint_control: *volatile [15]PerEndpoint(EndpointControlMmio) = @ptrCast(&peripherals.USB_DPRAM.EP1_IN_CONTROL);
 
 // +++++++++++++++++++++++++++++++++++++++++++++++++
 // Code
@@ -102,6 +104,8 @@ pub fn Polled(config: Config) type {
         data_buffer: []align(64) u8,
         interface: usb.DeviceInterface,
 
+        /// Poll to see if the host has sent anything. Delegate to the appropriate handler in the
+        /// controller based on the interrupt field set.
         pub fn poll(self: *@This(), controller: anytype) void {
             comptime usb.validate_controller(@TypeOf(controller));
 
@@ -110,6 +114,8 @@ pub fn Polled(config: Config) type {
 
             // Setup request received?
             if (ints.SETUP_REQ != 0) {
+                log.debug("-- setup request --", .{});
+
                 // Reset PID to 1 for EP0 IN. Every DATA packet we send in response
                 // to an IN on EP0 needs to use PID DATA1.
                 buffer_control[0].in.modify(.{ .PID_0 = 0 });
@@ -117,18 +123,20 @@ pub fn Polled(config: Config) type {
                 // Clear the status flag (write-one-to-clear)
                 peripherals.USB.SIE_STATUS.modify(.{ .SETUP_REC = 1 });
 
-                // The PAC models this buffer as two 32-bit registers.
+                // The SVD exposes this buffer as two 32-bit registers.
                 const setup: usb.types.SetupPacket = @bitCast([2]u32{
                     peripherals.USB_DPRAM.SETUP_PACKET_LOW.raw,
                     peripherals.USB_DPRAM.SETUP_PACKET_HIGH.raw,
                 });
 
-                log.debug("setup  {any}", .{setup});
+                log.debug("setup {any}", .{setup});
                 controller.on_setup_req(&self.interface, &setup);
             }
 
             // Events on one or more buffers? (In practice, always one.)
             if (ints.BUFF_STATUS != 0) {
+                log.debug("-- buffer status --", .{});
+
                 const buff_status = peripherals.USB.BUFF_STATUS.raw;
 
                 inline for (0..2 * config.max_endpoints_count) |shift| {
@@ -159,22 +167,19 @@ pub fn Polled(config: Config) type {
 
             // Has the host signaled a bus reset?
             if (ints.BUS_RESET != 0) {
-                log.info("bus reset", .{});
+                log.debug("-- bus reset --", .{});
 
-                // Abort all endpoints
-                peripherals.USB.EP_ABORT.raw = 0xFFFFFFFF;
-                // Acknowledge by writing the write-one-to-clear status bit.
                 peripherals.USB.SIE_STATUS.modify(.{ .BUS_RESET = 1 });
                 set_address(&self.interface, 0);
                 controller.on_bus_reset(&self.interface);
-                while (peripherals.USB.EP_ABORT_DONE.raw != 0xFFFFFFFF) {}
-                peripherals.USB.EP_ABORT.raw = 0;
             }
         }
 
         pub fn init() @This() {
             if (chip == .RP2350)
                 peripherals.USB.MAIN_CTRL.write(.{ .PHY_ISO = 0 });
+
+            peripherals.USB.SIE_CTRL.modify(.{ .PULLUP_EN = 0 });
 
             // Clear the control portion of DPRAM. This may not be necessary -- the
             // datasheet is ambiguous -- but the C examples do it, and so do we.
@@ -239,8 +244,10 @@ pub fn Polled(config: Config) type {
             };
 
             @memset(std.mem.asBytes(&self.endpoints), 0);
-            ep_open(&self.interface, &.control(.in(.ep0), max_supported_packet_size));
-            ep_open(&self.interface, &.control(.out(.ep0), max_supported_packet_size));
+
+            // Set up endpoints.
+            self.interface.ep_open(&.control(.in(.ep0), max_supported_packet_size));
+            self.interface.ep_open(&.control(.out(.ep0), max_supported_packet_size));
 
             // Present full-speed device by enabling pullup on DP. This is the point
             // where the host will notice our presence.

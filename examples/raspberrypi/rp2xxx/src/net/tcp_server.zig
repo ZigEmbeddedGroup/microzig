@@ -3,15 +3,21 @@ const microzig = @import("microzig");
 const rp2xxx = microzig.hal;
 const time = rp2xxx.time;
 const gpio = rp2xxx.gpio;
-const pio = rp2xxx.pio;
 const drivers = rp2xxx.drivers;
 
 const uart = rp2xxx.uart.instance.num(0);
 const uart_tx_pin = gpio.num(0);
-pub const microzig_options = microzig.Options{
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{
     .log_level = .debug,
     .logFn = rp2xxx.uart.log,
-};
+});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
 const log = std.log.scoped(.main);
 
 comptime {
@@ -33,7 +39,7 @@ pub fn main() !void {
     var wifi = try wifi_driver.init(.{});
     var led = wifi.gpio(0);
     // join network
-    try wifi.join(secrets.ssid, secrets.pwd, secrets.join_opt);
+    try wifi.join_wait(secrets.ssid, secrets.pwd, secrets.join_opt);
 
     // init lwip network interface
     var nic: net.Interface = .{ .link = wifi.link() };

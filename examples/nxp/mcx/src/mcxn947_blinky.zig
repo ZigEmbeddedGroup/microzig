@@ -3,6 +3,14 @@ const hal = microzig.hal;
 
 const pin_led_red = hal.GPIO.num(3, 12);
 
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
 pub fn main() void {
     pin_led_red.init();
     pin_led_red.set_direction(.out);

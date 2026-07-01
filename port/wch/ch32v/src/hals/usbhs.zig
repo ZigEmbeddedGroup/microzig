@@ -112,20 +112,20 @@ pub const RegCtrl = microzig.mmio.Mmio(packed struct(u8) {
     _reserved1: u2 = 0,
 });
 
-fn baseAddr() usize {
+fn base_addr() usize {
     return @intFromPtr(peripherals.USBHS);
 }
 fn mmio_u32(off: usize) *volatile RegU32 {
-    return @ptrFromInt(baseAddr() + off);
+    return @ptrFromInt(base_addr() + off);
 }
 fn mmio_u16(off: usize) *volatile RegU16 {
-    return @ptrFromInt(baseAddr() + off);
+    return @ptrFromInt(base_addr() + off);
 }
 fn mmio_tx_ctrl(off: usize) *volatile RegCtrl {
-    return @ptrFromInt(baseAddr() + off);
+    return @ptrFromInt(base_addr() + off);
 }
 fn mmio_rx_ctrl(off: usize) *volatile RegCtrl {
-    return @ptrFromInt(baseAddr() + off);
+    return @ptrFromInt(base_addr() + off);
 }
 
 // RX DMA: 0x20 + (ep-1)*4  (EP1..EP15)
@@ -212,12 +212,8 @@ pub fn Polled(comptime cfg: Config) type {
 
         interface: usb.DeviceInterface,
 
-        pub fn init() Self {
-            var self: Self = .{
-                .endpoints = undefined,
-                .buffer_pool = undefined,
-                .interface = .{ .vtable = &vtable },
-            };
+        pub fn init(self: *Self) void {
+            self.interface = .{ .vtable = &vtable };
             @memset(std.mem.asBytes(&self.endpoints), 0);
             @memset(self.pool[0..64], 0x7e);
             @memset(self.pool[64..], 0);
@@ -250,8 +246,6 @@ pub fn Polled(comptime cfg: Config) type {
             Regs.USB_CTRL.modify(.{
                 .RB_UC_CLR_ALL = 0,
             });
-
-            return self;
         }
 
         // TODO: replace with fixedbuffer allocator?

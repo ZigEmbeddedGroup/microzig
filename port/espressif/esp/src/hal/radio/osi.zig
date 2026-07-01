@@ -5,7 +5,6 @@ const builtin = @import("builtin");
 const c = @import("esp-wifi-driver");
 const microzig = @import("microzig");
 const enter_critical_section = microzig.interrupt.enter_critical_section;
-const time = microzig.drivers.time;
 const peripherals = microzig.chip.peripherals;
 const APB_CTRL = peripherals.APB_CTRL;
 const radio_interrupt = microzig.options.hal.radio.interrupt;
@@ -13,7 +12,6 @@ const radio_interrupt = microzig.options.hal.radio.interrupt;
 const radio = @import("../radio.zig");
 const rng = @import("../rng.zig");
 const rtos = @import("../rtos.zig");
-const systimer = @import("../systimer.zig");
 const get_time_since_boot = @import("../time.zig").get_time_since_boot;
 const timer = @import("timer.zig");
 const wifi = @import("wifi.zig");
@@ -46,12 +44,14 @@ pub fn strlen(str: ?[*:0]const u8) callconv(.c) usize {
     return std.mem.len(s);
 }
 
-pub fn strnlen(str: ?[*:0]const u8, _: usize) callconv(.c) usize {
-    // const s = str orelse return 0;
-    // return if (std.mem.indexOfScalar(u8, s[0..n], 0)) |index| index + 1 else n;
+pub fn strnlen(str: ?[*:0]const u8, n: usize) callconv(.c) usize {
     const s = str orelse return 0;
+    return if (std.mem.indexOfScalar(u8, s[0..n], 0)) |index| index else n;
+}
 
-    return std.mem.len(s);
+test "strnlen" {
+    try std.testing.expect(strnlen(&.{ 10, 20, 30, 0 }, 4) == 3);
+    try std.testing.expect(strnlen(&.{ 10, 20, 30, 0, 10, 20, 30 }, 7) == 3);
 }
 
 pub fn strrchr(str: ?[*:0]const u8, chr: u32) callconv(.c) ?[*:0]const u8 {
@@ -148,7 +148,7 @@ pub fn usleep(time_us: u32) callconv(.c) c_int {
 }
 
 pub fn vTaskDelay(ticks: u32) callconv(.c) void {
-    rtos.sleep(.from_us(ticks));
+    rtos.sleep(.from_ticks(ticks));
 }
 
 pub var WIFI_EVENT: c.esp_event_base_t = "WIFI_EVENT";
@@ -321,11 +321,12 @@ pub fn semphr_take(ptr: ?*anyopaque, tick: u32) callconv(.c) i32 {
     log.debug("semphr_take {?} {}", .{ ptr, tick });
 
     const sem: *rtos.Semaphore = @ptrCast(@alignCast(ptr));
-    const maybe_timeout: ?time.Duration = if (tick == c.OSI_FUNCS_TIME_BLOCKING)
-        .from_us(tick)
-    else
-        null;
-    sem.take_with_timeout(maybe_timeout) catch {
+    const timeout: rtos.Timeout = switch (tick) {
+        0 => .non_blocking,
+        c.OSI_FUNCS_TIME_BLOCKING => .never,
+        else => |ticks| .{ .after = .from_ticks(ticks) },
+    };
+    sem.take_with_timeout(timeout) catch {
         log.debug(">>>> return from semaphore take with timeout: {*}", .{sem});
         return 1;
     };
@@ -370,10 +371,11 @@ const RecursiveMutex = struct {
             if (@intFromEnum(current_task.priority) > @intFromEnum(owning_task.priority)) {
                 mutex.prev_priority = owning_task.priority;
                 owning_task.priority = current_task.priority;
-                rtos.make_ready(owning_task);
+                var _hptw = false;
+                rtos.make_ready(owning_task, &_hptw);
             }
 
-            mutex.wait_queue.wait(current_task, null);
+            mutex.wait_queue.wait(null);
         }
 
         assert(mutex.value == 0);
@@ -397,8 +399,13 @@ const RecursiveMutex = struct {
                 owning_task.priority = prev_priority;
                 mutex.prev_priority = null;
             }
+
             mutex.owning_task = null;
-            mutex.wait_queue.wake_one();
+
+            var hptw = false;
+            mutex.wait_queue.wake_one(&hptw);
+            if (hptw) rtos.yield_from_cs(.reschedule);
+
             return true;
         } else {
             return false;
@@ -507,17 +514,12 @@ pub fn queue_send(ptr: ?*anyopaque, item_ptr: ?*anyopaque, block_time_tick: u32)
     const queue: *QueueWrapper = @ptrCast(@alignCast(ptr));
     const item: [*]const u8 = @ptrCast(@alignCast(item_ptr));
 
-    const size = switch (block_time_tick) {
-        0 => queue.inner.put_non_blocking(item[0..queue.item_len]),
-        else => queue.inner.put(
-            item[0..queue.item_len],
-            1,
-            if (block_time_tick == c.OSI_FUNCS_TIME_BLOCKING)
-                .from_us(block_time_tick)
-            else
-                null,
-        ),
+    const timeout: rtos.Timeout = switch (block_time_tick) {
+        0 => .non_blocking,
+        c.OSI_FUNCS_TIME_BLOCKING => .never,
+        else => |ticks| .{ .after = .from_ticks(ticks) },
     };
+    const size = queue.inner.put(item[0..queue.item_len], 1, timeout);
     if (size == 0) return -1;
     return 1;
 }
@@ -527,9 +529,11 @@ pub fn queue_send_from_isr(ptr: ?*anyopaque, item_ptr: ?*anyopaque, _hptw: ?*any
 
     const queue: *QueueWrapper = @ptrCast(@alignCast(ptr));
     const item: [*]const u8 = @ptrCast(@alignCast(item_ptr));
-    const n = @divExact(queue.inner.put_non_blocking(item[0..queue.item_len]), queue.item_len);
 
-    @as(*u32, @ptrCast(@alignCast(_hptw))).* = @intFromBool(rtos.is_a_higher_priority_task_ready());
+    var hptw = false;
+    const n = @divExact(queue.inner.put_from_isr(item[0..queue.item_len], &hptw), queue.item_len);
+
+    @as(*u32, @ptrCast(@alignCast(_hptw))).* |= @intFromBool(hptw);
 
     return @intCast(n);
 }
@@ -548,17 +552,12 @@ pub fn queue_recv(ptr: ?*anyopaque, item_ptr: ?*anyopaque, block_time_tick: u32)
     const queue: *QueueWrapper = @ptrCast(@alignCast(ptr));
     const item: [*]u8 = @ptrCast(@alignCast(item_ptr));
 
-    const size = switch (block_time_tick) {
-        0 => queue.inner.get_non_blocking(item[0..queue.item_len]),
-        else => queue.inner.get(
-            item[0..queue.item_len],
-            queue.item_len,
-            if (block_time_tick == c.OSI_FUNCS_TIME_BLOCKING)
-                .from_us(block_time_tick)
-            else
-                null,
-        ),
+    const timeout: rtos.Timeout = switch (block_time_tick) {
+        0 => .non_blocking,
+        c.OSI_FUNCS_TIME_BLOCKING => .never,
+        else => |ticks| .{ .after = .from_ticks(ticks) },
     };
+    const size = queue.inner.get(item[0..queue.item_len], 1, timeout);
     if (size == 0) return -1;
     return 1;
 }
@@ -673,17 +672,17 @@ pub fn task_delete(handle: ?*anyopaque) callconv(.c) void {
     if (handle != null) {
         @panic("task_delete(non-null): not implemented");
     }
-    rtos.yield(.delete);
+    rtos.yield(.exit);
 }
 
 pub fn task_delay(tick: u32) callconv(.c) void {
     log.debug("task_delay {}", .{tick});
 
-    rtos.sleep(.from_us(tick));
+    rtos.sleep(.from_ticks(tick));
 }
 
 pub fn task_ms_to_tick(ms: u32) callconv(.c) i32 {
-    return @intCast(ms * 1_000);
+    return @intCast(rtos.Duration.from_ms(ms).to_ticks());
 }
 
 pub fn task_get_current_task() callconv(.c) ?*anyopaque {

@@ -10,7 +10,7 @@
 
 # Getting Started
 
-## Blinky on the Raspberry Pi Pico
+## Blinky on the Raspberry Pi Pico and Pico 2
 
 This tutorial assumes that you're programming a [Raspberry Pi
 Pico](https://www.raspberrypi.com/products/raspberry-pi-pico/). This hardware
@@ -20,6 +20,11 @@ it does support other hardware, such as Microchip's `ATSAMD51J19` which was
 used for the [2024 SYCL](https://sycl.it)
 [Badge](https://github.com/ZigEmbeddedGroup/sycl-badge/blob/main/docs/introduction/).
 
+If you're using a Raspberry Pi Pico 2 instead, you can follow the same tutorial.
+The main change is in your `build.zig`, where the board target should be
+`mb.ports.rp2xxx.boards.raspberrypi.pico2_arm` instead of
+`mb.ports.rp2xxx.boards.raspberrypi.pico`.
+
 ## Let's Begin
 
 Quickly check that you have Zig `0.15.1` installed by running `zig version`.
@@ -27,8 +32,8 @@ Quickly check that you have Zig `0.15.1` installed by running `zig version`.
 Assuming you've initialized a zig project with `zig init`, or have set one up
 yourself, you can add microzig as a dependency with the following command:
 
-```sh
-zig fetch --save https://github.com/ZigEmbeddedGroup/microzig/releases/download/0.15.0/microzig.tar.gz
+```sh 
+zig fetch --save https://github.com/ZigEmbeddedGroup/microzig/releases/download/0.15.1/microzig.tar.gz
 ```
 
 Then in your `build.zig`:
@@ -59,6 +64,12 @@ pub fn build(b: *std.Build) void {
 }
 ```
 
+If you're building for a Pico 2, change the target line to:
+
+```zig
+.target = mb.ports.rp2xxx.boards.raspberrypi.pico2_arm,
+```
+
 and for your `src/main.zig`, let's start with a classic blinky program. Yes,
 most of the main stdlib is available for use on an MCU with Zig:
 
@@ -67,6 +78,13 @@ const std = @import("std");
 const microzig = @import("microzig");
 const rp2xxx = microzig.hal;
 const time = rp2xxx.time;
+
+pub const panic = microzig.panic;
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
 
 // Compile-time pin configuration
 const pin_config = rp2xxx.pins.GlobalConfiguration{
@@ -104,11 +122,11 @@ zig-out/firmware/blinky.elf: ELF 32-bit LSB executable, ARM, EABI5 version 1 (SY
 
 ## Programming the MCU
 
-To activate the UF2 bootloader, power must be applied to the pico while the
-`BOOTSEL` button is held. This is best done by connecting a button from `RUN`
-to ground, pressing both buttons, and releasing the `RUN` button first, then
-`BOOTSEL`. The other option is to plug/unplug the USB cable which is awkward
-and gets tiresome.
+To activate the UF2 bootloader, power must be applied to the Pico or Pico 2
+while the `BOOTSEL` button is held. This is best done by connecting a button
+from `RUN` to ground, pressing both buttons, and releasing the `RUN` button
+first, then `BOOTSEL`. The other option is to plug/unplug the USB cable which
+is awkward and gets tiresome.
 
 Copy the uf2 file into the mounted drive. Execution should take place immediately.
 

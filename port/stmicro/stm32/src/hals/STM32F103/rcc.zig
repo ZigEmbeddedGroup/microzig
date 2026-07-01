@@ -1,14 +1,15 @@
 //NOTE: this file is only valid for densities: Low, Medium and High. Connectivity/XL line devices are not supported in this version.
 //TODO: Add support for 105/107
 const std = @import("std");
-const ClockTree = @import("ClockTree").get_mcu_tree(microzig.config.chip_name);
 const microzig = @import("microzig");
 const power = @import("power.zig");
 const enums = @import("../common/enums.zig");
 const util = @import("../common/util.zig");
+const ClockTree = @import("ClockTree");
+const Tree = @field(ClockTree, microzig.config.chip_name);
 
 //expose only the configuration structs
-pub const Config = ClockTree.Config;
+pub const Config = Tree.Config;
 const flash_v1 = microzig.chip.types.peripherals.flash_f1;
 const flash = microzig.chip.peripherals.FLASH;
 const PLLMUL = microzig.chip.types.peripherals.rcc_f1.PLLMUL;
@@ -45,8 +46,8 @@ pub const Bus = enum {
 };
 
 //default clock config
-var current_clocks: ClockTree.Clock_Output = blk: {
-    const out = ClockTree.get_clocks(.{}) catch unreachable;
+var current_clocks: Tree.ClockOutput = blk: {
+    const out = Tree.get_clocks(.{}) catch unreachable;
     break :blk out.clock;
 };
 
@@ -54,38 +55,37 @@ var current_clocks: ClockTree.Clock_Output = blk: {
 ///Configures the system clocks
 ///NOTE: to configure the backup domain clocks (RTC) it is necessary to enable it through the power
 ///register before configuring the clocks
-pub fn apply(comptime config: ClockTree.Config) ClockInitError!ClockTree.Clock_Output {
-    const out_data = comptime ClockTree.get_clocks(config) catch unreachable;
+pub fn apply(comptime config: Tree.Config) ClockInitError!Tree.ClockOutput {
+    const out_data = comptime Tree.get_clocks(config) catch unreachable;
     try apply_internal(out_data.config);
     current_clocks = out_data.clock;
     return out_data.clock;
 }
 
-fn apply_internal(config: ClockTree.Config_Output) ClockInitError!void {
-    const latency: flash_v1.LATENCY = if (config.FLatency) |lat| @enumFromInt(@as(u3, @intFromEnum(lat))) else .WS0;
+fn apply_internal(config: Tree.OutputConfig) ClockInitError!void {
+    const latency: flash_v1.LATENCY = @enumFromInt(@intFromEnum(config.FLatency));
     const prefetch = config.flags.PREFETCH_ENABLE;
-    const apb1: ?PPRE = if (config.APB1CLKDivider) |pre| @enumFromInt(@as(u3, @intFromEnum(pre))) else null;
-    const apb2: ?PPRE = if (config.APB2CLKDivider) |pre| @enumFromInt(@as(u3, @intFromEnum(pre))) else null;
-    const ahb: ?HPRE = if (config.AHBCLKDivider) |pre| @enumFromInt(@as(u4, @intFromEnum(pre))) else null;
-    const adc: ?ADCPRE = if (config.ADCPresc) |pre| @enumFromInt(@as(u2, @intFromEnum(pre))) else null;
-    const sys_clk: SW = if (config.SYSCLKSource) |src| @enumFromInt(@as(u2, @intFromEnum(src))) else .HSI;
-    //USB prescaler enum is inverted
-    const usb: ?USBPRE = if (config.USBPrescaler) |pre| @enumFromInt(@as(u1, @intFromEnum(pre)) ^ 1) else null;
+    const apb1: PPRE = @enumFromInt(@intFromEnum(config.APB1CLKDivider));
+    const apb2: PPRE = @enumFromInt(@intFromEnum(config.APB2CLKDivider));
+    const ahb: HPRE = @enumFromInt(@intFromEnum(config.AHBCLKDivider));
+    const adc: ADCPRE = @enumFromInt(@intFromEnum(config.ADCPresc));
+    const sys_clk: SW = @enumFromInt(@intFromEnum(config.SYSCLKSource));
+    const usb: USBPRE = @enumFromInt(@intFromEnum(config.USBPrescaler));
 
     secure_enable();
     set_flash(latency, prefetch);
 
     if (config.flags.EnableHSE) {
-        const timout = if (config.HSE_Timout) |t| @as(usize, @intFromFloat(t)) else null;
+        const timout = @as(usize, config.HSE_Timout);
         try enable_hse(config.flags.HSEByPass, config.flags.EnbaleCSS, timout);
     } else {
         disable_hse();
     }
 
     if (config.flags.PLLUsed) {
-        const source: PLLSRC = if (config.PLLSource) |src| @enumFromInt(@as(u1, @intFromEnum(src))) else PLLSRC.HSI_Div2;
-        const mul: PLLMUL = if (config.PLLMUL) |pre| @enumFromInt(@as(u4, @intFromEnum(pre))) else PLLMUL.Mul2;
-        const pre_div: PLLXTPRE = if (config.HSEDivPLL) |pre| @enumFromInt(@as(u1, @intFromEnum(pre))) else PLLXTPRE.Div1;
+        const source: PLLSRC = @enumFromInt(@intFromEnum(config.PLLSourceVirtual));
+        const mul: PLLMUL = @enumFromInt(@intFromEnum(config.PLLMUL));
+        const pre_div: PLLXTPRE = @enumFromInt(@intFromEnum(config.HSEDivPLL));
         config_pll(source, mul, pre_div);
         enable_pll();
     } else {
@@ -97,7 +97,7 @@ fn apply_internal(config: ClockTree.Config_Output) ClockInitError!void {
     //BACKUP DOMAIN CLOCK CONFIG
 
     if (config.flags.EnableLSE) {
-        const timeout = if (config.LSE_Timout) |t| @as(usize, @intFromFloat(t)) else null;
+        const timeout = @as(usize, config.LSE_Timout);
         const bypass = config.flags.LSEByPass;
         try enable_lse(timeout, bypass);
     } else {
@@ -106,34 +106,17 @@ fn apply_internal(config: ClockTree.Config_Output) ClockInitError!void {
 
     set_lsi(config.flags.LSIUsed);
 
-    rtc_config: {
-        if (config.flags.RTCEnable) {
-            if (config.RTCClockSelection) |s| {
-                const source = switch (s) {
-                    .RCC_RTCCLKSOURCE_HSE_DIV128 => RTCSEL.HSE,
-                    .RCC_RTCCLKSOURCE_LSE => RTCSEL.LSE,
-                    .RCC_RTCCLKSOURCE_LSI => RTCSEL.LSI,
-                };
-                config_rtc(source);
-                break :rtc_config;
-            }
-        }
+    if (config.flags.RTCEnable) {
+        const source: RTCSEL = @enumFromInt(@intFromEnum(config.RTCClockSelection));
+        config_rtc(source);
+    } else {
         config_rtc(.DISABLE);
     }
 
-    mco_config: {
-        if (config.flags.MCOEnable) {
-            if (config.RCC_MCOSource) |src| {
-                const source: MCOSEL = switch (src) {
-                    .RCC_MCO1SOURCE_HSE => .HSE,
-                    .RCC_MCO1SOURCE_HSI => .HSI,
-                    .RCC_MCO1SOURCE_PLLCLK => .PLL,
-                    .RCC_MCO1SOURCE_SYSCLK => .SYS,
-                };
-                config_mco(source);
-                break :mco_config;
-            }
-        }
+    if (config.flags.MCOEnable) {
+        const source: MCOSEL = @enumFromInt(@intFromEnum(config.RCC_MCOSource));
+        config_mco(source);
+    } else {
         config_mco(.DISABLE);
     }
 
@@ -142,9 +125,7 @@ fn apply_internal(config: ClockTree.Config_Output) ClockInitError!void {
 
     //in case of HSI not used, we have to disable it here
     //becuse the system clock configuration 'secure_enable' enables it by default
-    if (config.HSICalibrationValue) |val| {
-        calib_hsi(@intFromFloat(val));
-    }
+    calib_hsi(@intCast(config.HSICalibrationValue));
     set_hsi(config.flags.HSIUsed);
 }
 
@@ -160,7 +141,7 @@ pub fn secure_enable() void {
     rcc.BDCR.raw = 0;
     rcc.CFGR.raw = 0;
     while (rcc.CFGR.read().SWS != .HSI) {
-        asm volatile ("" ::: .{ .memory = true });
+        asm volatile ("");
     }
 
     rcc.CR.modify(.{
@@ -175,7 +156,7 @@ pub fn set_hsi(on: bool) void {
     rcc.CR.modify(.{ .HSION = @intFromBool(on) });
     if (on) {
         while (rcc.CR.read().HSIRDY == 0) {
-            asm volatile ("" ::: .{ .memory = true });
+            asm volatile ("");
         }
     }
 }
@@ -188,7 +169,7 @@ pub fn calib_hsi(calib: usize) void {
 
     //wait for the HSI to stabilize
     for (0..16) |_| {
-        asm volatile ("" ::: .{ .memory = true });
+        asm volatile ("");
     }
 }
 
@@ -196,7 +177,7 @@ fn set_lsi(on: bool) void {
     rcc.CSR.modify(.{ .LSION = @intFromBool(on) });
     if (on) {
         while (rcc.CSR.read().LSIRDY == 0) {
-            asm volatile ("" ::: .{ .memory = true });
+            asm volatile ("");
         }
     }
 }
@@ -220,7 +201,7 @@ pub fn enable_hse(bypass: bool, css: bool, timeout: ?usize) ClockInitError!void 
     while (rcc.CR.read().HSERDY == 0) {
         if (ticks == 0) return error.HSETimeout;
         ticks -= 1;
-        asm volatile ("" ::: .{ .memory = true });
+        asm volatile ("");
     }
 }
 
@@ -245,7 +226,7 @@ fn enable_lse(timeout: ?usize, bypass: bool) ClockInitError!void {
     while (rcc.BDCR.read().LSERDY == 0) {
         if (ticks == 0) return error.LSETimeout;
         ticks -= 1;
-        asm volatile ("" ::: .{ .memory = true });
+        asm volatile ("");
     }
 }
 
@@ -293,21 +274,21 @@ fn config_system_clock(system_clock: SW) void {
     while (true) {
         const sws = rcc.CFGR.read().SWS;
         if (sws == system_clock) break;
-        asm volatile ("" ::: .{ .memory = true });
+        asm volatile ("");
     }
 }
 
 pub fn enable_pll() void {
     rcc.CR.modify(.{ .PLLON = 1 });
     while (rcc.CR.read().PLLRDY == 0) {
-        asm volatile ("" ::: .{ .memory = true });
+        asm volatile ("");
     }
 }
 
 pub fn disable_pll() void {
     rcc.CR.modify(.{ .PLLON = 0 });
     while (rcc.CR.read().PLLRDY != 0) {
-        asm volatile ("" ::: .{ .memory = true });
+        asm volatile ("");
     }
 }
 
@@ -514,15 +495,15 @@ pub fn get_clock(comptime source: Peripherals) u32 {
     })) current_clocks.USBoutput else if (util.match_name(peri_name, &.{
         "RTC",
     })) current_clocks.RTCOutput else @panic("Unknown clock for peripheral");
-    return @intFromFloat(clock);
+    return clock;
 }
 
 pub inline fn get_sys_clk() u32 {
-    return @intFromFloat(current_clocks.SysCLKOutput);
+    return current_clocks.SysCLKOutput;
 }
 
 inline fn calc_wait_ticks(val: usize) usize {
-    const corrent_clock: usize = @intFromFloat(current_clocks.SysCLKOutput);
+    const corrent_clock: usize = @intCast(current_clocks.SysCLKOutput);
     const ms_per_tick = corrent_clock / 1000;
     return ms_per_tick * val;
 }

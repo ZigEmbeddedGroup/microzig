@@ -1,9 +1,6 @@
-const std = @import("std");
-
 const microzig = @import("microzig");
 const rp2xxx = microzig.hal;
 const board = microzig.board;
-const gpio = rp2xxx.gpio;
 const time = rp2xxx.time;
 const multicore = rp2xxx.multicore;
 
@@ -16,6 +13,14 @@ fn core1() void {
         pins.led.put(0);
         time.sleep_ms(100);
     }
+}
+
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
 }
 
 pub fn main() !void {

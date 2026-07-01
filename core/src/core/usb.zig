@@ -20,15 +20,16 @@ pub const StructFieldAttributes = struct {
     default_value_ptr: ?*const anyopaque = null,
 };
 
-/// Meant to make transition to zig 0.16 easier
+/// Helper to create a struct, wrapping around @Type, meant to make transition to zig 0.16 easier
 pub fn Struct(
-    comptime layout: std.builtin.Type.ContainerLayout,
-    comptime BackingInt: ?type,
-    comptime field_names: []const [:0]const u8,
-    comptime field_types: *const [field_names.len]type,
-    comptime field_attrs: *const [field_names.len]StructFieldAttributes,
+    layout: std.builtin.Type.ContainerLayout,
+    BackingInt: ?type,
+    field_names: []const [:0]const u8,
+    field_types: *const [field_names.len]type,
+    field_attrs: *const [field_names.len]StructFieldAttributes,
 ) type {
-    comptime var fields: []const std.builtin.Type.StructField = &.{};
+    var fields: []const std.builtin.Type.StructField = &.{};
+    // Iterate over the names, field types, and attributes, creating a new struct field entry
     for (field_names, field_types, field_attrs) |n, T, a| {
         fields = fields ++ &[1]std.builtin.Type.StructField{.{
             .name = n,
@@ -47,6 +48,7 @@ pub fn Struct(
     } });
 }
 
+// What does this do? It lets you iterate through interfaces and endpoints?
 pub const DescriptorAllocator = struct {
     next_ep_num: [2]u8,
     next_itf_num: u8,
@@ -96,6 +98,7 @@ pub const DescriptorAllocator = struct {
     }
 };
 
+/// Wraps a Descriptor type. Returned by the `create` method of the Descriptor.
 pub fn DescriptorCreateResult(Descriptor: type) type {
     return struct {
         descriptor: Descriptor,
@@ -108,7 +111,7 @@ pub fn DescriptorCreateResult(Descriptor: type) type {
 }
 
 /// USB Device interface
-/// Any device implementation used with DeviceController must implement those functions
+/// Any device implementation used with DeviceController must implement these functions
 pub const DeviceInterface = struct {
     pub const VTable = struct {
         ep_writev: *const fn (*DeviceInterface, types.Endpoint.Num, []const []const u8) types.Len,
@@ -191,16 +194,24 @@ pub const Config = struct {
         max_current_ma: u9,
         Drivers: type,
 
+        /// Generate A struct with a field for each field in Drivers, where the type is the third
+        /// arg of the Drivers' Descriptor's 'create' method.
         pub fn Args(self: @This()) type {
             const fields = @typeInfo(self.Drivers).@"struct".fields;
             var field_names: [fields.len][:0]const u8 = undefined;
             var field_types: [fields.len]type = undefined;
             for (fields, 0..) |fld, i| {
+                // Collect field names
                 field_names[i] = fld.name;
+                // Collect the type info  for the Descriptor.create function parameter
                 const params = @typeInfo(@TypeOf(fld.type.Descriptor.create)).@"fn".params;
+                // Ensure it takes 3 parameters
                 assert(params.len == 3);
+                // The first must be a DescriptorAllocator
                 assert(params[0].type == *DescriptorAllocator);
+                // The second is usb.types.Len
                 assert(params[1].type == types.Len);
+                // And save the type of the third
                 field_types[i] = params[2].type.?;
             }
             return Struct(.auto, null, &field_names, &field_types, &@splat(.{}));
@@ -251,11 +262,14 @@ pub fn validate_controller(T: type) void {
 
 /// USB device controller
 ///
-/// This code handles usb enumeration and configuration and routes packets to drivers.
+/// Responds to host requests and dispatches to the appropriate drivers.
+/// When this type is build (at comptime), it builds descriptor and handler tables based on the
+/// provided config.
 pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
     std.debug.assert(config.configurations.len == 1);
 
     return struct {
+        // We only support one configuration
         const config0 = config.configurations[0];
         const driver_fields = @typeInfo(config0.Drivers).@"struct".fields;
         const DriverEnum = std.meta.FieldEnum(config0.Drivers);
@@ -298,14 +312,18 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
             var driver_alloc_attrs: []const StructFieldAttributes = &.{};
 
             for (driver_fields, 0..) |drv, drv_id| {
+                // Get descriptor type for the current driver
                 const Descriptors = drv.type.Descriptor;
+                // Call the create method on the descriptor, which wraps it with the allow stuff.
                 const result = Descriptors.create(&alloc, max_psize, @field(driver_args[0], drv.name));
+                // Get the descriptor instance from the result.
                 const descriptors = result.descriptor;
 
+                // If the driver requests memory, then collect the names, types, and attrs
                 if (result.alloc_bytes) |len| {
-                    driver_alloc_names = driver_alloc_names ++ &[1][:0]const u8{drv.name};
-                    driver_alloc_types = driver_alloc_types ++ &[1]type{[len]u8};
-                    driver_alloc_attrs = driver_alloc_attrs ++ &[1]StructFieldAttributes{.{ .@"align" = result.alloc_align }};
+                    driver_alloc_names = driver_alloc_names ++ &[_][:0]const u8{drv.name};
+                    driver_alloc_types = driver_alloc_types ++ &[_]type{[len]u8};
+                    driver_alloc_attrs = driver_alloc_attrs ++ &[_]StructFieldAttributes{.{ .@"align" = result.alloc_align }};
                 } else {
                     assert(result.alloc_align == null);
                 }
@@ -313,9 +331,14 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
                 assert(@alignOf(Descriptors) == 1);
                 size += @sizeOf(Descriptors);
 
+                // Collect handler types, names, and drivers, to later be bound to the appropriate
+                // endpoints
                 for (@typeInfo(Descriptors).@"struct".fields, 0..) |fld, desc_num| {
                     const desc = @field(descriptors, fld.name);
 
+                    // Determine which interface numbers this driver owns. If it is an
+                    // InterfaceAssociation, then use the interface count. If it is an Interface,
+                    // then the driver owns just that one interface.
                     if (desc_num == 0) {
                         const itf_start, const itf_count = switch (fld.type) {
                             descriptor.InterfaceAssociation => .{ desc.first_interface, desc.interface_count },
@@ -329,10 +352,11 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
                         };
                         if (itf_start != itf_handlers.len)
                             @compileError("interface numbering mismatch");
-                        itf_handlers = itf_handlers ++ &[1]DriverEnum{@field(DriverEnum, drv.name)} ** itf_count;
+                        itf_handlers = itf_handlers ++ &[_]DriverEnum{@field(DriverEnum, drv.name)} ** itf_count;
                     }
 
                     switch (fld.type) {
+                        // Register handler for endpoints
                         descriptor.Endpoint => {
                             const ep_dir = @intFromEnum(desc.endpoint.dir);
                             const ep_num = @intFromEnum(desc.endpoint.num);
@@ -347,6 +371,7 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
                             ep_handler_drivers[ep_dir][ep_num] = drv_id;
                             ep_handler_names[ep_dir][ep_num] = fld.name;
                         },
+                        // Interface association must be first
                         descriptor.InterfaceAssociation => assert(desc_num == 0),
                         else => {},
                     }
@@ -356,9 +381,12 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
                 field_attrs[drv_id] = .{ .default_value_ptr = &descriptors };
             }
 
+            // Finally, bind the handler functions based on the data collected above.
             const Tuple = std.meta.Tuple;
+            // Create a tuple with the appropriate types
             const ep_handlers_types: [2]type = .{ Tuple(&ep_handler_types[0]), Tuple(&ep_handler_types[1]) };
             var ep_handlers: Tuple(&ep_handlers_types) = undefined;
+            // Iterate over all IN and OUT endpoints and bind the handler for any that are set.
             for (&ep_handler_types, &ep_handler_names, &ep_handler_drivers, 0..) |htypes, hnames, hdrivers, dir| {
                 for (&htypes, &hnames, &hdrivers, 0..) |T, name, drv_id, ep| {
                     if (T != void)
@@ -558,6 +586,7 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
             }
         }
 
+        // Return the appropriate descriptor type as determined by the top 8 bits of the value.
         fn get_descriptor(value: u16) ?[]const u8 {
             const asBytes = std.mem.asBytes;
             const desc_type: descriptor.Type = @enumFromInt(value >> 8);

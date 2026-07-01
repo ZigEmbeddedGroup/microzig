@@ -92,10 +92,12 @@ pub const Cmd = enum(u32) {
     set_auth = 22,
     set_ssid = 26,
     set_antdiv = 64,
+    set_pm = 86,
     set_gmode = 110,
     set_wsec = 134,
     set_band = 142,
     set_wpa_auth = 165,
+    set_scan_channel_time = 185,
     get_var = 262,
     set_var = 263,
     set_wsec_pmk = 268,
@@ -184,7 +186,7 @@ pub const Response = struct {
         return .{ head, self.sdp.len - head };
     }
 
-    pub fn event(self: Self) EventPacket {
+    pub fn event(self: Self) ?EventPacket {
         assert(self.sdp.channel() == .event);
         const buf = self.data();
         if (buf.len < @sizeOf(EventPacket)) {
@@ -195,7 +197,63 @@ pub const Response = struct {
         var evt: EventPacket = undefined;
         @memcpy(std.mem.asBytes(&evt), buf[0..@sizeOf(EventPacket)]);
         std.mem.byteSwapAllFields(EventPacket, &evt);
+
+        if (evt.eth.ether_type != 0x886c) return null;
+        if (!mem.eql(u8, &evt.hdr.oui, &.{ 0x00, 0x10, 0x18 })) return null;
+
         return evt;
+    }
+
+    pub fn event_scan_result(self: Self) !struct { EventScanResult, Security } {
+        var res: EventScanResult = undefined;
+        var sec: Security = .{};
+
+        assert(self.sdp.channel() == .event);
+        const buf = self.data();
+        if (buf.len < @sizeOf(EventPacket) + @sizeOf(EventScanResult)) {
+            return error.Cyw43InsufficientData;
+        }
+        const res_buf = buf[@sizeOf(EventPacket)..];
+        @memcpy(std.mem.asBytes(&res), res_buf[0..@sizeOf(EventScanResult)]);
+        res.channel &= 0xff;
+        if (res_buf.len < res.ie_offset + res.ie_length) {
+            return error.Cyw43InsufficientData;
+        }
+
+        // ref: https://github.com/georgerobotics/cyw43-driver/blob/13004039ffe127519f33824bf7d240e1f23fbdcd/src/cyw43_ll.c#L538
+        const is_open = res.capability & 0x0010 == 0;
+        if (!is_open) sec.wep_psk = true;
+
+        var ie_buf = res_buf[res.ie_offset..][0..res.ie_length];
+        while (ie_buf.len >= 2) {
+            const typ = ie_buf[0];
+            const len = ie_buf[1];
+            ie_buf = ie_buf[2..];
+            if (typ == 48) {
+                sec.wpa2 = true;
+            } else {
+                const wpa_oui_type1 = "\x00\x50\xF2\x01";
+                if (typ == 221 and ie_buf.len >= wpa_oui_type1.len) {
+                    if (mem.eql(u8, ie_buf[0..wpa_oui_type1.len], wpa_oui_type1)) {
+                        sec.wpa = true;
+                    }
+                }
+            }
+            if (ie_buf.len <= len) break;
+            ie_buf = ie_buf[len..];
+        }
+
+        return .{ res, sec };
+    }
+};
+
+pub const Security = packed struct {
+    wep_psk: bool = false,
+    wpa: bool = false,
+    wpa2: bool = false,
+
+    pub fn open(s: Security) bool {
+        return @as(u3, @bitCast(s)) == 0;
     }
 };
 
@@ -350,58 +408,20 @@ const EventPacket = extern struct {
 };
 
 // Escan result event (excluding 12-byte IOCTL header and BDC header)
-const EventScanResult = extern struct {
-    eth: EthernetHeader,
-    hdr: EventHeader,
-    msg: EventMessage,
-    scan: ScanResultHeader,
-    info: BssInfo,
-};
+pub const EventScanResult = extern struct {
+    // Scan result header
+    const Header = extern struct {
+        buflen: u32,
+        version: u32,
+        sync_id: u16,
+        bss_count: u16,
+    };
 
-// Ethernet header (sdpcm_ethernet_header_t)
-const EthernetHeader = extern struct {
-    dest_mac: [6]u8,
-    source_mac: [6]u8,
-    ether_type: u16,
-};
+    hdr: Header,
 
-// Vendor-specific (Broadcom) Ethernet header (sdpcm_bcmeth_header_t)
-const EventHeader = extern struct {
-    subtype: u16,
-    len: u16,
-    ver: u8,
-    oui: [3]u8,
-    usr_subtype: u16,
-};
-
-// Raw event header (sdpcm_raw_event_header_t)
-const EventMessage = extern struct {
-    version: u16,
-    flags: u16,
-    event_type: EventType,
-    status: EventStatus,
-    reason: u32,
-    auth_type: u32,
-    datalen: u32,
-    addr: [6]u8,
-    ifname: [16]u8,
-    ifidx: u8,
-    bsscfgidx: u8,
-};
-
-// Scan result header (part of wl_escan_result_t)
-const ScanResultHeader = extern struct {
-    buflen: u32,
-    version: u32,
-    sync_id: u16,
-    bss_count: u16,
-};
-
-// BSS info from EScan (part of wl_bss_info_t)
-const BssInfo = extern struct {
     version: u32, // version field
     length: u32, // byte length of data in this record, starting at version and including IEs
-    bssid: [6]u8, // Unique 6-byte MAC address
+    bssid: [6]u8, // The MAC address of the Access Point (AP)
     beacon_period: u16, // Interval between two consecutive beacon frames. Units are Kusec
     capability: u16, // Capability information
     ssid_len: u8, // SSID length
@@ -427,10 +447,40 @@ const BssInfo = extern struct {
     // Variable-length Information Elements follow, see cyw43_ll_wifi_parse_scan_result
 };
 
-// zig fmt: off
+// Ethernet header (sdpcm_ethernet_header_t)
+const EthernetHeader = extern struct {
+    dest_mac: [6]u8,
+    source_mac: [6]u8,
+    ether_type: u16,
+};
+
+// Vendor-specific (Broadcom) Ethernet header (sdpcm_bcmeth_header_t)
+const EventHeader = extern struct {
+    subtype: u16,
+    len: u16,
+    ver: u8,
+    oui: [3]u8,
+    usr_subtype: u16,
+};
+
+// Raw event header (sdpcm_raw_event_header_t)
+pub const EventMessage = extern struct {
+    version: u16,
+    flags: u16,
+    event_type: EventType,
+    status: EventStatus,
+    reason: u32,
+    auth_type: u32,
+    datalen: u32,
+    addr: [6]u8,
+    ifname: [16]u8,
+    ifidx: u8,
+    bsscfgidx: u8,
+};
 
 // Async events
-const EventType = enum(u32) {
+pub const EventType = enum(u32) {
+    // zig fmt: off
     none                           =   0xffffffff,
     set_ssid                       =   0, // indicates status of set ssid ,
     join                           =   1, // differentiates join ibss from found (wlc_e_start) ibss
@@ -582,9 +632,17 @@ const EventType = enum(u32) {
     ext_auth_frame_rx              = 188, // authentication request received
     mgmt_frame_txstatus            = 189, // mgmt frame Tx complete
     _,
-};
+    // zig fmt: on
 
-// zig fmt: on
+    pub fn mask(events: []const EventType) [26]u8 {
+        var m: [26]u8 = @splat(0);
+        for (events) |event| {
+            const e: u32 = @intFromEnum(event);
+            m[4 + e / 8] |= @as(u8, 1) << @as(u3, @truncate(e & 7));
+        }
+        return m;
+    }
+};
 
 pub const EventStatus = enum(u32) {
     /// operation was successful
@@ -717,4 +775,23 @@ test "small data is padded in request to 4 bytes" {
     const r2 = request(buf[512..], .set_var, "ampdu_ba_wsize", &.{0x08}, 1, 2);
 
     try testing.expectEqualSlices(u8, r1, r2);
+}
+
+test "events mask" {
+    const buf = hex_to_bytes("000000008B120102004000000000800100000000000000000000");
+    try testing.expectEqual(26, buf.len);
+    const mask = EventType.mask(&.{
+        .join,
+        .assoc,
+        .reassoc,
+        .assoc_req_ie,
+        .assoc_resp_ie,
+        .set_ssid,
+        .link,
+        .auth,
+        .psk_sup,
+        .eapol_msg,
+        .disassoc_ind,
+    });
+    try testing.expectEqualSlices(u8, &buf, &mask);
 }

@@ -13,12 +13,16 @@ const uart_rx_pin = gpio.num(1);
 
 const MAGICREBOOTCODE: u8 = 0xAB;
 
-pub const microzig_options = microzig.Options{
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{
     .log_level = .debug,
     .logFn = rp2xxx.uart.log,
-    // This function has to handle both cpus if BANK0 interrupts are enabled on both.
-    .interrupts = .{ .IO_IRQ_BANK0 = .{ .c = callback_alt } },
-};
+});
+
+comptime {
+    _ = microzig.export_startup();
+}
 
 // used as event flag to keep IRQ handler fast
 var event: ?gpio.IrqTrigger = null;

@@ -48,7 +48,6 @@ pub fn build(b: *std.Build) void {
         .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_spi_loopback", .file = "src/spi_loopback.zig" },
         .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_spi_flash_w25q", .file = "src/spi_flash_w25q.zig" },
         .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_sharp_niceview", .file = "src/sharp_niceview.zig" },
-        .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_usb_cdc", .file = "src/usb_cdc.zig" },
 
         // CH32V30x
         .{ .target = mb.ports.ch32v.chips.ch32v303xb, .name = "empty_ch32v303", .file = "src/empty.zig" },
@@ -88,7 +87,7 @@ pub fn build(b: *std.Build) void {
             const bin_filename = b.fmt("{s}.bin", .{example.name});
             const objcopy_run = b.addSystemCommand(&.{objcopy_path});
             objcopy_run.addArgs(&.{ "-O", "binary" });
-            objcopy_run.addArtifactArg(fw.artifact);
+            objcopy_run.addArtifactArg(fw.exe);
             const bin_output = objcopy_run.addOutputFileArg(bin_filename);
             b.getInstallStep().dependOn(&b.addInstallFileWithDir(
                 bin_output,

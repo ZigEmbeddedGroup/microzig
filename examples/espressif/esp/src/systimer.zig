@@ -1,13 +1,20 @@
 const std = @import("std");
 const microzig = @import("microzig");
-const peripherals = microzig.chip.peripherals;
 const hal = microzig.hal;
-const gpio = hal.gpio;
 const systimer = hal.systimer;
 const usb_serial_jtag = hal.usb_serial_jtag;
 
-pub const microzig_options: microzig.Options = .{
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{
     .logFn = usb_serial_jtag.logger.log,
+});
+
+comptime {
+    _ = microzig.export_startup();
+}
+
+pub const microzig_options: microzig.Options = .{
     .interrupts = .{
         .interrupt1 = .{ .c = timer_interrupt },
     },

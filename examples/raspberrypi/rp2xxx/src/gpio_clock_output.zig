@@ -1,12 +1,18 @@
-const std = @import("std");
 const microzig = @import("microzig");
 const rp2xxx = microzig.hal;
 const gpio = rp2xxx.gpio;
 const time = rp2xxx.time;
 const clocks = rp2xxx.clocks;
-const Pin = rp2xxx.gpio.Pin;
 
 const gpout0_pin = gpio.num(21);
+
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
 
 pub fn main() !void {
     // Don't forget to bring a blinky!

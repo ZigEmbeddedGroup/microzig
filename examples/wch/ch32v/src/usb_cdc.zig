@@ -9,25 +9,24 @@ const usb = microzig.core.usb;
 const USB_Serial = usb.drivers.CDC;
 
 const RCC = microzig.chip.peripherals.RCC;
-const AFIO = microzig.chip.peripherals.AFIO;
-const PFIC = microzig.chip.peripherals.PFIC;
 
 const usart = hal.usart.instance.USART1;
 
 const usart_tx_pin = gpio.Pin.init(0, 9); // PA9
-const func_pin = gpio.Pin.init(0, 10); // PA10
-const tog_pin = gpio.Pin.init(0, 14);
-const mco_pin = gpio.Pin.init(0, 8);
 
-pub const microzig_options = microzig.Options{
+pub const std_options = microzig.std_options(.{
     .logFn = hal.usart.log,
     .log_level = .debug,
     .log_scope_levels = &.{
-        .{ .scope = .usb_dev, .level = .warn },
-        .{ .scope = .usb_ctrl, .level = .warn },
-        .{ .scope = .usb_cdc, .level = .warn },
+        .{ .scope = .usb_dev, .level = .info },
+        .{ .scope = .usb_ctrl, .level = .info },
+        .{ .scope = .usb_cdc, .level = .info },
     },
-};
+});
+
+comptime {
+    _ = microzig.export_startup();
+}
 
 const USBController = usb.DeviceController(.{
     .bcd_usb = .v2_00,
@@ -46,9 +45,7 @@ const USBController = usb.DeviceController(.{
     .serial = .{ .itf_notifi = "Board CDC", .itf_data = "Board CDC Data" },
 }});
 
-pub var usb_dev: hal.usb.Polled(
-    .{},
-) = undefined;
+pub var usb_dev: hal.usb.Polled(.{}) = undefined;
 
 var usb_controller: USBController = .init;
 
@@ -74,15 +71,16 @@ pub fn main() !void {
 
     std.log.info("Initializing USB device.", .{});
 
-    usb_dev = .init();
+    usb_dev.init();
 
     var i: u32 = 0;
     var old: u64 = time.get_time_since_boot().to_us();
     var new: u64 = 0;
 
     while (true) {
+        new = time.get_time_since_boot().to_us();
+
         if (usb_controller.drivers()) |drivers| {
-            new = time.get_time_since_boot().to_us();
             if (new - old > 500000) {
                 old = new;
                 i += 1;
@@ -111,9 +109,7 @@ pub fn usb_cdc_write(serial: *USB_Serial, comptime fmt: []const u8, args: anytyp
     while (write_buff.len > 0) {
         write_buff = write_buff[serial.write(write_buff)..];
         while (!serial.flush()) {
-            // pins.tog.put(0);
             usb_dev.poll(false, &usb_controller);
-            // pins.tog.put(1);
         }
     }
 }

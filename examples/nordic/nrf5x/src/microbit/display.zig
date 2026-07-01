@@ -1,8 +1,15 @@
-const std = @import("std");
 const microzig = @import("microzig");
 const nrf = microzig.hal;
 const time = nrf.time;
 const microbit = microzig.board;
+
+pub const panic = microzig.panic;
+
+pub const std_options = microzig.std_options(.{});
+
+comptime {
+    _ = microzig.export_startup();
+}
 
 pub const heart: [5][5]u1 = .{
     .{ 0, 1, 0, 1, 0 },
