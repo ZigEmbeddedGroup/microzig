@@ -27,7 +27,7 @@ const BootromData = struct {
         // The Bootrom makes 128 attempts of approximately 4ms each for a total of approximately 0.5 seconds before giving up
         // and dropping into USB code to load and checksum the second stage with varying SPI parameters. If it sees a checksum
         // pass it will immediately jump into the 252-byte payload which contains the flash second stage.
-        const Hash = std.hash.crc.Crc(u32, .{
+        const Hash = std.hash.crc.Generic(u32, .{
             .polynomial = 0x04c11db7,
             .initial = 0xffffffff,
             .reflect_input = false,
