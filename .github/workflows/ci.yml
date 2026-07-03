@@ -239,7 +239,7 @@ jobs:
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
         with:
-          version: master
+          version: 0.15.2
       - name: Build Website
         run: zig build
         working-directory: website
