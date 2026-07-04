@@ -6,9 +6,6 @@ on:
     branches: [main, zig-master]
   workflow_dispatch:
 
-env:
-  ZIG_VERSION: master
-
 jobs:
   formatting-check:
     name: Formatting check
@@ -18,8 +15,6 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
-        with:
-          version: ${{ env.ZIG_VERSION }}
       - name: Run zig fmt
         run: zig fmt --check .
 
@@ -77,8 +72,6 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
-        with:
-          version: ${{ env.ZIG_VERSION }}
       - name: Unit Test Regz
         run: zig build test
         working-directory: tools/regz
@@ -95,8 +88,6 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
-        with:
-          version: ${{ env.ZIG_VERSION }}
       - name: Unit Test UF2
         run: zig build test
         working-directory: tools/uf2
@@ -113,8 +104,6 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
-        with:
-          version: ${{ env.ZIG_VERSION }}
       - name: Unit Test ESP Image
         run: zig build test
         working-directory: tools/esp-image
@@ -131,8 +120,6 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
-        with:
-          version: ${{ env.ZIG_VERSION }}
       - name: Build Printer
         run: zig build
         working-directory: tools/printer
@@ -155,8 +142,6 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
-        with:
-          version: ${{ env.ZIG_VERSION }}
       - name: Build Sorcerer
         run: zig build
         working-directory: tools/sorcerer
@@ -173,8 +158,6 @@ jobs:
         uses: actions/checkout@v3
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
-        with:
-          version: ${{ env.ZIG_VERSION }}
       - name: Generate Code
         run: zig build -Dgenerate
         working-directory: port/stmicro/stm32
@@ -201,8 +184,6 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
-        with:
-          version: ${{ env.ZIG_VERSION }}
       - name: Build
         run: zig build -Doptimize=ReleaseSmall
 
@@ -219,8 +200,6 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
-        with:
-          version: ${{ env.ZIG_VERSION }}
       - name: Generate and test packages
         working-directory: modules/foundation-libc/test
         run: |

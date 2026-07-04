@@ -1,7 +1,6 @@
 .{
     .name = .bounded_array,
     .version = "0.0.1",
-    .minimum_zig_version = "0.15.1",
     .paths = .{
         "build.zig",
         "build.zig.zon",

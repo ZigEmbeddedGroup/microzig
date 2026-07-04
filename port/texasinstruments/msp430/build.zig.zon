@@ -2,7 +2,6 @@
     .name = .mz_port_texasinstruments_msp430,
     .fingerprint = 0x14af6dac35483b45,
     .version = "0.0.0",
-    .minimum_zig_version = "0.15.2",
     .dependencies = .{
         .@"microzig/build-internals" = .{ .path = "../../../build-internals" },
         .@"microzig/tools/regz" = .{ .path = "../../../tools/regz" },
