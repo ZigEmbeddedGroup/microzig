@@ -1,7 +1,6 @@
 .{
     .name = .msp430,
     .version = "0.0.1",
-    .minimum_zig_version = "0.15.2",
     .fingerprint = 0x21359f74332f7448,
     .dependencies = .{
         .microzig = .{ .path = "../../.." },

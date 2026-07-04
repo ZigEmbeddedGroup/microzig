@@ -2,7 +2,6 @@
     .name = .freertos,
     .version = "0.0.0",
     .fingerprint = 0xb81d2ef66274e984,
-    .minimum_zig_version = "0.15.1",
     .dependencies = .{
         .freertos_kernel = .{
             .url = "git+https://github.com/FreeRTOS/FreeRTOS-Kernel.git#52822473466cfa5cdd2146d02dae5f924b8552e4",
