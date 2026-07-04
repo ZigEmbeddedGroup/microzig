@@ -19,6 +19,7 @@ const errata = @import("./usbd/errata.zig");
 
 const MAX_PACKET_SIZE = 64;
 const NUM_EP = 8;
+const EP0_IN_STATUS_TIMEOUT_FRAMES: u11 = 5;
 
 const PowerState = union(enum) {
     detached,
@@ -30,6 +31,8 @@ const PowerState = union(enum) {
 const EP0_State = struct {
     direction: usb.types.Dir = .Out,
     remaining_size: u16 = 0,
+    in_pending: bool = false,
+    in_start_frame: u11 = 0,
 };
 
 const EP_Config = struct {
@@ -132,6 +135,10 @@ pub const USBD = struct {
                 // SETUP packet captured by hardware
                 if (peripherals.USBD.EVENTS_EP0SETUP.raw != 0) {
                     peripherals.USBD.EVENTS_EP0SETUP.write_raw(0);
+                    // Aborted control transfer: drop stale DATADONE so it can't
+                    // trigger on_buffer for the next transfer.
+                    peripherals.USBD.EVENTS_EP0DATADONE.write_raw(0);
+                    self.ep0_state.in_pending = false;
 
                     const setup: usb.types.SetupPacket = .{
                         .request_type = @bitCast(@as(u8, @intCast(peripherals.USBD.BMREQUESTTYPE.raw))),
@@ -154,6 +161,7 @@ pub const USBD = struct {
                     // (https://github.com/nrf-rs/nrf-usbd/blob/main/src/usbd.rs#L683)
                     // But this case is not handled in the controller yet
                     peripherals.USBD.EVENTS_EP0DATADONE.write_raw(0);
+                    self.ep0_state.in_pending = false;
                     switch (self.ep0_state.direction) {
                         .In => controller.on_buffer(&self.interface, .in(.ep0)),
                         // Control-OUT with data-phase is unhandled in the controller
@@ -196,6 +204,20 @@ pub const USBD = struct {
                 }
 
                 // TODO: ISO endpoints
+
+                // EP0 IN data stage:
+                // Host may jump to the status stage without acknowledging the data transfer
+                // so the EP0DATADONE_EP0STATUS short may never fire and device will keep
+                // NAKing the OUT tokens.
+                // HACK: trigger status stage if the IN transfer is not acknowledged after a few frames
+                if (self.ep0_state.in_pending) {
+                    const now = peripherals.USBD.FRAMECNTR.read().FRAMECNTR;
+                    if ((now -% self.ep0_state.in_start_frame) >= EP0_IN_STATUS_TIMEOUT_FRAMES) {
+                        peripherals.USBD.TASKS_EP0STATUS.write_raw(1);
+                        peripherals.USBD.EVENTS_EP0DATADONE.write_raw(0);
+                        self.ep0_state.in_pending = false;
+                    }
+                }
             },
         }
     }
@@ -281,10 +303,10 @@ pub const USBD = struct {
                 peripherals.USBD.SHORTS.write(.{ .EP0DATADONE_EP0STATUS = .Disabled });
             }
 
-            // Here, nrf-usbd does this:
-            // > Hack: trigger status stage if the IN transfer is not acknowledged after a few frames,
-            // > so record the current frame here; the actual test and status stage activation happens
-            // > in the poll method.
+            // Saving current frame counter to start the timeout that will trigger
+            // status stage if the IN transfer is not acknowledged after a few frames
+            self.ep0_state.in_start_frame = peripherals.USBD.FRAMECNTR.read().FRAMECNTR;
+            self.ep0_state.in_pending = true;
         }
 
         // Start DMA
