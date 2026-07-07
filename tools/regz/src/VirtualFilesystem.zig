@@ -108,7 +108,6 @@ fn operate(userdata: ?*anyopaque, op: std.Io.Operation) std.Io.Cancelable!std.Io
         .file_read_streaming => unreachable,
         .device_io_control => unreachable,
         .net_receive => unreachable,
-        .net_read => unreachable,
     };
 }
 
@@ -379,6 +378,7 @@ pub fn io(vfs: *VirtualFilesystem) std.Io {
             .netConnectUnix = std.Io.failingNetConnectUnix,
             .netSocketCreatePair = std.Io.failingNetSocketCreatePair,
             .netSend = std.Io.failingNetSend,
+            .netRead = std.Io.failingNetRead,
 
             .netWrite = std.Io.failingNetWrite,
             .netWriteFile = std.Io.failingNetWriteFile,
