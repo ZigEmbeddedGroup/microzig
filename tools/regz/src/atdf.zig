@@ -131,8 +131,7 @@ fn load_interrupt_group(ctx: *Context, node: xml.Node, device_id: DeviceID) !voi
     const db = ctx.db;
     const module_instance = node.get_attribute("module-instance") orelse return error.MissingModuleInstance;
     const name_in_module = node.get_attribute("name-in-module") orelse return error.MissingNameInModule;
-    const index_str = node.get_attribute("index") orelse return error.MissingInterruptGroupIndex;
-    const index = try std.fmt.parseInt(i32, index_str, 0);
+    const index = try node.get_attribute_int(i32, "index") orelse return error.MissingInterruptGroupIndex;
 
     if (ctx.interrupt_groups.get(name_in_module)) |group_list| {
         for (group_list.items) |entry| {
@@ -250,8 +249,7 @@ fn infer_enum_size(allocator: Allocator, module_node: xml.Node, value_group_node
         var max_value: u64 = 0;
         var value_it = value_group_node.iterate(&.{}, &.{"value"});
         while (value_it.next()) |value_node| {
-            const value_str = value_node.get_attribute("value") orelse continue;
-            const value = try std.fmt.parseInt(u64, value_str, 0);
+            const value = try value_node.get_attribute_int(u64, "value") orelse continue;
             max_value = @max(value, max_value);
         }
 
@@ -268,8 +266,7 @@ fn infer_enum_size(allocator: Allocator, module_node: xml.Node, value_group_node
             if (bitfield_node.get_attribute("values")) |values| {
                 if (std.mem.eql(u8, values, value_group_name)) {
                     log.debug("found values={s}", .{values});
-                    const mask_str = bitfield_node.get_attribute("mask") orelse continue;
-                    const mask = try std.fmt.parseInt(u64, mask_str, 0);
+                    const mask = try bitfield_node.get_attribute_int(u64, "mask") orelse continue;
                     try field_sizes.append(allocator, @popCount(mask));
                 }
             }
@@ -384,10 +381,7 @@ fn load_module_interrupt_group_entry(
 
     try list.append(ctx.db.gpa, .{
         .name = node.get_attribute("name") orelse return error.MissingInterruptName,
-        .index = if (node.get_attribute("index")) |index_str|
-            try std.fmt.parseInt(i32, index_str, 0)
-        else
-            return error.MissingInterruptIndex,
+        .index = try node.get_attribute_int(i32, "index") orelse return error.MissingInterruptIndex,
         .description = node.get_attribute("caption"),
     });
 }
@@ -443,36 +437,26 @@ fn load_nested_register_group(
     try db.add_nested_struct_field(parent, .{
         .name = name,
         .struct_id = struct_id,
-        .offset_bytes = if (node.get_attribute("offset")) |offset_str|
-            try std.fmt.parseInt(u64, offset_str, 0)
-        else
-            return error.MissingRegisterOffset,
+        .offset_bytes = try node.get_attribute_int(u64, "offset") orelse return error.MissingRegisterOffset,
         .description = node.get_attribute("caption"),
-
-        .size_bytes = if (node.get_attribute("size")) |size_str|
-            try std.fmt.parseInt(u64, size_str, 0)
-        else
-            null,
-        .count = if (node.get_attribute("count")) |count_str|
-            try std.fmt.parseInt(u64, count_str, 0)
-        else
-            null,
+        .size_bytes = try node.get_attribute_int(u64, "size"),
+        .count = try node.get_attribute_int(u64, "count"),
     });
 }
 
 fn infer_register_group_offset(ctx: *Context, node: xml.Node, struct_id: StructID) !void {
     // collect register offsets
-    var min: ?u64 = null;
+    var min: u64 = std.math.maxInt(u64);
     var register_it = node.iterate(&.{}, &.{ "register", "register-group" });
+
     while (register_it.next()) |register_node| {
-        const offset_str = register_node.get_attribute("offset") orelse continue;
-        const offset_bytes = std.fmt.parseInt(u64, offset_str, 0) catch continue;
-        min = @min(if (min) |m| m else offset_bytes, offset_bytes);
+        const offset_bytes = register_node.get_attribute_int(u64, "offset") catch continue orelse continue;
+        min = @min(min, offset_bytes);
     }
 
-    if (min) |m| {
-        try ctx.inferred_register_group_offsets.put(ctx.arena.allocator(), struct_id, m);
-        log.debug("inferred offset of {f}: {} bytes", .{ struct_id, m });
+    if (min != std.math.maxInt(u64)) {
+        try ctx.inferred_register_group_offsets.put(ctx.arena.allocator(), struct_id, min);
+        log.debug("inferred offset of {f}: {} bytes", .{ struct_id, min });
     }
 }
 
@@ -493,10 +477,7 @@ fn load_register_group(ctx: *Context, node: xml.Node, parent: PeripheralID) !voi
     const struct_id = try db.create_nested_struct(parent_struct_id, .{
         .name = node.get_attribute("name") orelse return error.NoName,
         .description = node.get_attribute("caption"),
-        .size_bytes = if (node.get_attribute("size")) |size_str|
-            try std.fmt.parseInt(u64, size_str, 0)
-        else
-            null,
+        .size_bytes = try node.get_attribute_int(u64, "size"),
     });
 
     try infer_register_group_offset(ctx, node, struct_id);
@@ -584,22 +565,14 @@ fn load_register(
     const register_id = try db.create_register(parent, .{
         .name = name,
         .description = node.get_attribute("caption"),
-        .size_bits = if (node.get_attribute("size")) |size_str|
-            @as(u64, 8) * try std.fmt.parseInt(u64, size_str, 0)
-        else
-            return error.MissingRegisterSize,
-        .offset_bytes = if (node.get_attribute("offset")) |offset_str|
-            try std.fmt.parseInt(u64, offset_str, 0) - register_group_offset
+        .size_bits = (try node.get_attribute_int(u64, "size") orelse
+            return error.MissingRegisterSize) * 8,
+        .offset_bytes = if (try node.get_attribute_int(u64, "offset")) |offset|
+            offset - register_group_offset
         else
             return error.MissingRegisterOffset,
-        .count = if (node.get_attribute("count")) |count_str|
-            try std.fmt.parseInt(u64, count_str, 0)
-        else
-            null,
-        .reset_value = if (node.get_attribute("initval")) |initval_str|
-            try std.fmt.parseInt(u64, initval_str, 0)
-        else
-            null,
+        .count = try node.get_attribute_int(u64, "count"),
+        .reset_value = try node.get_attribute_int(u64, "initval"),
         .access = if (node.get_attribute("rw")) |access_str|
             try access_from_string(access_str)
         else
@@ -894,8 +867,7 @@ fn load_module_instance_from_peripheral(
 
     const offset_bytes: u64 = if (get_inlined_register_group(node, name)) |register_group_node| blk: {
         log.debug("inlining {s}", .{name});
-        const offset_str = register_group_node.get_attribute("offset") orelse return error.MissingPeripheralOffset;
-        const offset = try std.fmt.parseInt(u64, offset_str, 0);
+        const offset = try register_group_node.get_attribute_int(u64, "offset") orelse return error.MissingPeripheralOffset;
         break :blk offset;
     } else {
         return error.Todo;
@@ -940,8 +912,7 @@ fn load_module_instance_from_register_group(
 
     const name = node.get_attribute("name") orelse return error.MissingInstanceName;
     const name_in_module = register_group_node.get_attribute("name-in-module") orelse return error.MissingNameInModule;
-    const offset_str = register_group_node.get_attribute("offset") orelse return error.MissingOffset;
-    const offset = try std.fmt.parseInt(u64, offset_str, 0);
+    const offset = try register_group_node.get_attribute_int(u64, "offset") orelse return error.MissingOffset;
     const desc = node.get_attribute("caption");
     const parent_id = try db.get_peripheral_struct(peripheral_id);
     const struct_decl = try db.get_struct_decl_by_name(ctx.arena.allocator(), parent_id, name_in_module);
@@ -1007,15 +978,11 @@ fn load_register_group_instance(
         try db.add_description(id, caption);
 
     // size is in bytes
-    if (node.get_attribute("size")) |size_str| {
-        const size = try std.fmt.parseInt(u64, size_str, 0);
+    if (try node.get_attribute_int(u64, "size")) |size|
         try db.add_size(id, size);
-    }
 
-    if (node.get_attribute("offset")) |offset_str| {
-        const offset = try std.fmt.parseInt(u64, offset_str, 0);
+    if (try node.get_attribute_int(u64, "offset")) |offset|
         try db.add_offset(id, offset);
-    }
 
     try db.add_child("instance.register_group", peripheral_id, id);
 }

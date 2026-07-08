@@ -86,10 +86,11 @@ fn load_device(
 
     const root = try doc.get_root_element();
 
-    const cpu_node = root.find_child(&.{"cpu"}) orelse if (root.find_child(&.{"router"})) |router_node| blk: {
+    const cpu_node = root.find_child(&.{"cpu"}) orelse blk: {
+        const router_node = root.find_child(&.{"router"}) orelse return error.MissingField;
         const subpath_node = router_node.find_child(&.{"subpath"}) orelse return error.MissingField;
         break :blk subpath_node.find_child(&.{"cpu"}) orelse return error.MissingField;
-    } else return error.MissingField;
+    };
 
     const isa_str = cpu_node.get_attribute("isa") orelse return error.MissingField;
     const arch = parse_isa_to_arch(isa_str);
@@ -143,8 +144,7 @@ fn load_instance(
     const name = node.get_attribute("id") orelse return error.MissingField;
     const href = node.get_attribute("href") orelse return error.MissingField;
 
-    const baseaddr_str = node.get_attribute("baseaddr") orelse return error.MissingField;
-    const baseaddr = try std.fmt.parseInt(u64, baseaddr_str, 0);
+    const baseaddr = try node.get_attribute_int(u64, "baseaddr") orelse return error.MissingField;
 
     // Check if we've already loaded this module file
     const module_entry = if (modules.get(href)) |module_entry| blk: {
@@ -167,10 +167,9 @@ fn load_instance(
                 return;
         }
 
-        const description = root.get_attribute("description");
         const new_peripheral_id = try db.create_peripheral(.{
             .name = name,
-            .description = description,
+            .description = root.get_attribute("description"),
         });
 
         // Detect format: check if first register has an offset attribute
@@ -185,8 +184,7 @@ fn load_instance(
             var min_offset: ?u64 = null;
             register_it = root.iterate(&.{}, &.{"register"});
             while (register_it.next()) |register_node| {
-                const offset_str = register_node.get_attribute("offset") orelse return error.MissingField;
-                const offset = try std.fmt.parseInt(u64, std.mem.trim(u8, offset_str, " "), 0);
+                const offset = try register_node.get_attribute_int(u64, "offset") orelse return error.MissingField;
                 min_offset = if (min_offset) |current|
                     @min(current, offset)
                 else
@@ -222,29 +220,23 @@ fn load_instance(
     };
 
     // Create the device peripheral instance with the peripheral type
-    const description = node.get_attribute("description");
-    const struct_id = try db.get_peripheral_struct(module_entry.peripheral_id);
-
     _ = try db.create_device_peripheral(device_id, .{
         .name = name,
-        .description = description,
-        .struct_id = struct_id,
+        .description = node.get_attribute("description"),
+        .struct_id = try db.get_peripheral_struct(module_entry.peripheral_id),
         .offset_bytes = baseaddr + module_entry.base_offset,
     });
 }
 
 fn load_register(db: *Database, struct_id: StructID, base_offset: u64, node: xml.Node) !void {
-    const offset_str = node.get_attribute("offset") orelse return error.MissingField;
-    const abs_offset = try std.fmt.parseInt(u64, std.mem.trim(u8, offset_str, " "), 0);
-
-    const width_str = node.get_attribute("width") orelse return error.MissingField;
-    const width_bits = try std.fmt.parseInt(u64, width_str, 0);
+    const abs_offset = try node.get_attribute_int(u64, "offset") orelse return error.MissingField;
 
     const register_id = try db.create_register(struct_id, .{
         .name = node.get_attribute("acronym") orelse return error.MissingField,
         .description = node.get_attribute("description"),
         .offset_bytes = abs_offset - base_offset,
-        .size_bits = width_bits,
+        .size_bits = try node.get_attribute_int(u64, "width") orelse return error.MissingField,
+        .count = try node.get_attribute_int(u64, "instances"),
     });
 
     var bitfield_it = node.iterate(&.{}, &.{"bitfield"});
@@ -254,8 +246,7 @@ fn load_register(db: *Database, struct_id: StructID, base_offset: u64, node: xml
 }
 
 fn load_register_sequential(db: *Database, struct_id: StructID, current_offset: *u64, node: xml.Node) !void {
-    const width_str = node.get_attribute("width") orelse return error.MissingField;
-    const width_bits = try std.fmt.parseInt(u64, width_str, 0);
+    const width_bits = try node.get_attribute_int(u64, "width") orelse return error.MissingField;
 
     const register_id = try db.create_register(struct_id, .{
         .name = node.get_attribute("acronym") orelse return error.MissingField,
@@ -277,11 +268,8 @@ fn load_bitfield(db: *Database, register_id: RegisterID, node: xml.Node) !void {
     const name = node.get_attribute("id") orelse return error.MissingField;
     const description = node.get_attribute("description");
 
-    const width_str = node.get_attribute("width") orelse return error.MissingField;
-    const width_bits = try std.fmt.parseInt(u8, width_str, 0);
-
-    const end_str = node.get_attribute("end") orelse return error.MissingField;
-    const end_bit = try std.fmt.parseInt(u8, end_str, 0);
+    const width_bits = try node.get_attribute_int(u8, "width") orelse return error.MissingField;
+    const end_bit = try node.get_attribute_int(u8, "end") orelse return error.MissingField;
 
     const access_str = node.get_attribute("rwaccess");
     const access: Database.Access = if (access_str) |str|
@@ -307,11 +295,10 @@ fn load_bitfield(db: *Database, register_id: RegisterID, node: xml.Node) !void {
 
         var bitenum_it = node.iterate(&.{}, &.{"bitenum"});
         while (bitenum_it.next()) |bitenum_node| {
-            const value_str = bitenum_node.get_attribute("value") orelse return error.MissingField;
             try db.add_enum_field(enum_id, .{
                 .name = bitenum_node.get_attribute("id") orelse return error.MissingField,
                 .description = bitenum_node.get_attribute("description"),
-                .value = try std.fmt.parseInt(u64, value_str, 0),
+                .value = try bitenum_node.get_attribute_int(u64, "value") orelse return error.MissingField,
             });
         }
 
