@@ -1,0 +1,23 @@
+.{
+    .{
+        .add_enum_and_apply = .{
+            .parent = "types.peripherals.gpioa",
+            .@"enum" = .{
+                .name = "ChannelID",
+                .bitsize = 2,
+                .fields = .{
+                    .{ .name = "none", .value = 0 },
+                    .{ .name = "ch_1", .value = 1 },
+                    .{ .name = "ch_2", .value = 2 },
+                    .{ .name = "ch_3", .value = 3 },
+                },
+            },
+            .apply_to = .{
+                "types.peripherals.gpioa.GPIOA_FSUB_0.CHANID",
+                "types.peripherals.gpioa.GPIOA_FSUB_1.CHANID",
+                "types.peripherals.gpioa.GPIOA_FPUB_0.CHANID",
+                "types.peripherals.gpioa.GPIOA_FPUB_1.CHANID",
+            },
+        },
+    },
+}

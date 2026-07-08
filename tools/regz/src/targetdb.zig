@@ -37,7 +37,9 @@ pub fn load_into_db(db: *Database, io: std.Io, path: []const u8, device: ?[]cons
         if (entry.kind != .file)
             continue;
 
-        if (!std.mem.startsWith(u8, entry.name, "MSP430") and !std.mem.startsWith(u8, entry.name, "tm4c"))
+        if (!std.mem.startsWith(u8, entry.name, "MSP430") and
+            !std.mem.startsWith(u8, entry.name, "MSPM0") and
+            !std.mem.startsWith(u8, entry.name, "tm4c"))
             continue;
 
         if (device) |d| {
@@ -153,28 +155,19 @@ fn load_instance(
 
         // Detect format: check if first register has an offset attribute
         var register_it = root.iterate(&.{}, &.{"register"});
-        const has_explicit_offsets = if (register_it.next()) |first_register|
-            first_register.get_attribute("offset") != null
-        else
-            false;
-
-        const base_offset: u64 = if (has_explicit_offsets) base_blk: {
-            // Original format: registers have explicit offset attributes
-            var min_offset: ?u64 = null;
-            register_it = root.iterate(&.{}, &.{"register"});
+        const base_offset_opt: ?u64 = if (register_it.next()) |first_register| base_blk: {
+            var min_offset: u64 = try first_register.get_attribute_int(u64, "offset") orelse break :base_blk null;
             while (register_it.next()) |register_node| {
-                const offset = try register_node.get_attribute_int(u64, "offset") orelse return error.MissingField;
-                min_offset = if (min_offset) |current|
-                    @min(current, offset)
-                else
-                    offset;
+                const offset = try register_node.get_attribute_int(u64, "offset") orelse
+                    return error.MissingField;
+                min_offset = @min(min_offset, offset);
             }
-            break :base_blk min_offset orelse return error.MissingField;
-        } else 0;
+            break :base_blk min_offset;
+        } else null;
 
         const struct_id = try db.get_peripheral_struct(new_peripheral_id);
 
-        if (has_explicit_offsets) {
+        if (base_offset_opt) |base_offset| {
             register_it = root.iterate(&.{}, &.{"register"});
             while (register_it.next()) |register_node| {
                 try load_register(db, struct_id, base_offset, register_node);
@@ -190,7 +183,7 @@ fn load_instance(
         // Cache the peripheral type and base offset for this module file
         const new_module_entry = ModuleEntry{
             .peripheral_id = new_peripheral_id,
-            .base_offset = base_offset,
+            .base_offset = @intCast(base_offset_opt orelse 0),
         };
         const href_copy = try db.gpa.dupe(u8, href);
         try modules.put(href_copy, new_module_entry);
@@ -211,7 +204,9 @@ fn load_register(db: *Database, struct_id: StructID, base_offset: u64, node: xml
     const abs_offset = try node.get_attribute_int(u64, "offset") orelse return error.MissingField;
 
     const register_id = try db.create_register(struct_id, .{
-        .name = node.get_attribute("acronym") orelse return error.MissingField,
+        .name = node.get_attribute("acronym") orelse
+            node.get_attribute("id") orelse
+            return error.MissingField,
         .description = node.get_attribute("description"),
         .offset_bytes = abs_offset - base_offset,
         .size_bits = try node.get_attribute_int(u64, "width") orelse return error.MissingField,
