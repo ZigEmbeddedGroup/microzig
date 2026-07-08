@@ -154,11 +154,11 @@ fn load_instance(
         });
 
         // Detect format: check if first register has an offset attribute
-        var register_it = root.iterate(&.{}, &.{"register"});
-        const base_offset_opt: ?u64 = if (register_it.next()) |first_register| base_blk: {
-            var min_offset: u64 = try first_register.get_attribute_int(u64, "offset") orelse break :base_blk null;
+        var register_it = root.iterate(&.{}, &.{ "register", "group" });
+        const base_offset_opt: ?u63 = if (register_it.next()) |first_register| base_blk: {
+            var min_offset: u63 = try first_register.get_attribute_int(u63, "offset") orelse break :base_blk null;
             while (register_it.next()) |register_node| {
-                const offset = try register_node.get_attribute_int(u64, "offset") orelse
+                const offset = try register_node.get_attribute_int(u63, "offset") orelse
                     return error.MissingField;
                 min_offset = @min(min_offset, offset);
             }
@@ -168,15 +168,23 @@ fn load_instance(
         const struct_id = try db.get_peripheral_struct(new_peripheral_id);
 
         if (base_offset_opt) |base_offset| {
+            var group_it = root.iterate(&.{}, &.{"group"});
             register_it = root.iterate(&.{}, &.{"register"});
-            while (register_it.next()) |register_node| {
-                try load_register(db, struct_id, base_offset, register_node);
+            var group_offset: i64 = 0;
+
+            while (true) {
+                while (register_it.next()) |register_node| {
+                    _ = try load_register(db, struct_id, group_offset - @as(i64, base_offset), null, register_node);
+                }
+                const group = group_it.next() orelse break;
+                group_offset = try group.get_attribute_int(u63, "offset") orelse return error.MissingField;
+                register_it = group.iterate(&.{}, &.{"register"});
             }
         } else {
-            var current_offset: u64 = 0;
+            var next_offset: u63 = 0;
             register_it = root.iterate(&.{}, &.{"register"});
             while (register_it.next()) |register_node| {
-                try load_register_sequential(db, struct_id, &current_offset, register_node);
+                next_offset += try load_register(db, struct_id, 0, next_offset, register_node);
             }
         }
 
@@ -200,42 +208,28 @@ fn load_instance(
     });
 }
 
-fn load_register(db: *Database, struct_id: StructID, base_offset: u64, node: xml.Node) !void {
-    const abs_offset = try node.get_attribute_int(u64, "offset") orelse return error.MissingField;
+fn load_register(db: *Database, struct_id: StructID, base_offset: i64, next_offset: ?u63, node: xml.Node) !u63 {
+    const offset = next_offset orelse try node.get_attribute_int(u63, "offset") orelse return error.MissingField;
+    const width_bits = try node.get_attribute_int(u63, "width") orelse return error.MissingField;
+    const count = try node.get_attribute_int(u63, "instances");
 
     const register_id = try db.create_register(struct_id, .{
         .name = node.get_attribute("acronym") orelse
             node.get_attribute("id") orelse
             return error.MissingField,
         .description = node.get_attribute("description"),
-        .offset_bytes = abs_offset - base_offset,
-        .size_bits = try node.get_attribute_int(u64, "width") orelse return error.MissingField,
-        .count = try node.get_attribute_int(u64, "instances"),
+        .offset_bytes = std.math.cast(u64, base_offset + @as(i64, offset)) orelse return error.NegativeOffset,
+        .size_bits = width_bits,
+        .count = count orelse null,
     });
 
     var bitfield_it = node.iterate(&.{}, &.{"bitfield"});
     while (bitfield_it.next()) |bitfield_node| {
         try load_bitfield(db, register_id, bitfield_node);
     }
-}
-
-fn load_register_sequential(db: *Database, struct_id: StructID, current_offset: *u64, node: xml.Node) !void {
-    const width_bits = try node.get_attribute_int(u64, "width") orelse return error.MissingField;
-
-    const register_id = try db.create_register(struct_id, .{
-        .name = node.get_attribute("acronym") orelse return error.MissingField,
-        .description = node.get_attribute("description"),
-        .offset_bytes = current_offset.*,
-        .size_bits = width_bits,
-    });
 
     // Update offset for next register (width in bits converted to bytes)
-    current_offset.* += width_bits / 8;
-
-    var bitfield_it = node.iterate(&.{}, &.{"bitfield"});
-    while (bitfield_it.next()) |bitfield_node| {
-        try load_bitfield(db, register_id, bitfield_node);
-    }
+    return (count orelse 1) * try std.math.divExact(u63, width_bits, 8);
 }
 
 fn load_bitfield(db: *Database, register_id: RegisterID, node: xml.Node) !void {

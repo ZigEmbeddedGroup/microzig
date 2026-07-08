@@ -20,5 +20,14 @@ pub fn build(b: *std.Build) void {
         });
 
         mb.install_firmware(raw_blinky, .{});
+
+        const blinky = mb.add_firmware(.{
+            .name = b.fmt("blinky_{s}", .{field_name}),
+            .target = target,
+            .optimize = optimize,
+            .root_source_file = b.path("src/blinky.zig"),
+        });
+
+        mb.install_firmware(blinky, .{});
     }
 }
