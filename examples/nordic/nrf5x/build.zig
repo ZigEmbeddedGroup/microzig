@@ -31,6 +31,8 @@ pub fn build(b: *std.Build) void {
         .{ .target = nrf52840_mdk, .name = "nrf52840_mdk_rtt_log", .file = "src/rtt_log.zig" },
         .{ .target = nrf52840_mdk, .name = "nrf52840_mdk_semihosting", .file = "src/semihosting.zig" },
         .{ .target = nrf52840_mdk, .name = "nrf52840_mdk_spi_master", .file = "src/spi_master.zig" },
+        .{ .target = nrf52840_mdk, .name = "nrf52840_mdk_usb_hid", .file = "src/usb_hid.zig" },
+        .{ .target = nrf52840_mdk, .name = "nrf52840_mdk_usb_cdc", .file = "src/usb_cdc.zig" },
 
         .{ .target = pca10040, .name = "pca10040_blinky", .file = "src/blinky.zig" },
         .{ .target = pca10040, .name = "pca10040_uart", .file = "src/uart.zig" },
