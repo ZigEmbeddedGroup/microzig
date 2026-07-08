@@ -69,15 +69,13 @@ fn load_device(ctx: *Context, node: xml.Node) !void {
     });
 
     const name = node.get_attribute("name") orelse return error.NoDeviceName;
-    const arch_str = node.get_attribute("architecture") orelse return error.NoDeviceArch;
-    const arch = arch_from_str(arch_str);
     const family = node.get_attribute("family") orelse return error.NoDeviceFamily;
 
     const db = ctx.db;
 
     const device_id = try db.create_device(.{
         .name = name,
-        .arch = arch,
+        .arch = .from_string(node.get_attribute("architecture") orelse return error.NoDeviceArch),
     });
 
     try db.add_device_property(device_id, .{ .key = "family", .value = family });
@@ -145,35 +143,6 @@ fn load_interrupt_group(ctx: *Context, node: xml.Node, device_id: DeviceID) !voi
             });
         }
     }
-}
-
-fn arch_from_str(str: []const u8) Arch {
-    return if (std.mem.eql(u8, "ARM926EJ-S", str))
-        .arm926ej_s
-    else if (std.mem.eql(u8, "AVR8", str))
-        .avr8
-    else if (std.mem.eql(u8, "AVR8L", str))
-        .avr8l
-    else if (std.mem.eql(u8, "AVR8X", str))
-        .avr8x
-    else if (std.mem.eql(u8, "AVR8_XMEGA", str))
-        .avr8xmega
-    else if (std.mem.eql(u8, "CORTEX-A5", str))
-        .cortex_a5
-    else if (std.mem.eql(u8, "CORTEX-A7", str))
-        .cortex_a7
-    else if (std.mem.eql(u8, "CORTEX-M0PLUS", str))
-        .cortex_m0plus
-    else if (std.mem.eql(u8, "CORTEX-M23", str))
-        .cortex_m23
-    else if (std.mem.eql(u8, "CORTEX-M4", str))
-        .cortex_m4
-    else if (std.mem.eql(u8, "CORTEX-M7", str))
-        .cortex_m7
-    else if (std.mem.eql(u8, "MIPS", str))
-        .mips
-    else
-        .unknown;
 }
 
 // This function is intended to normalize the struct layout of some peripheral

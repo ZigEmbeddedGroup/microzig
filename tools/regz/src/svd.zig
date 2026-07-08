@@ -64,7 +64,7 @@ pub fn load_into_db(db: *Database, doc: xml.Doc) !void {
         var cpu_it = root.iterate(&.{}, &.{"cpu"});
         if (cpu_it.next()) |cpu| {
             if (cpu.get_value("name")) |cpu_name| {
-                break :blk arch_from_str(cpu_name);
+                break :blk .from_string(cpu_name);
             }
         }
 
@@ -202,67 +202,6 @@ fn derive_peripherals(ctx: *Context, device_id: DeviceID) !void {
                 return error.PeripheralMissingBaseAddress,
         });
     }
-}
-
-fn arch_from_str(str: []const u8) Arch {
-    return if (std.mem.eql(u8, "CM0", str))
-        .cortex_m0
-    else if (std.mem.eql(u8, "CM0PLUS", str))
-        .cortex_m0plus
-    else if (std.mem.eql(u8, "CM0+", str))
-        .cortex_m0plus
-    else if (std.mem.eql(u8, "CM1", str))
-        .cortex_m1
-    else if (std.mem.eql(u8, "SC000", str))
-        .sc000
-    else if (std.mem.eql(u8, "CM23", str))
-        .cortex_m23
-    else if (std.mem.eql(u8, "CM3", str))
-        .cortex_m3
-    else if (std.mem.eql(u8, "CM33", str))
-        .cortex_m33
-    else if (std.mem.eql(u8, "CM35P", str))
-        .cortex_m35p
-    else if (std.mem.eql(u8, "CM55", str))
-        .cortex_m55
-    else if (std.mem.eql(u8, "SC300", str))
-        .sc300
-    else if (std.mem.eql(u8, "CM4", str))
-        .cortex_m4
-    else if (std.mem.eql(u8, "CM7", str))
-        .cortex_m7
-    else if (std.mem.eql(u8, "ARMV8MML", str))
-        .arm_v81_mml
-    else if (std.mem.eql(u8, "ARMV8MBL", str))
-        .arm_v8_mbl
-    else if (std.mem.eql(u8, "ARMV81MML", str))
-        .arm_v8_mml
-    else if (std.mem.eql(u8, "CA5", str))
-        .cortex_a5
-    else if (std.mem.eql(u8, "CA7", str))
-        .cortex_a7
-    else if (std.mem.eql(u8, "CA8", str))
-        .cortex_a8
-    else if (std.mem.eql(u8, "CA9", str))
-        .cortex_a9
-    else if (std.mem.eql(u8, "CA15", str))
-        .cortex_a15
-    else if (std.mem.eql(u8, "CA17", str))
-        .cortex_a17
-    else if (std.mem.eql(u8, "CA53", str))
-        .cortex_a53
-    else if (std.mem.eql(u8, "CA57", str))
-        .cortex_a57
-    else if (std.mem.eql(u8, "CA72", str))
-        .cortex_a72
-    else if (std.mem.eql(u8, "QINGKEV2", str))
-        .qingke_v2
-    else if (std.mem.eql(u8, "QINGKEV3", str))
-        .qingke_v3
-    else if (std.mem.eql(u8, "QINGKEV4", str))
-        .qingke_v4
-    else
-        .unknown;
 }
 
 pub fn load_peripheral(ctx: *Context, node: xml.Node, device_id: DeviceID) !void {

@@ -16,24 +16,6 @@ const ModuleEntry = struct {
     base_offset: u64,
 };
 
-fn parse_isa_to_arch(isa: []const u8) Arch {
-    // Convert ISA string (e.g., "CORTEX_M4", "MSP430") to lowercase and match to Arch enum
-    var buf: [32]u8 = undefined;
-    if (isa.len > buf.len) return .unknown;
-
-    const lower = std.ascii.lowerString(&buf, isa);
-
-    // Try to match against all Arch enum values
-    inline for (@typeInfo(Arch).@"enum".field_names) |field_name| {
-        if (std.mem.eql(u8, lower, field_name)) {
-            return @field(Arch, field_name);
-        }
-    }
-
-    log.warn("Unknown ISA: {s}, defaulting to unknown arch", .{isa});
-    return .unknown;
-}
-
 pub fn load_into_db(db: *Database, io: std.Io, path: []const u8, device: ?[]const u8) !void {
     var targetdb_dir = try std.Io.Dir.cwd().openDir(io, path, .{});
     defer targetdb_dir.close(io);
@@ -92,8 +74,7 @@ fn load_device(
         break :blk subpath_node.find_child(&.{"cpu"}) orelse return error.MissingField;
     };
 
-    const isa_str = cpu_node.get_attribute("isa") orelse return error.MissingField;
-    const arch = parse_isa_to_arch(isa_str);
+    const arch: Arch = .from_string(cpu_node.get_attribute("isa") orelse return error.MissingField);
 
     const device_id = try db.create_device(.{
         .arch = arch,
@@ -108,15 +89,13 @@ fn load_device(
     _ = property_it;
 
     // Detect FPU presence for Cortex-M chips by checking for FPU instance
-    if (std.mem.startsWith(u8, isa_str, "CORTEX_M")) {
+    if (arch.is_cortex_m()) {
         var fpu_check_it = cpu_node.iterate(&.{}, &.{"instance"});
         var has_fpu = false;
         while (fpu_check_it.next()) |instance_node| {
-            if (instance_node.get_attribute("id")) |id| {
-                if (std.mem.eql(u8, id, "FPU")) {
-                    has_fpu = true;
-                    break;
-                }
+            if (std.mem.eql(u8, "FPU", instance_node.get_attribute("id") orelse continue)) {
+                has_fpu = true;
+                break;
             }
         }
 
