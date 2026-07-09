@@ -52,9 +52,9 @@ pub const Arch = enum {
     pub const default = .unknown;
 
     pub fn to_string(arch: Arch) []const u8 {
-        return inline for (@typeInfo(Arch).@"enum".fields) |field| {
-            if (@field(Arch, field.name) == arch)
-                break field.name;
+        return inline for (@typeInfo(Arch).@"enum".field_names) |field_name| {
+            if (@field(Arch, field_name) == arch)
+                break field_name;
         } else unreachable;
     }
 
