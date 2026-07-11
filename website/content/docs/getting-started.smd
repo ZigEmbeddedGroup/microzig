@@ -1,7 +1,7 @@
 ---
 .title = "Getting Started",
-.date = @date("2024-11-02T00:00:00"),
-.author = "Matthew Knight",
+.date = .date("2024-11-02T00:00:00"),
+.authors = ["Matthew Knight"],
 .draft = false,
 .layout = "index.shtml",
 .description = "MicroZig: Getting Started",

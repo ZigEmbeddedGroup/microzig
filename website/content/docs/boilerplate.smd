@@ -1,7 +1,7 @@
 ---
 .title = "Application Boilerplate",
-.date = @date("2026-05-01T00:00:00"),
-.author = "Matthew Knight",
+.date = .date("2026-05-01T00:00:00"),
+.authors = ["Matthew Knight"],
 .draft = false,
 .layout = "index.shtml",
 .description = "MicroZig: Application Boilerplate",

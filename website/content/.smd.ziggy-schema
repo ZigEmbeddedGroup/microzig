@@ -1,0 +1,72 @@
+$ = Page
+
+/// This is the schema of a SuperMD document frontmatter.
+///
+/// As a reminder, optionals ('?'), slices ('[]'), and dictionaries ('{:}')
+/// can all be omitted, see https://ziggy-lang.io for more info.
+///
+/// Note that while some fields here are defined as optional,
+/// in SuperHTML they will instead be non-optional with a default value.
+/// For example '?bytes' fields will default to an empty string, while
+/// slices and dictionaries will instead default to empty containers.
+///
+/// Make sure to read the SuperHTML reference to know how to properly
+/// access these fields (https://zine-ssg.io/docs/superhtml/scripty/).
+struct Page {
+    /// The title of this page.
+    title: ?bytes,
+    /// A short description of the page.
+    description: ?bytes,
+    /// The publishing date of this page.
+    date: Date,
+    /// The author(s) of this page.
+    authors: []bytes,
+    /// A list of tags for this page.
+    tags: []bytes,
+    /// Path to a layout file inside of the configured layouts directory.
+    layout: bytes,
+    /// Alternative paths where this content will also be made available.
+    ///
+    /// Note that the copies will be 100% identical to the main version,
+    /// if you need minor (or major) changes to other variants of this page,
+    /// you will want to use `alternatives`.
+    aliases: []bytes,
+    /// Alternative versions of this page, created by rendering the content
+    /// using a different layout and placed at a different URL.
+    ///
+    /// Useful for creating RSS feeds, for example.
+    alternatives: []Alternative,
+    /// In multilingual sites can be set to match corresponding pages that
+    /// don't have identical URLs. See 'i18n' docs for more info.
+    translation_key: ?bytes,
+    /// Ignore other SuperMD files in this directory and any sub-directory.
+    /// Can only be meaningfully set to true for 'index.smd' pages.
+    skip_subdirs: ?bool,
+    /// When set to true this file will be ignored when bulding the website,
+    /// unless the '--drafts' option has been passed to Zine.
+    draft: ?bool,
+    /// User-defined properties that you can reference from SuperHTML via
+    /// '$page.custom'
+    custom: {:}any,
+
+    union Date {
+        /// A RFC3339 date string, e.g. "1990/01/01" or "1990/01/01T00:00:00".
+        date: bytes,
+        /// An epoch UNIX timestamp (seconds), e.g. 631148400.
+        unix: int,
+    }
+
+    struct Alternative {
+        /// A name that can be used to refer to this alternative version
+        /// of the page from SuperHTML.
+        name: bytes,
+        /// Path to a layout file inside of the configured layouts
+        /// directory.
+        layout: bytes,
+        /// Output path, relative to the current directory. Use an absolute
+        /// path to refer to the website's root directory.
+        output: bytes,
+        /// Useful when generating `<link rel="alternate">` elements.
+        type: ?bytes,
+    }
+}
