@@ -1,6 +1,7 @@
 const std = @import("std");
 const xml = @import("xml");
 
+const BitRange = @import("BitRange.zig");
 const Database = @import("Database.zig");
 const DeviceID = Database.DeviceID;
 const PeripheralID = Database.PeripheralID;
@@ -236,8 +237,7 @@ fn load_bitfield(db: *Database, register_id: RegisterID, node: xml.Node) !void {
     const name = node.get_attribute("id") orelse return error.MissingField;
     const description = node.get_attribute("description");
 
-    const width_bits = try node.get_attribute_int(u8, "width") orelse return error.MissingField;
-    const end_bit = try node.get_attribute_int(u8, "end") orelse return error.MissingField;
+    const bit_range: BitRange = try .parse_xml(node);
 
     const access_str = node.get_attribute("rwaccess");
     const access: Database.Access = if (access_str) |str|
@@ -258,7 +258,7 @@ fn load_bitfield(db: *Database, register_id: RegisterID, node: xml.Node) !void {
 
     const enum_id: ?EnumID = if (node.find_child(&.{"bitenum"}) != null) blk: {
         const enum_id = try db.create_enum(null, .{
-            .size_bits = width_bits,
+            .size_bits = bit_range.width,
         });
 
         var bitenum_it = node.iterate(&.{}, &.{"bitenum"});
@@ -278,7 +278,7 @@ fn load_bitfield(db: *Database, register_id: RegisterID, node: xml.Node) !void {
         .description = description,
         .enum_id = enum_id,
         .access = access,
-        .offset_bits = end_bit,
-        .size_bits = width_bits,
+        .offset_bits = bit_range.offset,
+        .size_bits = bit_range.width,
     });
 }

@@ -5,6 +5,7 @@ const Allocator = std.mem.Allocator;
 const xml = @import("xml");
 const Arch = @import("arch.zig").Arch;
 
+const BitRange = @import("BitRange.zig");
 const Database = @import("Database.zig");
 const Access = Database.Access;
 const StructID = Database.StructID;
@@ -467,7 +468,7 @@ fn load_single_register(ctx: *Context, node: xml.Node, parent: StructID) !void {
 
 fn load_field(ctx: *Context, node: xml.Node, register_id: RegisterID, props: *const RegisterProperties) !void {
     const db = ctx.db;
-    const bit_range = try BitRange.parse(node);
+    const bit_range: BitRange = try .parse_xml(node);
     const dim_elements = try DimElements.parse(ctx, node);
     const count: ?u16 = if (dim_elements) |elements| count: {
         if (elements.dim_name != null)
@@ -482,7 +483,7 @@ fn load_field(ctx: *Context, node: xml.Node, register_id: RegisterID, props: *co
     }
 
     const enum_id: ?EnumID = if (node.find_child(&.{"enumeratedValues"})) |enum_values_node|
-        try load_enumerated_values(ctx, enum_values_node, @intCast(bit_range.width))
+        try load_enumerated_values(ctx, enum_values_node, bit_range.width)
     else
         null;
 
@@ -508,8 +509,8 @@ fn load_field(ctx: *Context, node: xml.Node, register_id: RegisterID, props: *co
                 };
             } else try get_name_without_suffix(node, "%s"),
             .description = node.get_value("description"),
-            .size_bits = @intCast(bit_range.width),
-            .offset_bits = @intCast(bit_range.offset),
+            .size_bits = bit_range.width,
+            .offset_bits = bit_range.offset,
             .enum_id = enum_id,
             .access = access,
         });
@@ -830,58 +831,6 @@ const DimElements = struct {
 
             return error.DimIndexInvalid;
         }
-    }
-};
-
-const BitRange = struct {
-    offset: u64,
-    width: u64,
-
-    fn parse(node: xml.Node) !BitRange {
-        const lsb_opt = node.get_value("lsb");
-        const msb_opt = node.get_value("msb");
-
-        if (lsb_opt != null and msb_opt != null) {
-            const lsb = try std.fmt.parseInt(u8, lsb_opt.?, 0);
-            const msb = try std.fmt.parseInt(u8, msb_opt.?, 0);
-
-            if (msb < lsb)
-                return error.InvalidRange;
-
-            return BitRange{
-                .offset = lsb,
-                .width = msb - lsb + 1,
-            };
-        }
-
-        const bit_offset_opt = node.get_value("bitOffset");
-        const bit_width_opt = node.get_value("bitWidth");
-        if (bit_offset_opt != null and bit_width_opt != null) {
-            const offset = try std.fmt.parseInt(u8, bit_offset_opt.?, 0);
-            const width = try std.fmt.parseInt(u8, bit_width_opt.?, 0);
-
-            return BitRange{
-                .offset = offset,
-                .width = width,
-            };
-        }
-
-        const bit_range_opt = node.get_value("bitRange");
-        if (bit_range_opt) |bit_range_str| {
-            var it = std.mem.tokenizeAny(u8, bit_range_str, "[:]");
-            const msb = try std.fmt.parseInt(u8, it.next() orelse return error.NoMsb, 0);
-            const lsb = try std.fmt.parseInt(u8, it.next() orelse return error.NoLsb, 0);
-
-            if (msb < lsb)
-                return error.InvalidRange;
-
-            return BitRange{
-                .offset = lsb,
-                .width = msb - lsb + 1,
-            };
-        }
-
-        return error.InvalidRange;
     }
 };
 
