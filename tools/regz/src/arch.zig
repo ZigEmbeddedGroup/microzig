@@ -85,6 +85,8 @@ pub const Arch = enum {
             .cortex_m0
         else if (std.mem.eql(u8, "cm0plus", lower))
             .cortex_m0plus
+        else if (std.mem.eql(u8, "cm0p", lower))
+            .cortex_m0plus
         else if (std.mem.eql(u8, "cm0+", lower))
             .cortex_m0plus
         else if (std.mem.eql(u8, "cm1", lower))

@@ -3,15 +3,6 @@ const Database = @import("Database.zig");
 const Arch = @import("arch.zig").Arch;
 const arm = @import("arch/arm.zig");
 
-pub const core_to_cpu = std.StaticStringMap([]const u8).initComptime(&.{
-    .{ "cm0", "cortex_m0" },
-    .{ "cm0p", "cortex_m0plus" },
-    .{ "cm3", "cortex_m3" },
-    .{ "cm4", "cortex_m4" },
-    .{ "cm7", "cortex_m7" },
-    .{ "cm33", "cortex_m33" },
-});
-
 pub const ChipFile = struct {
     name: []const u8,
     family: []const u8,
@@ -530,7 +521,7 @@ pub fn load_into_db(db: *Database, io: std.Io, path: []const u8, device: ?[]cons
 
     for (chip_files.items) |chip_file| {
         const core = chip_file.value.cores[0];
-        const arch = std.meta.stringToEnum(Arch, core_to_cpu.get(core.name).?).?;
+        const arch: Arch = .from_string(core.name);
         const device_id = try db.create_device(.{
             .name = chip_file.value.name,
             .arch = arch,
