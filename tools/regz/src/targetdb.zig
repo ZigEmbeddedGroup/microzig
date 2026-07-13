@@ -239,18 +239,9 @@ fn load_bitfield(db: *Database, register_id: RegisterID, node: xml.Node) !void {
 
     const bit_range: BitRange = try .parse_xml(node);
 
-    const access_str = node.get_attribute("rwaccess");
-    const access: Database.Access = if (access_str) |str|
-        if (std.mem.eql(u8, str, "RW"))
-            .read_write
-        else if (std.mem.eql(u8, str, "R/W"))
-            .read_write
-        else if (std.mem.eql(u8, str, "R"))
-            .read_only
-        else if (std.mem.eql(u8, str, "W"))
-            .write_only
-        else blk: {
-            log.info("unrecognized access string: '{s}'", .{str});
+    const access = if (node.get_attribute("rwaccess")) |access_str|
+        Database.Access.from_string(access_str) orelse blk: {
+            log.info("unrecognized access string: '{s}'", .{access_str});
             break :blk .read_write;
         }
     else

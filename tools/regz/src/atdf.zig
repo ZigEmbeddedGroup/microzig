@@ -543,7 +543,7 @@ fn load_register(
         .count = try node.get_attribute_int(u64, "count"),
         .reset_value = try node.get_attribute_int(u64, "initval"),
         .access = if (node.get_attribute("rw")) |access_str|
-            try access_from_string(access_str)
+            Database.Access.from_string(access_str) orelse return error.InvalidAccessStr
         else
             .read_write,
     });
@@ -699,17 +699,6 @@ fn load_field(ctx: *Context, node: xml.Node, peripheral_struct_id: StructID, par
         // TODO: namespace the enum to the appropriate register, register_group, or peripheral
 
     }
-}
-
-fn access_from_string(str: []const u8) !Database.Access {
-    return if (std.mem.eql(u8, "RW", str))
-        .read_write
-    else if (std.mem.eql(u8, "R", str))
-        .read_only
-    else if (std.mem.eql(u8, "W", str))
-        .write_only
-    else
-        error.InvalidAccessStr;
 }
 
 fn load_enum(

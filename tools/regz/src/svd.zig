@@ -488,7 +488,7 @@ fn load_field(ctx: *Context, node: xml.Node, register_id: RegisterID, props: *co
         null;
 
     const access = if (node.get_value("access")) |access_str|
-        parse_access(access_str) catch blk: {
+        Access.from_string(access_str) orelse blk: {
             log.warn("Failed to parse access string '{s}', it must be one of 'read-value', 'write-only', 'read-write', 'writeOnce', or 'read-writeOnce', defaulting to 'read-write'", .{access_str});
             break :blk .read_write;
         }
@@ -860,7 +860,7 @@ const RegisterProperties = struct {
             else
                 null,
             .access = if (node.get_value("access")) |access_str|
-                parse_access(access_str) catch blk: {
+                Access.from_string(access_str) orelse blk: {
                     log.warn("Failed to parse access string '{s}', it must be one of 'read-only'," ++
                         "'write-only', 'write', 'read-write', 'writeOnce', or 'read-writeOnce', " ++
                         "defaulting to 'read-write'", .{access_str});
@@ -880,25 +880,6 @@ const RegisterProperties = struct {
         };
     }
 };
-
-fn parse_access(str: []const u8) !Access {
-    return if (std.ascii.eqlIgnoreCase("read-only", str))
-        Access.read_only
-    else if (std.ascii.eqlIgnoreCase("write-only", str))
-        Access.write_only
-    else if (std.ascii.eqlIgnoreCase("write", str))
-        Access.write_only
-    else if (std.ascii.eqlIgnoreCase("read-write", str))
-        Access.read_write
-    else if (std.ascii.eqlIgnoreCase("writeOnce", str))
-        Access.write_once
-    else if (std.ascii.eqlIgnoreCase("read-writeOnce", str))
-        Access.read_write_once
-    else blk: {
-        log.warn("invalid access type: '{s}'", .{str});
-        break :blk error.UnknownAccessType;
-    };
-}
 
 test "svd.device register properties" {
     const text =
