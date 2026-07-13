@@ -91,6 +91,88 @@ pub fn read(self: Uart) ?u8 {
     return @intFromEnum(self.regs.UART0_TXDATA.read().DATA);
 }
 
+pub const Writer = struct {
+    const vtable: *const std.Io.Writer.VTable = &.{
+        .drain = drain,
+    };
+
+    instance: Uart,
+    seek: usize = 0,
+    interface: std.Io.Writer,
+
+    pub fn drain(w: *std.Io.Writer, data: []const []const u8, splat: usize) std.Io.Writer.Error!usize {
+        _ = splat;
+        const self: *Writer = @fieldParentPtr("interface", w);
+
+        // Drain interface buffer first
+        while (self.seek != w.end) {
+            if (!self.instance.write(w.buffer[self.seek]))
+                return 0;
+            self.seek += 1;
+        }
+        w.end = 0;
+        self.seek = 0;
+
+        // Only drain from the first data slice
+        for (data[0], 0..) |c, i| {
+            if (!self.instance.write(c))
+                return i;
+        }
+        return data[0].len;
+    }
+};
+
+pub fn writer(self: Uart, buffer: []u8) Writer {
+    return .{
+        .instance = self,
+        .interface = .{
+            .vtable = Writer.vtable,
+            .buffer = buffer,
+        },
+    };
+}
+
+var logger: ?Uart.Writer = null;
+
+/// Set a specific uart instance to be used for logging.
+///
+/// Allows system logging over uart via:
+/// pub const microzig_options = .{
+///     .logFn = hal.uart.log,
+/// };
+pub fn init_logger(uart: Uart) void {
+    logger = uart.writer("");
+    logger.?.interface.writeAll("\r\n================ STARTING NEW LOGGER ================\r\n") catch {};
+}
+
+/// Disables logging via the uart instance.
+pub fn deinit_logger() void {
+    logger = null;
+}
+
+pub fn log(
+    comptime level: std.log.Level,
+    comptime scope: @TypeOf(.EnumLiteral),
+    comptime format: []const u8,
+    args: anytype,
+) void {
+    // const level_prefix = comptime "[{}.{:0>6}] " ++ level.asText();
+    const prefix = comptime level.asText() ++ switch (scope) {
+        .default => ": ",
+        else => " (" ++ @tagName(scope) ++ "): ",
+    };
+
+    if (logger) |*w| {
+        // const current_time = time.get_time_since_boot();
+        // const seconds = current_time.to_us() / std.time.us_per_s;
+        // const microseconds = current_time.to_us() % std.time.us_per_s;
+
+        // w.interface.print(prefix ++ format ++ "\r\n", .{ seconds, microseconds } ++ args) catch {};
+        w.interface.print(prefix ++ format ++ "\r\n", args) catch {};
+        w.interface.flush() catch {};
+    }
+}
+
 fn RegFieldType(register_name: []const u8, field_name: []const u8) type {
     const reg_idx = std.meta.fieldIndex(peri_types.uart0, register_name) orelse
         @compileError("No register " ++ register_name ++ " in uart0.");

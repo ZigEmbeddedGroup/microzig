@@ -16,6 +16,7 @@ pub fn build(b: *std.Build) void {
             "blinky",
             "raw_blinky",
             "uart_echo",
+            "uart_log",
         }) |name| {
             const example = mb.add_firmware(.{
                 .name = name ++ "_" ++ field_name,
