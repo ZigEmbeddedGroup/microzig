@@ -15,11 +15,11 @@ jobs:
     steps:
       - name: Checkout PR code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
-        with:
-          version: master
 
       - name: Build zigimports
         run: |
