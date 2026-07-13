@@ -140,7 +140,7 @@ fn generate_chips_file(
         , .{
             std.zig.fmtId(chip_file.name),
             std.zig.fmtId(chip_file.name),
-            regz.embassy.core_to_cpu.get(core.name).?,
+            regz.Arch.from_string(core.name),
         });
 
         if (with_fpu) {
