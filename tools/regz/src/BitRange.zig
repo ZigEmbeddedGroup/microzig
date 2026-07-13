@@ -17,13 +17,13 @@ pub fn lsb_msb(lsb: u8, msb: u8) !BitRange {
 }
 
 pub fn parse_xml(node: xml.Node) !BitRange {
-    if (try node.get_attribute_int(u8, "lsb")) |lsb| {
-        if (try node.get_attribute_int(u8, "msb")) |msb| {
+    if (try node.get_value_int(u8, "lsb")) |lsb| {
+        if (try node.get_value_int(u8, "msb")) |msb| {
             return .lsb_msb(lsb, msb);
         }
     }
-    if (try node.get_attribute_int(u8, "bitOffset")) |offset| {
-        if (try node.get_attribute_int(u8, "bitWidth")) |width| {
+    if (try node.get_value_int(u8, "bitOffset")) |offset| {
+        if (try node.get_value_int(u8, "bitWidth")) |width| {
             return .{
                 .offset = offset,
                 .width = width,

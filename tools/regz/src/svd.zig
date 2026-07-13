@@ -197,9 +197,7 @@ fn derive_peripherals(ctx: *Context, device_id: DeviceID) !void {
             .description = node.get_value("description"),
             .struct_id = struct_id,
             .count = count,
-            .offset_bytes = if (node.get_value("baseAddress")) |base_address|
-                try std.fmt.parseInt(u64, base_address, 0)
-            else
+            .offset_bytes = try node.get_value_int(u64, "baseAddress") orelse
                 return error.PeripheralMissingBaseAddress,
         });
     }
@@ -248,9 +246,7 @@ pub fn load_peripheral(ctx: *Context, node: xml.Node, device_id: DeviceID) !void
         .description = node.get_value("description"),
         .struct_id = struct_id,
         .count = count,
-        .offset_bytes = if (node.get_value("baseAddress")) |base_address|
-            try std.fmt.parseInt(u64, base_address, 0)
-        else
+        .offset_bytes = try node.get_value_int(u64, "baseAddress") orelse
             return error.PeripheralMissingBaseAddress,
     });
     _ = instance_id;
@@ -310,7 +306,8 @@ fn load_cluster(
     // Note that dimable identifier type means that it can include a %s in the name, it's a copy of a previous identifier
     const name = node.get_value("name") orelse return error.MissingClusterName;
     const description = node.get_value("description");
-    const address_offset_str = node.get_value("addressOffset") orelse return error.MissingClusterOffset;
+    const address_offset = try node.get_value_int(u64, "addressOffset") orelse
+        return error.MissingClusterOffset;
     const alternate_cluster = node.get_value("alternateCluster");
     if (alternate_cluster != null)
         return error.TodoAlternateCluster;
@@ -325,7 +322,7 @@ fn load_cluster(
             .name = name[0 .. name.len - "[%s]".len],
             .struct_id = struct_id,
             .description = description,
-            .offset_bytes = try std.fmt.parseInt(u32, address_offset_str, 0),
+            .offset_bytes = address_offset,
             .count = array.count,
             .size_bytes = array.increment,
         }),
@@ -346,7 +343,7 @@ fn load_cluster(
             .name = name,
             .struct_id = struct_id,
             .description = description,
-            .offset_bytes = try std.fmt.parseInt(u32, address_offset_str, 0),
+            .offset_bytes = address_offset,
         });
     }
 
@@ -743,14 +740,8 @@ const DimElements = struct {
     }
 
     fn parse(ctx: *Context, node: xml.Node) !?DimElements {
-        const dim_increment = if (node.get_value("dimIncrement")) |dim_increment_str|
-            try std.fmt.parseInt(u64, dim_increment_str, 0)
-        else
-            null;
-        const dim = if (node.get_value("dim")) |dim_str|
-            try std.fmt.parseInt(u64, dim_str, 0)
-        else
-            null;
+        const dim_increment = try node.get_value_int(u64, "dimIncrement");
+        const dim = try node.get_value_int(u64, "dim");
         var dim_index = node.get_value("dimIndex");
 
         // if "dimIncrement" exists, "dim" becomes a mandatory field
@@ -855,10 +846,7 @@ const RegisterProperties = struct {
 
     fn parse(node: xml.Node) !RegisterProperties {
         return RegisterProperties{
-            .size = if (node.get_value("size")) |size_str|
-                try std.fmt.parseInt(u64, size_str, 0)
-            else
-                null,
+            .size = try node.get_value_int(u64, "size"),
             .access = if (node.get_value("access")) |access_str|
                 Access.from_string(access_str) orelse blk: {
                     log.warn("Failed to parse access string '{s}', it must be one of 'read-only'," ++
@@ -869,14 +857,8 @@ const RegisterProperties = struct {
             else
                 null,
             .protection = null,
-            .reset_value = if (node.get_value("resetValue")) |size_str|
-                try std.fmt.parseInt(u64, size_str, 0)
-            else
-                null,
-            .reset_mask = if (node.get_value("resetMask")) |size_str|
-                try std.fmt.parseInt(u64, size_str, 0)
-            else
-                null,
+            .reset_value = try node.get_value_int(u64, "resetValue"),
+            .reset_mask = try node.get_value_int(u64, "resetMask"),
         };
     }
 };

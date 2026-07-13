@@ -127,6 +127,12 @@ pub const Node = struct {
         else
             null;
     }
+
+    pub fn get_value_int(node: Node, T: type, key: [:0]const u8) !?T {
+        const buf = get_value(node, key) orelse return null;
+        const buf_trim = std.mem.trim(u8, buf, &std.ascii.whitespace);
+        return std.fmt.parseInt(T, buf_trim, 0) catch |e| e;
+    }
 };
 
 pub const Doc = struct {
