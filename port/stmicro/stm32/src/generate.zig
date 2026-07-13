@@ -134,7 +134,7 @@ fn generate_chips_file(
             \\        .preferred_binary_format = .elf,
             \\        .zig_target = .{{
             \\            .cpu_arch = .thumb,
-            \\            .cpu_model = .{{ .explicit = &std.Target.arm.cpu.{s} }},
+            \\            .cpu_model = .{{ .explicit = &std.Target.arm.cpu.{t} }},
             \\            .os_tag = .freestanding,
             \\
         , .{

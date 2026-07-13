@@ -133,6 +133,10 @@ jobs:
       run: zig build -Doptimize=ReleaseSmall
       working-directory: examples/texasinstruments/msp430
 
+    - name: texasinstruments/mspm0
+      run: zig build -Doptimize=ReleaseSmall
+      working-directory: examples/texasinstruments/mspm0
+
     - name: texasinstruments/tm4c
       run: zig build -Doptimize=ReleaseSmall
       working-directory: examples/texasinstruments/tm4c
