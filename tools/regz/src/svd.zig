@@ -358,7 +358,7 @@ fn load_cluster(
     while (cluster_it.next()) |cluster_node|
         try load_cluster(ctx, cluster_node, struct_id);
 
-    log.debug("loaded cluster name: {s} description={?s} offset={s}", .{ name, description, address_offset_str });
+    log.debug("loaded cluster name: {s} description={?s} offset=0x{X}", .{ name, description, address_offset });
 }
 
 fn get_name_without_suffix(node: xml.Node, suffix: []const u8) ![]const u8 {
