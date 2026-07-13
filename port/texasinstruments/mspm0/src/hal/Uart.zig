@@ -1,0 +1,125 @@
+const std = @import("std");
+const microzig = @import("microzig");
+
+const peri_types = microzig.chip.types.peripherals;
+const Uart = @This();
+
+regs: *volatile peri_types.uart0,
+
+pub fn num(n: comptime_int) Uart {
+    const name = std.fmt.comptimePrint("uart{}", .{n});
+    return .{ .regs = if (@hasDecl(microzig.chip.peripherals, name))
+        @field(microzig.chip.peripherals, name)
+    else
+        @compileError(name ++ " not present or not supported") };
+}
+
+pub const Config = struct {
+    pub const Clock = struct {
+        pub const Source = enum { BUSCLK, MFCLK, LFCLK };
+
+        src: Source = .BUSCLK,
+        div0: peri_types.uart0.ClkdivRatio = .@"1",
+        ovs: RegFieldType("UART0_CTL0", "HSE") = .OVS16,
+        div: IntFracDiv(16, 6),
+    };
+
+    clk: Clock,
+    bits: RegFieldType("UART0_LCRH", "WLEN") = .DATABIT8,
+    loopback: bool = false,
+    manchester_encode: bool = false,
+    enable: bool = true,
+};
+
+/// See Technical Reference Manual 14.2.6: Initialization
+pub fn configure(self: Uart, cfg: Config) void {
+    self.regs.UART0_PWREN.raw = 0x2600_0001;
+    // Technical reference manual part 2.2.6
+    inline for (0..4) |_|
+        asm volatile ("nop");
+    self.regs.UART0_CLKSEL.write(.{
+        .LFCLK_SEL = @enumFromInt(@intFromBool(cfg.clk.src == .LFCLK)),
+        .MFCLK_SEL = @enumFromInt(@intFromBool(cfg.clk.src == .MFCLK)),
+        .BUSCLK_SEL = @enumFromInt(@intFromBool(cfg.clk.src == .BUSCLK)),
+    });
+    self.regs.UART0_CLKDIV.write(.{ .RATIO = cfg.clk.div0 });
+    var ctl0 = self.regs.UART0_CTL0.read();
+    if (ctl0.ENABLE != .DISABLE) {
+        ctl0.ENABLE = .DISABLE;
+        self.regs.UART0_CTL0.write(ctl0);
+    }
+    self.regs.UART0_IBRD.write(.{ .DIVINT = @enumFromInt(cfg.clk.div.int) });
+    self.regs.UART0_FBRD.write(.{ .DIVFRAC = @enumFromInt(cfg.clk.div.frac) });
+
+    // There are more ctl0 options
+    ctl0.LBE = if (cfg.loopback) .ENABLE else .DISABLE;
+    ctl0.MENC = if (cfg.manchester_encode) .ENABLE else .DISABLE;
+    ctl0.HSE = cfg.clk.ovs;
+    self.regs.UART0_CTL0.write(ctl0);
+
+    self.regs.UART0_LCRH.write(.{
+        .BRK = .DISABLE,
+        .PEN = .DISABLE,
+        .EPS = .ODD,
+        .STP2 = .DISABLE,
+        .WLEN = cfg.bits,
+        .SPS = .DISABLE,
+        .SENDIDLE = .DISABLE,
+        .EXTDIR_SETUP = @enumFromInt(0),
+        .EXTDIR_HOLD = @enumFromInt(0),
+    });
+    if (cfg.enable) {
+        ctl0.ENABLE = .ENABLE;
+        self.regs.UART0_CTL0.write(ctl0);
+    }
+}
+
+pub fn disable(self: Uart) void {
+    self.regs.PWREN = 0;
+}
+
+pub fn write(self: Uart, b: u8) bool {
+    const stat = self.regs.UART0_STAT.read();
+    if (stat.TXFF == .SET) return false;
+    self.regs.UART0_TXDATA.write(.{ .DATA = @enumFromInt(b) });
+    return true;
+}
+
+pub fn read(self: Uart) ?u8 {
+    const stat = self.regs.UART0_STAT.read();
+    if (stat.RXFE == .SET) return null;
+    return @intFromEnum(self.regs.UART0_TXDATA.read().DATA);
+}
+
+fn RegFieldType(register_name: []const u8, field_name: []const u8) type {
+    const reg_idx = std.meta.fieldIndex(peri_types.uart0, register_name) orelse
+        @compileError("No register " ++ register_name ++ " in uart0.");
+    const Reg = std.meta.fieldTypes(peri_types.uart0)[reg_idx].underlying_type;
+
+    const fld_idx = std.meta.fieldIndex(Reg, field_name) orelse
+        @compileError("No field " ++ field_name ++ " in uart0." ++ register_name ++ ".");
+    return std.meta.fieldTypes(Reg)[fld_idx];
+}
+
+// Maybe move this into core?
+pub fn IntFracDiv(int_bits: comptime_int, frac_bits: comptime_int) type {
+    return struct {
+        pub const Int = @Int(.unsigned, int_bits);
+        pub const Frac = @Int(.unsigned, frac_bits);
+
+        int: Int,
+        frac: Frac = 0,
+
+        // Returns clock configuration that most closely matches the given ratio
+        pub fn from_ratio(ratio: comptime_float) @This() {
+            const int = @floor(ratio);
+            if (int >= (1 << int_bits))
+                @compileError("Divider too big");
+
+            return .{
+                .int = @intFromFloat(int),
+                .frac = (ratio - int) * (1 << frac_bits),
+            };
+        }
+    };
+}

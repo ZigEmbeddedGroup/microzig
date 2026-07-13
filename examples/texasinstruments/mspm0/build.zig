@@ -12,22 +12,19 @@ pub fn build(b: *std.Build) void {
     inline for (comptime std.meta.fieldNames(@TypeOf(mb.ports.mspm0.chips))) |field_name| {
         const target = @field(mb.ports.mspm0.chips, field_name);
 
-        const raw_blinky = mb.add_firmware(.{
-            .name = b.fmt("raw_blinky_{s}", .{field_name}),
-            .target = target,
-            .optimize = optimize,
-            .root_source_file = b.path("src/raw_blinky.zig"),
-        });
+        inline for ([_][]const u8{
+            "blinky",
+            "raw_blinky",
+            "uart_echo",
+        }) |name| {
+            const example = mb.add_firmware(.{
+                .name = name ++ "_" ++ field_name,
+                .target = target,
+                .optimize = optimize,
+                .root_source_file = b.path("src/" ++ name ++ ".zig"),
+            });
 
-        mb.install_firmware(raw_blinky, .{});
-
-        const blinky = mb.add_firmware(.{
-            .name = b.fmt("blinky_{s}", .{field_name}),
-            .target = target,
-            .optimize = optimize,
-            .root_source_file = b.path("src/blinky.zig"),
-        });
-
-        mb.install_firmware(blinky, .{});
+            mb.install_firmware(example, .{});
+        }
     }
 }

@@ -96,6 +96,7 @@ pub fn init(dep: *std.Build.Dependency) ?@This() {
 
     const patch_paths = [_][]const u8{
         "patches/gpio.zon",
+        "patches/uart.zon",
     };
     const patch_files = b.allocator.alloc(std.Build.LazyPath, patch_paths.len) catch @panic("OOM");
     for (patch_files, patch_paths) |*dst, src|
