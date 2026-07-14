@@ -136,7 +136,7 @@ export fn memset(dest: [*]u8, ch: u8, count: usize) callconv(.c) [*]u8 {
     _ = count; // R14
     asm volatile (
         \\  MOV R12, R5
-        \\  ADD R14, R5
+        \\  ADD R5, R14
         \\memset_loop:
         \\  CMP   R5, R12
         \\  JEQ   memset_done
@@ -144,7 +144,7 @@ export fn memset(dest: [*]u8, ch: u8, count: usize) callconv(.c) [*]u8 {
         \\  INC   R12
         \\  JMP   memset_loop
         \\memset_done:
-        \\  SUB R14, R12
+        \\  SUB R12, R14
         ::: .{
             .r5 = true,
             // r12 doesn't go in the clobbers because it is restored before exiting
@@ -160,8 +160,8 @@ export fn memcpy(dest: [*]u8, src: [*]const u8, count: usize) callconv(.c) [*]u8
     _ = src; // R13
     _ = count; // R14
     asm volatile (
-        \\  MOV R12, R5
-        \\  ADD R14, R5
+        \\  MOV R5, R12
+        \\  ADD R5, R14
         \\memcpy_loop:
         \\  CMP  R5, R12
         \\  JEQ  memcpy_done
@@ -169,7 +169,7 @@ export fn memcpy(dest: [*]u8, src: [*]const u8, count: usize) callconv(.c) [*]u8
         \\  INC   R12
         \\  INC   R13
         \\memcpy_done:
-        \\  SUB R14, R12
+        \\  SUB R12, R14
         ::: .{
             .r5 = true,
             // r12 doesn't go in the clobbers because it is restored before exiting

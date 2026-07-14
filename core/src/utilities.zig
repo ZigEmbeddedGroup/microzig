@@ -576,7 +576,7 @@ pub fn CircularBuffer(comptime T: type, comptime len: usize) type {
                 buffer.full = true;
         }
 
-        pub fn read(buffer: *Self, out: []T) usize {
+        pub fn read(buffer: *Self, out: []u8) usize {
             buffer.assert_valid();
             defer buffer.assert_valid();
 
@@ -589,7 +589,7 @@ pub fn CircularBuffer(comptime T: type, comptime len: usize) type {
             return count;
         }
 
-        pub fn write(buffer: *Self, data: []const T) error{Full}!void {
+        pub fn write(buffer: *Self, data: []const u8) error{Full}!void {
             buffer.assert_valid();
             defer buffer.assert_valid();
             for (data) |d| {
