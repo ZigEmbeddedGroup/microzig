@@ -2,6 +2,7 @@
     .name = .mz_website,
     .fingerprint = 0xf41bcd0e071e6f03,
     .version = "0.2.0",
+    .minimum_zig_version = "0.17.0-dev.857+2b2b85c5f",
     .paths = .{
         "README.md",
         "build.zig",
@@ -13,8 +14,8 @@
     },
     .dependencies = .{
         .zine = .{
-            .url = "git+https://github.com/kristoff-it/zine#b96e930630f8237aa4927fe14b9cb227061155d3",
-            .hash = "zine-0.11.1-ou6nIBB5FgAaYePTyiT2__fkGVNfImMOnpc_xKNXsYpF",
+            .url = "git+https://github.com/kristoff-it/zine#7689a27d78d206ed9297987998d2472c42904d75",
+            .hash = "zine-0.12.1-ou6nIC85FwCLi6UIsJNHXrE05AMYNfYKJPkNc4Qlo79H",
         },
     },
 }

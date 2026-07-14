@@ -1,7 +1,7 @@
 ---
 .title = "Embedded Basics",
-.date = @date("2020-07-06T00:00:00"),
-.author = "Felix Queißner",
+.date = .date("2020-07-06T00:00:00"),
+.authors = "Felix Queißner",
 .draft = false,
 .layout = "tutorial.shtml",
 .tags = []
