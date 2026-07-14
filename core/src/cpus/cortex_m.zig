@@ -262,7 +262,10 @@ pub const interrupt = struct {
             switch (cortex_m) {
                 .cortex_m0plus,
                 => {
-                    if (excpt == .SVCALL) ppb.SHCSR.raw |= 0x0000_8000;
+                    if (excpt == .SVCALL) {
+                        ppb.SHCSR.raw |= 0x0000_8000;
+                        return;
+                    }
                     @compileError("not supported on this platform");
                 },
                 .cortex_m3, .cortex_m4, .cortex_m7 => {
@@ -295,7 +298,10 @@ pub const interrupt = struct {
             switch (cortex_m) {
                 .cortex_m0plus,
                 => {
-                    if (excpt == .SVCALL) ppb.SHCSR.raw &= ~@as(u32, 0x0000_8000);
+                    if (excpt == .SVCALL) {
+                        ppb.SHCSR.raw &= ~@as(u32, 0x0000_8000);
+                        return;
+                    }
                     @compileError("not supported on this platform");
                 },
                 .cortex_m3, .cortex_m4, .cortex_m7 => {
