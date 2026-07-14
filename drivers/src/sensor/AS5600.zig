@@ -108,7 +108,7 @@ pub const AS5600 = struct {
     }
 
     pub fn read_zero_position(self: *const Self) !u16 {
-        const zpos = self.read2_raw(register.ZPOS);
+        const zpos = try self.read2_raw(register.ZPOS);
         return zpos & 0xFFF;
     }
 
@@ -120,7 +120,7 @@ pub const AS5600 = struct {
     }
 
     pub fn read_max_position(self: *const Self) !u16 {
-        const mpos = self.read2_raw(register.MPOS);
+        const mpos = try self.read2_raw(register.MPOS);
         return mpos & 0xFFF;
     }
 
@@ -132,7 +132,7 @@ pub const AS5600 = struct {
     }
 
     pub fn read_max_angle(self: *const Self) !u16 {
-        const mang = self.read2_raw(register.MANG);
+        const mang = try self.read2_raw(register.MANG);
         return mang & 0xFFF;
     }
 
@@ -144,7 +144,7 @@ pub const AS5600 = struct {
     }
 
     pub fn read_configuration(self: *const Self) !u16 {
-        const configuration = self.read2_raw(register.CONF);
+        const configuration = try self.read2_raw(register.CONF);
         return @bitCast(configuration);
     }
 
