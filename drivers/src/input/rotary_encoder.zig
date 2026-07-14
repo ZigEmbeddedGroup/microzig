@@ -45,6 +45,13 @@ pub fn RotaryEncoder(comptime options: Options) type {
             defer enc.last_a = a;
             defer enc.last_b = b;
 
+            // Detect invalid transitions: both bits changed simultaneously
+            const a_changed = a.value() ^ enc.last_a.value();
+            const b_changed = b.value() ^ enc.last_b.value();
+            if (a_changed != 0 and b_changed != 0) {
+                return .@"error";
+            }
+
             const enable = a.value() ^ b.value() ^ enc.last_a.value() ^ enc.last_b.value();
             const direction = a.value() ^ enc.last_b.value();
 
@@ -136,4 +143,12 @@ test RotaryEncoder {
         try std.testing.expectEqual(.decrement, try encoder.poll());
         try std.testing.expectEqual(.idle, try encoder.poll());
     }
+
+    // Test invalid state: both A and B change simultaneously
+    // Current state is (high, high) from the previous test loop
+    // Force both bits to change at once
+    a.state = .low;
+    b.state = .low;
+    try std.testing.expectEqual(.@"error", try encoder.poll());
+    try std.testing.expectEqual(.idle, try encoder.poll());
 }
