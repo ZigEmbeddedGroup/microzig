@@ -251,3 +251,4 @@ test {
     _ = base.BlockMemory;
     _ = base.ClockDevice;
     _ = base.I2C_Device;
+}
