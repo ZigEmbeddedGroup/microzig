@@ -20,8 +20,6 @@ jobs:
 
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
-        with:
-          version: master
 
       - name: Build zigimports
         run: |
