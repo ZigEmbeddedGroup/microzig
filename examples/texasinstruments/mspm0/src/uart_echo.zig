@@ -23,7 +23,7 @@ pub fn main() void {
 
     const uart = mspm0.Uart.num(0);
     uart.configure(.{
-        .clk = .{ .div = .from_ratio(3) },
+        .clk = .{ .div = .from_float(3.0) },
     });
 
     while (true) {

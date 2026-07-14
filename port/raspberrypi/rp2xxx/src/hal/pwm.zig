@@ -8,6 +8,7 @@ const has_rp2350b = compatibility.has_rp2350b;
 const hw = @import("hw.zig");
 
 pub const Config = struct {};
+pub const FractionalDivider = microzig.utilities.IntFracDiv(8, 4);
 
 fn get_regs(slice: u32) *volatile Regs {
     @import("std").debug.assert(slice < if (has_rp2350b) 12 else 8);
@@ -56,10 +57,9 @@ pub const Slice = enum(u32) {
     /// Set the slice to a clock divider mode.
     ///
     /// Parameters:
-    ///   integer - the integer part of the clock divider
-    ///   fraction - the fractional part of the clock divider
-    pub fn set_clk_div(self: Slice, integer: u8, fraction: u4) void {
-        set_slice_clk_div(@intFromEnum(self), integer, fraction);
+    ///   div - configuration of the clock divider
+    pub fn set_clk_div(self: Slice, div: FractionalDivider) void {
+        set_slice_clk_div(@intFromEnum(self), div);
     }
 };
 
@@ -150,12 +150,11 @@ pub fn set_slice_phase_correct(slice: u32, phase_correct: bool) void {
 ///
 /// Parameters:
 ///   slice - the slice to set
-///   integer - the integer part of the clock divider
-///   fraction - the fractional part of the clock divider
-pub fn set_slice_clk_div(slice: u32, integer: u8, fraction: u4) void {
+///   div - configuration of the clock divider
+pub fn set_slice_clk_div(slice: u32, div: FractionalDivider) void {
     get_regs(slice).div.modify(.{
-        .INT = integer,
-        .FRAC = fraction,
+        .INT = div.int,
+        .FRAC = div.frac,
     });
 }
 

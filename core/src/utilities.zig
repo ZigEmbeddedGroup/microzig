@@ -656,20 +656,47 @@ pub fn IntFracDiv(int_bits: comptime_int, frac_bits: comptime_int) type {
     return struct {
         pub const Int = @Int(.unsigned, int_bits);
         pub const Frac = @Int(.unsigned, frac_bits);
+        pub const FixedP = @Int(.unsigned, int_bits + frac_bits);
 
         int: Int,
-        frac: Frac = 0,
+        frac: Frac,
 
-        // Returns clock configuration that most closely matches the given ratio
-        pub fn from_ratio(ratio: comptime_float) @This() {
-            const int = @floor(ratio);
-            if (int >= (1 << int_bits))
+        /// Writes upper bits to int and lower bits to frac
+        pub fn from_fixedp(fixedp: FixedP) !@This() {
+            return if (fixedp >= (1 << frac_bits)) .{
+                .int = @intCast(fixedp >> frac_bits),
+                .frac = @truncate(fixedp),
+            } else error.DividerTooSmall;
+        }
+
+        /// Returns clock configuration that most closely matches the given ratio
+        pub fn from_float(ratio: anytype) @This() {
+            const info = @typeInfo(@TypeOf(ratio));
+            if (info != .float and info != .comptime_float)
+                @compileError("Expected ratio to be a float, got " ++ @typeName(@TypeOf(ratio)));
+
+            const fixedp = ratio * (1 << frac_bits);
+            if (comptime info == .comptime_float and fixedp >= (1 << (int_bits + frac_bits)))
                 @compileError("Divider too big");
 
-            return .{
-                .int = @intFromFloat(int),
-                .frac = (ratio - int) * (1 << frac_bits),
-            };
+            return from_fixedp(@round(fixedp)) catch unreachable;
+        }
+
+        /// Returns clock configuration that most closely matches the ratio of in/out
+        pub fn from_ratio(in: comptime_int, out: comptime_int) @This() {
+            // Maybe use rounding instead of truncating division?
+            return comptime from_fixedp((in << frac_bits) / out) catch unreachable;
+        }
+
+        /// Returns a ratio that most closely matches this configuration
+        pub fn to_float(self: @This(), Float: type) Float {
+            if (@typeInfo(Float) != .float and @typeInfo(Float) != .comptime_float)
+                @compileError("Expected return type to be a float, got " ++ @typeName(Float));
+
+            const int_shifted = @shlExact(@as(FixedP, self.int), frac_bits);
+            const combined = int_shifted | @as(FixedP, self.frac);
+
+            return @as(Float, @floatFromInt(combined)) / (1 << frac_bits);
         }
     };
 }

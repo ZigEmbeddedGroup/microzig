@@ -24,7 +24,7 @@ pub fn main() void {
         uart_tx.set_function(5);
         const uart = mspm0.Uart.num(0);
         uart.configure(.{
-            .clk = .{ .div = .from_ratio(3) },
+            .clk = .{ .div = .from_float(3.0) },
         });
         mspm0.Uart.init_logger(uart);
     }

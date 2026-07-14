@@ -13,6 +13,7 @@ pub const assembler = @import("assembler.zig");
 const encoder = @import("assembler/encoder.zig");
 const gpio = @import("../gpio.zig");
 
+pub const ClkDivOptions = microzig.utilities.IntFracDiv(16, 8);
 pub const Instruction = encoder.Instruction;
 pub const Program = assembler.Program;
 
@@ -84,19 +85,6 @@ pub const Irq = enum {
         // first two, or is it other things?
         statemachine,
     };
-};
-
-pub const ClkDivOptions = struct {
-    int: u16 = 1,
-    frac: u8 = 0,
-
-    pub fn from_float(div: f32) ClkDivOptions {
-        const fixed = @as(u24, @intFromFloat(div * 256));
-        return ClkDivOptions{
-            .int = @as(u16, @truncate(fixed >> 8)),
-            .frac = @as(u8, @truncate(fixed)),
-        };
-    }
 };
 
 pub const ExecOptions = struct {
@@ -629,7 +617,7 @@ pub fn ShiftOptions(chip: Chip) type {
 
 pub fn StateMachineInitOptions(chip: Chip) type {
     return struct {
-        clkdiv: ClkDivOptions = .{},
+        clkdiv: ClkDivOptions = .from_float(1.0),
         pin_mappings: PinMappingOptions = .{},
         exec: ExecOptions = .{},
         shift: ShiftOptions(chip) = .{},
@@ -638,7 +626,7 @@ pub fn StateMachineInitOptions(chip: Chip) type {
 
 pub fn LoadAndStartProgramOptions(chip: Chip) type {
     return struct {
-        clkdiv: ClkDivOptions = .{},
+        clkdiv: ClkDivOptions = .from_float(1.0),
         shift: ShiftOptions(chip) = .{},
         pin_mappings: PinMappingOptions = .{},
         exec: ExecOptions = .{},

@@ -98,7 +98,7 @@ pub fn main() !void {
     led.set_function(.pwm);
     led.set_direction(.out);
     led_pwm.slice().set_wrap(100);
-    led_pwm.slice().set_clk_div(50, 0);
+    led_pwm.slice().set_clk_div(.from_float(50.0));
     led_pwm.set_level(1);
     led_pwm.slice().enable();
 
