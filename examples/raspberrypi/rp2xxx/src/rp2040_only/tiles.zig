@@ -89,7 +89,7 @@ pub fn main() !void {
         (800_000 * cycles_per_bit);
 
     pio.sm_load_and_start_program(sm, ws2812_program, .{
-        .clkdiv = rp2xxx.pio.ClkDivOptions.from_float(div),
+        .clkdiv = .from_float(div),
         .pin_mappings = .{
             .side_set = .single(led_pin),
         },

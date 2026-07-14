@@ -40,7 +40,7 @@ comptime {
 pub fn main() !void {
     pio.gpio_init(pin);
     pio.sm_load_and_start_program(sm, squarewave_program, .{
-        .clkdiv = rp2xxx.pio.ClkDivOptions.from_float(125),
+        .clkdiv = .from_float(125.0),
         .pin_mappings = .{
             .set = .single(pin),
         },

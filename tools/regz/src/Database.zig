@@ -369,6 +369,45 @@ pub const Access = enum {
                 break field_name;
         } else unreachable;
     }
+
+    pub fn from_string(access: []const u8) ?Access {
+        // Convert to lowercase, to match zig enum style
+        var buf: [32]u8 = undefined;
+        // Matches nothing, used to avoid duplicating log statement
+        var lower: []u8 = "";
+
+        if (access.len <= buf.len) {
+            lower = std.ascii.lowerString(&buf, access);
+            std.mem.replaceScalar(u8, lower, '-', '_');
+            std.mem.replaceScalar(u8, lower, '/', '_');
+        }
+
+        // Try to match against all enum values
+        return if (std.meta.stringToEnum(Access, lower)) |ret|
+            ret
+        else if (std.mem.eql(u8, "r", lower))
+            .read_only
+        else if (std.mem.eql(u8, "w", lower))
+            .write_only
+        else if (std.mem.eql(u8, "rw", lower))
+            .read_write
+        else if (std.mem.eql(u8, "r_w", lower))
+            .read_write
+        else if (std.mem.eql(u8, "read", lower))
+            .read_only
+        else if (std.mem.eql(u8, "write", lower))
+            .write_only
+        else if (std.mem.eql(u8, "readwrite", lower))
+            .read_write
+        else if (std.mem.eql(u8, "writeonce", lower))
+            .write_once
+        else if (std.mem.eql(u8, "read_writeonce", lower))
+            .read_write_once
+        else {
+            log.warn("invalid access type: '{s}'", .{access});
+            return null;
+        };
+    }
 };
 
 pub const StructLayout = enum {

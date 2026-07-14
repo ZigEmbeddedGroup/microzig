@@ -72,7 +72,7 @@ pub fn init(config: CYW43_PIO_SPI_Config) !CYW43_PIO_SPI {
 
     try config.pio.sm_load_and_start_program(sm, cyw43spi_program, .{
         // Default max value from pico-sdk 62.5Mhz
-        .clkdiv = .{ .int = 2, .frac = 0 },
+        .clkdiv = .from_float(2.0),
         .pin_mappings = .{
             .out = .single(config.io_pin),
             .set = .single(config.io_pin),

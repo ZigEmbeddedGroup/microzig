@@ -1,0 +1,21 @@
+.{
+    .name = .mz_port_texasinstruments_mspm0,
+    .fingerprint = 0x532b24ad1c2b55f3,
+    .version = "0.0.1",
+    .minimum_zig_version = "0.17.0",
+    .dependencies = .{
+        .@"microzig/build-internals" = .{ .path = "../../../build-internals" },
+        .@"microzig/tools/regz" = .{ .path = "../../../tools/regz" },
+        .ti_data = .{
+            .url = "git+https://github.com/ZigEmbeddedGroup/texasinstruments-data.git#2bdd0ff770ea4070caf25e2d33e9744374c75b21",
+            .hash = "N-V-__8AAEUAg0HJNVCziuaLjHq479tsKsXb4GbNf5ye38oi",
+            .lazy = true,
+        },
+    },
+    .paths = .{
+        "src",
+        "build.zig",
+        "build.zig.zon",
+        "README.md",
+    },
+}

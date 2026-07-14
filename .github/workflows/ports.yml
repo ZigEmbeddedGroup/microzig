@@ -63,6 +63,10 @@ jobs:
       run: zig build test
       working-directory: port/texasinstruments/msp430
 
+    - name: texasinstruments/mspm0
+      run: zig build test
+      working-directory: port/texasinstruments/mspm0
+
     - name: texasinstruments/tm4c
       run: zig build test
       working-directory: port/texasinstruments/tm4c
@@ -128,6 +132,10 @@ jobs:
     - name: texasinstruments/msp430
       run: zig build -Doptimize=ReleaseSmall
       working-directory: examples/texasinstruments/msp430
+
+    - name: texasinstruments/mspm0
+      run: zig build -Doptimize=ReleaseSmall
+      working-directory: examples/texasinstruments/mspm0
 
     - name: texasinstruments/tm4c
       run: zig build -Doptimize=ReleaseSmall

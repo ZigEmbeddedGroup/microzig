@@ -35,8 +35,8 @@ pub const Node = struct {
         attr: ?*Attr,
 
         pub const Entry = struct {
-            key: []const u8,
-            value: []const u8,
+            key: [:0]const u8,
+            value: [:0]const u8,
         };
 
         pub fn next(it: *AttrIterator) ?Entry {
@@ -56,11 +56,11 @@ pub const Node = struct {
         }
     };
 
-    pub fn get_name(node: Node) []const u8 {
+    pub fn get_name(node: Node) [:0]const u8 {
         return std.mem.span(node.impl.name);
     }
 
-    pub fn get_attribute(node: Node, key: [:0]const u8) ?[]const u8 {
+    pub fn get_attribute(node: Node, key: [:0]const u8) ?[:0]const u8 {
         if (c.xmlHasProp(node.impl, key.ptr)) |prop| {
             if (@as(*c.xmlAttr, @ptrCast(prop)).children) |value_node| {
                 if (@as(*c.xmlNode, @ptrCast(value_node)).content) |content| {
@@ -70,6 +70,12 @@ pub const Node = struct {
         }
 
         return null;
+    }
+
+    pub fn get_attribute_int(node: Node, T: type, key: [:0]const u8) !?T {
+        const buf = get_attribute(node, key) orelse return null;
+        const buf_trim = std.mem.trim(u8, buf, &std.ascii.whitespace);
+        return std.fmt.parseInt(T, buf_trim, 0) catch |e| e;
     }
 
     pub fn find_child(node: Node, keys: []const []const u8) ?Node {
@@ -120,6 +126,12 @@ pub const Node = struct {
                 null
         else
             null;
+    }
+
+    pub fn get_value_int(node: Node, T: type, key: [:0]const u8) !?T {
+        const buf = get_value(node, key) orelse return null;
+        const buf_trim = std.mem.trim(u8, buf, &std.ascii.whitespace);
+        return std.fmt.parseInt(T, buf_trim, 0) catch |e| e;
     }
 };
 

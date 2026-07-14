@@ -134,13 +134,13 @@ fn generate_chips_file(
             \\        .preferred_binary_format = .elf,
             \\        .zig_target = .{{
             \\            .cpu_arch = .thumb,
-            \\            .cpu_model = .{{ .explicit = &std.Target.arm.cpu.{s} }},
+            \\            .cpu_model = .{{ .explicit = &std.Target.arm.cpu.{t} }},
             \\            .os_tag = .freestanding,
             \\
         , .{
             std.zig.fmtId(chip_file.name),
             std.zig.fmtId(chip_file.name),
-            regz.embassy.core_to_cpu.get(core.name).?,
+            regz.Arch.from_string(core.name),
         });
 
         if (with_fpu) {

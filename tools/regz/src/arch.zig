@@ -1,3 +1,5 @@
+const std = @import("std");
+
 // concrete arch's that we support in codegen, for stuff like interrupt
 // table generation
 pub const Arch = enum {
@@ -52,10 +54,102 @@ pub const Arch = enum {
     pub const default = .unknown;
 
     pub fn to_string(arch: Arch) []const u8 {
-        return inline for (@typeInfo(Arch).@"enum".field_names) |field_name| {
-            if (@field(Arch, field_name) == arch)
-                break field_name;
-        } else unreachable;
+        return @tagName(arch);
+    }
+
+    pub fn from_string(arch: []const u8) Arch {
+        // Convert ISA string (e.g., "CORTEX_M4", "MSP430") to lowercase and match to Arch enum
+        var buf: [32]u8 = undefined;
+        // Matches nothing, used to avoid duplicating log statement
+        var lower: []u8 = "";
+
+        if (arch.len <= buf.len) {
+            lower = std.ascii.lowerString(&buf, arch);
+            std.mem.replaceScalar(u8, lower, '-', '_');
+        }
+
+        // Try to match against all Arch enum values
+        return if (std.meta.stringToEnum(Arch, lower)) |ret|
+            ret
+        else if (std.mem.eql(u8, "armv8mml", lower))
+            .arm_v81_mml
+        else if (std.mem.eql(u8, "armv8mbl", lower))
+            .arm_v8_mbl
+        else if (std.mem.eql(u8, "armv81mml", lower))
+            .arm_v8_mml
+        else if (std.mem.eql(u8, "avr8x_mega", lower))
+            .avr8xmega
+        else if (std.mem.eql(u8, "cortex_m0p", lower))
+            .cortex_m0plus
+        else if (std.mem.eql(u8, "cm0", lower))
+            .cortex_m0
+        else if (std.mem.eql(u8, "cm0plus", lower))
+            .cortex_m0plus
+        else if (std.mem.eql(u8, "cm0p", lower))
+            .cortex_m0plus
+        else if (std.mem.eql(u8, "cm0+", lower))
+            .cortex_m0plus
+        else if (std.mem.eql(u8, "cm1", lower))
+            .cortex_m1
+        else if (std.mem.eql(u8, "cm23", lower))
+            .cortex_m23
+        else if (std.mem.eql(u8, "cm3", lower))
+            .cortex_m3
+        else if (std.mem.eql(u8, "cm33", lower))
+            .cortex_m33
+        else if (std.mem.eql(u8, "cm35p", lower))
+            .cortex_m35p
+        else if (std.mem.eql(u8, "cm4", lower))
+            .cortex_m4
+        else if (std.mem.eql(u8, "cm55", lower))
+            .cortex_m55
+        else if (std.mem.eql(u8, "cm7", lower))
+            .cortex_m7
+        else if (std.mem.eql(u8, "ca5", lower))
+            .cortex_a5
+        else if (std.mem.eql(u8, "ca7", lower))
+            .cortex_a7
+        else if (std.mem.eql(u8, "ca8", lower))
+            .cortex_a8
+        else if (std.mem.eql(u8, "ca9", lower))
+            .cortex_a9
+        else if (std.mem.eql(u8, "ca15", lower))
+            .cortex_a15
+        else if (std.mem.eql(u8, "ca17", lower))
+            .cortex_a17
+        else if (std.mem.eql(u8, "ca53", lower))
+            .cortex_a53
+        else if (std.mem.eql(u8, "ca57", lower))
+            .cortex_a57
+        else if (std.mem.eql(u8, "ca72", lower))
+            .cortex_a72
+        else if (std.mem.eql(u8, "qingkev2", lower))
+            .qingke_v2
+        else if (std.mem.eql(u8, "qingkev3", lower))
+            .qingke_v3
+        else if (std.mem.eql(u8, "qingkev4", lower))
+            .qingke_v4
+        else {
+            std.log.warn("Unknown Arch: {s}, defaulting to .unknown", .{arch});
+            return .unknown;
+        };
+    }
+
+    pub fn is_cortex_m(arch: Arch) bool {
+        return switch (arch) {
+            .cortex_m0,
+            .cortex_m0plus,
+            .cortex_m1,
+            .cortex_m23,
+            .cortex_m3,
+            .cortex_m33,
+            .cortex_m35p,
+            .cortex_m4,
+            .cortex_m55,
+            .cortex_m7,
+            => true,
+            else => false,
+        };
     }
 
     pub fn is_arm(arch: Arch) bool {

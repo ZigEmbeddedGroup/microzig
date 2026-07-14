@@ -13,6 +13,8 @@ const time = @import("time.zig");
 
 const UartRegs = microzig.chip.types.peripherals.UART0;
 
+pub const BaudrateDivider = microzig.utilities.IntFracDiv(16, 6);
+
 pub const WordBits = enum {
     five,
     six,
@@ -504,8 +506,8 @@ pub const UART = enum(u1) {
         });
     }
 
+    /// Deprecated, use set_divider instead
     pub fn set_baudrate(uart: UART, baud_rate: u32, peri_freq: u32) void {
-        const uart_regs = uart.get_regs();
         const baud_rate_div = (8 * peri_freq / baud_rate);
         var baud_ibrd = @as(u16, @intCast(baud_rate_div >> 7));
 
@@ -517,8 +519,14 @@ pub const UART = enum(u1) {
             break :baud_fbrd 0;
         } else @as(u6, @intCast(((@as(u7, @truncate(baud_rate_div))) + 1) / 2));
 
-        uart_regs.UARTIBRD.write(.{ .BAUD_DIVINT = baud_ibrd });
-        uart_regs.UARTFBRD.write(.{ .BAUD_DIVFRAC = baud_fbrd });
+        uart.set_divider(.{ .int = baud_ibrd, .frac = baud_fbrd });
+    }
+
+    /// Remember that there is a builtin by-16 divider
+    pub fn set_divider(uart: UART, div: BaudrateDivider) void {
+        const uart_regs = uart.get_regs();
+        uart_regs.UARTIBRD.write(.{ .BAUD_DIVINT = div.int });
+        uart_regs.UARTFBRD.write(.{ .BAUD_DIVFRAC = div.frac });
 
         // PL011 needs a (dummy) LCR_H write to latch in the divisors.
         // We don't want to actually change LCR_H contents here.
