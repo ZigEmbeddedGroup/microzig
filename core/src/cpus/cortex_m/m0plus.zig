@@ -169,7 +169,7 @@ pub const NestedVectorInterruptController = extern struct {
     /// register saves value 192 to the register.
     IPR: [32]u8,
 
-    pub fn is_enabled(nvic: *volatile NestedVectorInterruptController, num: comptime_int) void {
+    pub fn is_enabled(nvic: *volatile NestedVectorInterruptController, num: comptime_int) bool {
         return nvic.ISER & (1 << num) != 0;
     }
 
@@ -181,7 +181,7 @@ pub const NestedVectorInterruptController = extern struct {
         nvic.ICER |= 1 << num;
     }
 
-    pub fn is_pending(nvic: *volatile NestedVectorInterruptController, num: comptime_int) void {
+    pub fn is_pending(nvic: *volatile NestedVectorInterruptController, num: comptime_int) bool {
         return nvic.ISPR & (1 << num) != 0;
     }
 

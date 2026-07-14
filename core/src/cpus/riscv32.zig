@@ -9,9 +9,11 @@ pub const nop = riscv32_common.nop;
 pub const wfi = riscv32_common.wfi;
 
 pub fn wfe() void {
-    asm volatile ("csrs 0x810, 0x1");
+    // Enable MIE (Machine Interrupt Enable) in mstatus so WFI can
+    // wake up on interrupts, then re-enable after WFI.
+    asm volatile ("csrs 0x300, 0x1");
     wfi();
-    asm volatile ("csrs 0x810, 0x1");
+    asm volatile ("csrs 0x300, 0x1");
 }
 
 pub const startup_logic = struct {
