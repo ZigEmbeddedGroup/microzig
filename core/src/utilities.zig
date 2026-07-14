@@ -653,20 +653,19 @@ test "CircularBuffer bounds" {
 }
 
 pub fn IntFracDiv(int_bits: comptime_int, frac_bits: comptime_int) type {
-    return struct {
+    const FixedPoint = @Int(.unsigned, int_bits + frac_bits);
+    return packed struct(FixedPoint) {
         pub const Int = @Int(.unsigned, int_bits);
         pub const Frac = @Int(.unsigned, frac_bits);
-        pub const FixedP = @Int(.unsigned, int_bits + frac_bits);
+        pub const FixedP = FixedPoint;
 
-        int: Int,
         frac: Frac,
+        int: Int,
 
         /// Writes upper bits to int and lower bits to frac
         pub fn from_fixedp(fixedp: FixedP) !@This() {
-            return if (fixedp >= (1 << frac_bits)) .{
-                .int = @intCast(fixedp >> frac_bits),
-                .frac = @truncate(fixedp),
-            } else error.DividerTooSmall;
+            const ret: @This() = @bitCast(fixedp);
+            return if (ret.int > 0) ret else error.DividerTooSmall;
         }
 
         /// Returns clock configuration that most closely matches the given ratio
@@ -686,6 +685,11 @@ pub fn IntFracDiv(int_bits: comptime_int, frac_bits: comptime_int) type {
         pub fn from_ratio(in: comptime_int, out: comptime_int) @This() {
             // Maybe use rounding instead of truncating division?
             return comptime from_fixedp((in << frac_bits) / out) catch unreachable;
+        }
+
+        /// Useful for ratio comparisons
+        pub fn to_fixedp(self: @This()) FixedP {
+            return @bitCast(self);
         }
 
         /// Returns a ratio that most closely matches this configuration
