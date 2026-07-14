@@ -651,3 +651,25 @@ test "CircularBuffer bounds" {
 
     try std.testing.expectError(error.Full, maybe_err);
 }
+
+pub fn IntFracDiv(int_bits: comptime_int, frac_bits: comptime_int) type {
+    return struct {
+        pub const Int = @Int(.unsigned, int_bits);
+        pub const Frac = @Int(.unsigned, frac_bits);
+
+        int: Int,
+        frac: Frac = 0,
+
+        // Returns clock configuration that most closely matches the given ratio
+        pub fn from_ratio(ratio: comptime_float) @This() {
+            const int = @floor(ratio);
+            if (int >= (1 << int_bits))
+                @compileError("Divider too big");
+
+            return .{
+                .int = @intFromFloat(int),
+                .frac = (ratio - int) * (1 << frac_bits),
+            };
+        }
+    };
+}

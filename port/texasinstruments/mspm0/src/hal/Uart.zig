@@ -21,7 +21,7 @@ pub const Config = struct {
         src: Source = .BUSCLK,
         div0: peri_types.uart0.ClkdivRatio = .@"1",
         ovs: RegFieldType("UART0_CTL0", "HSE") = .OVS16,
-        div: IntFracDiv(16, 6),
+        div: microzig.utilities.IntFracDiv(16, 6),
     };
 
     clk: Clock,
@@ -181,27 +181,4 @@ fn RegFieldType(register_name: []const u8, field_name: []const u8) type {
     const fld_idx = std.meta.fieldIndex(Reg, field_name) orelse
         @compileError("No field " ++ field_name ++ " in uart0." ++ register_name ++ ".");
     return std.meta.fieldTypes(Reg)[fld_idx];
-}
-
-// Maybe move this into core?
-pub fn IntFracDiv(int_bits: comptime_int, frac_bits: comptime_int) type {
-    return struct {
-        pub const Int = @Int(.unsigned, int_bits);
-        pub const Frac = @Int(.unsigned, frac_bits);
-
-        int: Int,
-        frac: Frac = 0,
-
-        // Returns clock configuration that most closely matches the given ratio
-        pub fn from_ratio(ratio: comptime_float) @This() {
-            const int = @floor(ratio);
-            if (int >= (1 << int_bits))
-                @compileError("Divider too big");
-
-            return .{
-                .int = @intFromFloat(int),
-                .frac = (ratio - int) * (1 << frac_bits),
-            };
-        }
-    };
 }
