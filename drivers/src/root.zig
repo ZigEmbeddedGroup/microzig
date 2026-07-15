@@ -233,6 +233,7 @@ test {
     _ = sensor.TLV493D;
     _ = sensor.TMP117;
     _ = sensor.AHT30;
+    _ = sensor.AS5600;
 
     _ = @import("stepper/common.zig");
     _ = stepper.A4988;
