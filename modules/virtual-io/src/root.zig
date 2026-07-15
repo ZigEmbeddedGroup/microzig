@@ -26,12 +26,17 @@ pub const vtable: std.Io.VTable = blk: {
     break :blk ret;
 };
 
+pub const root_dir: std.Io.Dir = .{ .handle = handle_from_id(ID.root) };
+
 gpa: Allocator,
 directories: Map(ID, Dir) = .empty,
 files: Map(ID, File) = .empty,
 // child -> parent
 hierarchy: Map(ID, ID) = .empty,
-next_id: u16 = 2,
+last_id: u16 = switch (builtin.os.tag) {
+    .windows => @intFromPtr(root_dir.handle),
+    else => root_dir.handle,
+},
 
 fn id_from_handle(handle: std.posix.fd_t) ID {
     return @enumFromInt(switch (builtin.os.tag) {
@@ -148,11 +153,6 @@ pub fn deinit(vio: *VirtualIo) void {
     vio.hierarchy.deinit(vio.gpa);
 }
 
-pub fn root_dir(vio: *VirtualIo) std.Io.Dir {
-    _ = vio;
-    return .{ .handle = handle_from_id(ID.root) };
-}
-
 pub fn get_file(vio: *VirtualIo, path: []const u8) !?ID {
     var components: std.ArrayList([]const u8) = .empty;
     defer components.deinit(vio.gpa);
@@ -211,13 +211,9 @@ pub fn get_children(vio: *VirtualIo, allocator: Allocator, id: ID) ![]const Entr
     return ret.toOwnedSlice(allocator);
 }
 
-fn new_id(vio: *VirtualIo) ID {
-    defer vio.next_id += 1;
-    return @enumFromInt(vio.next_id);
-}
-
 fn create_dir(vio: *VirtualIo, parent: ID, name: []const u8) !ID {
-    const id = vio.new_id();
+    vio.last_id += 1;
+    const id: ID = @enumFromInt(vio.last_id);
 
     const name_copy = try vio.gpa.dupe(u8, name);
     try vio.directories.put(vio.gpa, id, .{
@@ -230,7 +226,8 @@ fn create_dir(vio: *VirtualIo, parent: ID, name: []const u8) !ID {
 }
 
 fn create_file(vio: *VirtualIo, parent: ID, name: []const u8) !ID {
-    const id = vio.new_id();
+    vio.last_id += 1;
+    const id: ID = @enumFromInt(vio.last_id);
 
     const name_copy = try vio.gpa.dupe(u8, name);
     try vio.files.put(vio.gpa, id, .{

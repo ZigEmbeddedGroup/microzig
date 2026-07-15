@@ -1783,7 +1783,7 @@ test "gen.peripheral instantiation" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.io(), vfs.root_dir(), .{});
+    try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "TEST_DEVICE.zig",
@@ -1906,7 +1906,7 @@ test "gen.peripherals with a shared type" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.io(), vfs.root_dir(), .{});
+    try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "TEST_DEVICE.zig",
@@ -2025,7 +2025,7 @@ test "gen.peripheral with modes" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.io(), vfs.root_dir(), .{});
+    try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
@@ -2131,7 +2131,7 @@ test "gen.peripheral with enum" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.io(), vfs.root_dir(), .{});
+    try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
@@ -2200,7 +2200,7 @@ test "gen.peripheral with enum, enum is exhausted of values" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.io(), vfs.root_dir(), .{});
+    try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
@@ -2275,7 +2275,7 @@ test "gen.field with named enum" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.io(), vfs.root_dir(), .{});
+    try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
@@ -2356,7 +2356,7 @@ test "gen.field with named enum and named default" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.io(), vfs.root_dir(), .{});
+    try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
@@ -2437,7 +2437,7 @@ test "gen.field with named enum and unnamed default" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.io(), vfs.root_dir(), .{});
+    try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
@@ -2515,7 +2515,7 @@ test "gen.field with anonymous enum" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.io(), vfs.root_dir(), .{});
+    try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
@@ -2593,7 +2593,7 @@ test "gen.field with anonymous enum and default" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.io(), vfs.root_dir(), .{});
+    try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
@@ -2678,7 +2678,7 @@ test "gen.namespaced register groups" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.io(), vfs.root_dir(), .{});
+    try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "ATmega328P.zig",
@@ -2791,7 +2791,7 @@ test "gen.peripheral with reserved register" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.io(), vfs.root_dir(), .{});
+    try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "ATmega328P.zig",
@@ -2894,7 +2894,7 @@ test "gen.peripheral with count" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.io(), vfs.root_dir(), .{});
+    try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "ATmega328P.zig",
@@ -2998,7 +2998,7 @@ test "gen.peripheral with count, padding required" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.io(), vfs.root_dir(), .{});
+    try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "ATmega328P.zig",
@@ -3103,7 +3103,7 @@ test "gen.register with count" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.io(), vfs.root_dir(), .{});
+    try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "ATmega328P.zig",
@@ -3220,7 +3220,7 @@ test "gen.register with count and fields" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.io(), vfs.root_dir(), .{});
+    try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "ATmega328P.zig",
@@ -3328,7 +3328,7 @@ test "gen.field with count, width of one, offset, and padding" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.io(), vfs.root_dir(), .{});
+    try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
@@ -3401,7 +3401,7 @@ test "gen.field with count, multi-bit width, offset, and padding" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.io(), vfs.root_dir(), .{});
+    try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
@@ -3465,7 +3465,7 @@ test "gen.interrupts.avr" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.io(), vfs.root_dir(), .{});
+    try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "ATmega328P.zig",
@@ -3561,7 +3561,7 @@ test "gen.peripheral type with register and field" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.io(), vfs.root_dir(), .{});
+    try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
@@ -3651,7 +3651,7 @@ test "gen.name collisions in enum name cause them to be anonymous" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.io(), vfs.root_dir(), .{});
+    try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
@@ -3732,7 +3732,7 @@ test "gen.pick one enum field in value collisions" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.io(), vfs.root_dir(), .{});
+    try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
@@ -3808,7 +3808,7 @@ test "gen.pick one enum field in value collisions" {
 //    var vfs: VirtualFilesystem = .init(std.testing.allocator);
 //    defer vfs.deinit();
 //
-//    try db.to_zig(vfs.io(), vfs.root_dir(), .{});
+//    try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
 //    try expect_output(&.{
 //        .{
 //            .path = "types.zig",
@@ -3885,7 +3885,7 @@ test "gen.pick one enum field in value collisions" {
 //    var vfs: VirtualFilesystem = .init(std.testing.allocator);
 //    defer vfs.deinit();
 //
-//    try db.to_zig(vfs.io(), vfs.root_dir(), .{});
+//    try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
 //    try expect_output(&.{
 //        .{
 //            .path = "types.zig",
@@ -3963,7 +3963,7 @@ test "gen.nested struct field in a peripheral" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.io(), vfs.root_dir(), .{});
+    try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
@@ -4048,7 +4048,7 @@ test "gen.nested struct field in a peripheral that has a named type" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.io(), vfs.root_dir(), .{});
+    try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
@@ -4133,7 +4133,7 @@ test "gen.nested struct field in a peripheral with offset" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.io(), vfs.root_dir(), .{});
+    try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
@@ -4225,7 +4225,7 @@ test "gen.nested struct field in nested struct field" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.io(), vfs.root_dir(), .{});
+    try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
@@ -4327,7 +4327,7 @@ test "gen.nested struct field next to register" {
     var vfs: VirtualFilesystem = .init(std.testing.allocator);
     defer vfs.deinit();
 
-    try db.to_zig(vfs.io(), vfs.root_dir(), .{});
+    try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
