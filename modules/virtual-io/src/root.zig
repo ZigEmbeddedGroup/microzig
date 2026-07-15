@@ -1,4 +1,19 @@
-//! Filesystem to store generated files
+//! In-memory filesystem implementation
+const std = @import("std");
+const builtin = @import("builtin");
+
+const Allocator = std.mem.Allocator;
+const assert = std.debug.assert;
+const log = std.log.scoped(.vio);
+const Map = std.AutoArrayHashMapUnmanaged;
+
+pub const Kind = enum(u1) {
+    file,
+    directory,
+};
+
+pub const VirtualIo = @This();
+
 gpa: Allocator,
 directories: Map(ID, Dir) = .empty,
 files: Map(ID, File) = .empty,
@@ -6,21 +21,11 @@ files: Map(ID, File) = .empty,
 hierarchy: Map(ID, ID) = .empty,
 next_id: u16 = 2,
 
-pub const VirtualFilesystem = @This();
-
-const std = @import("std");
-const Allocator = std.mem.Allocator;
-const Map = std.AutoArrayHashMapUnmanaged;
-const assert = std.debug.assert;
-const log = std.log.scoped(.vfs);
-
-const builtin = @import("builtin");
-
 fn id_from_handle(handle: std.posix.fd_t) ID {
-    return switch (builtin.os.tag) {
-        .windows => @enumFromInt(@intFromPtr(handle)),
-        else => @enumFromInt(handle),
-    };
+    return @enumFromInt(switch (builtin.os.tag) {
+        .windows => @intFromPtr(handle),
+        else => handle,
+    });
 }
 
 fn handle_from_id(id: ID) std.posix.fd_t {
@@ -30,11 +35,6 @@ fn handle_from_id(id: ID) std.posix.fd_t {
     };
 }
 
-pub const Kind = enum {
-    file,
-    directory,
-};
-
 pub const Dir = struct {
     name: []const u8,
 
@@ -43,7 +43,7 @@ pub const Dir = struct {
     }
 
     fn create_file(userdata: ?*anyopaque, dir: std.Io.Dir, sub_path: []const u8, _: std.Io.Dir.CreateFileOptions) std.Io.File.OpenError!std.Io.File {
-        const vfs: *VirtualFilesystem = @ptrCast(@alignCast(userdata.?));
+        const vfs: *VirtualIo = @ptrCast(@alignCast(userdata.?));
         const dir_id = id_from_handle(dir.handle);
 
         if (std.mem.findScalar(u8, sub_path, '/') != null) {
@@ -69,7 +69,7 @@ pub const Dir = struct {
         _: std.Io.Dir.Permissions,
         _: std.Io.Dir.OpenOptions,
     ) std.Io.Dir.CreateDirPathOpenError!std.Io.Dir {
-        const vfs: *VirtualFilesystem = @ptrCast(@alignCast(userdata.?));
+        const vfs: *VirtualIo = @ptrCast(@alignCast(userdata.?));
         const parent = id_from_handle(parent_dir.handle);
         const id = vfs.create_dir(parent, sub_path) catch return error.NoSpaceLeft;
 
@@ -94,7 +94,7 @@ pub const File = struct {
 };
 
 fn operate(userdata: ?*anyopaque, op: std.Io.Operation) std.Io.Cancelable!std.Io.Operation.Result {
-    const vfs: *VirtualFilesystem = @ptrCast(@alignCast(userdata.?));
+    const vfs: *VirtualIo = @ptrCast(@alignCast(userdata.?));
     return switch (op) {
         .file_write_streaming => |write_op| blk: {
             const file = vfs.files.getPtr(id_from_handle(write_op.file.handle)).?;
@@ -121,13 +121,13 @@ pub const ID = enum(u16) {
     _,
 };
 
-pub fn init(gpa: Allocator) VirtualFilesystem {
-    return VirtualFilesystem{
+pub fn init(gpa: Allocator) VirtualIo {
+    return VirtualIo{
         .gpa = gpa,
     };
 }
 
-pub fn deinit(fs: *VirtualFilesystem) void {
+pub fn deinit(fs: *VirtualIo) void {
     for (fs.directories.values()) |*directory| directory.deinit(fs.gpa);
     for (fs.files.values()) |*file| file.deinit(fs.gpa);
 
@@ -136,12 +136,12 @@ pub fn deinit(fs: *VirtualFilesystem) void {
     fs.hierarchy.deinit(fs.gpa);
 }
 
-pub fn root_dir(fs: *VirtualFilesystem) std.Io.Dir {
+pub fn root_dir(fs: *VirtualIo) std.Io.Dir {
     _ = fs;
     return .{ .handle = handle_from_id(ID.root) };
 }
 
-pub fn get_file(fs: *VirtualFilesystem, path: []const u8) !?ID {
+pub fn get_file(fs: *VirtualIo, path: []const u8) !?ID {
     var components: std.ArrayList([]const u8) = .empty;
     defer components.deinit(fs.gpa);
 
@@ -152,7 +152,7 @@ pub fn get_file(fs: *VirtualFilesystem, path: []const u8) !?ID {
     return fs.recursive_get_file(0, .root, components.items);
 }
 
-fn recursive_get_file(fs: *VirtualFilesystem, depth: usize, dir_id: ID, components: []const []const u8) !?ID {
+fn recursive_get_file(fs: *VirtualIo, depth: usize, dir_id: ID, components: []const []const u8) !?ID {
     return switch (components.len) {
         0 => null,
         1 => blk: {
@@ -187,7 +187,7 @@ pub const Entry = struct {
     kind: Kind,
 };
 
-pub fn get_children(fs: *VirtualFilesystem, allocator: Allocator, id: ID) ![]const Entry {
+pub fn get_children(fs: *VirtualIo, allocator: Allocator, id: ID) ![]const Entry {
     var ret: std.ArrayList(Entry) = .empty;
     for (fs.hierarchy.keys(), fs.hierarchy.values()) |child_id, parent_id| {
         if (parent_id == id)
@@ -199,12 +199,12 @@ pub fn get_children(fs: *VirtualFilesystem, allocator: Allocator, id: ID) ![]con
     return ret.toOwnedSlice(allocator);
 }
 
-fn new_id(fs: *VirtualFilesystem) ID {
+fn new_id(fs: *VirtualIo) ID {
     defer fs.next_id += 1;
     return @enumFromInt(fs.next_id);
 }
 
-fn create_dir(fs: *VirtualFilesystem, parent: ID, name: []const u8) !ID {
+fn create_dir(fs: *VirtualIo, parent: ID, name: []const u8) !ID {
     const id = fs.new_id();
 
     const name_copy = try fs.gpa.dupe(u8, name);
@@ -217,7 +217,7 @@ fn create_dir(fs: *VirtualFilesystem, parent: ID, name: []const u8) !ID {
     return id;
 }
 
-fn create_file(fs: *VirtualFilesystem, parent: ID, name: []const u8) !ID {
+fn create_file(fs: *VirtualIo, parent: ID, name: []const u8) !ID {
     const id = fs.new_id();
 
     const name_copy = try fs.gpa.dupe(u8, name);
@@ -231,7 +231,7 @@ fn create_file(fs: *VirtualFilesystem, parent: ID, name: []const u8) !ID {
     return id;
 }
 
-pub fn get_kind(fs: *VirtualFilesystem, id: ID) Kind {
+pub fn get_kind(fs: *VirtualIo, id: ID) Kind {
     return if (fs.files.contains(id))
         .file
     else if (fs.directories.contains(id))
@@ -240,7 +240,7 @@ pub fn get_kind(fs: *VirtualFilesystem, id: ID) Kind {
         unreachable;
 }
 
-pub fn get_name(fs: *VirtualFilesystem, id: ID) []const u8 {
+pub fn get_name(fs: *VirtualIo, id: ID) []const u8 {
     return if (fs.files.get(id)) |f|
         f.name
     else if (fs.directories.get(id)) |d|
@@ -249,19 +249,19 @@ pub fn get_name(fs: *VirtualFilesystem, id: ID) []const u8 {
         unreachable;
 }
 
-pub fn get_content(fs: *VirtualFilesystem, id: ID) []const u8 {
+pub fn get_content(fs: *VirtualIo, id: ID) []const u8 {
     assert(fs.get_kind(id) == .file);
     return fs.files.get(id).?.content.writer.buffered();
 }
 
-fn get_child(fs: *VirtualFilesystem, parent: ID, component: []const u8) ?ID {
+fn get_child(fs: *VirtualIo, parent: ID, component: []const u8) ?ID {
     return for (fs.hierarchy.keys(), fs.hierarchy.values()) |child_id, entry_parent_id| {
         if (entry_parent_id == parent and std.mem.eql(u8, component, fs.get_name(child_id)))
             break child_id;
     } else null;
 }
 
-pub fn io(vfs: *VirtualFilesystem) std.Io {
+pub fn io(vfs: *VirtualIo) std.Io {
     return .{
         .userdata = vfs,
         .vtable = &.{

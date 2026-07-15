@@ -13,7 +13,7 @@ const DevicePeripheral = Database.DevicePeripheral;
 const EnumID = Database.EnumID;
 const StructID = Database.StructID;
 const NestedStructField = Database.NestedStructField;
-const VirtualFilesystem = @import("virtual-io").VirtualFilesystem;
+const VirtualFilesystem = @import("virtual-io").VirtualIo;
 
 const Properties = @import("properties.zig").Properties;
 const arm = @import("arch/arm.zig");
