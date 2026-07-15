@@ -6,7 +6,7 @@ files: Map(ID, File) = .empty,
 hierarchy: Map(ID, ID) = .empty,
 next_id: u16 = 2,
 
-const VirtualFilesystem = @This();
+pub const VirtualFilesystem = @This();
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;
