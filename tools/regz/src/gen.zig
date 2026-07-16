@@ -1780,7 +1780,7 @@ test "gen.peripheral instantiation" {
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    var vfs: VirtualFilesystem = try .init(std.testing.allocator);
     defer vfs.deinit();
 
     try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
@@ -1903,7 +1903,7 @@ test "gen.peripherals with a shared type" {
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    var vfs: VirtualFilesystem = try .init(std.testing.allocator);
     defer vfs.deinit();
 
     try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
@@ -2022,7 +2022,7 @@ test "gen.peripheral with modes" {
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    var vfs: VirtualFilesystem = try .init(std.testing.allocator);
     defer vfs.deinit();
 
     try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
@@ -2128,7 +2128,7 @@ test "gen.peripheral with enum" {
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    var vfs: VirtualFilesystem = try .init(std.testing.allocator);
     defer vfs.deinit();
 
     try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
@@ -2197,7 +2197,7 @@ test "gen.peripheral with enum, enum is exhausted of values" {
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    var vfs: VirtualFilesystem = try .init(std.testing.allocator);
     defer vfs.deinit();
 
     try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
@@ -2272,7 +2272,7 @@ test "gen.field with named enum" {
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    var vfs: VirtualFilesystem = try .init(std.testing.allocator);
     defer vfs.deinit();
 
     try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
@@ -2353,7 +2353,7 @@ test "gen.field with named enum and named default" {
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    var vfs: VirtualFilesystem = try .init(std.testing.allocator);
     defer vfs.deinit();
 
     try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
@@ -2434,7 +2434,7 @@ test "gen.field with named enum and unnamed default" {
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    var vfs: VirtualFilesystem = try .init(std.testing.allocator);
     defer vfs.deinit();
 
     try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
@@ -2512,7 +2512,7 @@ test "gen.field with anonymous enum" {
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    var vfs: VirtualFilesystem = try .init(std.testing.allocator);
     defer vfs.deinit();
 
     try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
@@ -2590,7 +2590,7 @@ test "gen.field with anonymous enum and default" {
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    var vfs: VirtualFilesystem = try .init(std.testing.allocator);
     defer vfs.deinit();
 
     try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
@@ -2675,7 +2675,7 @@ test "gen.namespaced register groups" {
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    var vfs: VirtualFilesystem = try .init(std.testing.allocator);
     defer vfs.deinit();
 
     try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
@@ -2788,7 +2788,7 @@ test "gen.peripheral with reserved register" {
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    var vfs: VirtualFilesystem = try .init(std.testing.allocator);
     defer vfs.deinit();
 
     try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
@@ -2891,7 +2891,7 @@ test "gen.peripheral with count" {
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    var vfs: VirtualFilesystem = try .init(std.testing.allocator);
     defer vfs.deinit();
 
     try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
@@ -2995,7 +2995,7 @@ test "gen.peripheral with count, padding required" {
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    var vfs: VirtualFilesystem = try .init(std.testing.allocator);
     defer vfs.deinit();
 
     try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
@@ -3100,7 +3100,7 @@ test "gen.register with count" {
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    var vfs: VirtualFilesystem = try .init(std.testing.allocator);
     defer vfs.deinit();
 
     try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
@@ -3217,7 +3217,7 @@ test "gen.register with count and fields" {
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    var vfs: VirtualFilesystem = try .init(std.testing.allocator);
     defer vfs.deinit();
 
     try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
@@ -3325,7 +3325,7 @@ test "gen.field with count, width of one, offset, and padding" {
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    var vfs: VirtualFilesystem = try .init(std.testing.allocator);
     defer vfs.deinit();
 
     try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
@@ -3398,7 +3398,7 @@ test "gen.field with count, multi-bit width, offset, and padding" {
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    var vfs: VirtualFilesystem = try .init(std.testing.allocator);
     defer vfs.deinit();
 
     try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
@@ -3462,7 +3462,7 @@ test "gen.interrupts.avr" {
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    var vfs: VirtualFilesystem = try .init(std.testing.allocator);
     defer vfs.deinit();
 
     try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
@@ -3558,7 +3558,7 @@ test "gen.peripheral type with register and field" {
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    var vfs: VirtualFilesystem = try .init(std.testing.allocator);
     defer vfs.deinit();
 
     try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
@@ -3648,7 +3648,7 @@ test "gen.name collisions in enum name cause them to be anonymous" {
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    var vfs: VirtualFilesystem = try .init(std.testing.allocator);
     defer vfs.deinit();
 
     try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
@@ -3729,7 +3729,7 @@ test "gen.pick one enum field in value collisions" {
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    var vfs: VirtualFilesystem = try .init(std.testing.allocator);
     defer vfs.deinit();
 
     try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
@@ -3805,7 +3805,7 @@ test "gen.pick one enum field in value collisions" {
 //    var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
 //    defer buffer.deinit();
 //
-//    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+//    var vfs: VirtualFilesystem = try .init(std.testing.allocator);
 //    defer vfs.deinit();
 //
 //    try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
@@ -3882,7 +3882,7 @@ test "gen.pick one enum field in value collisions" {
 //    var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
 //    defer buffer.deinit();
 //
-//    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+//    var vfs: VirtualFilesystem = try .init(std.testing.allocator);
 //    defer vfs.deinit();
 //
 //    try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
@@ -3960,7 +3960,7 @@ test "gen.nested struct field in a peripheral" {
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    var vfs: VirtualFilesystem = try .init(std.testing.allocator);
     defer vfs.deinit();
 
     try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
@@ -4045,7 +4045,7 @@ test "gen.nested struct field in a peripheral that has a named type" {
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    var vfs: VirtualFilesystem = try .init(std.testing.allocator);
     defer vfs.deinit();
 
     try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
@@ -4130,7 +4130,7 @@ test "gen.nested struct field in a peripheral with offset" {
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    var vfs: VirtualFilesystem = try .init(std.testing.allocator);
     defer vfs.deinit();
 
     try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
@@ -4222,7 +4222,7 @@ test "gen.nested struct field in nested struct field" {
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    var vfs: VirtualFilesystem = try .init(std.testing.allocator);
     defer vfs.deinit();
 
     try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});
@@ -4324,7 +4324,7 @@ test "gen.nested struct field next to register" {
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
+    var vfs: VirtualFilesystem = try .init(std.testing.allocator);
     defer vfs.deinit();
 
     try db.to_zig(vfs.io(), VirtualFilesystem.root_dir, .{});

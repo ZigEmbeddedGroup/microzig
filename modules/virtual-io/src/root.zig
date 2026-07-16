@@ -7,7 +7,6 @@ const assert = std.debug.assert;
 const Dir = std.Io.Dir;
 const File = std.Io.File;
 const log = std.log.scoped(.vio);
-const Map = std.AutoArrayHashMapUnmanaged;
 
 pub const Node = struct {
     pub const ID = std.posix.fd_t;
@@ -21,6 +20,8 @@ pub const Node = struct {
         file: []const u8,
         dir,
     };
+
+    const Map = std.AutoArrayHashMapUnmanaged(ID, Node);
 
     name: []const u8,
     kind: Kind,
@@ -107,24 +108,29 @@ pub const vtable: *const std.Io.VTable = blk: {
 
 // Don't use file descriptor 0, because on windows, fd_t is actually a *anyopaque,
 // and setting that null under the hood is ILLEGAL, and I don't want to go to jail.
-pub const root_dir: Dir = .{ .handle = handle_from_int(1) };
+const root_dir_handle = 1;
+pub const root_dir: Dir = .{
+    .handle = handle_from_int(root_dir_handle),
+};
 
 gpa: Allocator,
-nodes: Map(Node.ID, Node) = .empty,
+nodes: Node.Map,
 // child -> parent
-hierarchy: Map(Node.ID, Dir) = .empty,
-last_id: u16 = switch (builtin.os.tag) {
-    .windows => @intFromPtr(root_dir.handle),
-    else => root_dir.handle,
-},
+hierarchy: std.AutoArrayHashMapUnmanaged(Node.ID, Dir),
+last_id: u16,
 
 pub fn io(vio: *VirtualIo) std.Io {
     return .{ .userdata = vio, .vtable = vtable };
 }
 
-pub fn init(gpa: Allocator) VirtualIo {
-    return VirtualIo{
+pub fn init(gpa: Allocator) !VirtualIo {
+    var nodes: Node.Map = .empty;
+    try nodes.put(gpa, root_dir.handle, .{ .name = "", .kind = .dir });
+    return .{
         .gpa = gpa,
+        .nodes = nodes,
+        .hierarchy = .empty,
+        .last_id = root_dir_handle,
     };
 }
 
