@@ -17,11 +17,43 @@ pub const VirtualIo = @This();
 pub const vtable: std.Io.VTable = blk: {
     var ret = std.Io.failing.vtable.*;
 
-    ret.operate = operate;
-    ret.dirCreateDirPathOpen = Dir.create_dir_path_open;
-    ret.dirClose = Dir.close;
-    ret.dirCreateFile = Dir.create_file;
-    ret.fileClose = File.close;
+    const VTable = struct {
+        fn operate(userdata: ?*anyopaque, op: std.Io.Operation) std.Io.Cancelable!std.Io.Operation.Result {
+            const vio: *VirtualIo = @ptrCast(@alignCast(userdata.?));
+            return vio.operate(op);
+        }
+
+        fn create_dir_path_open(
+            userdata: ?*anyopaque,
+            dir: std.Io.Dir,
+            sub_path: []const u8,
+            _: std.Io.Dir.Permissions,
+            _: std.Io.Dir.OpenOptions,
+        ) std.Io.Dir.CreateDirPathOpenError!std.Io.Dir {
+            const vio: *VirtualIo = @ptrCast(@alignCast(userdata.?));
+            return vio.create_dir(dir, sub_path);
+        }
+
+        fn dir_close(_: ?*anyopaque, _: []const std.Io.Dir) void {}
+
+        fn dir_create_file(
+            userdata: ?*anyopaque,
+            dir: std.Io.Dir,
+            sub_path: []const u8,
+            _: std.Io.Dir.CreateFileOptions,
+        ) std.Io.File.OpenError!std.Io.File {
+            const vio: *VirtualIo = @ptrCast(@alignCast(userdata.?));
+            return vio.create_file(dir, sub_path);
+        }
+
+        fn file_close(_: ?*anyopaque, _: []const std.Io.File) void {}
+    };
+
+    ret.operate = VTable.operate;
+    ret.dirCreateDirPathOpen = VTable.create_dir_path_open;
+    ret.dirClose = VTable.dir_close;
+    ret.dirCreateFile = VTable.dir_create_file;
+    ret.fileClose = VTable.file_close;
 
     break :blk ret;
 };
@@ -53,35 +85,6 @@ pub const Dir = struct {
     pub fn deinit(d: *Dir, gpa: Allocator) void {
         gpa.free(d.name);
     }
-
-    fn create_file(
-        userdata: ?*anyopaque,
-        dir: std.Io.Dir,
-        sub_path: []const u8,
-        _: std.Io.Dir.CreateFileOptions,
-    ) std.Io.File.OpenError!std.Io.File {
-        const vio: *VirtualIo = @ptrCast(@alignCast(userdata.?));
-
-        if (std.mem.findScalar(u8, sub_path, '/') != null) {
-            log.err("path includes '/': '{s}'", .{sub_path});
-            return error.BadPathName;
-        }
-
-        return vio.create_file(dir, sub_path);
-    }
-
-    fn create_dir_path_open(
-        userdata: ?*anyopaque,
-        dir: std.Io.Dir,
-        sub_path: []const u8,
-        _: std.Io.Dir.Permissions,
-        _: std.Io.Dir.OpenOptions,
-    ) std.Io.Dir.CreateDirPathOpenError!std.Io.Dir {
-        const vio: *VirtualIo = @ptrCast(@alignCast(userdata.?));
-        return vio.create_dir(dir, sub_path);
-    }
-
-    fn close(_: ?*anyopaque, _: []const std.Io.Dir) void {}
 };
 
 pub const File = struct {
@@ -92,12 +95,9 @@ pub const File = struct {
         gpa.free(f.name);
         f.content.deinit();
     }
-
-    pub fn close(_: ?*anyopaque, _: []const std.Io.File) void {}
 };
 
-fn operate(userdata: ?*anyopaque, op: std.Io.Operation) std.Io.Cancelable!std.Io.Operation.Result {
-    const vio: *VirtualIo = @ptrCast(@alignCast(userdata.?));
+fn operate(vio: *VirtualIo, op: std.Io.Operation) std.Io.Cancelable!std.Io.Operation.Result {
     switch (op) {
         .file_write_streaming => |write_op| {
             const file = vio.files.getPtr(write_op.file.handle).?;
@@ -213,13 +213,18 @@ fn create_dir(vio: *VirtualIo, parent: std.Io.Dir, name: []const u8) !std.Io.Dir
     return dir;
 }
 
-fn create_file(vio: *VirtualIo, parent: std.Io.Dir, name: []const u8) !std.Io.File {
+fn create_file(vio: *VirtualIo, parent: std.Io.Dir, sub_path: []const u8) !std.Io.File {
+    if (std.mem.findScalar(u8, sub_path, '/') != null) {
+        log.err("path includes '/': '{s}'", .{sub_path});
+        return error.BadPathName;
+    }
+
     const file: std.Io.File = .{
         .handle = try vio.create_node(parent),
         .flags = .{ .nonblocking = false },
     };
 
-    const name_copy = vio.gpa.dupe(u8, name) catch
+    const name_copy = vio.gpa.dupe(u8, sub_path) catch
         return error.NoSpaceLeft;
     vio.files.put(vio.gpa, file.handle, .{
         .name = name_copy,
