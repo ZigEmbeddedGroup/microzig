@@ -33,6 +33,91 @@ const Header = extern struct {
     }
 };
 
+test {
+    // Verify Down mode() returns correct mode after init
+    const LockOps = struct {
+        fn lock(_: *anyopaque) void {}
+        fn unlock(_: *anyopaque) void {}
+    };
+    const my_lock: AnyLock = .{ .context = undefined, .lock_fn = LockOps.lock, .unlock_fn = LockOps.unlock };
+    const TestDown = channel.Down(my_lock, struct {
+        inline fn barrier() void {}
+    }.barrier);
+    var buf: [64]u8 align(4) = undefined;
+    var d: TestDown = undefined;
+    d.init("test", &buf, .NoBlockSkip);
+    try std.testing.expectEqual(.NoBlockSkip, d.mode());
+}
+
+test {
+    // Verify Down set_mode changes mode
+    const LockOps = struct {
+        fn lock(_: *anyopaque) void {}
+        fn unlock(_: *anyopaque) void {}
+    };
+    const my_lock: AnyLock = .{ .context = undefined, .lock_fn = LockOps.lock, .unlock_fn = LockOps.unlock };
+    const TestDown = channel.Down(my_lock, struct {
+        inline fn barrier() void {}
+    }.barrier);
+    var buf: [64]u8 align(4) = undefined;
+    var d: TestDown = undefined;
+    d.init("test", &buf, .BlockIfFull);
+    try std.testing.expectEqual(.BlockIfFull, d.mode());
+    d.set_mode(.NoBlockTrim);
+    try std.testing.expectEqual(.NoBlockTrim, d.mode());
+}
+
+test {
+    // Verify Up channel Writer compiles and drain works
+    const LockOps = struct {
+        fn lock(_: *anyopaque) void {}
+        fn unlock(_: *anyopaque) void {}
+    };
+    const my_lock: AnyLock = .{ .context = undefined, .lock_fn = LockOps.lock, .unlock_fn = LockOps.unlock };
+    const TestUp = channel.Up(my_lock, struct {
+        inline fn barrier() void {}
+    }.barrier);
+    var buf: [128]u8 align(4) = undefined;
+    var u: TestUp = undefined;
+    u.init("test", &buf, .NoBlockTrim);
+    var wbuf: [32]u8 = undefined;
+    var w = u.writer(&wbuf);
+    _ = w.interface.write("hello") catch 0;
+}
+
+test {
+    // Verify Down channel Reader compiles
+    const LockOps = struct {
+        fn lock(_: *anyopaque) void {}
+        fn unlock(_: *anyopaque) void {}
+    };
+    const my_lock: AnyLock = .{ .context = undefined, .lock_fn = LockOps.lock, .unlock_fn = LockOps.unlock };
+    const TestDown = channel.Down(my_lock, struct {
+        inline fn barrier() void {}
+    }.barrier);
+    var buf: [64]u8 align(4) = undefined;
+    var d: TestDown = undefined;
+    d.init("test", &buf, .NoBlockSkip);
+    var rbuf: [32]u8 = undefined;
+    _ = d.reader(&rbuf);
+}
+
+test {
+    // Verify Up mode() returns correct mode
+    const LockOps = struct {
+        fn lock(_: *anyopaque) void {}
+        fn unlock(_: *anyopaque) void {}
+    };
+    const my_lock: AnyLock = .{ .context = undefined, .lock_fn = LockOps.lock, .unlock_fn = LockOps.unlock };
+    const TestUp = channel.Up(my_lock, struct {
+        inline fn barrier() void {}
+    }.barrier);
+    var buf: [128]u8 align(4) = undefined;
+    var u: TestUp = undefined;
+    u.init("test", &buf, .BlockIfFull);
+    try std.testing.expectEqual(.BlockIfFull, u.mode());
+}
+
 pub const channel = struct {
     pub const Mode = enum(usize) {
         NoBlockSkip = 0,
@@ -305,7 +390,7 @@ pub const channel = struct {
             }
 
             pub fn mode(self: *Self) Mode {
-                return @enumFromInt(self.mode & 3);
+                return @enumFromInt(self.flags & 3);
             }
 
             pub fn set_mode(self: *Self, mode_: Mode) void {
