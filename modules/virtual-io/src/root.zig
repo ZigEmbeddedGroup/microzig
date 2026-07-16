@@ -67,10 +67,7 @@ pub const Dir = struct {
             return error.BadPathName;
         }
 
-        return .{
-            .handle = try vio.create_file(dir, sub_path),
-            .flags = .{ .nonblocking = false },
-        };
+        return vio.create_file(dir, sub_path);
     }
 
     fn create_dir_path_open(
@@ -193,35 +190,43 @@ pub fn get_children(vio: *VirtualIo, allocator: Allocator, dir: std.Io.Dir) ![]c
     return ret.toOwnedSlice(allocator);
 }
 
-fn create_dir(vio: *VirtualIo, parent: std.Io.Dir, name: []const u8) !std.Io.Dir {
+fn create_node(vio: *VirtualIo, parent: std.Io.Dir) !std.posix.fd_t {
     vio.last_id += 1;
-    const dir: std.Io.Dir = .{ .handle = handle_from_int(vio.last_id) };
+    const handle = handle_from_int(vio.last_id);
+
+    vio.hierarchy.put(vio.gpa, handle, parent) catch
+        return error.NoSpaceLeft;
+
+    return handle;
+}
+
+fn create_dir(vio: *VirtualIo, parent: std.Io.Dir, name: []const u8) !std.Io.Dir {
+    const dir: std.Io.Dir = .{
+        .handle = try vio.create_node(parent),
+    };
 
     const name_copy = vio.gpa.dupe(u8, name) catch
         return error.NoSpaceLeft;
     vio.directories.put(vio.gpa, dir, .{ .name = name_copy }) catch
         return error.NoSpaceLeft;
-    vio.hierarchy.put(vio.gpa, dir.handle, parent) catch
-        return error.NoSpaceLeft;
 
     return dir;
 }
 
-fn create_file(vio: *VirtualIo, parent: std.Io.Dir, name: []const u8) !std.posix.fd_t {
-    vio.last_id += 1;
-    const id = handle_from_int(vio.last_id);
+fn create_file(vio: *VirtualIo, parent: std.Io.Dir, name: []const u8) !std.Io.File {
+    const file: std.Io.File = .{
+        .handle = try vio.create_node(parent),
+        .flags = .{ .nonblocking = false },
+    };
 
     const name_copy = vio.gpa.dupe(u8, name) catch
         return error.NoSpaceLeft;
-    vio.files.put(vio.gpa, id, .{
+    vio.files.put(vio.gpa, file.handle, .{
         .name = name_copy,
         .content = .init(vio.gpa),
     }) catch return error.NoSpaceLeft;
 
-    vio.hierarchy.put(vio.gpa, id, parent) catch
-        return error.NoSpaceLeft;
-
-    return id;
+    return file;
 }
 
 pub fn get_kind(vio: *VirtualIo, id: std.posix.fd_t) Kind {
