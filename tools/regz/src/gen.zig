@@ -1736,10 +1736,10 @@ const ExpectedOutput = struct {
 };
 
 fn expect_output(expected_outputs: []const ExpectedOutput, vfs: *VirtualFilesystem) !void {
-    try std.testing.expectEqual(expected_outputs.len, vfs.file_count());
+    try std.testing.expectEqual(expected_outputs.len, vfs.total_file_count());
     for (expected_outputs) |eo| {
         const file_id = try vfs.get_file(eo.path) orelse unreachable;
-        try std.testing.expectEqualStrings(eo.content, vfs.get_content(file_id));
+        try std.testing.expectEqualStrings(eo.content, vfs.file_content(file_id));
     }
 }
 
