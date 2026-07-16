@@ -1738,8 +1738,8 @@ const ExpectedOutput = struct {
 fn expect_output(expected_outputs: []const ExpectedOutput, vfs: *VirtualFilesystem) !void {
     try std.testing.expectEqual(expected_outputs.len, vfs.total_file_count());
     for (expected_outputs) |eo| {
-        const file = try std.Io.Dir.openFile(VirtualFilesystem.root_dir, vfs.io(), eo.path, .{});
-        try std.testing.expectEqualStrings(eo.content, try vfs.file_content(file));
+        const node = (try vfs.get_node(VirtualFilesystem.root_dir, eo.path)).value_ptr;
+        try std.testing.expectEqualStrings(eo.content, node.kind.file.written());
     }
 }
 

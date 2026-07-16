@@ -89,7 +89,14 @@ pub const vtable: *const std.Io.VTable = blk: {
             _: Dir.OpenFileOptions,
         ) File.OpenError!File {
             const vio: *VirtualIo = @ptrCast(@alignCast(userdata.?));
-            return try vio.dir_open_file(dir, sub_path) orelse error.FileNotFound;
+            const node = try vio.get_node(dir, sub_path);
+            return switch (node.value_ptr.kind) {
+                .file => .{
+                    .handle = node.key_ptr.*,
+                    .flags = .{ .nonblocking = false },
+                },
+                .dir => error.IsDir,
+            };
         }
 
         fn file_close(_: ?*anyopaque, _: []const File) void {}
@@ -141,7 +148,7 @@ pub fn deinit(vio: *VirtualIo) void {
     vio.hierarchy.deinit(vio.gpa);
 }
 
-pub fn total_file_count(vio: *VirtualIo) usize {
+pub fn total_file_count(vio: *const VirtualIo) usize {
     var ret: usize = 0;
     var it = vio.nodes.iterator();
     while (it.next()) |entry| {
@@ -151,42 +158,29 @@ pub fn total_file_count(vio: *VirtualIo) usize {
     return ret;
 }
 
-pub fn file_content(vio: *VirtualIo, file: File) ![]const u8 {
-    const node = vio.nodes.getPtr(file.handle) orelse
-        return error.Unexpected;
-    return switch (node.kind) {
-        .file => |*w| w.written(),
-        .dir => error.Unexpected,
-    };
-}
-
-fn dir_open_file(vio: *VirtualIo, dir: Dir, path: []const u8) !?File {
+pub fn get_node(vio: *const VirtualIo, dir: Dir, path: []const u8) !Node.Map.Entry {
     var it = vio.hierarchy.iterator();
     const idx_opt = std.mem.findScalar(u8, path, '/');
+    const path_part = path[0 .. idx_opt orelse path.len];
     while (it.next()) |entry| {
         if (entry.value_ptr.handle != dir.handle)
             continue;
         const id = entry.key_ptr.*;
-        const child = vio.nodes.getPtr(id).?;
+        const child = vio.nodes.getEntry(id).?;
+
+        if (!std.mem.eql(u8, path_part, child.value_ptr.name))
+            continue;
 
         if (idx_opt) |idx| {
-            if (child.kind != .dir) continue;
+            if (child.value_ptr.kind != .dir) continue;
 
-            return try vio.dir_open_file(
+            return try vio.get_node(
                 .{ .handle = id },
                 path[idx + 1 ..],
-            ) orelse continue;
-        } else {
-            if (child.kind != .file) continue;
-
-            if (std.mem.eql(u8, child.name, path))
-                return .{
-                    .handle = id,
-                    .flags = .{ .nonblocking = false },
-                };
-        }
+            );
+        } else return child;
     }
-    return null;
+    return error.FileNotFound;
 }
 
 fn create_node(vio: *VirtualIo, dir: Dir, sub_path: []const u8, info: Node.CreateInfo) !Node.ID {
