@@ -8,29 +8,29 @@ const Dir = std.Io.Dir;
 const File = std.Io.File;
 const log = std.log.scoped(.vio);
 
-pub const Node = struct {
+pub const Node = union(enum) {
     pub const ID = std.posix.fd_t;
 
-    pub const Kind = union(enum) {
-        file: std.Io.Writer.Allocating,
-        dir,
-    };
-
-    pub const CreateInfo = union(std.meta.Tag(Kind)) {
+    pub const CreateInfo = union(std.meta.Tag(Node)) {
         file: []const u8,
         dir,
     };
 
     const Map = std.AutoArrayHashMapUnmanaged(ID, Node);
+    const Directory = std.StringHashMapUnmanaged(ID);
 
-    name: []const u8,
-    kind: Kind,
+    file: std.Io.Writer.Allocating,
+    dir: Directory,
 
     pub fn destroy(node: *Node, gpa: Allocator) void {
-        gpa.free(node.name);
-        switch (node.kind) {
+        switch (node.*) {
             .file => |*w| w.deinit(),
-            .dir => {},
+            .dir => |*entries| {
+                var it = entries.keyIterator();
+                while (it.next()) |name|
+                    gpa.free(name.*);
+                entries.deinit(gpa);
+            },
         }
     }
 };
@@ -89,10 +89,12 @@ pub const vtable: *const std.Io.VTable = blk: {
             _: Dir.OpenFileOptions,
         ) File.OpenError!File {
             const vio: *VirtualIo = @ptrCast(@alignCast(userdata.?));
-            const node = try vio.get_node(dir, sub_path);
-            return switch (node.value_ptr.kind) {
+            const node_id = try vio.get_node(dir, sub_path);
+            const node = vio.nodes.get(node_id) orelse
+                return error.FileNotFound;
+            return switch (node) {
                 .file => .{
-                    .handle = node.key_ptr.*,
+                    .handle = node_id,
                     .flags = .{ .nonblocking = false },
                 },
                 .dir => error.IsDir,
@@ -122,8 +124,6 @@ pub const root_dir: Dir = .{
 
 gpa: Allocator,
 nodes: Node.Map,
-// child -> parent
-hierarchy: std.AutoArrayHashMapUnmanaged(Node.ID, Dir),
 last_id: u16,
 
 pub fn io(vio: *VirtualIo) std.Io {
@@ -132,11 +132,10 @@ pub fn io(vio: *VirtualIo) std.Io {
 
 pub fn init(gpa: Allocator) !VirtualIo {
     var nodes: Node.Map = .empty;
-    try nodes.put(gpa, root_dir.handle, .{ .name = "", .kind = .dir });
+    try nodes.put(gpa, root_dir.handle, .{ .dir = .empty });
     return .{
         .gpa = gpa,
         .nodes = nodes,
-        .hierarchy = .empty,
         .last_id = root_dir_handle,
     };
 }
@@ -145,42 +144,33 @@ pub fn deinit(vio: *VirtualIo) void {
     for (vio.nodes.values()) |*node|
         node.destroy(vio.gpa);
     vio.nodes.deinit(vio.gpa);
-    vio.hierarchy.deinit(vio.gpa);
 }
 
 pub fn total_file_count(vio: *const VirtualIo) usize {
     var ret: usize = 0;
     var it = vio.nodes.iterator();
     while (it.next()) |entry| {
-        if (entry.value_ptr.kind == .file)
+        if (entry.value_ptr.* == .file)
             ret += 1;
     }
     return ret;
 }
 
-pub fn get_node(vio: *const VirtualIo, dir: Dir, path: []const u8) !Node.Map.Entry {
-    var it = vio.hierarchy.iterator();
+pub fn get_node(vio: *const VirtualIo, dir: Dir, path: []const u8) !Node.ID {
     const idx_opt = std.mem.findScalar(u8, path, '/');
     const path_part = path[0 .. idx_opt orelse path.len];
-    while (it.next()) |entry| {
-        if (entry.value_ptr.handle != dir.handle)
-            continue;
-        const id = entry.key_ptr.*;
-        const child = vio.nodes.getEntry(id).?;
 
-        if (!std.mem.eql(u8, path_part, child.value_ptr.name))
-            continue;
+    const dir_node = vio.nodes.getEntry(dir.handle) orelse
+        return error.Unexpected;
 
-        if (idx_opt) |idx| {
-            if (child.value_ptr.kind != .dir) continue;
+    const id = switch (dir_node.value_ptr.*) {
+        .dir => |d| d.get(path_part) orelse return error.FileNotFound,
+        else => return error.FileNotFound,
+    };
 
-            return try vio.get_node(
-                .{ .handle = id },
-                path[idx + 1 ..],
-            );
-        } else return child;
-    }
-    return error.FileNotFound;
+    if (idx_opt) |idx| {
+        return try vio.get_node(.{ .handle = id }, path[idx + 1 ..]);
+    } else return id;
 }
 
 fn create_node(vio: *VirtualIo, dir: Dir, sub_path: []const u8, info: Node.CreateInfo) !Node.ID {
@@ -189,18 +179,14 @@ fn create_node(vio: *VirtualIo, dir: Dir, sub_path: []const u8, info: Node.Creat
         return error.BadPathName;
     }
 
-    const node: Node = .{
-        .name = vio.gpa.dupe(u8, sub_path) catch
-            return error.NoSpaceLeft,
-        .kind = switch (info) {
-            .file => |content| blk: {
-                var w: std.Io.Writer.Allocating = .init(vio.gpa);
-                w.writer.writeAll(content) catch
-                    return error.NoSpaceLeft;
-                break :blk .{ .file = w };
-            },
-            .dir => .dir,
+    const node: Node = switch (info) {
+        .file => |content| blk: {
+            var w: std.Io.Writer.Allocating = .init(vio.gpa);
+            w.writer.writeAll(content) catch
+                return error.NoSpaceLeft;
+            break :blk .{ .file = w };
         },
+        .dir => .{ .dir = .empty },
     };
 
     vio.last_id += 1;
@@ -208,8 +194,18 @@ fn create_node(vio: *VirtualIo, dir: Dir, sub_path: []const u8, info: Node.Creat
 
     vio.nodes.put(vio.gpa, handle, node) catch
         return error.NoSpaceLeft;
-    vio.hierarchy.put(vio.gpa, handle, dir) catch
+
+    const dir_node = vio.nodes.getPtr(dir.handle) orelse
+        return error.Unexpected;
+
+    const name = vio.gpa.dupe(u8, sub_path) catch
         return error.NoSpaceLeft;
+
+    switch (dir_node.*) {
+        .dir => |*d| d.put(vio.gpa, name, handle) catch
+            return error.NoSpaceLeft,
+        else => return error.Unexpected,
+    }
 
     return handle;
 }
@@ -217,7 +213,7 @@ fn create_node(vio: *VirtualIo, dir: Dir, sub_path: []const u8, info: Node.Creat
 fn file_write_streaming(vio: *VirtualIo, op: std.Io.Operation.FileWriteStreaming) std.Io.Operation.FileWriteStreaming.Result {
     const node = vio.nodes.getPtr(op.file.handle) orelse
         return error.Unexpected;
-    const w = switch (node.kind) {
+    const w = switch (node.*) {
         .file => |*allocating| &allocating.writer,
         .dir => return error.Unexpected,
     };
