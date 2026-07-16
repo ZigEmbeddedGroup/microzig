@@ -149,119 +149,119 @@ pub const Node = union(enum) {
     }
 };
 
-pub const VirtualIo = @This();
+const VTable = struct {
+    fn operate(userdata: ?*anyopaque, op: Io.Operation) Io.Cancelable!Io.Operation.Result {
+        const vio: *VirtualIo = @ptrCast(@alignCast(userdata.?));
+        return switch (op) {
+            .file_write_streaming => |write_op| .{
+                .file_write_streaming = File.write_streaming(vio, write_op),
+            },
+            .file_read_streaming => .{ .file_read_streaming = error.InputOutput },
+            .device_io_control => unreachable,
+            .net_receive => .{ .net_receive = .{ error.NetworkDown, 0 } },
+            .net_read => .{ .net_read = error.NetworkDown },
+        };
+    }
 
-pub const vtable: *const Io.VTable = blk: {
-    const VTable = struct {
-        fn operate(userdata: ?*anyopaque, op: Io.Operation) Io.Cancelable!Io.Operation.Result {
-            const vio: *VirtualIo = @ptrCast(@alignCast(userdata.?));
-            return switch (op) {
-                .file_write_streaming => |write_op| .{
-                    .file_write_streaming = File.write_streaming(vio, write_op),
-                },
-                .file_read_streaming => .{ .file_read_streaming = error.InputOutput },
-                .device_io_control => unreachable,
-                .net_receive => .{ .net_receive = .{ error.NetworkDown, 0 } },
-                .net_read => .{ .net_read = error.NetworkDown },
-            };
-        }
+    fn create_dir_path_open(
+        userdata: ?*anyopaque,
+        dir: Io.Dir,
+        sub_path: []const u8,
+        _: Io.Dir.Permissions,
+        _: Io.Dir.OpenOptions,
+    ) Io.Dir.CreateDirPathOpenError!Io.Dir {
+        const vio: *VirtualIo = @ptrCast(@alignCast(userdata.?));
+        const parent = try Dir.from_std(vio, dir);
+        const ret = try parent.create_node(vio, sub_path, .dir);
+        return .{ .handle = ret.to_handle() };
+    }
 
-        fn create_dir_path_open(
-            userdata: ?*anyopaque,
-            dir: Io.Dir,
-            sub_path: []const u8,
-            _: Io.Dir.Permissions,
-            _: Io.Dir.OpenOptions,
-        ) Io.Dir.CreateDirPathOpenError!Io.Dir {
-            const vio: *VirtualIo = @ptrCast(@alignCast(userdata.?));
-            const parent = try Dir.from_std(vio, dir);
-            const ret = try parent.create_node(vio, sub_path, .dir);
-            return .{ .handle = ret.to_handle() };
-        }
+    fn dir_close(_: ?*anyopaque, _: []const Io.Dir) void {}
 
-        fn dir_close(_: ?*anyopaque, _: []const Io.Dir) void {}
+    fn dir_create_file(
+        userdata: ?*anyopaque,
+        dir: Io.Dir,
+        sub_path: []const u8,
+        _: Io.Dir.CreateFileOptions,
+    ) Io.File.OpenError!Io.File {
+        const vio: *VirtualIo = @ptrCast(@alignCast(userdata.?));
+        const parent = try Dir.from_std(vio, dir);
+        const ret = try parent.create_node(vio, sub_path, .file);
+        return .{
+            .handle = ret.to_handle(),
+            .flags = .{ .nonblocking = false },
+        };
+    }
 
-        fn dir_create_file(
-            userdata: ?*anyopaque,
-            dir: Io.Dir,
-            sub_path: []const u8,
-            _: Io.Dir.CreateFileOptions,
-        ) Io.File.OpenError!Io.File {
-            const vio: *VirtualIo = @ptrCast(@alignCast(userdata.?));
-            const parent = try Dir.from_std(vio, dir);
-            const ret = try parent.create_node(vio, sub_path, .file);
-            return .{
-                .handle = ret.to_handle(),
-                .flags = .{ .nonblocking = false },
-            };
-        }
+    fn dir_open_file(
+        userdata: ?*anyopaque,
+        dir: Io.Dir,
+        sub_path: []const u8,
+        _: Io.Dir.OpenFileOptions,
+    ) Io.File.OpenError!Io.File {
+        const vio: *VirtualIo = @ptrCast(@alignCast(userdata.?));
+        const parent = try Dir.from_std(vio, dir);
+        const node = try parent.sub_path(vio, sub_path);
+        return .{
+            .handle = node.to_handle(),
+            .flags = .{ .nonblocking = false },
+        };
+    }
 
-        fn dir_open_file(
-            userdata: ?*anyopaque,
-            dir: Io.Dir,
-            sub_path: []const u8,
-            _: Io.Dir.OpenFileOptions,
-        ) Io.File.OpenError!Io.File {
-            const vio: *VirtualIo = @ptrCast(@alignCast(userdata.?));
-            const parent = try Dir.from_std(vio, dir);
-            const node = try parent.sub_path(vio, sub_path);
-            return .{
-                .handle = node.to_handle(),
-                .flags = .{ .nonblocking = false },
-            };
-        }
-
-        fn file_close(_: ?*anyopaque, _: []const Io.File) void {}
-    };
-
-    var ret = Io.failing.vtable.*;
-    ret.operate = VTable.operate;
-    ret.dirCreateDirPathOpen = VTable.create_dir_path_open;
-    ret.dirClose = VTable.dir_close;
-    ret.dirCreateFile = VTable.dir_create_file;
-    ret.dirOpenFile = VTable.dir_open_file;
-    ret.fileClose = VTable.file_close;
-
-    const ret_const = ret;
-    break :blk &ret_const;
+    fn file_close(_: ?*anyopaque, _: []const Io.File) void {}
 };
 
-pub const root_dir: Io.Dir = .{ .handle = Node.ID.root.to_handle() };
+pub const VirtualIo = struct {
+    pub const root_dir: Io.Dir = .{ .handle = Node.ID.root.to_handle() };
 
-gpa: Allocator,
-nodes: Node.Map,
-last_id: Node.ID,
+    pub const vtable: *const Io.VTable = blk: {
+        var ret = Io.failing.vtable.*;
+        ret.operate = VTable.operate;
+        ret.dirCreateDirPathOpen = VTable.create_dir_path_open;
+        ret.dirClose = VTable.dir_close;
+        ret.dirCreateFile = VTable.dir_create_file;
+        ret.dirOpenFile = VTable.dir_open_file;
+        ret.fileClose = VTable.file_close;
 
-pub fn io(vio: *VirtualIo) Io {
-    return .{ .userdata = vio, .vtable = vtable };
-}
-
-pub fn init(gpa: Allocator) !VirtualIo {
-    var nodes: Node.Map = .empty;
-    try nodes.put(gpa, .root, .{ .dir = .{} });
-    return .{
-        .gpa = gpa,
-        .nodes = nodes,
-        .last_id = .root,
+        const ret_const = ret;
+        break :blk &ret_const;
     };
-}
 
-pub fn deinit(vio: *VirtualIo) void {
-    for (vio.nodes.values()) |*node|
-        node.destroy(vio.gpa);
-    vio.nodes.deinit(vio.gpa);
-}
+    gpa: Allocator,
+    nodes: Node.Map,
+    last_id: Node.ID,
 
-pub fn total_file_count(vio: *const VirtualIo) usize {
-    var ret: usize = 0;
-    var it = vio.nodes.iterator();
-    while (it.next()) |entry| {
-        if (entry.value_ptr.* == .file)
-            ret += 1;
+    pub fn io(vio: *VirtualIo) Io {
+        return .{ .userdata = vio, .vtable = vtable };
     }
-    return ret;
-}
 
-pub fn file_contents(vio: *const VirtualIo, file: Io.File) !*std.ArrayList(u8) {
-    return &(try File.from_std(vio, file)).inner;
-}
+    pub fn init(gpa: Allocator) !VirtualIo {
+        var nodes: Node.Map = .empty;
+        try nodes.put(gpa, .root, .{ .dir = .{} });
+        return .{
+            .gpa = gpa,
+            .nodes = nodes,
+            .last_id = .root,
+        };
+    }
+
+    pub fn deinit(vio: *VirtualIo) void {
+        for (vio.nodes.values()) |*node|
+            node.destroy(vio.gpa);
+        vio.nodes.deinit(vio.gpa);
+    }
+
+    pub fn total_file_count(vio: *const VirtualIo) usize {
+        var ret: usize = 0;
+        var it = vio.nodes.iterator();
+        while (it.next()) |entry| {
+            if (entry.value_ptr.* == .file)
+                ret += 1;
+        }
+        return ret;
+    }
+
+    pub fn file_contents(vio: *const VirtualIo, file: Io.File) !*std.ArrayList(u8) {
+        return &(try File.from_std(vio, file)).inner;
+    }
+};
