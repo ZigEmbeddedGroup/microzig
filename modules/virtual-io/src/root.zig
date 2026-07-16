@@ -153,62 +153,33 @@ pub fn file_content(vio: *VirtualIo, file: File) []const u8 {
     };
 }
 
-pub fn get_file(vio: *VirtualIo, path: []const u8) !?File {
-    var components: std.ArrayList([]const u8) = .empty;
-    defer components.deinit(vio.gpa);
+pub fn get_file(vio: *VirtualIo, dir: Dir, path: []const u8) !?File {
+    var it = vio.hierarchy.iterator();
+    const idx_opt = std.mem.findScalar(u8, path, '/');
+    while (it.next()) |entry| {
+        if (entry.value_ptr.handle != dir.handle)
+            continue;
+        const id = entry.key_ptr.*;
+        const child = vio.nodes.getPtr(id).?;
 
-    var it = std.mem.tokenizeScalar(u8, path, '/');
-    while (it.next()) |component|
-        components.append(vio.gpa, component) catch
-            return error.NoSpaceLeft;
+        if (idx_opt) |idx| {
+            if (child.kind != .dir) continue;
 
-    return vio.recursive_get_file(0, root_dir, components.items);
-}
+            return try vio.get_file(
+                .{ .handle = id },
+                path[idx + 1 ..],
+            ) orelse continue;
+        } else {
+            if (child.kind != .file) continue;
 
-fn recursive_get_file(vio: *VirtualIo, depth: usize, dir: Dir, components: []const []const u8) !?File {
-    const children = try vio.get_children(vio.gpa, dir);
-    defer vio.gpa.free(children);
-
-    switch (components.len) {
-        0 => {},
-        1 => for (children) |id| {
-            const child = vio.nodes.getPtr(id).?;
-
-            if (child.kind != .file)
-                continue;
-
-            if (std.mem.eql(u8, child.name, components[0]))
+            if (std.mem.eql(u8, child.name, path))
                 return .{
                     .handle = id,
                     .flags = .{ .nonblocking = false },
                 };
-        },
-        else => for (children) |id| {
-            const child = vio.nodes.getPtr(id).?;
-
-            if (child.kind != .dir)
-                continue;
-
-            return try vio.recursive_get_file(
-                depth + 1,
-                .{ .handle = id },
-                components[1..],
-            ) orelse continue;
-        },
+        }
     }
     return null;
-}
-
-fn get_children(vio: *VirtualIo, allocator: Allocator, dir: Dir) ![]Node.ID {
-    var ret: std.ArrayList(Node.ID) = .empty;
-    var it = vio.hierarchy.iterator();
-    while (it.next()) |entry| {
-        if (entry.value_ptr.handle == dir.handle)
-            ret.append(allocator, entry.key_ptr.*) catch
-                return error.NoSpaceLeft;
-    }
-    return ret.toOwnedSlice(allocator) catch
-        return error.NoSpaceLeft;
 }
 
 fn create_node(vio: *VirtualIo, dir: Dir, sub_path: []const u8, info: Node.CreateInfo) !Node.ID {
