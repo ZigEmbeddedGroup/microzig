@@ -1740,7 +1740,7 @@ fn expect_output(expected_outputs: []const ExpectedOutput, vfs: *VirtualFilesyst
     for (expected_outputs) |eo| {
         const node_id = try vfs.get_node(VirtualFilesystem.root_dir, eo.path);
         const node = vfs.nodes.getPtr(node_id) orelse unreachable;
-        try std.testing.expectEqualStrings(eo.content, node.file.written());
+        try std.testing.expectEqualStrings(eo.content, node.file.items);
     }
 }
 

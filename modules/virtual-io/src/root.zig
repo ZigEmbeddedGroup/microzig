@@ -10,21 +10,16 @@ const log = std.log.scoped(.vio);
 
 pub const Node = union(enum) {
     pub const ID = std.posix.fd_t;
-
-    pub const CreateInfo = union(std.meta.Tag(Node)) {
-        file: []const u8,
-        dir,
-    };
+    pub const Kind = std.meta.Tag(Node);
 
     const Map = std.AutoArrayHashMapUnmanaged(ID, Node);
-    const Directory = std.StringHashMapUnmanaged(ID);
 
-    file: std.Io.Writer.Allocating,
-    dir: Directory,
+    file: std.ArrayList(u8),
+    dir: std.StringHashMapUnmanaged(ID),
 
     pub fn destroy(node: *Node, gpa: Allocator) void {
         switch (node.*) {
-            .file => |*w| w.deinit(),
+            .file => |*w| w.deinit(gpa),
             .dir => |*entries| {
                 var it = entries.keyIterator();
                 while (it.next()) |name|
@@ -38,8 +33,6 @@ pub const Node = union(enum) {
 pub const VirtualIo = @This();
 
 pub const vtable: *const std.Io.VTable = blk: {
-    var ret = std.Io.failing.vtable.*;
-
     const VTable = struct {
         fn operate(userdata: ?*anyopaque, op: std.Io.Operation) std.Io.Cancelable!std.Io.Operation.Result {
             const vio: *VirtualIo = @ptrCast(@alignCast(userdata.?));
@@ -77,7 +70,7 @@ pub const vtable: *const std.Io.VTable = blk: {
         ) File.OpenError!File {
             const vio: *VirtualIo = @ptrCast(@alignCast(userdata.?));
             return .{
-                .handle = try vio.create_node(dir, sub_path, .{ .file = "" }),
+                .handle = try vio.create_node(dir, sub_path, .file),
                 .flags = .{ .nonblocking = false },
             };
         }
@@ -104,6 +97,7 @@ pub const vtable: *const std.Io.VTable = blk: {
         fn file_close(_: ?*anyopaque, _: []const File) void {}
     };
 
+    var ret = std.Io.failing.vtable.*;
     ret.operate = VTable.operate;
     ret.dirCreateDirPathOpen = VTable.create_dir_path_open;
     ret.dirClose = VTable.dir_close;
@@ -173,19 +167,14 @@ pub fn get_node(vio: *const VirtualIo, dir: Dir, path: []const u8) !Node.ID {
     } else return id;
 }
 
-fn create_node(vio: *VirtualIo, dir: Dir, sub_path: []const u8, info: Node.CreateInfo) !Node.ID {
+fn create_node(vio: *VirtualIo, dir: Dir, sub_path: []const u8, kind: Node.Kind) !Node.ID {
     if (std.mem.findScalar(u8, sub_path, '/') != null) {
         log.err("path includes '/': '{s}'", .{sub_path});
         return error.BadPathName;
     }
 
-    const node: Node = switch (info) {
-        .file => |content| blk: {
-            var w: std.Io.Writer.Allocating = .init(vio.gpa);
-            w.writer.writeAll(content) catch
-                return error.NoSpaceLeft;
-            break :blk .{ .file = w };
-        },
+    const node: Node = switch (kind) {
+        .file => .{ .file = .empty },
         .dir => .{ .dir = .empty },
     };
 
@@ -213,11 +202,13 @@ fn create_node(vio: *VirtualIo, dir: Dir, sub_path: []const u8, info: Node.Creat
 fn file_write_streaming(vio: *VirtualIo, op: std.Io.Operation.FileWriteStreaming) std.Io.Operation.FileWriteStreaming.Result {
     const node = vio.nodes.getPtr(op.file.handle) orelse
         return error.Unexpected;
-    const w = switch (node.*) {
-        .file => |*allocating| &allocating.writer,
+    const file = switch (node.*) {
+        .file => |*data| data,
         .dir => return error.Unexpected,
     };
-    return w.writeSplatHeader(
+    var allocating: std.Io.Writer.Allocating = .fromArrayList(vio.gpa, file);
+    defer file.* = allocating.toArrayList();
+    return allocating.writer.writeSplatHeader(
         op.header,
         op.data,
         op.splat,
