@@ -42,26 +42,15 @@ pub const vtable: *const std.Io.VTable = blk: {
     const VTable = struct {
         fn operate(userdata: ?*anyopaque, op: std.Io.Operation) std.Io.Cancelable!std.Io.Operation.Result {
             const vio: *VirtualIo = @ptrCast(@alignCast(userdata.?));
-            switch (op) {
-                .file_write_streaming => |write_op| {
-                    const node = vio.nodes.getPtr(write_op.file.handle).?;
-                    const w = switch (node.kind) {
-                        .file => |*allocating| &allocating.writer,
-                        .dir => unreachable,
-                    };
-                    return .{
-                        .file_write_streaming = w.writeSplatHeader(
-                            write_op.header,
-                            write_op.data,
-                            write_op.splat,
-                        ) catch error.NoSpaceLeft,
-                    };
+            return switch (op) {
+                .file_write_streaming => |write_op| .{
+                    .file_write_streaming = vio.file_write_streaming(write_op),
                 },
-                .file_read_streaming => unreachable,
+                .file_read_streaming => .{ .file_read_streaming = error.InputOutput },
                 .device_io_control => unreachable,
-                .net_receive => unreachable,
-                .net_read => unreachable,
-            }
+                .net_receive => .{ .net_receive = .{ error.NetworkDown, 0 } },
+                .net_read => .{ .net_read = error.NetworkDown },
+            };
         }
 
         fn create_dir_path_open(
@@ -92,6 +81,16 @@ pub const vtable: *const std.Io.VTable = blk: {
             };
         }
 
+        fn dir_open_file(
+            userdata: ?*anyopaque,
+            dir: Dir,
+            sub_path: []const u8,
+            _: Dir.OpenFileOptions,
+        ) File.OpenError!File {
+            const vio: *VirtualIo = @ptrCast(@alignCast(userdata.?));
+            return try vio.dir_open_file(dir, sub_path) orelse error.FileNotFound;
+        }
+
         fn file_close(_: ?*anyopaque, _: []const File) void {}
     };
 
@@ -99,6 +98,7 @@ pub const vtable: *const std.Io.VTable = blk: {
     ret.dirCreateDirPathOpen = VTable.create_dir_path_open;
     ret.dirClose = VTable.dir_close;
     ret.dirCreateFile = VTable.dir_create_file;
+    ret.dirOpenFile = VTable.dir_open_file;
     ret.fileClose = VTable.file_close;
 
     const ret_const = ret;
@@ -145,15 +145,16 @@ pub fn total_file_count(vio: *VirtualIo) usize {
     return ret;
 }
 
-pub fn file_content(vio: *VirtualIo, file: File) []const u8 {
-    const node = vio.nodes.getPtr(file.handle).?;
+pub fn file_content(vio: *VirtualIo, file: File) ![]const u8 {
+    const node = vio.nodes.getPtr(file.handle) orelse
+        return error.Unexpected;
     return switch (node.kind) {
         .file => |*w| w.written(),
-        .dir => unreachable,
+        .dir => error.Unexpected,
     };
 }
 
-pub fn get_file(vio: *VirtualIo, dir: Dir, path: []const u8) !?File {
+fn dir_open_file(vio: *VirtualIo, dir: Dir, path: []const u8) !?File {
     var it = vio.hierarchy.iterator();
     const idx_opt = std.mem.findScalar(u8, path, '/');
     while (it.next()) |entry| {
@@ -165,7 +166,7 @@ pub fn get_file(vio: *VirtualIo, dir: Dir, path: []const u8) !?File {
         if (idx_opt) |idx| {
             if (child.kind != .dir) continue;
 
-            return try vio.get_file(
+            return try vio.dir_open_file(
                 .{ .handle = id },
                 path[idx + 1 ..],
             ) orelse continue;
@@ -211,6 +212,20 @@ fn create_node(vio: *VirtualIo, dir: Dir, sub_path: []const u8, info: Node.Creat
         return error.NoSpaceLeft;
 
     return handle;
+}
+
+fn file_write_streaming(vio: *VirtualIo, op: std.Io.Operation.FileWriteStreaming) std.Io.Operation.FileWriteStreaming.Result {
+    const node = vio.nodes.getPtr(op.file.handle) orelse
+        return error.Unexpected;
+    const w = switch (node.kind) {
+        .file => |*allocating| &allocating.writer,
+        .dir => return error.Unexpected,
+    };
+    return w.writeSplatHeader(
+        op.header,
+        op.data,
+        op.splat,
+    ) catch error.NoSpaceLeft;
 }
 
 fn handle_from_int(int: u16) Node.ID {
