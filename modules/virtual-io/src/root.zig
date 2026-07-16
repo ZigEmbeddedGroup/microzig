@@ -9,13 +9,46 @@ const File = std.Io.File;
 const log = std.log.scoped(.vio);
 
 pub const Node = union(enum) {
-    pub const ID = std.posix.fd_t;
+    pub const Dir = std.StringHashMapUnmanaged(ID);
+    pub const File = std.ArrayList(u8);
     pub const Kind = std.meta.Tag(Node);
+    pub const Map = std.AutoArrayHashMapUnmanaged(ID, Node);
 
-    const Map = std.AutoArrayHashMapUnmanaged(ID, Node);
+    pub const ID = enum(u16) {
+        const Backing = @Int(.unsigned, @bitSizeOf(ID));
 
-    file: std.ArrayList(u8),
-    dir: std.StringHashMapUnmanaged(ID),
+        // Reserve first 256 file handles for os-specific values, such as sitdin/out/err
+        // on posix, cwd on wasm and the reserved NULL value on windows.
+        root = 0x100,
+        _,
+
+        pub fn from_handle(handle: std.posix.fd_t) !ID {
+            return if (std.math.cast(Backing, switch (builtin.os.tag) {
+                .windows => @intFromPtr(handle),
+                else => handle,
+            })) |int|
+                @enumFromInt(int)
+            else
+                error.Unexpected;
+        }
+
+        pub fn to_handle(id: ID) std.posix.fd_t {
+            return switch (builtin.os.tag) {
+                .windows => @ptrFromInt(@intFromEnum(id)),
+                else => @intFromEnum(id),
+            };
+        }
+
+        fn next(prev: ID) !ID {
+            return if (std.math.add(Backing, @intFromEnum(prev), 1)) |int|
+                @enumFromInt(int)
+            else |_|
+                error.Unexpected;
+        }
+    };
+
+    file: Node.File,
+    dir: Node.Dir,
 
     pub fn destroy(node: *Node, gpa: Allocator) void {
         switch (node.*) {
@@ -56,7 +89,7 @@ pub const vtable: *const std.Io.VTable = blk: {
         ) Dir.CreateDirPathOpenError!Dir {
             const vio: *VirtualIo = @ptrCast(@alignCast(userdata.?));
             return .{
-                .handle = try vio.create_node(dir, sub_path, .dir),
+                .handle = (try vio.create_node(try .from_handle(dir.handle), sub_path, .dir)).to_handle(),
             };
         }
 
@@ -70,7 +103,7 @@ pub const vtable: *const std.Io.VTable = blk: {
         ) File.OpenError!File {
             const vio: *VirtualIo = @ptrCast(@alignCast(userdata.?));
             return .{
-                .handle = try vio.create_node(dir, sub_path, .file),
+                .handle = (try vio.create_node(try .from_handle(dir.handle), sub_path, .file)).to_handle(),
                 .flags = .{ .nonblocking = false },
             };
         }
@@ -82,12 +115,12 @@ pub const vtable: *const std.Io.VTable = blk: {
             _: Dir.OpenFileOptions,
         ) File.OpenError!File {
             const vio: *VirtualIo = @ptrCast(@alignCast(userdata.?));
-            const node_id = try vio.get_node(dir, sub_path);
+            const node_id = try vio.get_node(try .from_handle(dir.handle), sub_path);
             const node = vio.nodes.get(node_id) orelse
                 return error.FileNotFound;
             return switch (node) {
                 .file => .{
-                    .handle = node_id,
+                    .handle = node_id.to_handle(),
                     .flags = .{ .nonblocking = false },
                 },
                 .dir => error.IsDir,
@@ -109,16 +142,11 @@ pub const vtable: *const std.Io.VTable = blk: {
     break :blk &ret_const;
 };
 
-// Don't use file descriptor 0, because on windows, fd_t is actually a *anyopaque,
-// and setting that null under the hood is ILLEGAL, and I don't want to go to jail.
-const root_dir_handle = 1;
-pub const root_dir: Dir = .{
-    .handle = handle_from_int(root_dir_handle),
-};
+pub const root_dir: Dir = .{ .handle = Node.ID.root.to_handle() };
 
 gpa: Allocator,
 nodes: Node.Map,
-last_id: u16,
+last_id: Node.ID,
 
 pub fn io(vio: *VirtualIo) std.Io {
     return .{ .userdata = vio, .vtable = vtable };
@@ -126,11 +154,11 @@ pub fn io(vio: *VirtualIo) std.Io {
 
 pub fn init(gpa: Allocator) !VirtualIo {
     var nodes: Node.Map = .empty;
-    try nodes.put(gpa, root_dir.handle, .{ .dir = .empty });
+    try nodes.put(gpa, .root, .{ .dir = .empty });
     return .{
         .gpa = gpa,
         .nodes = nodes,
-        .last_id = root_dir_handle,
+        .last_id = .root,
     };
 }
 
@@ -150,11 +178,11 @@ pub fn total_file_count(vio: *const VirtualIo) usize {
     return ret;
 }
 
-pub fn get_node(vio: *const VirtualIo, dir: Dir, path: []const u8) !Node.ID {
+pub fn get_node(vio: *const VirtualIo, dir: Node.ID, path: []const u8) !Node.ID {
     const idx_opt = std.mem.findScalar(u8, path, '/');
     const path_part = path[0 .. idx_opt orelse path.len];
 
-    const dir_node = vio.nodes.getEntry(dir.handle) orelse
+    const dir_node = vio.nodes.getEntry(dir) orelse
         return error.Unexpected;
 
     const id = switch (dir_node.value_ptr.*) {
@@ -163,11 +191,11 @@ pub fn get_node(vio: *const VirtualIo, dir: Dir, path: []const u8) !Node.ID {
     };
 
     if (idx_opt) |idx| {
-        return try vio.get_node(.{ .handle = id }, path[idx + 1 ..]);
+        return try vio.get_node(id, path[idx + 1 ..]);
     } else return id;
 }
 
-fn create_node(vio: *VirtualIo, dir: Dir, sub_path: []const u8, kind: Node.Kind) !Node.ID {
+fn create_node(vio: *VirtualIo, dir: Node.ID, sub_path: []const u8, kind: Node.Kind) !Node.ID {
     if (std.mem.findScalar(u8, sub_path, '/') != null) {
         log.err("path includes '/': '{s}'", .{sub_path});
         return error.BadPathName;
@@ -178,29 +206,29 @@ fn create_node(vio: *VirtualIo, dir: Dir, sub_path: []const u8, kind: Node.Kind)
         .dir => .{ .dir = .empty },
     };
 
-    vio.last_id += 1;
-    const handle = handle_from_int(vio.last_id);
+    const id: Node.ID = try vio.last_id.next();
+    vio.last_id = id;
 
-    vio.nodes.put(vio.gpa, handle, node) catch
+    vio.nodes.put(vio.gpa, id, node) catch
         return error.NoSpaceLeft;
 
-    const dir_node = vio.nodes.getPtr(dir.handle) orelse
+    const dir_node = vio.nodes.getPtr(dir) orelse
         return error.Unexpected;
 
     const name = vio.gpa.dupe(u8, sub_path) catch
         return error.NoSpaceLeft;
 
     switch (dir_node.*) {
-        .dir => |*d| d.put(vio.gpa, name, handle) catch
+        .dir => |*d| d.put(vio.gpa, name, id) catch
             return error.NoSpaceLeft,
         else => return error.Unexpected,
     }
 
-    return handle;
+    return id;
 }
 
 fn file_write_streaming(vio: *VirtualIo, op: std.Io.Operation.FileWriteStreaming) std.Io.Operation.FileWriteStreaming.Result {
-    const node = vio.nodes.getPtr(op.file.handle) orelse
+    const node = vio.nodes.getPtr(try .from_handle(op.file.handle)) orelse
         return error.Unexpected;
     const file = switch (node.*) {
         .file => |*data| data,
@@ -213,11 +241,4 @@ fn file_write_streaming(vio: *VirtualIo, op: std.Io.Operation.FileWriteStreaming
         op.data,
         op.splat,
     ) catch error.NoSpaceLeft;
-}
-
-fn handle_from_int(int: u16) Node.ID {
-    return switch (builtin.os.tag) {
-        .windows => @ptrFromInt(int),
-        else => int,
-    };
 }
