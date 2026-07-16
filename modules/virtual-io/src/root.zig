@@ -68,9 +68,7 @@ pub const Dir = struct {
         }
 
         return .{
-            .handle = vio.create_file(dir, sub_path) catch |err| switch (err) {
-                error.OutOfMemory => return error.NoSpaceLeft,
-            },
+            .handle = try vio.create_file(dir, sub_path),
             .flags = .{ .nonblocking = false },
         };
     }
@@ -83,7 +81,7 @@ pub const Dir = struct {
         _: std.Io.Dir.OpenOptions,
     ) std.Io.Dir.CreateDirPathOpenError!std.Io.Dir {
         const vio: *VirtualIo = @ptrCast(@alignCast(userdata.?));
-        return vio.create_dir(dir, sub_path) catch return error.NoSpaceLeft;
+        return vio.create_dir(dir, sub_path);
     }
 
     fn close(_: ?*anyopaque, _: []const std.Io.Dir) void {}
@@ -142,7 +140,8 @@ pub fn get_file(vio: *VirtualIo, path: []const u8) !?std.posix.fd_t {
 
     var it = std.mem.tokenizeScalar(u8, path, '/');
     while (it.next()) |component|
-        try components.append(vio.gpa, component);
+        components.append(vio.gpa, component) catch
+            return error.NoSpaceLeft;
 
     return vio.recursive_get_file(0, root_dir, components.items);
 }
@@ -186,10 +185,10 @@ pub fn get_children(vio: *VirtualIo, allocator: Allocator, dir: std.Io.Dir) ![]c
     var ret: std.ArrayList(Entry) = .empty;
     for (vio.hierarchy.keys(), vio.hierarchy.values()) |child_id, parent| {
         if (parent.handle == dir.handle)
-            try ret.append(allocator, .{
+            ret.append(allocator, .{
                 .id = child_id,
                 .kind = vio.get_kind(child_id),
-            });
+            }) catch return error.NoSpaceLeft;
     }
     return ret.toOwnedSlice(allocator);
 }
@@ -198,12 +197,12 @@ fn create_dir(vio: *VirtualIo, parent: std.Io.Dir, name: []const u8) !std.Io.Dir
     vio.last_id += 1;
     const dir: std.Io.Dir = .{ .handle = handle_from_int(vio.last_id) };
 
-    const name_copy = try vio.gpa.dupe(u8, name);
-    try vio.directories.put(vio.gpa, dir, .{
-        .name = name_copy,
-    });
-
-    try vio.hierarchy.put(vio.gpa, dir.handle, parent);
+    const name_copy = vio.gpa.dupe(u8, name) catch
+        return error.NoSpaceLeft;
+    vio.directories.put(vio.gpa, dir, .{ .name = name_copy }) catch
+        return error.NoSpaceLeft;
+    vio.hierarchy.put(vio.gpa, dir.handle, parent) catch
+        return error.NoSpaceLeft;
 
     return dir;
 }
@@ -212,13 +211,15 @@ fn create_file(vio: *VirtualIo, parent: std.Io.Dir, name: []const u8) !std.posix
     vio.last_id += 1;
     const id = handle_from_int(vio.last_id);
 
-    const name_copy = try vio.gpa.dupe(u8, name);
-    try vio.files.put(vio.gpa, id, .{
+    const name_copy = vio.gpa.dupe(u8, name) catch
+        return error.NoSpaceLeft;
+    vio.files.put(vio.gpa, id, .{
         .name = name_copy,
         .content = .init(vio.gpa),
-    });
+    }) catch return error.NoSpaceLeft;
 
-    try vio.hierarchy.put(vio.gpa, id, parent);
+    vio.hierarchy.put(vio.gpa, id, parent) catch
+        return error.NoSpaceLeft;
 
     return id;
 }
