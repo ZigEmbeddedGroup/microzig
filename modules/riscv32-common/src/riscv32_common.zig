@@ -457,7 +457,7 @@ pub const csr = struct {
                 switch (@typeInfo(T)) {
                     .@"struct" => {
                         var value = read();
-                        inline for (@typeInfo(@TypeOf(modifier)).Struct.field_names) |field_name| {
+                        inline for (@typeInfo(@TypeOf(modifier)).@"struct".field_names) |field_name| {
                             @field(value, field_name) = @field(modifier, field_name);
                         }
                         write(value);
@@ -586,3 +586,79 @@ pub const utilities = struct {
         }
     };
 };
+
+test "Csr with u32 type" {
+    const TestCsr = csr.Csr(0x300, u32);
+    _ = TestCsr;
+}
+
+test "Csr from_val with comptime_int" {
+    const TestCsr = csr.Csr(0x300, u32);
+    _ = TestCsr.from_val(@as(comptime_int, 42));
+}
+
+test "Csr from_val with int" {
+    const TestCsr = csr.Csr(0x300, u32);
+    _ = TestCsr.from_val(@as(u32, 42));
+}
+
+test "Csr is_comptime" {
+    const TestCsr = csr.Csr(0x300, u32);
+    _ = TestCsr.is_comptime(42);
+}
+
+test "Csr packed struct set and clear" {
+    const Ms = csr.Csr(0x300, packed struct {
+        pub const XS = enum(u2) {
+            off = 0b00,
+            initial = 0b01,
+            clean = 0b10,
+            dirty = 0b11,
+        };
+        pub const FS = XS;
+        pub const VS = XS;
+        pub const MPP = enum(u2) {
+            user = 0b00,
+            supervisor = 0b01,
+            hypervisor = 0b10,
+            machine = 0b11,
+        };
+        reserved0: u1 = 0,
+        sie: u1 = 0,
+        reserved2: u1 = 0,
+        mie: u1 = 0,
+        reserved4: u1 = 0,
+        spie: u1 = 0,
+        ube: u1 = 0,
+        mpie: u1 = 0,
+        spp: u1 = 0,
+        vs: VS = @enumFromInt(0),
+        mpp: MPP = @enumFromInt(0),
+        fs: FS = @enumFromInt(0),
+        xs: XS = @enumFromInt(0),
+        mprv: u1 = 0,
+        reserved18: u13 = 0,
+        sd: u1 = 0,
+    });
+    _ = Ms.from_val(@as(u32, 0xdeadbeef));
+    _ = Ms.from_val(@as(comptime_int, 0xdeadbeef));
+}
+
+test "Csr packed struct modify" {
+    // 32-bit packed struct: 12 fields of varying sizes
+    const Ms = csr.Csr(0x300, packed struct {
+        sie: u1 = 0,
+        mie: u1 = 0,
+        spie: u1 = 0,
+        mpie: u1 = 0,
+        spp: u1 = 0,
+        vs: u2 = 0,
+        mpp: u2 = 0,
+        fs: u2 = 0,
+        xs: u2 = 0,
+        mprv: u1 = 0,
+        reserved: u17 = 0,
+        sd: u1 = 0,
+    });
+    _ = Ms.from_val(@as(u32, 0));
+}
