@@ -58,7 +58,7 @@ pub const Dir = struct {
                 return error.PathAlreadyExists;
 
             result.value_ptr.* = switch (kind) {
-                .file => .{ .file = .empty },
+                .file => .{ .file = .{} },
                 .dir => .{ .dir = .{} },
             };
         } else |_| return error.NoSpaceLeft;
@@ -67,10 +67,38 @@ pub const Dir = struct {
     }
 };
 
+pub const File = struct {
+    inner: std.ArrayList(u8) = .empty,
+
+    pub fn from_std(vio: *const VirtualIo, file: Io.File) !*File {
+        return from_id(vio, try .from_handle(file.handle));
+    }
+
+    pub fn from_id(vio: *const VirtualIo, id: Node.ID) !*File {
+        const node = vio.nodes.getPtr(id) orelse
+            return error.Unexpected;
+        return switch (node.*) {
+            .file => |*ret| ret,
+            .dir => error.IsDir,
+        };
+    }
+
+    pub fn write_streaming(
+        vio: *const VirtualIo,
+        op: Io.Operation.FileWriteStreaming,
+    ) Io.Operation.FileWriteStreaming.Result {
+        const file = File.from_std(vio, op.file) catch
+            return error.Unexpected;
+        var allocating: Io.Writer.Allocating = .fromArrayList(vio.gpa, &file.inner);
+        defer file.inner = allocating.toArrayList();
+        return allocating.writer.writeSplatHeader(op.header, op.data, op.splat) catch
+            error.NoSpaceLeft;
+    }
+};
+
 pub const Node = union(enum) {
     pub const Kind = std.meta.Tag(Node);
     pub const Map = std.AutoArrayHashMapUnmanaged(ID, Node);
-    pub const File = std.ArrayList(u8);
 
     pub const ID = enum(u16) {
         const Backing = @Int(.unsigned, @bitSizeOf(ID));
@@ -110,7 +138,7 @@ pub const Node = union(enum) {
 
     pub fn destroy(node: *Node, gpa: Allocator) void {
         switch (node.*) {
-            .file => |*file| file.deinit(gpa),
+            .file => |*file| file.inner.deinit(gpa),
             .dir => |*dir| {
                 var it = dir.inner.keyIterator();
                 while (it.next()) |name|
@@ -129,7 +157,7 @@ pub const vtable: *const Io.VTable = blk: {
             const vio: *VirtualIo = @ptrCast(@alignCast(userdata.?));
             return switch (op) {
                 .file_write_streaming => |write_op| .{
-                    .file_write_streaming = vio.file_write_streaming(write_op),
+                    .file_write_streaming = File.write_streaming(vio, write_op),
                 },
                 .file_read_streaming => .{ .file_read_streaming = error.InputOutput },
                 .device_io_control => unreachable,
@@ -234,22 +262,6 @@ pub fn total_file_count(vio: *const VirtualIo) usize {
     return ret;
 }
 
-pub fn file_contents(vio: *const VirtualIo, file: Io.File) !*Node.File {
-    return &vio.nodes.getPtr(try .from_handle(file.handle)).?.file;
-}
-
-fn file_write_streaming(vio: *VirtualIo, op: Io.Operation.FileWriteStreaming) Io.Operation.FileWriteStreaming.Result {
-    const node = vio.nodes.getPtr(try .from_handle(op.file.handle)) orelse
-        return error.Unexpected;
-    const file = switch (node.*) {
-        .file => |*data| data,
-        .dir => return error.Unexpected,
-    };
-    var allocating: Io.Writer.Allocating = .fromArrayList(vio.gpa, file);
-    defer file.* = allocating.toArrayList();
-    return allocating.writer.writeSplatHeader(
-        op.header,
-        op.data,
-        op.splat,
-    ) catch error.NoSpaceLeft;
+pub fn file_contents(vio: *const VirtualIo, file: Io.File) !*std.ArrayList(u8) {
+    return &(try File.from_std(vio, file)).inner;
 }
