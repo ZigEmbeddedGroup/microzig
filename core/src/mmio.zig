@@ -70,8 +70,8 @@ pub fn Mmio(comptime Packed: type) type {
                         @as(FieldType, @enumFromInt(@as(U, @intFromEnum(@field(val, field_name))) ^
                             @as(U, @intFromEnum(@as(FieldType, value)))));
                 },
-                else => |T| {
-                    @compileError("unsupported register field type '" ++ @typeName(T) ++ "'");
+                else => {
+                    @compileError("unsupported register field type '" ++ @typeName(FieldType) ++ "'");
                 },
             }
         }

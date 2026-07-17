@@ -248,7 +248,7 @@ pub const fs = struct {
     };
 
     pub const FType = enum {
-        FIle,
+        File,
         Device,
     };
     pub const OpenMode = enum(usize) {
@@ -390,7 +390,7 @@ pub const fs = struct {
 
         pub fn get_type(file: File) FileError!FType {
             return switch (sys_istty(&file)) {
-                0 => FType.FIle,
+                0 => FType.File,
                 1 => FType.Device,
                 else => FileError.InvalidFile,
             };

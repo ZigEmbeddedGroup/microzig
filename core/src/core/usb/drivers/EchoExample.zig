@@ -62,7 +62,7 @@ pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterfac
         .device = device,
         .descriptor = desc,
         .packet_buffer = data,
-        .tx_ready = .init(false),
+        .tx_ready = .init(true),
     };
     device.ep_listen(
         desc.ep_out.endpoint.num,
