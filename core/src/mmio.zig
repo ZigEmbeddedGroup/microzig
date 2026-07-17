@@ -1,46 +1,85 @@
 const std = @import("std");
 const assert = std.debug.assert;
+const FieldAttributes = std.builtin.Type.Struct.FieldAttributes;
 
-pub fn Mmio(comptime Packed: type) type {
-    @setEvalBranchQuota(2_000);
+pub fn Mmio(T: type) type {
+    @setEvalBranchQuota(10_000);
 
-    const size = @bitSizeOf(Packed);
-    if ((size % 8) != 0)
-        @compileError("size must be divisible by 8!");
+    const info = @typeInfo(T);
+    if (info != .@"struct" or info.@"struct".layout != .@"packed")
+        @compileError("Expected a packed struct, got " ++ @typeName(T));
 
-    if (!std.math.isPowerOfTwo(size / 8))
-        @compileError("size must encode a power of two number of bytes!");
+    if (@bitSizeOf(T) != @sizeOf(T) * 8)
+        @compileError(std.fmt.comptimePrint(
+            "Bitsize of {s} ({}) must be 8 times its size ({}).",
+            .{ @typeName(T), @bitSizeOf(T), @sizeOf(T) },
+        ));
 
-    const Int = @Int(.unsigned, size);
+    if (!std.math.isPowerOfTwo(@sizeOf(T)))
+        @compileError(std.fmt.comptimePrint(
+            "Size of {s} ({}) must be a power of two.",
+            .{ @typeName(T), @bitSizeOf(T), @sizeOf(T) },
+        ));
 
-    if (@sizeOf(Packed) != (size / 8))
-        @compileError(std.fmt.comptimePrint("Int and Packed must have the same size!, they are {} and {} bytes respectively", .{ size / 8, @sizeOf(Packed) }));
+    return extern struct {
+        const field_names = info.@"struct".field_names;
+        const field_types = info.@"struct".field_types;
 
-    return packed struct(Int) {
-        const Self = @This();
+        /// Struct defining register field layout
+        pub const Fields = T;
+        /// Backing integer
+        pub const Int = @Int(.unsigned, @bitSizeOf(Fields));
+        /// Naturally aligned volatile pointer
+        pub const MmioPtr = *align(@sizeOf(Fields)) volatile @This();
+        /// Like `Fields`, but all fields are optional and default to `null`
+        pub const FieldsOpt = @Struct(
+            .auto,
+            null,
+            field_names,
+            blk: {
+                var ret: [field_names.len]type = undefined;
+                for (0..field_names.len) |i|
+                    ret[i] = ?field_types[i];
+                break :blk &ret;
+            },
+            blk: {
+                var ret: [field_names.len]FieldAttributes = undefined;
+                for (0..field_names.len) |i| {
+                    const default: ?field_types[i] = null;
+                    ret[i] = .{ .default_value_ptr = &default };
+                }
+                break :blk &ret;
+            },
+        );
 
+        pub const underlying_type = Fields;
+
+        /// Unstable API. Use read/write functions instead.
         raw: Int,
 
-        pub const underlying_type = Packed;
-
-        pub inline fn read(addr: *volatile Self) Packed {
-            return @bitCast(addr.raw);
+        pub inline fn read_raw(mmio: MmioPtr) Int {
+            return mmio.raw;
         }
 
-        pub inline fn write(addr: *volatile Self, val: Packed) void {
-            comptime {
-                assert(@bitSizeOf(Packed) == @bitSizeOf(Int));
-            }
-            addr.write_raw(@bitCast(val));
+        pub inline fn write_raw(mmio: MmioPtr, val: Int) void {
+            mmio.raw = val;
         }
 
-        pub inline fn write_raw(addr: *volatile Self, val: Int) void {
-            addr.raw = val;
+        pub inline fn read(mmio: MmioPtr) Fields {
+            return @bitCast(mmio.read_raw());
+        }
+
+        pub inline fn write(mmio: MmioPtr, val: Fields) void {
+            mmio.write_raw(@bitCast(val));
         }
 
         /// Set field `field_name` of this register to `value`.
         /// A one-field version of modify(), more helpful if `field_name` is comptime calculated.
-        pub inline fn modify_one(addr: *volatile Self, comptime field_name: []const u8, value: @FieldType(underlying_type, field_name)) void {
+        pub inline fn modify_one(
+            addr: MmioPtr,
+            comptime field_name: []const u8,
+            value: @FieldType(Fields, field_name),
+        ) void {
             var val = read(addr);
             @field(val, field_name) = value;
             write(addr, val);
@@ -48,50 +87,14 @@ pub fn Mmio(comptime Packed: type) type {
 
         /// For each `.Field = value` entry of `fields`:
         /// Set field `Field` of this register to `value`.
-        pub inline fn modify(addr: *volatile Self, fields: anytype) void {
-            var val = read(addr);
-            inline for (@typeInfo(@TypeOf(fields)).@"struct".field_names) |field_name| {
-                @field(val, field_name) = @field(fields, field_name);
+        /// Operiation done by read-modify-write.
+        pub inline fn modify(mmio: MmioPtr, fields: FieldsOpt) void {
+            var val = mmio.read();
+            inline for (field_names) |field_name| {
+                if (@field(fields, field_name)) |value|
+                    @field(val, field_name) = value;
             }
-            write(addr, val);
-        }
-
-        /// In field `field_name` of struct `val`, toggle (only) all bits that are set in `value`.
-        inline fn toggle_field(val: anytype, comptime field_name: []const u8, value: anytype) void {
-            const FieldType = @TypeOf(@field(val, field_name));
-            switch (@typeInfo(FieldType)) {
-                .int => {
-                    @field(val, field_name) = @field(val, field_name) ^ value;
-                },
-                .@"enum" => |enum_info| {
-                    // same as for the .Int case, but casting to and from the u... tag type U of the enum FieldType
-                    const U = enum_info.tag_type;
-                    @field(val, field_name) =
-                        @as(FieldType, @enumFromInt(@as(U, @intFromEnum(@field(val, field_name))) ^
-                            @as(U, @intFromEnum(@as(FieldType, value)))));
-                },
-                else => |T| {
-                    @compileError("unsupported register field type '" ++ @typeName(T) ++ "'");
-                },
-            }
-        }
-
-        /// In field `field_name` of this register, toggle (only) all bits that are set in `value`.
-        /// A one-field version of toggle(), more helpful if `field_name` is comptime calculated.
-        pub inline fn toggle_one(addr: *volatile Self, comptime field_name: []const u8, value: anytype) void {
-            var val = read(addr);
-            toggle_field(&val, field_name, value);
-            write(addr, val);
-        }
-
-        /// For each `.Field = value` entry of `fields`:
-        /// In field `F` of this register, toggle (only) all bits that are set in `value`.
-        pub inline fn toggle(addr: *volatile Self, fields: anytype) void {
-            var val = read(addr);
-            inline for (@typeInfo(@TypeOf(fields)).@"struct".field_names) |field_name| {
-                toggle_field(&val, field_name, @field(fields, field_name));
-            }
-            write(addr, val);
+            mmio.write(val);
         }
     };
 }
