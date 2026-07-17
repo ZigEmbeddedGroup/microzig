@@ -7,40 +7,67 @@ const assert = std.debug.assert;
 const Io = std.Io;
 const log = std.log.scoped(.vio);
 
+pub fn ResultID(T: type) type {
+    return switch (T) {
+        Dir, File => T.ID,
+        else => @compileError("Expected File or Dir, got " ++ @typeName(T)),
+    };
+}
+
 pub const Dir = struct {
+    pub const kind: Node.Kind = .dir;
+    pub const empty: Node = .{ .dir = .{ .inner = .empty } };
+
+    pub const ID = enum(Node.ID) {
+        // Reserve first 256 file handles for os-specific values, such as sitdin/out/err
+        // on posix, cwd on wasm and the reserved NULL value on windows.
+        root = 0x100,
+        _,
+
+        pub fn from_std(dir: Io.Dir) !ID {
+            return from_handle(ID, dir.handle);
+        }
+
+        pub fn to_std(id: ID) Io.Dir {
+            return .{ .handle = to_handle(id) };
+        }
+
+        pub fn get(id: ID, vio: *const VirtualIo) !*Dir {
+            const node = vio.nodes.getPtr(@intFromEnum(id)) orelse
+                return error.Unexpected;
+            return switch (node.*) {
+                .dir => |*ret| ret,
+                else => error.NotDir,
+            };
+        }
+    };
+
     inner: std.StringHashMapUnmanaged(Node.ID) = .empty,
 
-    pub fn from_std(vio: *const VirtualIo, dir: Io.Dir) !*Dir {
-        return from_id(vio, try .from_handle(dir.handle));
-    }
-
-    pub fn from_id(vio: *const VirtualIo, id: Node.ID) !*Dir {
-        const node = vio.nodes.getPtr(id) orelse
-            return error.Unexpected;
-        return switch (node.*) {
-            .dir => |*ret| ret,
-            else => error.NotDir,
-        };
-    }
-
-    pub fn sub_path(parent: *Dir, vio: *const VirtualIo, path: []const u8) !Node.ID {
+    pub fn open(parent: *Dir, vio: *const VirtualIo, sub_path: []const u8) !Node.ID {
         var dir = parent;
-        var path_tail = path;
+        var path_tail = sub_path;
         while (std.mem.findScalar(u8, path_tail, '/')) |idx| {
-            dir = try .from_id(vio, dir.inner.get(path_tail[0..idx]) orelse
-                return error.FileNotFound);
+            const next = dir.inner.get(path_tail[0..idx]) orelse
+                return error.FileNotFound;
+            const node = vio.nodes.getPtr(next) orelse
+                return error.Unexpected;
+            switch (node.*) {
+                .dir => |*d| dir = d,
+                .file => return error.FileNotFound,
+            }
             path_tail = path_tail[idx + 1 ..];
         }
         return dir.inner.get(path_tail) orelse error.FileNotFound;
     }
 
-    pub fn create_node(dir: *Dir, vio: *VirtualIo, name: []const u8, comptime kind: Node.Kind) !Node.ID {
+    pub fn create(dir: *Dir, vio: *VirtualIo, name: []const u8, T: type) !ResultID(T) {
         if (std.mem.findScalar(u8, name, '/') != null) {
             log.err("name includes '/': '{s}'", .{name});
             return error.BadPathName;
         }
 
-        const id: Node.ID = try vio.last_id.next();
+        const id = vio.last_id + 1;
         vio.last_id = id;
 
         const name_owned = vio.gpa.dupe(u8, name) catch return error.NoSpaceLeft;
@@ -57,37 +84,48 @@ pub const Dir = struct {
             if (result.found_existing)
                 return error.PathAlreadyExists;
 
-            result.value_ptr.* = switch (kind) {
-                .file => .{ .file = .{} },
-                .dir => .{ .dir = .{} },
-            };
+            result.value_ptr.* = T.empty;
         } else |_| return error.NoSpaceLeft;
 
-        return id;
+        return @enumFromInt(id);
     }
 };
 
 pub const File = struct {
+    pub const kind: Node.Kind = .dir;
+    pub const empty: Node = .{ .file = .{ .inner = .empty } };
+
+    pub const ID = enum(Node.ID) {
+        _,
+
+        pub fn from_std(file: Io.File) !ID {
+            return from_handle(ID, file.handle);
+        }
+
+        pub fn to_std(id: ID) Io.File {
+            return .{
+                .handle = to_handle(id),
+                .flags = .{ .nonblocking = false },
+            };
+        }
+
+        pub fn get(id: ID, vio: *const VirtualIo) !*File {
+            const node = vio.nodes.getPtr(@intFromEnum(id)) orelse
+                return error.Unexpected;
+            return switch (node.*) {
+                .file => |*ret| ret,
+                .dir => error.IsDir,
+            };
+        }
+    };
+
     inner: std.ArrayList(u8) = .empty,
-
-    pub fn from_std(vio: *const VirtualIo, file: Io.File) !*File {
-        return from_id(vio, try .from_handle(file.handle));
-    }
-
-    pub fn from_id(vio: *const VirtualIo, id: Node.ID) !*File {
-        const node = vio.nodes.getPtr(id) orelse
-            return error.Unexpected;
-        return switch (node.*) {
-            .file => |*ret| ret,
-            .dir => error.IsDir,
-        };
-    }
 
     pub fn write_streaming(
         vio: *const VirtualIo,
         op: Io.Operation.FileWriteStreaming,
     ) Io.Operation.FileWriteStreaming.Result {
-        const file = File.from_std(vio, op.file) catch
+        const file = (try File.ID.from_std(op.file)).get(vio) catch
             return error.Unexpected;
         var allocating: Io.Writer.Allocating = .fromArrayList(vio.gpa, &file.inner);
         defer file.inner = allocating.toArrayList();
@@ -97,41 +135,9 @@ pub const File = struct {
 };
 
 pub const Node = union(enum) {
+    pub const ID = u16;
     pub const Kind = std.meta.Tag(Node);
     pub const Map = std.AutoArrayHashMapUnmanaged(ID, Node);
-
-    pub const ID = enum(u16) {
-        const Backing = @Int(.unsigned, @bitSizeOf(ID));
-
-        // Reserve first 256 file handles for os-specific values, such as sitdin/out/err
-        // on posix, cwd on wasm and the reserved NULL value on windows.
-        root = 0x100,
-        _,
-
-        pub fn from_handle(handle: std.posix.fd_t) !ID {
-            return if (std.math.cast(Backing, switch (builtin.os.tag) {
-                .windows => @intFromPtr(handle),
-                else => handle,
-            })) |int|
-                @enumFromInt(int)
-            else
-                error.Unexpected;
-        }
-
-        pub fn to_handle(id: ID) std.posix.fd_t {
-            return switch (builtin.os.tag) {
-                .windows => @ptrFromInt(@intFromEnum(id)),
-                else => @intFromEnum(id),
-            };
-        }
-
-        fn next(prev: ID) !ID {
-            return if (std.math.add(Backing, @intFromEnum(prev), 1)) |int|
-                @enumFromInt(int)
-            else |_|
-                error.Unexpected;
-        }
-    };
 
     file: File,
     dir: Dir,
@@ -171,9 +177,8 @@ const VTable = struct {
         _: Io.Dir.OpenOptions,
     ) Io.Dir.CreateDirPathOpenError!Io.Dir {
         const vio: *VirtualIo = @ptrCast(@alignCast(userdata.?));
-        const parent = try Dir.from_std(vio, dir);
-        const ret = try parent.create_node(vio, sub_path, .dir);
-        return .{ .handle = ret.to_handle() };
+        const parent = try (try Dir.ID.from_std(dir)).get(vio);
+        return (try parent.create(vio, sub_path, Dir)).to_std();
     }
 
     fn dir_close(_: ?*anyopaque, _: []const Io.Dir) void {}
@@ -185,12 +190,8 @@ const VTable = struct {
         _: Io.Dir.CreateFileOptions,
     ) Io.File.OpenError!Io.File {
         const vio: *VirtualIo = @ptrCast(@alignCast(userdata.?));
-        const parent = try Dir.from_std(vio, dir);
-        const ret = try parent.create_node(vio, sub_path, .file);
-        return .{
-            .handle = ret.to_handle(),
-            .flags = .{ .nonblocking = false },
-        };
+        const parent = try (try Dir.ID.from_std(dir)).get(vio);
+        return (try parent.create(vio, sub_path, File)).to_std();
     }
 
     fn dir_open_file(
@@ -200,19 +201,16 @@ const VTable = struct {
         _: Io.Dir.OpenFileOptions,
     ) Io.File.OpenError!Io.File {
         const vio: *VirtualIo = @ptrCast(@alignCast(userdata.?));
-        const parent = try Dir.from_std(vio, dir);
-        const node = try parent.sub_path(vio, sub_path);
-        return .{
-            .handle = node.to_handle(),
-            .flags = .{ .nonblocking = false },
-        };
+        const parent = try (try Dir.ID.from_std(dir)).get(vio);
+        const node = try parent.open(vio, sub_path);
+        return @as(File.ID, @enumFromInt(node)).to_std();
     }
 
     fn file_close(_: ?*anyopaque, _: []const Io.File) void {}
 };
 
 pub const VirtualIo = struct {
-    pub const root_dir: Io.Dir = .{ .handle = Node.ID.root.to_handle() };
+    pub const root_dir = Dir.ID.root.to_std();
 
     pub const vtable: *const Io.VTable = blk: {
         var ret = Io.failing.vtable.*;
@@ -236,13 +234,13 @@ pub const VirtualIo = struct {
     }
 
     pub fn init(gpa: Allocator) !VirtualIo {
-        var nodes: Node.Map = .empty;
-        try nodes.put(gpa, .root, .{ .dir = .{} });
-        return .{
+        var ret: VirtualIo = .{
             .gpa = gpa,
-            .nodes = nodes,
-            .last_id = .root,
+            .nodes = .empty,
+            .last_id = @intFromEnum(Dir.ID.root),
         };
+        try ret.nodes.put(gpa, ret.last_id, Dir.empty);
+        return ret;
     }
 
     pub fn deinit(vio: *VirtualIo) void {
@@ -262,6 +260,25 @@ pub const VirtualIo = struct {
     }
 
     pub fn file_contents(vio: *const VirtualIo, file: Io.File) !*std.ArrayList(u8) {
-        return &(try File.from_std(vio, file)).inner;
+        return &(try (try File.ID.from_std(file)).get(vio)).inner;
     }
 };
+
+pub fn from_handle(T: type, handle: std.posix.fd_t) !T {
+    const Backing = @Int(.unsigned, @bitSizeOf(T));
+    return if (std.math.cast(Backing, switch (builtin.os.tag) {
+        .windows => @intFromPtr(handle),
+        else => handle,
+    })) |int|
+        @enumFromInt(int)
+    else
+        error.Unexpected;
+}
+
+pub fn to_handle(id: anytype) std.posix.fd_t {
+    // const ID = @TypeOf(id);
+    return switch (builtin.os.tag) {
+        .windows => @ptrFromInt(@intFromEnum(id)),
+        else => @intFromEnum(id),
+    };
+}
