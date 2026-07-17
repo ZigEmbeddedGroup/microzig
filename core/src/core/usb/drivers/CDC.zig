@@ -204,10 +204,17 @@ pub fn flush(self: *@This()) bool {
         return false;
     self.tx_ready.store(false, .seq_cst);
 
-    assert(self.tx_end == self.device.ep_writev(
+    const written = self.device.ep_writev(
         self.descriptor.ep_in.endpoint.num,
         &.{self.tx_data[0..self.tx_end]},
-    ));
+    );
+    if (written < self.tx_end) {
+        // Short write: move unsent data to front of buffer
+        const remaining = self.tx_end - written;
+        std.mem.copyForwards(u8, self.tx_data[0..remaining], self.tx_data[written..][0..remaining]);
+        self.tx_end = remaining;
+        return false;
+    }
     self.tx_end = 0;
     return true;
 }
