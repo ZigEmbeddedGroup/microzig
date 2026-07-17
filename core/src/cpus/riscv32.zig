@@ -8,12 +8,6 @@ pub const interrupt = riscv32_common.interrupt;
 pub const nop = riscv32_common.nop;
 pub const wfi = riscv32_common.wfi;
 
-pub fn wfe() void {
-    asm volatile ("csrs 0x810, 0x1");
-    wfi();
-    asm volatile ("csrs 0x810, 0x1");
-}
-
 pub const startup_logic = struct {
     extern fn microzig_main() noreturn;
 
