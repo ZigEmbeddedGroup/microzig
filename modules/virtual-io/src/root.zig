@@ -15,8 +15,8 @@ pub fn ResultID(T: type) type {
 }
 
 pub const Dir = struct {
-    pub const kind: Node.Kind = .dir;
     pub const empty: Node = .{ .dir = .{ .inner = .empty } };
+    pub const kind: Node.Kind = empty;
 
     pub const ID = enum(Node.ID) {
         // Reserve first 256 file handles for os-specific values, such as sitdin/out/err
@@ -44,7 +44,7 @@ pub const Dir = struct {
 
     inner: std.StringHashMapUnmanaged(Node.ID) = .empty,
 
-    pub fn open(parent: *Dir, vio: *const VirtualIo, sub_path: []const u8) !Node.ID {
+    pub fn open(parent: *Dir, vio: *const VirtualIo, sub_path: []const u8, T: type) !ResultID(T) {
         var dir = parent;
         var path_tail = sub_path;
         while (std.mem.findScalar(u8, path_tail, '/')) |idx| {
@@ -58,7 +58,15 @@ pub const Dir = struct {
             }
             path_tail = path_tail[idx + 1 ..];
         }
-        return dir.inner.get(path_tail) orelse error.FileNotFound;
+        const id = dir.inner.get(path_tail) orelse
+            return error.FileNotFound;
+
+        // Check that node exists and is the right type
+        const node = vio.nodes.get(id);
+        if (node == null or node.? != T.kind)
+            return error.Unexpected;
+
+        return @enumFromInt(id);
     }
 
     pub fn create(dir: *Dir, vio: *VirtualIo, name: []const u8, T: type) !ResultID(T) {
@@ -92,8 +100,8 @@ pub const Dir = struct {
 };
 
 pub const File = struct {
-    pub const kind: Node.Kind = .dir;
     pub const empty: Node = .{ .file = .{ .inner = .empty } };
+    pub const kind: Node.Kind = empty;
 
     pub const ID = enum(Node.ID) {
         _,
@@ -202,8 +210,7 @@ const VTable = struct {
     ) Io.File.OpenError!Io.File {
         const vio: *VirtualIo = @ptrCast(@alignCast(userdata.?));
         const parent = try (try Dir.ID.from_std(dir)).get(vio);
-        const node = try parent.open(vio, sub_path);
-        return @as(File.ID, @enumFromInt(node)).to_std();
+        return (try parent.open(vio, sub_path, File)).to_std();
     }
 
     fn file_close(_: ?*anyopaque, _: []const Io.File) void {}
