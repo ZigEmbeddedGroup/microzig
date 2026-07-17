@@ -1,4 +1,3 @@
-const std = @import("std");
 const microzig = @import("microzig");
 
 const riscv32_common = @import("riscv32-common");
