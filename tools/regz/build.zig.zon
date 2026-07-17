@@ -13,6 +13,7 @@
             .url = "git+https://github.com/allyourcodebase/libxml2.git#e2c881ccb72dc96b03bb80f1f4c4b386969b76f7",
             .hash = "libxml2-2.15.1-2-qHdjhjJXAAAF6fWNrfH_GFaXDHRNjlYQoeKF_RBnWtVu",
         },
+        .virtual_io = .{ .path = "../../modules/virtual-io" },
         .zqlite = .{
             .url = "git+https://github.com/karlseguin/zqlite.zig#95054418207705ed9188b4d7467fec5136100f13",
             .hash = "zqlite-0.0.1-RWLaY9UynADU9w6axCjGV9--FpxxKO_qu1qmorhTj2D9",
