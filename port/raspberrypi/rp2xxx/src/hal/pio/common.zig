@@ -12,6 +12,7 @@ pub const PIO1 = microzig.chip.peripherals.PIO1;
 pub const assembler = @import("assembler.zig");
 const encoder = @import("assembler/encoder.zig");
 const gpio = @import("../gpio.zig");
+const hw = @import("../hw.zig");
 
 pub const ClkDivOptions = microzig.utilities.IntFracDiv(16, 8);
 pub const Instruction = encoder.Instruction;
@@ -401,6 +402,18 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
                 .TXOVER = mask,
                 .TXSTALL = mask,
             });
+        }
+
+        /// changing the state of fifos will clear them
+        pub fn sm_clear_fifos(self: EnumType, sm: StateMachine) void {
+            const sm_regs = self.get_sm_regs(sm);
+            const xor_shiftctrl = hw.xor_alias(&sm_regs.shiftctrl);
+            // Toggle twice
+            inline for (0..2) |_|
+                xor_shiftctrl.write_default_zero(.{
+                    .FJOIN_TX = 1,
+                    .FJOIN_RX = 1,
+                });
         }
 
         pub fn sm_fifo_level(self: EnumType, sm: StateMachine, fifo: Fifo) u4 {

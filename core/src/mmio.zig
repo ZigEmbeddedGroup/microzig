@@ -23,7 +23,7 @@ pub fn Mmio(T: type) type {
 
     return extern struct {
         const field_names = info.@"struct".field_names;
-        const field_types = info.@"struct".field_types;
+        const field_types = info.@"struct".field_types[0..field_names.len].*;
 
         /// Struct defining register field layout
         pub const Fields = T;
@@ -47,6 +47,25 @@ pub fn Mmio(T: type) type {
                 for (0..field_names.len) |i| {
                     const default: ?field_types[i] = null;
                     ret[i] = .{ .default_value_ptr = &default };
+                }
+                break :blk &ret;
+            },
+        );
+        /// Identical struct to `Fields`, but all fields without
+        /// default values are given a default value of zero.
+        pub const FieldsZero = @Struct(
+            .@"packed",
+            Int,
+            field_names,
+            &field_types,
+            blk: {
+                var ret: [field_names.len]FieldAttributes = undefined;
+                for (0..field_names.len) |i| {
+                    ret[i] = info.@"struct".field_attrs[i];
+                    if (ret[i].default_value_ptr == null) {
+                        const default = std.mem.zeroes(field_types[i]);
+                        ret[i].default_value_ptr = &default;
+                    }
                 }
                 break :blk &ret;
             },
@@ -93,6 +112,14 @@ pub fn Mmio(T: type) type {
                     @field(val, field_name) = value;
             }
             mmio.write(val);
+        }
+
+        /// For each `.Field = value` entry of `fields`:
+        /// Set field `Field` of this register to `value`.
+        /// All unspecified fields are initialized to zero.
+        /// Particularily useful for registers with atomic set/clear/xor
+        pub inline fn write_default_zero(mmio: MmioPtr, fields: FieldsZero) void {
+            mmio.write(@bitCast(fields));
         }
     };
 }

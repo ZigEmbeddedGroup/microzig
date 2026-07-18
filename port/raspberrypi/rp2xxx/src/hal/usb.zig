@@ -122,8 +122,7 @@ pub fn Polled(config: Config) type {
                 buffer_control[0].in.modify(.{ .PID_0 = 0 });
 
                 // Clear the status flag (write-one-to-clear)
-                // Candidate for write_default_zero
-                peripherals.USB.SIE_STATUS.modify(.{ .SETUP_REC = 1 });
+                peripherals.USB.SIE_STATUS.write_default_zero(.{ .SETUP_REC = 1 });
 
                 // The SVD exposes this buffer as two 32-bit registers.
                 const setup: usb.types.SetupPacket = @bitCast([2]u32{

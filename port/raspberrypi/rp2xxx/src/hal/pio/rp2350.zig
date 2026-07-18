@@ -86,29 +86,7 @@ pub const Pio = enum(u2) {
     pub const sm_set_enabled = PioImpl.sm_set_enabled;
     pub const sm_clear_debug = PioImpl.sm_clear_debug;
 
-    /// changing the state of fifos will clear them
-    pub fn sm_clear_fifos(self: Pio, sm: common.StateMachine) void {
-        const sm_regs = self.get_sm_regs(sm);
-        const xor_shiftctrl = hw.xor_alias(&sm_regs.shiftctrl);
-        // Candidate for write_default_zero
-        inline for (0..2) |_|
-            xor_shiftctrl.write(.{
-                .FJOIN_TX = 1,
-                .FJOIN_RX = 1,
-
-                .AUTOPUSH = 0,
-                .AUTOPULL = 0,
-                .IN_SHIFTDIR = 0,
-                .OUT_SHIFTDIR = 0,
-                .PUSH_THRESH = 0,
-                .PULL_THRESH = 0,
-
-                .FJOIN_RX_GET = 0,
-                .FJOIN_RX_PUT = 0,
-                .IN_COUNT = 0,
-            });
-    }
-
+    pub const sm_clear_fifos = PioImpl.sm_clear_fifos;
     pub const sm_fifo_level = PioImpl.sm_fifo_level;
     pub const sm_clear_interrupt = PioImpl.sm_clear_interrupt;
     pub const sm_enable_interrupt = PioImpl.sm_enable_interrupt;
