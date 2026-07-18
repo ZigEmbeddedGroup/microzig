@@ -41,7 +41,7 @@ const TIMINGR = blk: {
 
 const I2C = struct {
     regs: *volatile I2C_Peripherals,
-    timingr: TIMINGR.underlying_type,
+    timingr: TIMINGR.Fields,
 
     fn compute_presc(comptime instance: I2C_Type) ConfigError!struct { f32, u4 } {
         // Let first see if we need to prescale.
@@ -205,15 +205,16 @@ const I2C = struct {
         const scll = try compute_low_time(t_presc);
         const sclh = try compute_high_time(t_presc);
 
-        const timingr: TIMINGR.underlying_type = .{
-            .PRESC = presc,
-            .SCLDEL = scdel,
-            .SDADEL = sdadel,
-            .SCLL = scll,
-            .SCLH = sclh,
+        return .{
+            .regs = enums.get_regs(I2C_Peripherals, instance),
+            .timingr = .{
+                .PRESC = presc,
+                .SCLDEL = scdel,
+                .SDADEL = sdadel,
+                .SCLL = scll,
+                .SCLH = sclh,
+            },
         };
-
-        return .{ .regs = enums.get_regs(I2C_Peripherals, instance), .timingr = timingr };
     }
 };
 

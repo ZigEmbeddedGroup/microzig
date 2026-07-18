@@ -1,13 +1,13 @@
 const std = @import("std");
-
 const microzig = @import("microzig");
-const mdf = microzig.drivers;
-const peripherals = microzig.chip.peripherals;
-const compatibility = @import("compatibility.zig");
 
+const peripherals = microzig.chip.peripherals;
+const mdf = microzig.drivers;
+const utils = microzig.utilities;
 const Deadline = mdf.time.Deadline;
 const Duration = mdf.time.Duration;
 
+const compatibility = @import("compatibility.zig");
 const gpio = @import("gpio.zig");
 const time = @import("time.zig");
 
@@ -28,7 +28,7 @@ const SPIM3 = peripherals.SPIM3;
 const SpimRegs = microzig.chip.types.peripherals.SPIM0;
 
 const EASY_DMA_SIZE = std.math.maxInt(
-    @FieldType(@FieldType(@FieldType(SpimRegs, "TXD"), "MAXCNT").underlying_type, "MAXCNT"),
+    utils.RegFieldType(@FieldType(SpimRegs, "TXD"), "MAXCNT", "MAXCNT"),
 );
 
 const Config = struct {

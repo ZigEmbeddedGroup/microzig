@@ -64,7 +64,8 @@ pub const LP_UART = enum(u4) {
         if (config.data_mode == .@"10bit") regs.BAUD.modify_one("M10", .ENABLED);
         if (config.stop_bits_count == .two) regs.BAUD.modify_one("SBNS", .TWO);
 
-        var ctrl = std.mem.zeroes(@TypeOf(regs.CTRL).underlying_type);
+        // Candidate for write_default_zero
+        var ctrl = std.mem.zeroes(@TypeOf(regs.CTRL).Fields);
         ctrl.M7 = if (config.data_mode == .@"7bit") .DATA7 else .NO_EFFECT;
         ctrl.PE = if (config.parity != .none) .ENABLED else .DISABLED;
         ctrl.PT = if (@intFromEnum(config.parity) & 1 == 0) .EVEN else .ODD;
@@ -74,8 +75,9 @@ pub const LP_UART = enum(u4) {
         ctrl.ILT = .FROM_STOP; // same
         regs.CTRL.write(ctrl);
 
+        // Candidate for write_default_zero
         // clear flags and set bit order
-        var stat = std.mem.zeroes(@TypeOf(regs.STAT).underlying_type);
+        var stat = std.mem.zeroes(@TypeOf(regs.STAT).Fields);
         // read and write on these bits are different
         // writing one cleare those flags
         stat.RXEDGIF = .EDGE;
@@ -90,7 +92,7 @@ pub const LP_UART = enum(u4) {
 
         stat.MSBF = if (config.bit_order == .lsb) .LSB_FIRST else .MSB_FIRST;
         stat.RXINV = if (config.rx_invert) .INVERTED else .NOT_INVERTED;
-        regs.STAT.modify(stat);
+        regs.STAT.write(stat);
 
         uart.set_enabled(config.enable_send, config.enable_receive);
 

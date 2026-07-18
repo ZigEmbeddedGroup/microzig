@@ -1,11 +1,12 @@
 const std = @import("std");
-
 const microzig = @import("microzig");
-const mdf = microzig.drivers;
-const drivers = mdf.base;
-const peripherals = microzig.chip.peripherals;
-const compatibility = @import("compatibility.zig");
 
+const drivers = mdf.base;
+const mdf = microzig.drivers;
+const peripherals = microzig.chip.peripherals;
+const utils = microzig.utilities;
+
+const compatibility = @import("compatibility.zig");
 const gpio = @import("gpio.zig");
 const time = @import("time.zig");
 
@@ -17,10 +18,6 @@ const version: enum {
     .nrf52840 => .nrf52840,
     else => compatibility.unsupported_chip("DMA I2C"),
 };
-
-// "Two Wire Interface Master"
-const I2C0 = peripherals.TWIM0;
-const I2C1 = peripherals.TWIM1;
 
 const I2cRegs = microzig.chip.types.peripherals.TWIM0;
 
@@ -54,8 +51,8 @@ pub const I2C = enum(u1) {
 
     fn get_regs(i2c: I2C) *volatile I2cRegs {
         return switch (@intFromEnum(i2c)) {
-            0 => I2C0,
-            1 => I2C1,
+            0 => peripherals.TWIM0,
+            1 => peripherals.TWIM1,
         };
     }
 
@@ -143,9 +140,8 @@ pub const I2C = enum(u1) {
     /// Configure the TX DMA buffer for transmission.
     /// Returns error if buffer is too large for the hardware's MAXCNT register.
     fn set_tx_buffer(i2c: I2C, buf: []const u8) !void {
-        // TODO: There has got to be a nicer way to do this. MAXCNT is u16 on nRF52840, and u8 on
-        // nRF52831
-        const tx_cnt_type = @FieldType(@FieldType(@FieldType(I2cRegs, "TXD"), "MAXCNT").underlying_type, "MAXCNT");
+        // MAXCNT is u16 on nRF52840, and u8 on nRF52831
+        const tx_cnt_type = utils.RegFieldType(@FieldType(I2cRegs, "TXD"), "MAXCNT", "MAXCNT");
         if (std.math.cast(tx_cnt_type, buf.len) == null)
             return Error.TooMuchData;
 
@@ -158,9 +154,8 @@ pub const I2C = enum(u1) {
     /// Returns error if buffer is too large for the hardware's MAXCNT register.
     fn set_rx_buffer(i2c: I2C, buf: []u8) !void {
         const regs = i2c.get_regs();
-        // TODO: There has got to be a nicer way to do this. MAXCNT is u16 on nRF52840, and u8 on
-        // nRF52831
-        const rx_cnt_type = @FieldType(@FieldType(@FieldType(I2cRegs, "RXD"), "MAXCNT").underlying_type, "MAXCNT");
+        // MAXCNT is u16 on nRF52840, and u8 on nRF52831
+        const rx_cnt_type = utils.RegFieldType(@FieldType(I2cRegs, "RXD"), "MAXCNT", "MAXCNT");
         if (std.math.cast(rx_cnt_type, buf.len) == null)
             return Error.TooMuchData;
         regs.RXD.PTR.write(.{ .PTR = @intFromPtr(buf.ptr) });

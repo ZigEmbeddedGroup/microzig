@@ -52,8 +52,6 @@ pub fn Mmio(T: type) type {
             },
         );
 
-        pub const underlying_type = Fields;
-
         /// Unstable API. Use read/write functions instead.
         raw: Int,
 

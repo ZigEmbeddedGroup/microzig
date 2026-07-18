@@ -9,6 +9,7 @@ const log = std.log.scoped(.usb_dev);
 
 const microzig = @import("microzig");
 const peripherals = microzig.chip.peripherals;
+const peri_types = microzig.chip.types.peripherals;
 const chip = microzig.hal.compatibility.chip;
 const usb = microzig.core.usb;
 
@@ -65,10 +66,10 @@ fn PerEndpoint(T: type) type {
 }
 
 // It would be nice to instead generate those arrays automatically with a regz patch.
-const BufferControlMmio = microzig.mmio.Mmio(@TypeOf(peripherals.USB_DPRAM.EP0_IN_BUFFER_CONTROL).underlying_type);
+const BufferControlMmio = @FieldType(peri_types.USB_DPRAM, "EP0_IN_BUFFER_CONTROL");
 const buffer_control: *volatile [16]PerEndpoint(BufferControlMmio) = @ptrCast(&peripherals.USB_DPRAM.EP0_IN_BUFFER_CONTROL);
 
-const EndpointControlMmio = microzig.mmio.Mmio(@TypeOf(peripherals.USB_DPRAM.EP1_IN_CONTROL).underlying_type);
+const EndpointControlMmio = @FieldType(peri_types.USB_DPRAM, "EP1_IN_CONTROL");
 const endpoint_control: *volatile [15]PerEndpoint(EndpointControlMmio) = @ptrCast(&peripherals.USB_DPRAM.EP1_IN_CONTROL);
 
 // +++++++++++++++++++++++++++++++++++++++++++++++++
@@ -121,6 +122,7 @@ pub fn Polled(config: Config) type {
                 buffer_control[0].in.modify(.{ .PID_0 = 0 });
 
                 // Clear the status flag (write-one-to-clear)
+                // Candidate for write_default_zero
                 peripherals.USB.SIE_STATUS.modify(.{ .SETUP_REC = 1 });
 
                 // The SVD exposes this buffer as two 32-bit registers.

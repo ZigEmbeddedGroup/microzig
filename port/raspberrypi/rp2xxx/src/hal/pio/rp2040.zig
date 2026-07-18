@@ -81,20 +81,19 @@ pub const Pio = enum(u1) {
     pub fn sm_clear_fifos(self: Pio, sm: common.StateMachine) void {
         const sm_regs = self.get_sm_regs(sm);
         const xor_shiftctrl = hw.xor_alias(&sm_regs.shiftctrl);
-        const mask = @TypeOf(common.PIO0.SM0_SHIFTCTRL).underlying_type{
-            .FJOIN_TX = 1,
-            .FJOIN_RX = 1,
+        // Candidate for write_default_zero
+        inline for (0..2) |_|
+            xor_shiftctrl.write(.{
+                .FJOIN_TX = 1,
+                .FJOIN_RX = 1,
 
-            .AUTOPUSH = 0,
-            .AUTOPULL = 0,
-            .IN_SHIFTDIR = 0,
-            .OUT_SHIFTDIR = 0,
-            .PUSH_THRESH = 0,
-            .PULL_THRESH = 0,
-        };
-
-        xor_shiftctrl.write(mask);
-        xor_shiftctrl.write(mask);
+                .AUTOPUSH = 0,
+                .AUTOPULL = 0,
+                .IN_SHIFTDIR = 0,
+                .OUT_SHIFTDIR = 0,
+                .PUSH_THRESH = 0,
+                .PULL_THRESH = 0,
+            });
     }
 
     pub const sm_fifo_level = PioImpl.sm_fifo_level;
