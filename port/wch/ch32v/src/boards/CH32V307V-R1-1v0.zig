@@ -16,8 +16,12 @@ pub const clock_config: ch32v.clocks.Config = .{
 /// CPU frequency is derived from clock config
 pub const cpu_frequency = clock_config.target_frequency;
 
-/// Board-specific init: set 48 MHz clock, enable SysTick time
+/// Board-specific init: set 48 MHz clocks for the CPU and USBHS, enable SysTick time
 pub fn init() void {
     ch32v.clocks.init(clock_config);
+    ch32v.clocks.enable_usbhs_clock(.{
+        .ref_source_hz = clock_config.hse_frequency.?,
+        .ref_source = .hse,
+    });
     ch32v.time.init();
 }

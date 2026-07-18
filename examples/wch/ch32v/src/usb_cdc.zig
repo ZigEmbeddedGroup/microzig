@@ -31,8 +31,8 @@ comptime {
 const USBController = usb.DeviceController(.{
     .bcd_usb = .v2_00,
     .device_triple = .unspecified,
-    .vendor = .{ .id = 0x2E8A, .str = "MicroZig" },
-    .product = .{ .id = 0x000A, .str = board.product_string },
+    .vendor = .{ .id = 0x1209, .str = "MicroZig" },
+    .product = .{ .id = 0x0001, .str = board.product_string },
     .bcd_device = .v1_00,
     .serial = "someserial",
     .max_supported_packet_size = hal.usb.max_packet_size,
@@ -86,6 +86,7 @@ pub fn main() !void {
                 i += 1;
                 std.log.info("cdc test: {}", .{i});
 
+                // This string is longer than the 64 byte usb-fs packet
                 usb_cdc_write(&drivers.serial, "This is very very very long text sent from ch32 by USB CDC to your device: {}\r\n", .{i});
             }
 
