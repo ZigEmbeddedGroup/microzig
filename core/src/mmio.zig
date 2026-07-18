@@ -2,6 +2,77 @@ const std = @import("std");
 const assert = std.debug.assert;
 const FieldAttributes = std.builtin.Type.Struct.FieldAttributes;
 
+pub fn MmioRaw(T: type) type {
+    @setEvalBranchQuota(10_000);
+
+    if (@typeInfo(T) != .int)
+        @compileError("Expected an integer, got " ++ @typeName(T));
+
+    if (@bitSizeOf(T) != @sizeOf(T) * 8)
+        @compileError(std.fmt.comptimePrint(
+            "Bitsize of {s} ({}) must be 8 times its size ({}).",
+            .{ @typeName(T), @bitSizeOf(T), @sizeOf(T) },
+        ));
+
+    if (!std.math.isPowerOfTwo(@sizeOf(T)))
+        @compileError(std.fmt.comptimePrint(
+            "Size of {s} ({}) must be a power of two.",
+            .{ @typeName(T), @bitSizeOf(T), @sizeOf(T) },
+        ));
+
+    return extern struct {
+        /// Backing integer
+        pub const Int = T;
+        /// Naturally aligned volatile pointer
+        pub const MmioPtr = *align(@sizeOf(Int)) volatile @This();
+
+        /// Unstable API. Use read/write functions instead.
+        raw: Int,
+
+        pub inline fn read_raw(mmio: MmioPtr) Int {
+            return mmio.raw;
+        }
+
+        pub inline fn write_raw(mmio: MmioPtr, val: Int) void {
+            mmio.raw = val;
+        }
+
+        /// First clears the bits in `clear_mask`,
+        /// then sets the bits in `set_mask`.
+        /// Operiation done by read-modify-write.
+        pub inline fn modify_raw(mmio: MmioPtr, clear_mask: Int, set_mask: Int) void {
+            var val = mmio.read_raw();
+            val &= ~clear_mask;
+            val |= set_mask;
+            mmio.write_raw(val);
+        }
+
+        /// Sets the register's bits contained in `set_mask`.
+        /// Operiation done by read-modify-write.
+        pub inline fn set_raw(mmio: MmioPtr, set_mask: Int) void {
+            var val = mmio.read_raw();
+            val |= set_mask;
+            mmio.write_raw(val);
+        }
+
+        /// Clears the register's bits contained in  `clear_mask`,
+        /// Operiation done by read-modify-write.
+        pub inline fn clear_raw(mmio: MmioPtr, clear_mask: Int) void {
+            var val = mmio.read_raw();
+            val &= ~clear_mask;
+            mmio.write_raw(val);
+        }
+
+        /// Toggles the register's bits contained in `toggle_mask`.
+        /// Operiation done by read-modify-write.
+        pub inline fn toggle_raw(mmio: MmioPtr, toggle_mask: Int) void {
+            var val = mmio.read_raw();
+            val ^= toggle_mask;
+            mmio.write_raw(val);
+        }
+    };
+}
+
 pub fn Mmio(T: type) type {
     @setEvalBranchQuota(10_000);
 
@@ -29,8 +100,10 @@ pub fn Mmio(T: type) type {
         pub const Fields = T;
         /// Backing integer
         pub const Int = @Int(.unsigned, @bitSizeOf(Fields));
+        /// MmioRaw of the backing integer
+        pub const Raw = MmioRaw(Int);
         /// Naturally aligned volatile pointer
-        pub const MmioPtr = *align(@sizeOf(Fields)) volatile @This();
+        pub const MmioPtr = *align(@sizeOf(Int)) volatile @This();
         /// Like `Fields`, but all fields are optional and default to `null`
         pub const FieldsOpt = @Struct(
             .auto,
@@ -72,14 +145,14 @@ pub fn Mmio(T: type) type {
         );
 
         /// Unstable API. Use read/write functions instead.
-        raw: Int,
+        raw: Raw,
 
         pub inline fn read_raw(mmio: MmioPtr) Int {
-            return mmio.raw;
+            return mmio.raw.read_raw();
         }
 
         pub inline fn write_raw(mmio: MmioPtr, val: Int) void {
-            mmio.raw = val;
+            mmio.raw.write_raw(val);
         }
 
         pub inline fn read(mmio: MmioPtr) Fields {
@@ -88,6 +161,14 @@ pub fn Mmio(T: type) type {
 
         pub inline fn write(mmio: MmioPtr, val: Fields) void {
             mmio.write_raw(@bitCast(val));
+        }
+
+        /// For each `.Field = value` entry of `fields`:
+        /// Set field `Field` of this register to `value`.
+        /// All unspecified fields are initialized to zero.
+        /// Particularily useful for registers with atomic set/clear/xor
+        pub inline fn write_default_zero(mmio: MmioPtr, fields: FieldsZero) void {
+            mmio.write(@bitCast(fields));
         }
 
         /// Set field `field_name` of this register to `value`.
@@ -118,42 +199,25 @@ pub fn Mmio(T: type) type {
         /// then sets the bits in `set_mask`.
         /// Operiation done by read-modify-write.
         pub inline fn modify_raw(mmio: MmioPtr, clear_mask: Int, set_mask: Int) void {
-            var val = mmio.read_raw();
-            val &= ~clear_mask;
-            val |= set_mask;
-            mmio.write_raw(val);
+            mmio.raw.modify_raw(clear_mask, set_mask);
         }
 
         /// Sets the register's bits contained in `set_mask`.
         /// Operiation done by read-modify-write.
         pub inline fn set_raw(mmio: MmioPtr, set_mask: Int) void {
-            var val = mmio.read_raw();
-            val |= set_mask;
-            mmio.write_raw(val);
+            mmio.raw.set_raw(set_mask);
         }
 
         /// Clears the register's bits contained in  `clear_mask`,
         /// Operiation done by read-modify-write.
         pub inline fn clear_raw(mmio: MmioPtr, clear_mask: Int) void {
-            var val = mmio.read_raw();
-            val &= ~clear_mask;
-            mmio.write_raw(val);
+            mmio.raw.clear_raw(clear_mask);
         }
 
         /// Toggles the register's bits contained in `toggle_mask`.
         /// Operiation done by read-modify-write.
         pub inline fn toggle_raw(mmio: MmioPtr, toggle_mask: Int) void {
-            var val = mmio.read_raw();
-            val ^= toggle_mask;
-            mmio.write_raw(val);
-        }
-
-        /// For each `.Field = value` entry of `fields`:
-        /// Set field `Field` of this register to `value`.
-        /// All unspecified fields are initialized to zero.
-        /// Particularily useful for registers with atomic set/clear/xor
-        pub inline fn write_default_zero(mmio: MmioPtr, fields: FieldsZero) void {
-            mmio.write(@bitCast(fields));
+            mmio.raw.toggle_raw(toggle_mask);
         }
     };
 }

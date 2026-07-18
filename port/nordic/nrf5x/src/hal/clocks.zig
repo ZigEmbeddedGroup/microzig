@@ -63,16 +63,8 @@ pub const lfclk = struct {
     };
 
     pub fn calibrate() void {
-        switch (version) {
-            .nrf51 => {
-                CLOCK.TASKS_CAL = 1;
-                while (CLOCK.EVENTS_DONE == 0) {}
-            },
-            .nrf52 => {
-                CLOCK.TASKS_CAL.write_raw(1);
-                while (CLOCK.EVENTS_DONE.read_raw() == 0) {}
-            },
-        }
+        CLOCK.TASKS_CAL.write_raw(1);
+        while (CLOCK.EVENTS_DONE.read_raw() == 0) {}
     }
 
     pub fn set_source(comptime source: Source) void {
@@ -131,26 +123,11 @@ pub const lfclk = struct {
     }
 
     pub fn start() void {
-        switch (version) {
-            .nrf51 => {
-                CLOCK.TASKS_LFCLKSTART = 1;
-                while (CLOCK.EVENTS_LFCLKSTARTED == 0) {}
-            },
-            .nrf52 => {
-                CLOCK.TASKS_LFCLKSTART.write_raw(1);
-                while (CLOCK.EVENTS_LFCLKSTARTED.read_raw() == 0) {}
-            },
-        }
+        CLOCK.TASKS_LFCLKSTART.write_raw(1);
+        while (CLOCK.EVENTS_LFCLKSTARTED.read_raw() == 0) {}
     }
 
     pub fn stop() void {
-        switch (version) {
-            .nrf51 => {
-                CLOCK.TASKS_LFCLKSTOP = 1;
-            },
-            .nrf52 => {
-                CLOCK.TASKS_LFCLKSTOP.write_raw(1);
-            },
-        }
+        CLOCK.TASKS_LFCLKSTOP.write_raw(1);
     }
 };
