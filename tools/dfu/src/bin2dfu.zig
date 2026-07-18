@@ -38,15 +38,11 @@ fn find_arg(args: []const []const u8, key: []const u8) !?[]const u8 {
 
 var input_reader_buf: [4096]u8 = undefined;
 
-pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-
-    const args = try std.process.argsAlloc(gpa.allocator());
-    defer std.process.argsFree(gpa.allocator(), args);
-
+pub fn main(init: std.process.Init) !void {
+    const io = init.io;
+    const args = try init.minimal.args.toSlice(init.arena.allocator());
     for (args) |arg| if (std.mem.eql(u8, "--help", arg)) {
-        var writer = std.fs.File.stdout().writer(&.{});
+        var writer = std.Io.File.stdout().writer(io, &.{});
         try writer.interface.writeAll(usage);
         return;
     };
@@ -84,16 +80,15 @@ pub fn main() !void {
         };
     }
 
-    const bin_file = try std.fs.cwd().openFile(bin_path, .{});
-    defer bin_file.close();
+    const bin_file = try std.Io.Dir.cwd().openFile(io, bin_path, .{});
+    defer bin_file.close(io);
 
-    var bin_reader = bin_file.reader(&input_reader_buf);
-
-    const dest_file = try std.fs.cwd().createFile(output_path, .{});
-    defer dest_file.close();
+    var bin_reader = bin_file.reader(io, &input_reader_buf);
+    const dest_file = try std.Io.Dir.cwd().createFile(io, output_path, .{});
+    defer dest_file.close(io);
 
     // Unbuffered because dfu uses a hashed writer, which suggests
     // using an unbuffered underlying writer
-    var writer = dest_file.writer(&.{});
+    var writer = dest_file.writer(io, &.{});
     try dfu.from_bin(&bin_reader.interface, &writer.interface, opts);
 }

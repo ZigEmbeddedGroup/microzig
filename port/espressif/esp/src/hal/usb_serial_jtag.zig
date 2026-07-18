@@ -1,4 +1,5 @@
 const std = @import("std");
+const assert = std.debug.assert;
 const microzig = @import("microzig");
 const USB_SERIAL_JTAG = microzig.chip.peripherals.USB_DEVICE;
 
@@ -23,16 +24,47 @@ pub fn tx_fifo_write(byte: u8) void {
 /// USB Serial JTAG logger. To use this, add `.logFn = logger.log` to your
 /// `microzig_options`.
 pub const logger = struct {
-    pub const Error = error{
-        Timeout,
-    };
-    pub const Writer = std.io.GenericWriter(void, Error, generic_writer_fn);
-
-    const writer: Writer = .{ .context = {} };
-
     var timed_out: bool = false;
+    var buffer: [256]u8 = undefined;
+    var writer = std.Io.Writer{
+        .buffer = &buffer,
+        .vtable = &.{
+            .drain = logger.drain,
+        },
+    };
 
-    fn generic_writer_fn(_: void, buffer: []const u8) Error!usize {
+    fn drain(w: *std.Io.Writer, data: []const []const u8, splat: usize) std.Io.Writer.Error!usize {
+        // bytes from buffer are not included in count.
+        w.end -= write_blocking(w.buffer[0..w.end]) catch |err| switch (err) {
+            error.Timeout => {
+                logger.timed_out = true;
+                return error.WriteFailed;
+            },
+        };
+        assert(w.end == 0);
+
+        var n: usize = 0;
+        for (0..data.len - 1) |i| {
+            n += write_blocking(data[i]) catch |err| switch (err) {
+                error.Timeout => {
+                    logger.timed_out = true;
+                    return error.WriteFailed;
+                },
+            };
+        }
+
+        for (0..splat) |_|
+            n += write_blocking(data[data.len - 1]) catch |err| switch (err) {
+                error.Timeout => {
+                    logger.timed_out = true;
+                    return error.WriteFailed;
+                },
+            };
+
+        return n;
+    }
+
+    fn write_blocking(data: []const u8) !usize {
         const cs = microzig.interrupt.enter_critical_section();
         defer cs.leave();
 
@@ -46,7 +78,7 @@ pub const logger = struct {
             timed_out = false;
         }
 
-        for (buffer) |byte| {
+        for (data) |byte| {
             if (tx_fifo_full()) {
                 tx_fifo_flush();
                 try wait_for_flush();
@@ -57,7 +89,7 @@ pub const logger = struct {
 
         tx_fifo_flush();
 
-        return buffer.len;
+        return data.len;
     }
 
     fn wait_for_flush() error{Timeout}!void {
@@ -84,7 +116,6 @@ pub const logger = struct {
         };
 
         // TODO: add timestamp to log message
-
         writer.print(prefix ++ format ++ "\r\n", args) catch {};
     }
 };

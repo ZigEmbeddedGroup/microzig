@@ -3,6 +3,9 @@
 ## Supported Chips
 
 - ATtiny85
+- ATtiny84
+- ATtiny1634
+- ATtiny1616
 
 ## FYI: LLVM issues
 

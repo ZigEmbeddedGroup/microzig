@@ -58,34 +58,26 @@ pub const ExternalInterrupt = blk: {
     //       not the offset into the whole vector table.
 
     const vector_info = @typeInfo(Interrupt).@"enum";
-    const vector_fields = vector_info.fields;
     var result_len: usize = 0;
 
-    for (vector_fields) |field| {
-        if (field.value >= 0) result_len += 1;
+    for (vector_info.field_values) |field_value| {
+        if (field_value >= 0) result_len += 1;
     }
 
     if (result_len == 0) break :blk enum {};
 
-    var fields: [result_len]std.builtin.Type.EnumField = undefined;
-    var field_index: usize = 0;
-
+    var field_names: [result_len][]const u8 = undefined;
+    var field_values: [result_len]u8 = undefined;
+    var i: usize = 0;
     for (microzig.chip.interrupts) |intr| {
         if (intr.index >= 0) {
-            fields[field_index] = .{
-                .name = intr.name,
-                .value = intr.index,
-            };
-            field_index += 1;
+            field_names[i] = intr.name;
+            field_values[i] = intr.index;
+            i += 1;
         }
     }
 
-    break :blk @Type(.{ .@"enum" = .{
-        .tag_type = u8,
-        .fields = &fields,
-        .decls = &.{},
-        .is_exhaustive = true,
-    } });
+    break :blk @Enum(u8, .exhaustive, &field_names, &field_values);
 };
 
 /// Machine exceptions.
@@ -94,34 +86,25 @@ pub const Exception = blk: {
     //       vector table, not the negative offset from VTOR.
 
     const vector_info = @typeInfo(Interrupt).@"enum";
-    const vector_fields = vector_info.fields;
     var result_len: usize = 0;
 
-    for (vector_fields) |field| {
-        if (field.value < 0) result_len += 1;
+    for (vector_info.field_values) |field_value| {
+        if (field_value < 0)
+            result_len += 1;
     }
 
-    if (result_len == 0) break :blk enum {};
-
-    var fields: [result_len]std.builtin.Type.EnumField = undefined;
-    var field_index: usize = 0;
-
+    var field_names: [result_len][]const u8 = undefined;
+    var field_values: [result_len]u4 = undefined;
+    var i: usize = 0;
     for (microzig.chip.interrupts) |intr| {
         if (intr.index < 0) {
-            fields[field_index] = .{
-                .name = intr.name,
-                .value = 16 + intr.index, // Cortex-M exceptions are mapped to vector table slots 0 - 15
-            };
-            field_index += 1;
+            field_names[i] = intr.name;
+            field_values[i] = 16 + intr.index; // Cortex-M exceptions are mapped to vector table slots 0 - 15
+            i += 1;
         }
     }
 
-    break :blk @Type(.{ .@"enum" = .{
-        .tag_type = u4,
-        .fields = &fields,
-        .decls = &.{},
-        .is_exhaustive = true,
-    } });
+    break :blk @Enum(u4, .exhaustive, &field_names, &field_values);
 };
 
 pub const interrupt = struct {
@@ -800,20 +783,20 @@ pub const startup_logic = struct {
         };
 
         // Apply interrupts
-        for (@typeInfo(@TypeOf(microzig.options.interrupts)).@"struct".fields) |field| {
-            const maybe_handler = @field(microzig.options.interrupts, field.name);
-            const maybe_default = get_hal_default_handler(field.name);
+        for (@typeInfo(@TypeOf(microzig.options.interrupts)).@"struct".field_names) |field_name| {
+            const maybe_handler = @field(microzig.options.interrupts, field_name);
+            const maybe_default = get_hal_default_handler(field_name);
 
-            @field(tmp, field.name) = blk: {
+            @field(tmp, field_name) = blk: {
                 if (maybe_handler) |handler| {
                     if (!microzig.options.overwrite_hal_interrupts and maybe_default != null)
                         @compileError(std.fmt.comptimePrint(
                             \\Interrupt {s} is used internally by the HAL; overriding it may cause malfunction.
                             \\If you are sure of what you are doing, set "overwrite_hal_interrupts" to true in: "microzig_options".
                             \\
-                        , .{field.name}));
+                        , .{field_name}));
                     break :blk handler;
-                } else break :blk maybe_default orelse default_exception_handler(field.name);
+                } else break :blk maybe_default orelse default_exception_handler(field_name);
             };
         }
 

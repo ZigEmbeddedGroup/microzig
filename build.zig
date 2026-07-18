@@ -32,6 +32,7 @@ const port_list: []const struct {
     .{ .name = "stm32", .dep_name = "port/stmicro/stm32" },
     .{ .name = "ch32v", .dep_name = "port/wch/ch32v" },
     .{ .name = "msp430", .dep_name = "port/texasinstruments/msp430" },
+    .{ .name = "mspm0", .dep_name = "port/texasinstruments/mspm0" },
     .{ .name = "tm4c", .dep_name = "port/texasinstruments/tm4c" },
 };
 
@@ -55,15 +56,6 @@ pub fn build(b: *Build) void {
     );
 
     b.installArtifact(generate_linker_script_exe);
-
-    const boxzer_dep = b.dependency("boxzer", .{});
-    const boxzer_exe = boxzer_dep.artifact("boxzer");
-    const boxzer_run = b.addRunArtifact(boxzer_exe);
-    if (b.args) |args|
-        boxzer_run.addArgs(args);
-
-    const package_step = b.step("package", "Package monorepo using boxzer");
-    package_step.dependOn(&boxzer_run.step);
 }
 
 pub const PortSelect = struct {
@@ -79,52 +71,28 @@ pub const PortSelect = struct {
     stm32: bool = false,
     ch32v: bool = false,
     msp430: bool = false,
+    mspm0: bool = false,
     tm4c: bool = false,
 
     pub const all: PortSelect = blk: {
         var ret: PortSelect = undefined;
-        for (@typeInfo(PortSelect).@"struct".fields) |field| {
-            @field(ret, field.name) = true;
+        for (@typeInfo(PortSelect).@"struct".field_names) |field_name| {
+            @field(ret, field_name) = true;
         }
 
         break :blk ret;
     };
 
     comptime {
+        const info = @typeInfo(PortSelect).@"struct";
         // assumes fields are in the same order as the port list
-        for (port_list, @typeInfo(PortSelect).@"struct".fields) |port_entry, field| {
-            assert(std.mem.eql(u8, port_entry.name, field.name));
-            const default_value_ptr: *const bool = @ptrCast(field.default_value_ptr);
+        for (port_list, info.field_names, info.field_attrs) |port_entry, field_name, field_attr| {
+            assert(std.mem.eql(u8, port_entry.name, field_name));
+            const default_value_ptr: *const bool = @ptrCast(field_attr.default_value_ptr);
             assert(false == default_value_ptr.*);
         }
     }
 };
-
-// Don't know if this is required but it doesn't hurt either.
-// Helps in case there are multiple microzig instances including the same ports (eg: examples).
-pub const PortCache = blk: {
-    var fields: []const std.builtin.Type.StructField = &.{};
-    for (port_list) |port| {
-        const typ = ?(custom_lazy_import(port.dep_name) orelse struct {});
-        fields = fields ++ [_]std.builtin.Type.StructField{.{
-            .name = port.name,
-            .type = typ,
-            .default_value_ptr = @as(*const anyopaque, @ptrCast(&@as(typ, null))),
-            .is_comptime = false,
-            .alignment = @alignOf(typ),
-        }};
-    }
-    break :blk @Type(.{
-        .@"struct" = .{
-            .layout = .auto,
-            .fields = fields,
-            .decls = &.{},
-            .is_tuple = false,
-        },
-    });
-};
-
-var port_cache: PortCache = .{};
 
 /// The MicroZig build system.
 ///
@@ -165,29 +133,37 @@ pub fn MicroBuild(port_select: PortSelect) type {
         const Self = @This();
 
         const SelectedPorts = blk: {
-            var fields: []const std.builtin.Type.StructField = &.{};
+            const count = count_blk: {
+                var count: usize = 0;
+                for (port_list) |port| {
+                    if (@field(port_select, port.name)) {
+                        count += 1;
+                    }
+                }
 
-            for (port_list) |port| {
-                if (@field(port_select, port.name)) {
-                    const typ = custom_lazy_import(port.dep_name) orelse struct {};
-                    fields = fields ++ [_]std.builtin.Type.StructField{.{
-                        .name = port.name,
-                        .type = typ,
-                        .default_value_ptr = null,
-                        .is_comptime = false,
-                        .alignment = @alignOf(typ),
-                    }};
+                break :count_blk count;
+            };
+
+            var field_names: [count][]const u8 = undefined;
+            var field_types: [count]type = undefined;
+            var field_attrs: [count]std.builtin.Type.Struct.FieldAttributes = undefined;
+
+            if (count > 0) {
+                var i: usize = 0;
+                for (port_list) |port| {
+                    if (@field(port_select, port.name)) {
+                        const typ = custom_lazy_import(port.dep_name) orelse struct {};
+
+                        field_names[i] = port.name;
+                        field_types[i] = typ;
+                        field_attrs[i] = .{};
+
+                        i += 1;
+                    }
                 }
             }
 
-            break :blk @Type(.{
-                .@"struct" = .{
-                    .layout = .auto,
-                    .fields = fields,
-                    .decls = &.{},
-                    .is_tuple = false,
-                },
-            });
+            break :blk @Struct(.auto, null, &field_names, &field_types, &field_attrs);
         };
 
         const InitReturnType = blk: {
@@ -221,12 +197,8 @@ pub fn MicroBuild(port_select: PortSelect) type {
             var ports: SelectedPorts = undefined;
             inline for (port_list) |port| {
                 if (@field(port_select, port.name)) {
-                    @field(ports, port.name) = if (@field(port_cache, port.name)) |cached_port| cached_port else blk: {
-                        const port_dep = dep.builder.lazyDependency(port.dep_name, .{}).?;
-                        const instance = custom_lazy_import(port.dep_name).?.init(port_dep);
-                        @field(port_cache, port.name) = instance;
-                        break :blk instance;
-                    };
+                    const port_dep = dep.builder.lazyDependency(port.dep_name, .{}) orelse return null;
+                    @field(ports, port.name) = custom_lazy_import(port.dep_name).?.init(port_dep) orelse return null;
                 }
             }
 
@@ -527,6 +499,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                     .memory_regions = target.chip.memory_regions,
                     .generate = linker_script_options.generate,
                     .ram_image = target.ram_image,
+                    .assert_microzig_main = linker_script_options.assert_microzig_main,
                 };
 
                 const args_str = std.json.Stringify.valueAlloc(
@@ -632,10 +605,10 @@ pub fn MicroBuild(port_select: PortSelect) type {
                     result.value_ptr.* = switch (resolved_format) {
                         .elf => elf_file,
 
-                        .bin => blk: {
+                        .binary => blk: {
                             const objcopy = fw.mb.builder.addObjCopy(elf_file, .{
                                 .basename = basename,
-                                .format = .bin,
+                                .format = .binary,
                             });
 
                             break :blk objcopy.getOutput();
@@ -756,6 +729,16 @@ pub fn MicroBuild(port_select: PortSelect) type {
                     .name = "avr25",
                     .root_source_file = mb.core_dep.namedLazyPath("cpu_avr25"),
                 };
+            } else if (std.mem.eql(u8, target.cpu.model.name, "avr35")) {
+                return .{
+                    .name = "avr35",
+                    .root_source_file = mb.core_dep.namedLazyPath("cpu_avr5"),
+                };
+            } else if (std.mem.eql(u8, target.cpu.model.name, "avrxmega3")) {
+                return .{
+                    .name = "avrxmega3",
+                    .root_source_file = mb.core_dep.namedLazyPath("cpu_avr5"),
+                };
             } else if (std.mem.startsWith(u8, target.cpu.model.name, "cortex_m")) {
                 return .{
                     .name = target.cpu.model.name,
@@ -805,9 +788,9 @@ pub inline fn custom_lazy_import(
     const deps = build_runner.dependencies;
     const pkg_hash = custom_find_import_pkg_hash_or_fatal(dep_name);
 
-    inline for (@typeInfo(deps.packages).@"struct".decls) |decl| {
-        if (comptime std.mem.eql(u8, decl.name, pkg_hash)) {
-            const pkg = @field(deps.packages, decl.name);
+    inline for (@typeInfo(deps.packages).@"struct".decl_names) |decl_name| {
+        if (comptime std.mem.eql(u8, decl_name, pkg_hash)) {
+            const pkg = @field(deps.packages, decl_name);
             const available = !@hasDecl(pkg, "available") or pkg.available;
             if (!available) {
                 return null;
@@ -827,8 +810,8 @@ inline fn custom_find_import_pkg_hash_or_fatal(comptime dep_name: []const u8) []
     const build_runner = @import("root");
     const deps = build_runner.dependencies;
 
-    const pkg_deps = comptime for (@typeInfo(deps.packages).@"struct".decls) |decl| {
-        const pkg_hash = decl.name;
+    const pkg_deps = comptime for (@typeInfo(deps.packages).@"struct".decl_names) |decl_name| {
+        const pkg_hash = decl_name;
         const pkg = @field(deps.packages, pkg_hash);
         if (@hasDecl(pkg, "build_zig") and pkg.build_zig == @This()) break pkg.deps;
     } else deps.root_deps;

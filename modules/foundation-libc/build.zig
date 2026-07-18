@@ -1,17 +1,18 @@
 const std = @import("std");
 
 pub fn build(b: *std.Build) void {
-    const validation_step = b.step("validate", "Runs the test suite and validates everything. Automatically triggered in Debug builds.");
-
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
     const single_threaded = b.option(bool, "single_threaded", "Create a single-threaded libc implementation (default: false)") orelse false;
 
-    // Run validation in debug builds for convenience:
-    if (optimize == .Debug) {
-        b.getInstallStep().dependOn(validation_step);
-    }
+    const translate_c = b.addTranslateC(.{
+        .root_source_file = b.path("include/foundation/libc.h"),
+        .target = target,
+        .optimize = optimize,
+        .link_libc = false,
+    });
+    translate_c.addIncludePath(b.path("include"));
 
     const libc = b.addLibrary(.{
         .name = "foundation",
@@ -20,10 +21,13 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
             .root_source_file = b.path("src/libc.zig"),
             .single_threaded = single_threaded,
+            .imports = &.{
+                .{ .name = "h", .module = translate_c.createModule() },
+            },
         }),
     });
 
-    libc.addIncludePath(b.path("include"));
+    libc.root_module.addIncludePath(b.path("include"));
     for (header_files) |header_name|
         libc.installHeader(
             b.path(b.fmt("include/{s}", .{header_name})),

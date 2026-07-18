@@ -12,25 +12,38 @@ pub fn build(b: *std.Build) void {
 
     const upstream = b.dependency("lwip", .{});
 
-    const lwip = b.addLibrary(.{
-        .name = "lwip",
-        .root_module = b.createModule(.{
-            .optimize = optimize,
-            .target = target,
-            .link_libc = false,
-        }),
-        .linkage = .static,
+    const translate_c = b.addTranslateC(.{
+        .target = target,
+        .optimize = optimize,
+        .root_source_file = b.path("include/lwip.h"),
+        .link_libc = false,
+    });
+    translate_c.addIncludePath(upstream.path("src/include"));
+
+    const lwip_module = b.addModule("lwip", .{
+        .optimize = optimize,
+        .target = target,
+        .root_source_file = b.path("src/root.zig"),
+        .imports = &.{
+            .{ .name = "c", .module = translate_c.createModule() },
+        },
     });
 
-    lwip.addCSourceFiles(.{
+    const lwip = b.addLibrary(.{
+        .name = "lwip",
+        .root_module = lwip_module,
+    });
+
+    lwip.root_module.addCSourceFiles(.{
         .root = upstream.path("src"),
         .files = &files,
         .flags = &flags,
     });
-    lwip.addIncludePath(upstream.path("src/include"));
+    lwip.root_module.addIncludePath(upstream.path("src/include"));
 
     if (maybe_include_dir) |include_dir| {
-        lwip.addIncludePath(include_dir);
+        translate_c.addIncludePath(include_dir);
+        lwip.root_module.addIncludePath(include_dir);
         lwip.installHeadersDirectory(include_dir, "", .{});
     }
 

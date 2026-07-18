@@ -3,7 +3,7 @@
     // Note: This should be changed if you fork microzig!
     .fingerprint = 0x605a83a849186d0f,
     .version = "0.15.2",
-    .minimum_zig_version = "0.15.1",
+    .minimum_zig_version = "0.17.0-dev.1158+1d1193aa7",
     .dependencies = .{
         .@"build-internals" = .{ .path = "build-internals" },
         .core = .{ .path = "core" },
@@ -15,10 +15,11 @@
         .@"tools/regz" = .{ .path = "tools/regz" },
         .@"tools/uf2" = .{ .path = "tools/uf2" },
         .@"tools/dfu" = .{ .path = "tools/dfu" },
+        .@"tools/flags" = .{ .path = "tools/flags" },
 
         // modules
         .@"modules/foundation-libc" = .{ .path = "modules/foundation-libc" },
-        .@"modules/freertos" = .{ .path = "modules/freertos" },
+        //.@"modules/freertos" = .{ .path = "modules/freertos" },
         .@"modules/lwip" = .{ .path = "modules/lwip" },
         .@"modules/network" = .{ .path = "modules/network" },
         .@"modules/riscv32-common" = .{ .path = "modules/riscv32-common" },
@@ -39,14 +40,9 @@
         .@"port/raspberrypi/rp2xxx" = .{ .path = "port/raspberrypi/rp2xxx", .lazy = true },
         .@"port/stmicro/stm32" = .{ .path = "port/stmicro/stm32", .lazy = true },
         .@"port/texasinstruments/msp430" = .{ .path = "port/texasinstruments/msp430", .lazy = true },
+        .@"port/texasinstruments/mspm0" = .{ .path = "port/texasinstruments/mspm0", .lazy = true },
         .@"port/texasinstruments/tm4c" = .{ .path = "port/texasinstruments/tm4c", .lazy = true },
         .@"port/wch/ch32v" = .{ .path = "port/wch/ch32v", .lazy = true },
-
-        // used for creating package tarballs
-        .boxzer = .{
-            .url = "git+https://codeberg.org/mattnite/boxzer.git#4021540de4b07c11102dd4d46383ce0066f838bb",
-            .hash = "boxzer-0.1.0--ed-MPrnAAAQAwXnfMJuSkgAsw4FseHEHKcn7OMKXGZS",
-        },
     },
     .paths = .{
         "README.md",
@@ -55,15 +51,6 @@
         "LICENSE",
         "design",
         "tools/generate_linker_script.zig",
-        "tools",
-        "port",
-        "examples",
-        "build-internals",
-        "core",
-        "drivers",
-        "modules",
-    },
-    .boxzer_ignore_paths = .{
         "tools",
         "port",
         "examples",

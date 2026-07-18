@@ -1,0 +1,22 @@
+.{
+    .{ .add_enum_and_apply = .{
+        .parent = "types.peripherals.uart0",
+        .@"enum" = .{
+            .name = "ClkdivRatio",
+            .bitsize = 3,
+            .fields = .{
+                .{ .name = "1", .value = 0 },
+                .{ .name = "2", .value = 1 },
+                .{ .name = "3", .value = 2 },
+                .{ .name = "4", .value = 3 },
+                .{ .name = "5", .value = 4 },
+                .{ .name = "6", .value = 5 },
+                .{ .name = "7", .value = 6 },
+                .{ .name = "8", .value = 7 },
+            },
+        },
+        .apply_to = .{
+            "types.peripherals.uart0.UART0_CLKDIV.RATIO",
+        },
+    } },
+}

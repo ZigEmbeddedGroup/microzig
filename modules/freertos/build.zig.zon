@@ -2,7 +2,6 @@
     .name = .freertos,
     .version = "0.0.0",
     .fingerprint = 0xb81d2ef66274e984,
-    .minimum_zig_version = "0.15.1",
     .dependencies = .{
         .freertos_kernel = .{
             .url = "git+https://github.com/FreeRTOS/FreeRTOS-Kernel.git#52822473466cfa5cdd2146d02dae5f924b8552e4",
@@ -18,6 +17,10 @@
         },
         .foundationlibc = .{
             .path = "../foundation-libc/",
+        },
+        .translate_c = .{
+            .url = "git+https://codeberg.org/ziglang/translate-c#1b33d1d273f7035a16c45457efdf2afda7cf0925",
+            .hash = "translate_c-0.0.0-Q_BUWrI7BwCBn0jcYDTs1UP047kxSYoFpV6vD6Vuy9Vo",
         },
     },
     .paths = .{ "build.zig", "build.zig.zon", "src", "config" },

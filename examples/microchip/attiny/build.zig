@@ -13,7 +13,14 @@ pub fn build(b: *std.Build) void {
     const mb = MicroBuild.init(b, mz_dep) orelse return;
 
     const available_examples = [_]Example{
+        .{ .target = mb.ports.attiny.boards.digispark, .name = "digispark_blinky", .file = "src/blinky.zig" },
         .{ .target = mb.ports.attiny.boards.adafruit.trinket, .name = "trinket_blinky", .file = "src/blinky.zig" },
+        .{ .target = mb.ports.attiny.boards.adafruit.gemma, .name = "gemma_blinky", .file = "src/blinky.zig" },
+        .{ .target = mb.ports.attiny.chips.attiny85, .name = "attiny85_blinky", .file = "src/blinky.zig" },
+        .{ .target = mb.ports.attiny.chips.attiny85, .name = "attiny85_blinky_interrupt", .file = "src/blinky_interrupt.zig" },
+        .{ .target = mb.ports.attiny.chips.attiny84, .name = "attiny84_blinky", .file = "src/blinky84.zig" },
+        .{ .target = mb.ports.attiny.chips.attiny1634, .name = "attiny1634_pwm_adc", .file = "src/attiny1634_pwm_adc.zig" },
+        .{ .target = mb.ports.attiny.chips.attiny1616, .name = "attiny1616_tca_rtc", .file = "src/attiny1616_tca_rtc.zig" },
     };
 
     for (available_examples) |example| {

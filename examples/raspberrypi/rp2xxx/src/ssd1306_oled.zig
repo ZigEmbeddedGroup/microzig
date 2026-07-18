@@ -7,8 +7,8 @@ const i2c = rp2xxx.i2c;
 const font8x8 = @import("font8x8");
 
 const i2c0 = i2c.instance.num(0);
-const empty_row: []const u8 = " " ** 16;
-const four_rows = empty_row ** 4;
+const empty_row: [16]u8 = @splat(' ');
+const four_rows: [16 * 4]u8 = @splat(' ');
 
 pub const panic = microzig.panic;
 
@@ -34,7 +34,7 @@ pub fn main() void {
 
     rp2xxx.i2c.I2C.apply(i2c0, .{ .baud_rate = 400_000, .clock_config = rp2xxx.clock_config });
 
-    const i2c_dd = rp2xxx.drivers.I2C_Datagram_Device.init(i2c0, @enumFromInt(0x3C), null);
+    const i2c_dd = rp2xxx.drivers.I2C_DatagramDevice.init(i2c0, @enumFromInt(0x3C), null);
     const lcd = microzig.drivers.display.ssd1306.init(.i2c, i2c_dd, null) catch unreachable;
 
     const print_val = four_rows ++ "    WELCOME";
@@ -68,7 +68,7 @@ fn center_to_screen(buf: []u8, str: []u8) []u8 {
     const padding = @divTrunc(ldc_row_len - str.len, 2);
 
     // Copy the initial four rows
-    @memcpy(buf[0..four_rows_len], four_rows);
+    @memcpy(buf[0..four_rows_len], &four_rows);
 
     // Add left padding
     const left_pad_start = four_rows_len;

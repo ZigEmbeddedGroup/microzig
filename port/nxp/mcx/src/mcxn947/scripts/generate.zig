@@ -50,7 +50,7 @@ pub fn print_fields(comptime ty: []const u8, comptime suffix_: ?[]const u8) []Fi
     }
     const fields = fields_[0..len];
     var last_i = fields[0].i;
-    const spaces = " " ** 20;
+    const spaces: [20]u8 = @splat(' ');
     for (fields) |field| {
         if (last_i != field.i) {
             last_i = field.i;
@@ -71,9 +71,10 @@ fn get_field_offset(comptime T: type, comptime field_name: []const u8) u8 {
     std.debug.assert(std.meta.fieldIndex(T, field_name) != null);
 
     var offset: u8 = 0;
-    inline for (std.meta.fields(T)) |field| {
-        if (std.mem.eql(u8, field.name, field_name)) return offset;
-        offset += @bitSizeOf(field.type);
+    const info = @typeInfo(T).@"struct";
+    inline for (info.field_names, info.field_types) |other_name, other_type| {
+        if (std.mem.eql(u8, other_name, field_name)) return offset;
+        offset += @bitSizeOf(other_type);
     }
     unreachable;
 }

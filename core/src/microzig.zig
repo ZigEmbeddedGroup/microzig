@@ -37,14 +37,10 @@ pub const Allocator = @import("allocator.zig");
 pub const panic = std.debug.FullPanic(struct {
     pub fn panic_fn(message: []const u8, first_trace_address: ?usize) noreturn {
         std.log.err("panic: {s}", .{message});
+        _ = first_trace_address;
 
-        var frame_index: usize = 0;
-        if (@errorReturnTrace()) |trace| frame_index = utilities.dump_stack_trace(trace);
-
-        var iter = std.debug.StackIterator.init(first_trace_address orelse @returnAddress(), null);
-        while (iter.next()) |address| : (frame_index += 1) {
-            std.log.err("{d: >3}: 0x{X:0>8}", .{ frame_index, address });
-        }
+        // TODO: we no longer have StackIterator available to us, so we need to
+        // create our own.
 
         // Attach a breakpoint. this might trigger another panic internally, so
         // only do that if requested.
@@ -158,10 +154,11 @@ fn microzig_main() callconv(.c) noreturn {
             if (!options.simple_panic_if_main_errors) {
                 const max_error_size = comptime blk: {
                     var max: usize = 0;
-                    const err_type = @typeInfo(return_type).error_union.error_set;
-                    if (@typeInfo(err_type).error_set) |err_set| {
-                        for (err_set) |current_err| {
-                            max = @max(max, current_err.name.len);
+                    const error_set = @typeInfo(return_type).error_union.error_set;
+
+                    if (@typeInfo(error_set).error_set.error_names) |error_names| {
+                        for (error_names) |error_name| {
+                            max = @max(max, error_name.len);
                         }
                     }
                     break :blk max;

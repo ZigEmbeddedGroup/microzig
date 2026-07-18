@@ -43,7 +43,7 @@ pub fn main() !void {
 
     try camera.set_refresh_rate(0b101);
 
-    const i2c_dd = rp2xxx.drivers.I2C_Datagram_Device.init(i2c0, @enumFromInt(0x3C), null);
+    const i2c_dd = rp2xxx.drivers.I2C_DatagramDevice.init(i2c0, @enumFromInt(0x3C), null);
     const lcd = try display.ssd1306.init(.i2c, i2c_dd, null);
     try lcd.clear_screen(false);
 
@@ -88,7 +88,7 @@ inline fn find_hottest_cluster_centroid(image: *const [768]f32) struct { row: f3
         hot[i] = image[i] >= threshold;
     }
 
-    var visited: [768]bool = .{false} ** 768;
+    var visited: [768]bool = @splat(false);
     var queue: [768]u16 = undefined;
 
     var best_sum_row: f32 = 0;

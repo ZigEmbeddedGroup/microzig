@@ -60,24 +60,17 @@ pub fn SliceVector(comptime Slice: type) type {
     if (type_info.pointer.size != .slice)
         @compileError("Slice must have a slice type!");
 
-    const item_ptr_info: std.builtin.Type = .{
-        .pointer = .{
-            .alignment = @min(type_info.pointer.alignment, @alignOf(type_info.pointer.child)),
-            .size = .one,
-            .child = type_info.pointer.child,
-            .address_space = type_info.pointer.address_space,
-            .is_const = type_info.pointer.is_const,
-            .is_volatile = type_info.pointer.is_volatile,
-            .is_allowzero = type_info.pointer.is_allowzero,
-            .sentinel_ptr = null,
-        },
-    };
-
     return struct {
         const Vector = @This();
 
         pub const Item = type_info.pointer.child;
-        pub const ItemPtr = @Type(item_ptr_info);
+        pub const ItemPtr = @Pointer(.one, .{
+            .@"align" = type_info.pointer.attrs.@"align" orelse @alignOf(type_info.pointer.child),
+            .@"addrspace" = type_info.pointer.attrs.@"addrspace",
+            .@"const" = type_info.pointer.attrs.@"const",
+            .@"volatile" = type_info.pointer.attrs.@"volatile",
+            .@"allowzero" = type_info.pointer.attrs.@"allowzero",
+        }, type_info.pointer.child, null);
 
         /// The slice of slices. The first and the last slice of this slice must
         /// be non-empty or the slice-of-slices must be empty.
@@ -244,34 +237,28 @@ pub fn max_enum_tag(T: type) @typeInfo(T).@"enum".tag_type {
 
     const tag_type = @typeInfo(T).@"enum".tag_type;
     var max_tag: tag_type = std.math.minInt(tag_type);
-    for (@typeInfo(T).@"enum".fields) |field| {
-        if (field.value > max_tag) {
-            max_tag = field.value;
+    for (@typeInfo(T).@"enum".field_values) |field_value| {
+        if (field_value > max_tag) {
+            max_tag = field_value;
         }
     }
     return max_tag;
 }
 
 pub fn GenerateInterruptEnum(TagType: type) type {
-    if (@typeInfo(TagType) != .int) @compileError("expected an int type");
+    if (@typeInfo(TagType) != .int)
+        @compileError("expected an int type");
 
-    if (microzig.chip.interrupts.len == 0) return enum {};
+    const count = microzig.chip.interrupts.len;
+    var field_names: [count][]const u8 = undefined;
+    var field_values: [count]TagType = undefined;
 
-    var fields: [microzig.chip.interrupts.len]std.builtin.Type.EnumField = undefined;
-
-    for (&fields, microzig.chip.interrupts) |*field, interrupt| {
-        field.* = .{
-            .name = interrupt.name,
-            .value = interrupt.index,
-        };
+    for (microzig.chip.interrupts, &field_names, &field_values) |interrupt, *field_name, *field_value| {
+        field_name.* = interrupt.name;
+        field_value.* = interrupt.index;
     }
 
-    return @Type(.{ .@"enum" = .{
-        .tag_type = TagType,
-        .fields = &fields,
-        .decls = &.{},
-        .is_exhaustive = true,
-    } });
+    return @Enum(TagType, .exhaustive, &field_names, &field_values);
 }
 
 pub const Source = struct {
@@ -280,30 +267,33 @@ pub const Source = struct {
 };
 
 pub fn GenerateInterruptOptions(sources: []const Source) type {
-    var ret_fields: []const std.builtin.Type.StructField = &.{};
+    const count = blk: {
+        var count: usize = 0;
+        for (sources) |source| {
+            if (@typeInfo(source.InterruptEnum) != .@"enum") @compileError("expected an enum type");
 
+            count += @typeInfo(source.InterruptEnum).@"enum".field_names.len;
+        }
+
+        break :blk count;
+    };
+
+    var field_names: [count][]const u8 = undefined;
+    var field_types: [count]type = undefined;
+    var field_attrs: [count]std.builtin.Type.Struct.FieldAttributes = undefined;
+
+    var i: usize = 0;
     for (sources) |source| {
-        if (@typeInfo(source.InterruptEnum) != .@"enum") @compileError("expected an enum type");
+        for (@typeInfo(source.InterruptEnum).@"enum".field_names) |field_name| {
+            field_names[i] = field_name;
+            field_types[i] = ?source.HandlerFn;
+            field_attrs[i] = .{ .default_value_ptr = @ptrCast(&@as(?source.HandlerFn, null)) };
 
-        for (@typeInfo(source.InterruptEnum).@"enum".fields) |enum_field| {
-            ret_fields = ret_fields ++ .{std.builtin.Type.StructField{
-                .name = enum_field.name,
-                .type = ?source.HandlerFn,
-                .default_value_ptr = @as(*const anyopaque, @ptrCast(&@as(?source.HandlerFn, null))),
-                .is_comptime = false,
-                .alignment = @alignOf(?source.HandlerFn),
-            }};
+            i += 1;
         }
     }
 
-    return @Type(.{
-        .@"struct" = .{
-            .layout = .auto,
-            .fields = ret_fields,
-            .decls = &.{},
-            .is_tuple = false,
-        },
-    });
+    return @Struct(.auto, null, &field_names, &field_types, &field_attrs);
 }
 
 test SliceVector {
@@ -586,7 +576,7 @@ pub fn CircularBuffer(comptime T: type, comptime len: usize) type {
                 buffer.full = true;
         }
 
-        pub fn read(buffer: *Self, out: []u8) usize {
+        pub fn read(buffer: *Self, out: []T) usize {
             buffer.assert_valid();
             defer buffer.assert_valid();
 
@@ -599,7 +589,7 @@ pub fn CircularBuffer(comptime T: type, comptime len: usize) type {
             return count;
         }
 
-        pub fn write(buffer: *Self, data: []const u8) error{Full}!void {
+        pub fn write(buffer: *Self, data: []const T) error{Full}!void {
             buffer.assert_valid();
             defer buffer.assert_valid();
             for (data) |d| {
@@ -660,4 +650,57 @@ test "CircularBuffer bounds" {
     const maybe_err = fifo.write(big_data);
 
     try std.testing.expectError(error.Full, maybe_err);
+}
+
+pub fn IntFracDiv(int_bits: comptime_int, frac_bits: comptime_int) type {
+    const FixedPoint = @Int(.unsigned, int_bits + frac_bits);
+    return packed struct(FixedPoint) {
+        pub const Int = @Int(.unsigned, int_bits);
+        pub const Frac = @Int(.unsigned, frac_bits);
+        pub const FixedP = FixedPoint;
+
+        frac: Frac,
+        int: Int,
+
+        /// Writes upper bits to int and lower bits to frac
+        pub fn from_fixedp(fixedp: FixedP) !@This() {
+            const ret: @This() = @bitCast(fixedp);
+            return if (ret.int > 0) ret else error.DividerTooSmall;
+        }
+
+        /// Returns clock configuration that most closely matches the given ratio
+        pub fn from_float(ratio: anytype) @This() {
+            const info = @typeInfo(@TypeOf(ratio));
+            if (info != .float and info != .comptime_float)
+                @compileError("Expected ratio to be a float, got " ++ @typeName(@TypeOf(ratio)));
+
+            const fixedp = ratio * (1 << frac_bits);
+            if (comptime info == .comptime_float and fixedp >= (1 << (int_bits + frac_bits)))
+                @compileError("Divider too big");
+
+            return from_fixedp(@round(fixedp)) catch unreachable;
+        }
+
+        /// Returns clock configuration that most closely matches the ratio of in/out
+        pub fn from_ratio(in: comptime_int, out: comptime_int) @This() {
+            // Maybe use rounding instead of truncating division?
+            return comptime from_fixedp((in << frac_bits) / out) catch unreachable;
+        }
+
+        /// Useful for ratio comparisons
+        pub fn to_fixedp(self: @This()) FixedP {
+            return @bitCast(self);
+        }
+
+        /// Returns a ratio that most closely matches this configuration
+        pub fn to_float(self: @This(), Float: type) Float {
+            if (@typeInfo(Float) != .float and @typeInfo(Float) != .comptime_float)
+                @compileError("Expected return type to be a float, got " ++ @typeName(Float));
+
+            const int_shifted = @shlExact(@as(FixedP, self.int), frac_bits);
+            const combined = int_shifted | @as(FixedP, self.frac);
+
+            return @as(Float, @floatFromInt(combined)) / (1 << frac_bits);
+        }
+    };
 }

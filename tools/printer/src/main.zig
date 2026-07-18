@@ -6,44 +6,49 @@ var elf_file_reader_buf: [1024]u8 = undefined;
 var in_stream_buf: [1024]u8 = undefined;
 var out_stream_buf: [1024]u8 = undefined;
 
-pub fn main() !void {
-    var debug_allocator: std.heap.DebugAllocator(.{}) = .init;
-    defer _ = debug_allocator.deinit();
-    const allocator = debug_allocator.allocator();
+pub fn main(init: std.process.Init) !void {
+    const gpa = init.gpa;
+    const io = init.io;
 
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+    const args = try init.minimal.args.toSlice(init.arena.allocator());
     if (args.len < 2) {
-        try std.fs.File.stderr().writeAll("usage: ./printer elf_file [input_file]\n");
+        var stderr = std.Io.File.stderr().writer(io, &.{});
+        try stderr.interface.writeAll("usage: ./printer elf_file [input_file]\n");
         std.process.exit(1);
     }
 
-    const elf_file = try std.fs.cwd().openFile(args[1], .{});
-    defer elf_file.close();
-    var elf_file_reader = elf_file.reader(&elf_file_reader_buf);
+    const elf_file = try std.Io.Dir.cwd().openFile(io, args[1], .{});
+    defer elf_file.close(io);
 
-    var elf: printer.Elf = try .init(allocator, &elf_file_reader);
-    defer elf.deinit(allocator);
+    var elf_file_reader = elf_file.reader(io, &elf_file_reader_buf);
+    var elf: printer.Elf = try .init(gpa, &elf_file_reader);
+    defer elf.deinit(gpa);
 
-    var debug_info: printer.DebugInfo = try .init(allocator, elf);
-    defer debug_info.deinit(allocator);
+    var debug_info: printer.DebugInfo = try .init(gpa, elf);
+    defer debug_info.deinit(gpa);
 
     const input_file = if (args.len <= 2 or std.mem.eql(u8, args[2], "-"))
-        std.fs.File.stdin()
+        std.Io.File.stdin()
     else
-        try std.fs.cwd().openFile(args[2], .{});
-    defer input_file.close();
-    var in_stream = input_file.reader(&in_stream_buf);
+        try std.Io.Dir.cwd().openFile(io, args[2], .{});
+    defer input_file.close(io);
 
-    const stdout = std.fs.File.stdout();
-    var out_stream = stdout.writer(&out_stream_buf);
-    const out_tty_config = std.io.tty.detectConfig(stdout);
+    var reader = input_file.reader(io, &in_stream_buf);
+
+    const stdout = std.Io.File.stdout();
+    var writer = stdout.writer(io, &out_stream_buf);
+
+    const no_color = try init.minimal.environ.containsUnempty(gpa, "NO_COLOR");
+    const clicolor_force = try init.minimal.environ.containsUnempty(gpa, "CLICOLOR_FORCE");
+    var terminal: std.Io.Terminal = .{
+        .writer = &writer.interface,
+        .mode = try std.Io.Terminal.Mode.detect(io, stdout, no_color, clicolor_force),
+    };
 
     try printer.annotate(
-        &in_stream.interface,
-        &out_stream.interface,
-        out_tty_config,
+        io,
+        &reader.interface,
+        &terminal,
         elf,
         &debug_info,
     );

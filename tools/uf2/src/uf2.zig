@@ -1,12 +1,10 @@
 const std = @import("std");
-const testing = std.testing;
 const assert = std.debug.assert;
 const Allocator = std.mem.Allocator;
 
 pub const FamilyId = @import("family_id.zig").FamilyId;
 
 const prog_page_size = 256;
-const uf2_alignment = 4;
 
 pub const Archive = struct {
     allocator: Allocator,
@@ -77,7 +75,7 @@ pub const Archive = struct {
 
     /// Adds an elf to the archive. Returns error if the family id (if
     /// specified) is already present in the archive.
-    pub fn add_elf(self: *Archive, reader: *std.fs.File.Reader, opts: ELF_Options) !void {
+    pub fn add_elf(self: *Archive, reader: *std.Io.File.Reader, opts: ELF_Options) !void {
         if (opts.family_id) |family_id|
             if (try self.families.fetchPut(self.allocator, family_id, {}) != null)
                 return error.FamilyIdCollision;

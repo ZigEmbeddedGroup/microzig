@@ -1,5 +1,4 @@
 const std = @import("std");
-const isa = @import("decoder.zig");
 
 pub const Flash = struct {
     pub const Address = u24;
@@ -38,7 +37,7 @@ pub const Flash = struct {
         return struct {
             const Self = @This();
 
-            data: [size]u8 align(2) = .{0} ** size,
+            data: [size]u8 align(2) = @splat(0),
 
             pub fn memory(self: *Self) Flash {
                 return Flash{
@@ -57,6 +56,42 @@ pub const Flash = struct {
             }
         };
     }
+
+    pub const Allocated = struct {
+        gpa: std.mem.Allocator,
+        data: []u8 align(2),
+
+        pub fn init(gpa: std.mem.Allocator, size: usize) !Allocated {
+            if ((size & 1) != 0)
+                return error.InvalidDataSize;
+
+            const data = try gpa.allocWithOptions(u8, size, .@"2", null);
+            return .{
+                .gpa = gpa,
+                .data = data,
+            };
+        }
+
+        pub fn deinit(self: *Allocated) void {
+            self.gpa.free(self.data);
+        }
+
+        pub fn memory(self: *Allocated) Flash {
+            return Flash{
+                .ctx = self,
+                .vtable = &.{
+                    .mem_read = mem_read,
+                },
+                .size = @divExact(self.data.len, 2),
+            };
+        }
+
+        pub fn mem_read(ctx: ?*anyopaque, addr: Address) Error!u16 {
+            const mem: *Allocated = @ptrCast(@alignCast(ctx.?));
+            if (addr >= @as(Address, @intCast(@divExact(mem.data.len, 2)))) return error.InvalidAddress;
+            return std.mem.bytesAsSlice(u16, &mem.data)[addr];
+        }
+    };
 };
 
 pub const IO = struct {
@@ -201,7 +236,7 @@ pub fn FixedSizeMemory(comptime size: comptime_int, comptime bus_config: ?BusCon
         pub const BusType = Bus(config);
         const AddressType = BusType.Address;
 
-        data: [size]u8 align(2) = .{0} ** size,
+        data: [size]u8 align(2) = @splat(0),
 
         pub fn bus(self: *Self) BusType {
             return .{ .ctx = self, .vtable = &bus_vtable };

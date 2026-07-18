@@ -13,41 +13,6 @@ pub const types = @import("usb/types.zig");
 pub const ack: []const u8 = "";
 pub const nak: ?[]const u8 = null;
 
-/// Meant to make transition to zig 0.16 easier
-pub const StructFieldAttributes = struct {
-    @"comptime": bool = false,
-    @"align": ?usize = null,
-    default_value_ptr: ?*const anyopaque = null,
-};
-
-/// Helper to create a struct, wrapping around @Type, meant to make transition to zig 0.16 easier
-pub fn Struct(
-    layout: std.builtin.Type.ContainerLayout,
-    BackingInt: ?type,
-    field_names: []const [:0]const u8,
-    field_types: *const [field_names.len]type,
-    field_attrs: *const [field_names.len]StructFieldAttributes,
-) type {
-    var fields: []const std.builtin.Type.StructField = &.{};
-    // Iterate over the names, field types, and attributes, creating a new struct field entry
-    for (field_names, field_types, field_attrs) |n, T, a| {
-        fields = fields ++ &[1]std.builtin.Type.StructField{.{
-            .name = n,
-            .type = T,
-            .alignment = a.@"align" orelse @alignOf(T),
-            .default_value_ptr = a.default_value_ptr,
-            .is_comptime = a.@"comptime",
-        }};
-    }
-    return @Type(.{ .@"struct" = .{
-        .layout = layout,
-        .backing_integer = BackingInt,
-        .decls = &.{},
-        .fields = fields,
-        .is_tuple = false,
-    } });
-}
-
 // What does this do? It lets you iterate through interfaces and endpoints?
 pub const DescriptorAllocator = struct {
     next_ep_num: [2]u8,
@@ -95,6 +60,11 @@ pub const DescriptorAllocator = struct {
         for (self.strings) |s|
             ret = ret ++ [1]descriptor.String{.from_str(s)};
         return ret;
+    }
+
+    pub fn to_const(self: *DescriptorAllocator) DescriptorAllocator {
+        defer self.* = undefined;
+        return self.*;
     }
 };
 
@@ -167,19 +137,13 @@ pub fn EndpointHandler(Driver: type) type {
 pub fn DriverHandlers(Driver: type) type {
     var field_names: []const [:0]const u8 = &.{};
 
-    const desc_fields = @typeInfo(Driver.Descriptor).@"struct".fields;
-    for (desc_fields) |fld| switch (fld.type) {
-        descriptor.Endpoint => field_names = field_names ++ .{fld.name},
+    const info = @typeInfo(Driver.Descriptor).@"struct";
+    for (info.field_names, info.field_types) |field_name, field_type| switch (field_type) {
+        descriptor.Endpoint => field_names = field_names ++ .{field_name},
         else => {},
     };
 
-    return Struct(
-        .auto,
-        null,
-        field_names,
-        &@splat(EndpointHandler(Driver)),
-        &@splat(.{}),
-    );
+    return @Struct(.auto, null, field_names, &@splat(EndpointHandler(Driver)), &@splat(.{}));
 }
 
 pub const Config = struct {
@@ -197,24 +161,25 @@ pub const Config = struct {
         /// Generate A struct with a field for each field in Drivers, where the type is the third
         /// arg of the Drivers' Descriptor's 'create' method.
         pub fn Args(self: @This()) type {
-            const fields = @typeInfo(self.Drivers).@"struct".fields;
-            var field_names: [fields.len][:0]const u8 = undefined;
-            var field_types: [fields.len]type = undefined;
-            for (fields, 0..) |fld, i| {
+            const info = @typeInfo(self.Drivers).@"struct";
+            const count = info.field_names.len;
+            var field_names: [count][:0]const u8 = undefined;
+            var field_types: [count]type = undefined;
+            for (info.field_names, info.field_types, 0..) |field_name, field_type, i| {
                 // Collect field names
-                field_names[i] = fld.name;
+                field_names[i] = field_name;
                 // Collect the type info  for the Descriptor.create function parameter
-                const params = @typeInfo(@TypeOf(fld.type.Descriptor.create)).@"fn".params;
+                const param_types = @typeInfo(@TypeOf(field_type.Descriptor.create)).@"fn".param_types;
                 // Ensure it takes 3 parameters
-                assert(params.len == 3);
+                assert(param_types.len == 3);
                 // The first must be a DescriptorAllocator
-                assert(params[0].type == *DescriptorAllocator);
+                assert(param_types[0] == *DescriptorAllocator);
                 // The second is usb.types.Len
-                assert(params[1].type == types.Len);
+                assert(param_types[1] == types.Len);
                 // And save the type of the third
-                field_types[i] = params[2].type.?;
+                field_types[i] = param_types[2].?;
             }
-            return Struct(.auto, null, &field_names, &field_types, &@splat(.{}));
+            return @Struct(.auto, null, &field_names, &field_types, &@splat(.{}));
         }
     };
 
@@ -245,14 +210,14 @@ pub const Config = struct {
         var field_types: [self.configurations.len]type = undefined;
         for (self.configurations, &field_types) |cfg, *dst|
             dst.* = cfg.Args();
-        return std.meta.Tuple(&field_types);
+        return @Tuple(&field_types);
     }
 };
 
 pub fn validate_controller(T: type) void {
     comptime {
         const info = @typeInfo(T);
-        if (info != .pointer or info.pointer.is_const or info.pointer.size != .one)
+        if (info != .pointer or info.pointer.attrs.@"const" or info.pointer.size != .one)
             @compileError("Expected a mutable pointer to the usb controller, got: " ++ @typeName(T));
         const Controller = info.pointer.child;
         _ = Controller;
@@ -271,7 +236,7 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
     return struct {
         // We only support one configuration
         const config0 = config.configurations[0];
-        const driver_fields = @typeInfo(config0.Drivers).@"struct".fields;
+        const driver_info = @typeInfo(config0.Drivers).@"struct";
         const DriverEnum = std.meta.FieldEnum(config0.Drivers);
 
         /// This parses the drivers' descriptors and creates:
@@ -284,6 +249,9 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
             assert(std.math.isPowerOfTwo(max_psize));
 
             var alloc: DescriptorAllocator = .init(config.unique_endpoints);
+            const manufacturer_s = alloc.string(config.vendor.str);
+            const product_s = alloc.string(config.product.str);
+            const serial_s = alloc.string(config.serial);
 
             const desc_device: descriptor.Device = .{
                 .bcd_usb = config.bcd_usb,
@@ -292,38 +260,38 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
                 .vendor = .from(config.vendor.id),
                 .product = .from(config.product.id),
                 .bcd_device = config.bcd_device,
-                .manufacturer_s = alloc.string(config.vendor.str),
-                .product_s = alloc.string(config.product.str),
-                .serial_s = alloc.string(config.serial),
+                .manufacturer_s = manufacturer_s,
+                .product_s = product_s,
+                .serial_s = serial_s,
                 .num_configurations = config.configurations.len,
             };
             const configuration_s = alloc.string(config0.name);
 
             var size = @sizeOf(descriptor.Configuration);
-            var field_names: [driver_fields.len][:0]const u8 = undefined;
-            var field_types: [field_names.len]type = undefined;
-            var field_attrs: [field_names.len]StructFieldAttributes = undefined;
+            var field_names: [driver_info.field_names.len][:0]const u8 = undefined;
+            var field_types: [driver_info.field_names.len]type = undefined;
+            var field_attrs: [driver_info.field_names.len]std.builtin.Type.Struct.FieldAttributes = undefined;
             var ep_handler_types: [2][16]type = @splat(@splat(void));
             var ep_handler_names: [2][16][:0]const u8 = undefined;
             var ep_handler_drivers: [2][16]?usize = @splat(@splat(null));
             var itf_handlers: []const DriverEnum = &.{};
             var driver_alloc_names: []const [:0]const u8 = &.{};
             var driver_alloc_types: []const type = &.{};
-            var driver_alloc_attrs: []const StructFieldAttributes = &.{};
+            var driver_alloc_attrs: []const std.builtin.Type.Struct.FieldAttributes = &.{};
 
-            for (driver_fields, 0..) |drv, drv_id| {
+            for (driver_info.field_names, driver_info.field_types, 0..) |driver_field_name, driver_field_type, drv_id| {
                 // Get descriptor type for the current driver
-                const Descriptors = drv.type.Descriptor;
+                const Descriptors = driver_field_type.Descriptor;
                 // Call the create method on the descriptor, which wraps it with the allow stuff.
-                const result = Descriptors.create(&alloc, max_psize, @field(driver_args[0], drv.name));
+                const result = Descriptors.create(&alloc, max_psize, @field(driver_args[0], driver_field_name));
                 // Get the descriptor instance from the result.
                 const descriptors = result.descriptor;
 
                 // If the driver requests memory, then collect the names, types, and attrs
                 if (result.alloc_bytes) |len| {
-                    driver_alloc_names = driver_alloc_names ++ &[_][:0]const u8{drv.name};
+                    driver_alloc_names = driver_alloc_names ++ &[_][:0]const u8{driver_field_name};
                     driver_alloc_types = driver_alloc_types ++ &[_]type{[len]u8};
-                    driver_alloc_attrs = driver_alloc_attrs ++ &[_]StructFieldAttributes{.{ .@"align" = result.alloc_align }};
+                    driver_alloc_attrs = driver_alloc_attrs ++ &[_]std.builtin.Type.Struct.FieldAttributes{.{ .@"align" = result.alloc_align }};
                 } else {
                     assert(result.alloc_align == null);
                 }
@@ -333,29 +301,31 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
 
                 // Collect handler types, names, and drivers, to later be bound to the appropriate
                 // endpoints
-                for (@typeInfo(Descriptors).@"struct".fields, 0..) |fld, desc_num| {
-                    const desc = @field(descriptors, fld.name);
+                const info = @typeInfo(Descriptors).@"struct";
+                for (info.field_names, info.field_types, 0..) |field_name, field_type, desc_num| {
+                    const desc = @field(descriptors, field_name);
 
                     // Determine which interface numbers this driver owns. If it is an
                     // InterfaceAssociation, then use the interface count. If it is an Interface,
                     // then the driver owns just that one interface.
                     if (desc_num == 0) {
-                        const itf_start, const itf_count = switch (fld.type) {
+                        const itf_start, const itf_count = switch (field_type) {
                             descriptor.InterfaceAssociation => .{ desc.first_interface, desc.interface_count },
                             descriptor.Interface => .{ desc.interface_number, 1 },
                             else => |T| @compileError(
                                 "Expected first descriptor of driver " ++
-                                    @typeName(drv.type) ++
+                                    @typeName(driver_field_type) ++
                                     " to be of type Interface or InterfaceAssociation descriptor, got: " ++
                                     @typeName(T),
                             ),
                         };
                         if (itf_start != itf_handlers.len)
                             @compileError("interface numbering mismatch");
-                        itf_handlers = itf_handlers ++ &[_]DriverEnum{@field(DriverEnum, drv.name)} ** itf_count;
+
+                        itf_handlers = itf_handlers ++ @as([itf_count]DriverEnum, @splat(@field(DriverEnum, driver_field_name)));
                     }
 
-                    switch (fld.type) {
+                    switch (field_type) {
                         // Register handler for endpoints
                         descriptor.Endpoint => {
                             const ep_dir = @intFromEnum(desc.endpoint.dir);
@@ -364,37 +334,41 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
                             if (ep_handler_types[ep_dir][ep_num] != void)
                                 @compileError(std.fmt.comptimePrint(
                                     "ep{} {t}: multiple handlers: {s} and {s}",
-                                    .{ ep_num, desc.endpoint.dir, ep_handler_drivers[ep_dir][ep_num], drv.name },
+                                    .{ ep_num, desc.endpoint.dir, ep_handler_drivers[ep_dir][ep_num], driver_field_name },
                                 ));
 
-                            ep_handler_types[ep_dir][ep_num] = EndpointHandler(drv.type);
+                            ep_handler_types[ep_dir][ep_num] = EndpointHandler(driver_field_type);
                             ep_handler_drivers[ep_dir][ep_num] = drv_id;
-                            ep_handler_names[ep_dir][ep_num] = fld.name;
+                            ep_handler_names[ep_dir][ep_num] = field_name;
                         },
                         // Interface association must be first
                         descriptor.InterfaceAssociation => assert(desc_num == 0),
                         else => {},
                     }
                 }
-                field_names[drv_id] = drv.name;
+                field_names[drv_id] = driver_field_name;
                 field_types[drv_id] = Descriptors;
                 field_attrs[drv_id] = .{ .default_value_ptr = &descriptors };
             }
 
             // Finally, bind the handler functions based on the data collected above.
-            const Tuple = std.meta.Tuple;
             // Create a tuple with the appropriate types
-            const ep_handlers_types: [2]type = .{ Tuple(&ep_handler_types[0]), Tuple(&ep_handler_types[1]) };
-            var ep_handlers: Tuple(&ep_handlers_types) = undefined;
+            const ep_handlers_types: [2]type = .{ @Tuple(&ep_handler_types[0]), @Tuple(&ep_handler_types[1]) };
+            var ep_handlers: @Tuple(&ep_handlers_types) = undefined;
             // Iterate over all IN and OUT endpoints and bind the handler for any that are set.
             for (&ep_handler_types, &ep_handler_names, &ep_handler_drivers, 0..) |htypes, hnames, hdrivers, dir| {
                 for (&htypes, &hnames, &hdrivers, 0..) |T, name, drv_id, ep| {
                     if (T != void)
-                        ep_handlers[dir][ep] = @field(driver_fields[drv_id.?].type.handlers, name);
+                        ep_handlers[dir][ep] = @field(driver_info.field_types[drv_id.?].handlers, name);
                 }
             }
 
-            const DriverConfig = Struct(.@"extern", null, &field_names, &field_types, &field_attrs);
+            // alloc is invalidated after this point. It will cause a compile
+            // error if mutated.
+            const const_alloc = alloc.to_const();
+            const const_ep_handlers = ep_handlers;
+
+            const DriverConfig = @Struct(.@"extern", null, &field_names, &field_types, &field_attrs);
             const idx_in = @intFromEnum(types.Dir.In);
             const idx_out = @intFromEnum(types.Dir.Out);
             break :blk .{
@@ -402,7 +376,7 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
                 .config_descriptor = extern struct {
                     first: descriptor.Configuration = .{
                         .total_length = .from(size),
-                        .num_interfaces = alloc.next_itf_num,
+                        .num_interfaces = const_alloc.next_itf_num,
                         .configuration_value = 1,
                         .configuration_s = configuration_s,
                         .attributes = config0.attributes,
@@ -410,14 +384,14 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
                     },
                     drv: DriverConfig = .{},
                 }{},
-                .string_descriptors = alloc.string_descriptors(config.language),
+                .string_descriptors = const_alloc.string_descriptors(config.language),
                 .handlers_itf = itf_handlers,
                 .handlers_ep = struct {
-                    In: ep_handlers_types[idx_in] = ep_handlers[idx_in],
-                    Out: ep_handlers_types[idx_out] = ep_handlers[idx_out],
+                    In: ep_handlers_types[idx_in] = const_ep_handlers[idx_in],
+                    Out: ep_handlers_types[idx_out] = const_ep_handlers[idx_out],
                 }{},
                 .drivers_ep = ep_handler_drivers,
-                .DriverAlloc = Struct(
+                .DriverAlloc = @Struct(
                     .auto,
                     null,
                     driver_alloc_names,
@@ -520,7 +494,7 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
                 log.warn("Unhandled packet on ep0 Out", .{});
 
             if (comptime driver_opt) |driver| {
-                handler(&@field(self.driver_data.?, driver_fields[driver].name), ep.num);
+                handler(&@field(self.driver_data.?, driver_info.field_names[driver]), ep.num);
             }
         }
 
@@ -625,28 +599,28 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
 
             // We support just one config for now so ignore config index
             self.driver_data = @as(config0.Drivers, undefined);
-            inline for (driver_fields) |fld_drv| {
-                const cfg = @field(config_descriptor.drv, fld_drv.name);
-                const desc_fields = @typeInfo(@TypeOf(cfg)).@"struct".fields;
+            inline for (driver_info.field_names) |driver_field_name| {
+                const cfg = @field(config_descriptor.drv, driver_field_name);
+                const desc_info = @typeInfo(@TypeOf(cfg)).@"struct";
 
                 // Open OUT endpoint first so that the driver can call ep_listen in init
-                inline for (desc_fields) |fld| {
-                    const desc = &@field(cfg, fld.name);
-                    if (comptime fld.type == descriptor.Endpoint and desc.endpoint.dir == .Out)
+                inline for (desc_info.field_names, desc_info.field_types) |field_name, field_type| {
+                    const desc = &@field(cfg, field_name);
+                    if (comptime field_type == descriptor.Endpoint and desc.endpoint.dir == .Out)
                         device_itf.ep_open(desc);
                 }
 
-                const drv = &@field(self.driver_data.?, fld_drv.name);
+                const drv = &@field(self.driver_data.?, driver_field_name);
                 // Don't pass empty slices around
-                if (@hasField(@TypeOf(self.driver_alloc), fld_drv.name))
-                    drv.init(&cfg, device_itf, &@field(self.driver_alloc, fld_drv.name))
+                if (@hasField(@TypeOf(self.driver_alloc), driver_field_name))
+                    drv.init(&cfg, device_itf, &@field(self.driver_alloc, driver_field_name))
                 else
                     drv.init(&cfg, device_itf);
 
                 // Open IN endpoint last so that callbacks can happen
-                inline for (desc_fields) |fld| {
-                    const desc = &@field(cfg, fld.name);
-                    if (comptime fld.type == descriptor.Endpoint and desc.endpoint.dir == .In)
+                inline for (desc_info.field_names, desc_info.field_types) |field_name, field_type| {
+                    const desc = &@field(cfg, field_name);
+                    if (comptime field_type == descriptor.Endpoint and desc.endpoint.dir == .In)
                         device_itf.ep_open(desc);
                 }
             }

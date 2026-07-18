@@ -28,11 +28,11 @@ pub fn main() !void {
         dir: GPIO_Device,
         step: GPIO_Device,
     } = undefined;
-    inline for (std.meta.fields(@TypeOf(pins)), .{ 0, 1, 2, 20, 10 }) |field, num| {
+    inline for (@typeInfo(@TypeOf(pins)).@"struct".field_names, .{ 0, 1, 2, 20, 10 }) |field_name, num| {
         const pin = gpio.num(num);
         // Give the pin a sane default config
         pin.apply(.{});
-        @field(pins, field.name) = GPIO_Device.init(pin);
+        @field(pins, field_name) = GPIO_Device.init(pin);
     }
 
     var stepper = A4988.init(.{
@@ -47,8 +47,8 @@ pub fn main() !void {
     try stepper.begin(100, 1);
 
     while (true) {
-        const linear_profile = A4988.Speed_Profile{ .linear_speed = .{ .accel = 200, .decel = 200 } };
-        const constant_profile = A4988.Speed_Profile.constant_speed;
+        const linear_profile = A4988.SpeedProfile{ .linear_speed = .{ .accel = 200, .decel = 200 } };
+        const constant_profile = A4988.SpeedProfile.constant_speed;
         // Try both constant and linear acceleration profiles
         inline for (.{ constant_profile, linear_profile }) |profile| {
             stepper.set_speed_profile(

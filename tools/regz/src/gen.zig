@@ -13,10 +13,9 @@ const DevicePeripheral = Database.DevicePeripheral;
 const EnumID = Database.EnumID;
 const StructID = Database.StructID;
 const NestedStructField = Database.NestedStructField;
+const VirtualIo = @import("virtual-io").VirtualIo;
 
 const Properties = @import("properties.zig").Properties;
-const Directory = @import("Directory.zig");
-const VirtualFilesystem = @import("VirtualFilesystem.zig");
 const arm = @import("arch/arm.zig");
 const avr = @import("arch/avr.zig");
 const riscv = @import("arch/riscv.zig");
@@ -25,23 +24,24 @@ const log = std.log.scoped(.gen);
 
 pub const ToZigOptions = struct {};
 
-pub fn to_zig(db: *Database, dir: Directory, opts: ToZigOptions) !void {
+pub fn to_zig(db: *Database, io: std.Io, dir: std.Io.Dir, opts: ToZigOptions) !void {
     var arena = std.heap.ArenaAllocator.init(db.gpa);
     defer arena.deinit();
 
-    try write_device_files(db, arena.allocator(), dir, opts);
-    try write_types_files(db, arena.allocator(), dir, opts);
+    try write_device_files(io, db, arena.allocator(), dir, opts);
+    try write_types_files(io, db, arena.allocator(), dir, opts);
 }
 
 fn write_device_files(
+    io: std.Io,
     db: *Database,
     arena: Allocator,
-    dir: Directory,
+    dir: std.Io.Dir,
     opts: ToZigOptions,
 ) !void {
     const devices = try db.get_devices(arena);
     for (devices) |device| {
-        write_device_file(db, arena, &device, dir, opts) catch |err| {
+        write_device_file(db, io, arena, &device, dir, opts) catch |err| {
             log.warn("failed to write device: {}", .{err});
         };
     }
@@ -62,9 +62,10 @@ fn write_imports(opts: ToZigOptions, types_public: bool, types_path: []const u8,
 
 fn write_device_file(
     db: *Database,
+    io: std.Io,
     arena: Allocator,
     device: *const Database.Device,
-    dir: Directory,
+    dir: std.Io.Dir,
     opts: ToZigOptions,
 ) !void {
     var buf: std.Io.Writer.Allocating = .init(arena);
@@ -149,21 +150,33 @@ fn write_device_file(
     try ast.render(arena, &rendered_buffer.writer, fixups);
 
     const filename = try std.fmt.allocPrint(arena, "{s}.zig", .{device.name});
-    try dir.create_file(filename, rendered_buffer.written());
+    try dir.writeFile(io, .{
+        .sub_path = filename,
+        .data = rendered_buffer.written(),
+    });
 }
 
-fn write_types_files(db: *Database, arena: Allocator, dir: Directory, opts: ToZigOptions) !void {
-    try dir.create_file("types.zig",
+fn write_types_files(io: std.Io, db: *Database, arena: Allocator, dir: std.Io.Dir, opts: ToZigOptions) !void {
+    try dir.writeFile(io, .{
+        .sub_path = "types.zig",
+        .data =
         \\pub const peripherals = @import("types/peripherals.zig");
         \\
-    );
+        ,
+    });
 
-    try write_peripherals_files(db, arena, dir, opts);
+    try write_peripherals_files(io, db, arena, dir, opts);
 }
 
-fn write_peripherals_files(db: *Database, arena: Allocator, dir: Directory, opts: ToZigOptions) !void {
+fn write_peripherals_files(io: std.Io, db: *Database, arena: Allocator, dir: std.Io.Dir, opts: ToZigOptions) !void {
     var index_content: std.Io.Writer.Allocating = .init(arena);
     const index_writer = &index_content.writer;
+
+    const types_dir = try dir.createDirPathOpen(io, "types", .{});
+    defer types_dir.close(io);
+
+    const peripherals_dir = try types_dir.createDirPathOpen(io, "peripherals", .{});
+    defer peripherals_dir.close(io);
 
     const peripherals = try db.get_peripherals(arena);
     for (peripherals) |peripheral| {
@@ -180,7 +193,7 @@ fn write_peripherals_files(db: *Database, arena: Allocator, dir: Directory, opts
             continue;
         };
 
-        const path = try std.fmt.allocPrint(arena, "types/peripherals/{s}.zig", .{
+        const path = try std.fmt.allocPrint(arena, "{s}.zig", .{
             peripheral.name,
         });
 
@@ -205,7 +218,10 @@ fn write_peripherals_files(db: *Database, arena: Allocator, dir: Directory, opts
         const fixups: std.zig.Ast.Render.Fixups = .{};
         try ast.render(arena, &rendered_buffer.writer, fixups);
 
-        try dir.create_file(path, rendered_buffer.written());
+        try peripherals_dir.writeFile(io, .{
+            .sub_path = path,
+            .data = rendered_buffer.written(),
+        });
 
         if (try db.struct_is_zero_sized(arena, peripheral.struct_id)) {
             try index_writer.print(
@@ -227,7 +243,10 @@ fn write_peripherals_files(db: *Database, arena: Allocator, dir: Directory, opts
         }
     }
 
-    try dir.create_file("types/peripherals.zig", index_content.written());
+    try types_dir.writeFile(io, .{
+        .sub_path = "peripherals.zig",
+        .data = index_content.written(),
+    });
 }
 
 pub fn write_file_comment(allocator: Allocator, comment: []const u8, writer: *std.Io.Writer) !void {
@@ -1061,7 +1080,7 @@ fn write_nested_struct_field(db: *Database, arena: Allocator, nsf: *const Nested
     if (try db.get_struct_decl_by_struct_id(arena, nsf.struct_id)) |struct_decl| {
         try writer.print("{f},\n", .{std.zig.fmtId(struct_decl.name)});
     } else {
-        try write_struct(db, arena, null, nsf.struct_id, writer);
+        try write_struct(db, arena, nsf.size_bytes, nsf.struct_id, writer);
         try writer.writeAll(",\n");
     }
 }
@@ -1442,8 +1461,6 @@ fn raw_property_value_to_bool(value: []const u8) !bool {
     return error.BadValue;
 }
 
-const tests = @import("output_tests.zig");
-
 fn expect_register(expected: *const Register, actual: *const Register) !void {
     try std.testing.expectEqual(expected.id, actual.id);
     try std.testing.expectEqual(expected.struct_id, actual.struct_id);
@@ -1718,25 +1735,55 @@ const ExpectedOutput = struct {
     content: []const u8,
 };
 
-fn expect_output(expected_outputs: []const ExpectedOutput, vfs: *VirtualFilesystem) !void {
-    try std.testing.expectEqual(expected_outputs.len, vfs.files.count());
+fn expect_output(expected_outputs: []const ExpectedOutput, vio: *VirtualIo) !void {
+    try std.testing.expectEqual(expected_outputs.len, vio.total_file_count());
     for (expected_outputs) |eo| {
-        const file_id = try vfs.get_file(eo.path) orelse unreachable;
-        try std.testing.expectEqualStrings(eo.content, vfs.get_content(file_id));
+        const file = try VirtualIo.root_dir.openFile(vio.io(), eo.path, .{});
+        try std.testing.expectEqualStrings(eo.content, (try vio.file_contents(file)).items);
     }
 }
 
 test "gen.peripheral instantiation" {
-    var db = try tests.peripheral_instantiation(std.testing.allocator);
+    var db = try Database.create(std.testing.allocator);
     defer db.destroy();
+
+    const peripheral_id = try db.create_peripheral(.{
+        .name = "TEST_PERIPHERAL",
+    });
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+
+    const register_id = try db.create_register(struct_id, .{
+        .name = "TEST_REGISTER",
+        .size_bits = 32,
+        .offset_bytes = 0,
+        .reset_mask = 0x1,
+        .reset_value = 0x1,
+    });
+
+    _ = try db.add_register_field(register_id, .{
+        .name = "TEST_FIELD",
+        .size_bits = 1,
+        .offset_bits = 0,
+    });
+
+    const device_id = try db.create_device(.{
+        .name = "TEST_DEVICE",
+        .arch = .cortex_m0,
+    });
+
+    _ = try db.create_device_peripheral(device_id, .{
+        .name = "TEST0",
+        .offset_bytes = 0x1000,
+        .struct_id = struct_id,
+    });
 
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
-    defer vfs.deinit();
+    var vio: VirtualIo = try .init(std.testing.allocator);
+    defer vio.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try db.to_zig(vio.io(), VirtualIo.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "TEST_DEVICE.zig",
@@ -1782,14 +1829,14 @@ test "gen.peripheral instantiation" {
             ,
         },
         .{
-            .path = "peripherals.zig",
+            .path = "types/peripherals.zig",
             .content =
             \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
             \\
             ,
         },
         .{
-            .path = "peripherals/TEST_PERIPHERAL.zig",
+            .path = "types/peripherals/TEST_PERIPHERAL.zig",
             .content =
             \\const microzig = @import("microzig");
             \\const mmio = microzig.mmio;
@@ -1806,20 +1853,60 @@ test "gen.peripheral instantiation" {
             \\
             ,
         },
-    }, &vfs);
+    }, &vio);
 }
 
 test "gen.peripherals with a shared type" {
-    var db = try tests.peripherals_with_shared_type(std.testing.allocator);
+    var db = try Database.create(std.testing.allocator);
     defer db.destroy();
+
+    const peripheral_id = try db.create_peripheral(.{
+        .name = "TEST_PERIPHERAL",
+    });
+
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+
+    const register_id = try db.create_register(struct_id, .{
+        .name = "TEST_REGISTER",
+        .size_bits = 32,
+        .offset_bytes = 0,
+    });
+
+    try db.add_register_field(register_id, .{
+        .name = "TEST_FIELD",
+        .size_bits = 1,
+        .offset_bits = 0,
+    });
+
+    const device_id = try db.create_device(.{
+        .name = "TEST_DEVICE",
+        .arch = .cortex_m0,
+    });
+
+    _ = try db.create_device_peripheral(
+        device_id,
+        .{
+            .name = "TEST0",
+            .offset_bytes = 0x1000,
+            .struct_id = struct_id,
+        },
+    );
+    _ = try db.create_device_peripheral(
+        device_id,
+        .{
+            .name = "TEST1",
+            .offset_bytes = 0x2000,
+            .struct_id = struct_id,
+        },
+    );
 
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
-    defer vfs.deinit();
+    var vio: VirtualIo = try .init(std.testing.allocator);
+    defer vio.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try db.to_zig(vio.io(), VirtualIo.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "TEST_DEVICE.zig",
@@ -1866,14 +1953,14 @@ test "gen.peripherals with a shared type" {
             ,
         },
         .{
-            .path = "peripherals.zig",
+            .path = "types/peripherals.zig",
             .content =
             \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
             \\
             ,
         },
         .{
-            .path = "peripherals/TEST_PERIPHERAL.zig",
+            .path = "types/peripherals/TEST_PERIPHERAL.zig",
             .content =
             \\const microzig = @import("microzig");
             \\const mmio = microzig.mmio;
@@ -1890,20 +1977,55 @@ test "gen.peripherals with a shared type" {
             \\
             ,
         },
-    }, &vfs);
+    }, &vio);
 }
 
 test "gen.peripheral with modes" {
-    var db = try tests.peripheral_with_modes(std.testing.allocator);
+    var db = try Database.create(std.testing.allocator);
     defer db.destroy();
+
+    const peripheral_id = try db.create_peripheral(.{ .name = "TEST_PERIPHERAL" });
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+    const register1_id = try db.create_register(
+        struct_id,
+        .{ .name = "TEST_REGISTER1", .size_bits = 32, .offset_bytes = 0 },
+    );
+    const register2_id = try db.create_register(
+        struct_id,
+        .{ .name = "TEST_REGISTER2", .size_bits = 32, .offset_bytes = 0 },
+    );
+    const common_reg_id = try db.create_register(
+        struct_id,
+        .{ .name = "COMMON_REGISTER", .size_bits = 32, .offset_bytes = 4 },
+    );
+
+    try db.add_register_field(common_reg_id, .{
+        .name = "TEST_FIELD",
+        .size_bits = 1,
+        .offset_bits = 0,
+    });
+
+    const mode1_id = try db.create_mode(struct_id, .{
+        .name = "TEST_MODE1",
+        .value = "0x00",
+        .qualifier = "TEST_PERIPHERAL.TEST_MODE1.COMMON_REGISTER.TEST_FIELD",
+    });
+    const mode2_id = try db.create_mode(struct_id, .{
+        .name = "TEST_MODE2",
+        .value = "0x01",
+        .qualifier = "TEST_PERIPHERAL.TEST_MODE2.COMMON_REGISTER.TEST_FIELD",
+    });
+
+    try db.add_register_mode(register1_id, mode1_id);
+    try db.add_register_mode(register2_id, mode2_id);
 
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
-    defer vfs.deinit();
+    var vio: VirtualIo = try .init(std.testing.allocator);
+    defer vio.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try db.to_zig(vio.io(), VirtualIo.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
@@ -1913,14 +2035,14 @@ test "gen.peripheral with modes" {
             ,
         },
         .{
-            .path = "peripherals.zig",
+            .path = "types/peripherals.zig",
             .content =
             \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
             \\
             ,
         },
         .{
-            .path = "peripherals/TEST_PERIPHERAL.zig",
+            .path = "types/peripherals/TEST_PERIPHERAL.zig",
             .content =
             \\const microzig = @import("microzig");
             \\const mmio = microzig.mmio;
@@ -1976,20 +2098,40 @@ test "gen.peripheral with modes" {
             \\
             ,
         },
-    }, &vfs);
+    }, &vio);
 }
 
 test "gen.peripheral with enum" {
-    var db = try tests.peripheral_with_enum(std.testing.allocator);
+    var db = try Database.create(std.testing.allocator);
     defer db.destroy();
+
+    const peripheral_id = try db.create_peripheral(.{
+        .name = "TEST_PERIPHERAL",
+    });
+
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+
+    const enum_id = try db.create_enum(struct_id, .{
+        .name = "TEST_ENUM",
+        .size_bits = 4,
+    });
+
+    try db.add_enum_field(enum_id, .{ .name = "TEST_ENUM_FIELD1", .value = 0 });
+    try db.add_enum_field(enum_id, .{ .name = "TEST_ENUM_FIELD2", .value = 1 });
+
+    _ = try db.create_register(struct_id, .{
+        .name = "TEST_REGISTER",
+        .size_bits = 8,
+        .offset_bytes = 0,
+    });
 
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
-    defer vfs.deinit();
+    var vio: VirtualIo = try .init(std.testing.allocator);
+    defer vio.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try db.to_zig(vio.io(), VirtualIo.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
@@ -1999,14 +2141,14 @@ test "gen.peripheral with enum" {
             ,
         },
         .{
-            .path = "peripherals.zig",
+            .path = "types/peripherals.zig",
             .content =
             \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
             \\
             ,
         },
         .{
-            .path = "peripherals/TEST_PERIPHERAL.zig",
+            .path = "types/peripherals/TEST_PERIPHERAL.zig",
             .content =
             \\const microzig = @import("microzig");
             \\const mmio = microzig.mmio;
@@ -2026,20 +2168,39 @@ test "gen.peripheral with enum" {
             \\
             ,
         },
-    }, &vfs);
+    }, &vio);
 }
 
 test "gen.peripheral with enum, enum is exhausted of values" {
-    var db = try tests.peripheral_with_enum_and_its_exhausted_of_values(std.testing.allocator);
+    var db = try Database.create(std.testing.allocator);
     defer db.destroy();
+
+    const peripheral_id = try db.create_peripheral(.{
+        .name = "TEST_PERIPHERAL",
+    });
+
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+    const enum_id = try db.create_enum(struct_id, .{
+        .name = "TEST_ENUM",
+        .size_bits = 1,
+    });
+
+    try db.add_enum_field(enum_id, .{ .name = "TEST_ENUM_FIELD1", .value = 0 });
+    try db.add_enum_field(enum_id, .{ .name = "TEST_ENUM_FIELD2", .value = 1 });
+
+    _ = try db.create_register(struct_id, .{
+        .name = "TEST_REGISTER",
+        .size_bits = 8,
+        .offset_bytes = 0,
+    });
 
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
-    defer vfs.deinit();
+    var vio: VirtualIo = try .init(std.testing.allocator);
+    defer vio.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try db.to_zig(vio.io(), VirtualIo.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
@@ -2049,14 +2210,14 @@ test "gen.peripheral with enum, enum is exhausted of values" {
             ,
         },
         .{
-            .path = "peripherals.zig",
+            .path = "types/peripherals.zig",
             .content =
             \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
             \\
             ,
         },
         .{
-            .path = "peripherals/TEST_PERIPHERAL.zig",
+            .path = "types/peripherals/TEST_PERIPHERAL.zig",
             .content =
             \\const microzig = @import("microzig");
             \\const mmio = microzig.mmio;
@@ -2075,20 +2236,46 @@ test "gen.peripheral with enum, enum is exhausted of values" {
             \\
             ,
         },
-    }, &vfs);
+    }, &vio);
 }
 
 test "gen.field with named enum" {
-    var db = try tests.field_with_named_enum(std.testing.allocator);
+    var db = try Database.create(std.testing.allocator);
     defer db.destroy();
+
+    const peripheral_id = try db.create_peripheral(.{
+        .name = "TEST_PERIPHERAL",
+    });
+
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+    const enum_id = try db.create_enum(struct_id, .{
+        .name = "TEST_ENUM",
+        .size_bits = 4,
+    });
+
+    try db.add_enum_field(enum_id, .{ .name = "TEST_ENUM_FIELD1", .value = 0 });
+    try db.add_enum_field(enum_id, .{ .name = "TEST_ENUM_FIELD2", .value = 1 });
+
+    const register_id = try db.create_register(struct_id, .{
+        .name = "TEST_REGISTER",
+        .size_bits = 8,
+        .offset_bytes = 0,
+    });
+
+    try db.add_register_field(register_id, .{
+        .name = "TEST_FIELD",
+        .size_bits = 4,
+        .offset_bits = 0,
+        .enum_id = enum_id,
+    });
 
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
-    defer vfs.deinit();
+    var vio: VirtualIo = try .init(std.testing.allocator);
+    defer vio.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try db.to_zig(vio.io(), VirtualIo.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
@@ -2098,14 +2285,14 @@ test "gen.field with named enum" {
             ,
         },
         .{
-            .path = "peripherals.zig",
+            .path = "types/peripherals.zig",
             .content =
             \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
             \\
             ,
         },
         .{
-            .path = "peripherals/TEST_PERIPHERAL.zig",
+            .path = "types/peripherals/TEST_PERIPHERAL.zig",
             .content =
             \\const microzig = @import("microzig");
             \\const mmio = microzig.mmio;
@@ -2128,20 +2315,48 @@ test "gen.field with named enum" {
             \\
             ,
         },
-    }, &vfs);
+    }, &vio);
 }
 
 test "gen.field with named enum and named default" {
-    var db = try tests.field_with_named_enum_and_named_default(std.testing.allocator);
+    var db = try Database.create(std.testing.allocator);
     defer db.destroy();
+
+    const peripheral_id = try db.create_peripheral(.{
+        .name = "TEST_PERIPHERAL",
+    });
+
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+    const enum_id = try db.create_enum(struct_id, .{
+        .name = "TEST_ENUM",
+        .size_bits = 4,
+    });
+
+    try db.add_enum_field(enum_id, .{ .name = "TEST_ENUM_FIELD1", .value = 0 });
+    try db.add_enum_field(enum_id, .{ .name = "TEST_ENUM_FIELD2", .value = 1 });
+
+    const register_id = try db.create_register(struct_id, .{
+        .name = "TEST_REGISTER",
+        .size_bits = 8,
+        .offset_bytes = 0,
+        .reset_mask = 0xF,
+        .reset_value = 0x1,
+    });
+
+    try db.add_register_field(register_id, .{
+        .name = "TEST_FIELD",
+        .size_bits = 4,
+        .offset_bits = 0,
+        .enum_id = enum_id,
+    });
 
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
-    defer vfs.deinit();
+    var vio: VirtualIo = try .init(std.testing.allocator);
+    defer vio.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try db.to_zig(vio.io(), VirtualIo.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
@@ -2151,14 +2366,14 @@ test "gen.field with named enum and named default" {
             ,
         },
         .{
-            .path = "peripherals.zig",
+            .path = "types/peripherals.zig",
             .content =
             \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
             \\
             ,
         },
         .{
-            .path = "peripherals/TEST_PERIPHERAL.zig",
+            .path = "types/peripherals/TEST_PERIPHERAL.zig",
             .content =
             \\const microzig = @import("microzig");
             \\const mmio = microzig.mmio;
@@ -2181,20 +2396,48 @@ test "gen.field with named enum and named default" {
             \\
             ,
         },
-    }, &vfs);
+    }, &vio);
 }
 
 test "gen.field with named enum and unnamed default" {
-    var db = try tests.field_with_named_enum_and_unnamed_default(std.testing.allocator);
+    var db = try Database.create(std.testing.allocator);
     defer db.destroy();
+
+    const peripheral_id = try db.create_peripheral(.{
+        .name = "TEST_PERIPHERAL",
+    });
+
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+    const enum_id = try db.create_enum(struct_id, .{
+        .name = "TEST_ENUM",
+        .size_bits = 4,
+    });
+
+    try db.add_enum_field(enum_id, .{ .name = "TEST_ENUM_FIELD1", .value = 0 });
+    try db.add_enum_field(enum_id, .{ .name = "TEST_ENUM_FIELD2", .value = 1 });
+
+    const register_id = try db.create_register(struct_id, .{
+        .name = "TEST_REGISTER",
+        .size_bits = 8,
+        .offset_bytes = 0,
+        .reset_mask = 0xF,
+        .reset_value = 0xA,
+    });
+
+    try db.add_register_field(register_id, .{
+        .name = "TEST_FIELD",
+        .size_bits = 4,
+        .offset_bits = 0,
+        .enum_id = enum_id,
+    });
 
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
-    defer vfs.deinit();
+    var vio: VirtualIo = try .init(std.testing.allocator);
+    defer vio.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try db.to_zig(vio.io(), VirtualIo.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
@@ -2204,14 +2447,14 @@ test "gen.field with named enum and unnamed default" {
             ,
         },
         .{
-            .path = "peripherals.zig",
+            .path = "types/peripherals.zig",
             .content =
             \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
             \\
             ,
         },
         .{
-            .path = "peripherals/TEST_PERIPHERAL.zig",
+            .path = "types/peripherals/TEST_PERIPHERAL.zig",
             .content =
             \\const microzig = @import("microzig");
             \\const mmio = microzig.mmio;
@@ -2234,20 +2477,45 @@ test "gen.field with named enum and unnamed default" {
             \\
             ,
         },
-    }, &vfs);
+    }, &vio);
 }
 
 test "gen.field with anonymous enum" {
-    var db = try tests.field_with_anonymous_enum(std.testing.allocator);
+    var db = try Database.create(std.testing.allocator);
     defer db.destroy();
+
+    const peripheral_id = try db.create_peripheral(.{
+        .name = "TEST_PERIPHERAL",
+    });
+
+    const enum_id = try db.create_enum(null, .{
+        .size_bits = 4,
+    });
+
+    try db.add_enum_field(enum_id, .{ .name = "TEST_ENUM_FIELD1", .value = 0 });
+    try db.add_enum_field(enum_id, .{ .name = "TEST_ENUM_FIELD2", .value = 1 });
+
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+    const register_id = try db.create_register(struct_id, .{
+        .name = "TEST_REGISTER",
+        .size_bits = 8,
+        .offset_bytes = 0,
+    });
+
+    try db.add_register_field(register_id, .{
+        .name = "TEST_FIELD",
+        .size_bits = 4,
+        .offset_bits = 0,
+        .enum_id = enum_id,
+    });
 
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
-    defer vfs.deinit();
+    var vio: VirtualIo = try .init(std.testing.allocator);
+    defer vio.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try db.to_zig(vio.io(), VirtualIo.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
@@ -2257,14 +2525,14 @@ test "gen.field with anonymous enum" {
             ,
         },
         .{
-            .path = "peripherals.zig",
+            .path = "types/peripherals.zig",
             .content =
             \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
             \\
             ,
         },
         .{
-            .path = "peripherals/TEST_PERIPHERAL.zig",
+            .path = "types/peripherals/TEST_PERIPHERAL.zig",
             .content =
             \\const microzig = @import("microzig");
             \\const mmio = microzig.mmio;
@@ -2285,20 +2553,47 @@ test "gen.field with anonymous enum" {
             \\
             ,
         },
-    }, &vfs);
+    }, &vio);
 }
 
 test "gen.field with anonymous enum and default" {
-    var db = try tests.field_with_anonymous_enum_and_default(std.testing.allocator);
+    var db = try Database.create(std.testing.allocator);
     defer db.destroy();
+
+    const peripheral_id = try db.create_peripheral(.{
+        .name = "TEST_PERIPHERAL",
+    });
+
+    const enum_id = try db.create_enum(null, .{
+        .size_bits = 4,
+    });
+
+    try db.add_enum_field(enum_id, .{ .name = "TEST_ENUM_FIELD1", .value = 0 });
+    try db.add_enum_field(enum_id, .{ .name = "TEST_ENUM_FIELD2", .value = 1 });
+
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+    const register_id = try db.create_register(struct_id, .{
+        .name = "TEST_REGISTER",
+        .size_bits = 8,
+        .offset_bytes = 0,
+        .reset_mask = 0xF,
+        .reset_value = 0x1,
+    });
+
+    try db.add_register_field(register_id, .{
+        .name = "TEST_FIELD",
+        .size_bits = 4,
+        .offset_bits = 0,
+        .enum_id = enum_id,
+    });
 
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
-    defer vfs.deinit();
+    var vio: VirtualIo = try .init(std.testing.allocator);
+    defer vio.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try db.to_zig(vio.io(), VirtualIo.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
@@ -2308,14 +2603,14 @@ test "gen.field with anonymous enum and default" {
             ,
         },
         .{
-            .path = "peripherals.zig",
+            .path = "types/peripherals.zig",
             .content =
             \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
             \\
             ,
         },
         .{
-            .path = "peripherals/TEST_PERIPHERAL.zig",
+            .path = "types/peripherals/TEST_PERIPHERAL.zig",
             .content =
             \\const microzig = @import("microzig");
             \\const mmio = microzig.mmio;
@@ -2336,20 +2631,54 @@ test "gen.field with anonymous enum and default" {
             \\
             ,
         },
-    }, &vfs);
+    }, &vio);
 }
 
 test "gen.namespaced register groups" {
-    var db = try tests.namespaced_register_groups(std.testing.allocator);
+    var db = try Database.create(std.testing.allocator);
     defer db.destroy();
+
+    // peripheral
+    const peripheral_id = try db.create_peripheral(.{
+        .name = "PORT",
+    });
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+
+    // register_groups
+    const portb_group_id = try db.create_nested_struct(struct_id, .{ .name = "PORTB" });
+    const portc_group_id = try db.create_nested_struct(struct_id, .{ .name = "PORTC" });
+
+    // registers
+    _ = try db.create_register(portb_group_id, .{ .name = "PORTB", .size_bits = 8, .offset_bytes = 0 });
+    _ = try db.create_register(portb_group_id, .{ .name = "DDRB", .size_bits = 8, .offset_bytes = 1 });
+    _ = try db.create_register(portb_group_id, .{ .name = "PINB", .size_bits = 8, .offset_bytes = 2 });
+    _ = try db.create_register(portc_group_id, .{ .name = "PORTC", .size_bits = 8, .offset_bytes = 0 });
+    _ = try db.create_register(portc_group_id, .{ .name = "DDRC", .size_bits = 8, .offset_bytes = 1 });
+    _ = try db.create_register(portc_group_id, .{ .name = "PINC", .size_bits = 8, .offset_bytes = 2 });
+
+    // device
+    const device_id = try db.create_device(.{ .name = "ATmega328P", .arch = .avr8 });
+
+    // instances
+    _ = try db.create_device_peripheral(device_id, .{
+        .name = "PORTB",
+        .offset_bytes = 0x23,
+        .struct_id = portb_group_id,
+    });
+
+    _ = try db.create_device_peripheral(device_id, .{
+        .name = "PORTC",
+        .offset_bytes = 0x26,
+        .struct_id = portc_group_id,
+    });
 
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
-    defer vfs.deinit();
+    var vio: VirtualIo = try .init(std.testing.allocator);
+    defer vio.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try db.to_zig(vio.io(), VirtualIo.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "ATmega328P.zig",
@@ -2396,14 +2725,14 @@ test "gen.namespaced register groups" {
             ,
         },
         .{
-            .path = "peripherals.zig",
+            .path = "types/peripherals.zig",
             .content =
             \\pub const PORT = @import("peripherals/PORT.zig");
             \\
             ,
         },
         .{
-            .path = "peripherals/PORT.zig",
+            .path = "types/peripherals/PORT.zig",
             .content =
             \\const microzig = @import("microzig");
             \\const mmio = microzig.mmio;
@@ -2430,20 +2759,39 @@ test "gen.namespaced register groups" {
             \\
             ,
         },
-    }, &vfs);
+    }, &vio);
 }
 
 test "gen.peripheral with reserved register" {
-    var db = try tests.peripheral_with_reserved_register(std.testing.allocator);
+    var db = try Database.create(std.testing.allocator);
     defer db.destroy();
+
+    const peripheral_id = try db.create_peripheral(.{
+        .name = "PORTB",
+    });
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+
+    _ = try db.create_register(struct_id, .{ .name = "PORTB", .size_bits = 32, .offset_bytes = 0 });
+    _ = try db.create_register(struct_id, .{ .name = "PINB", .size_bits = 32, .offset_bytes = 8 });
+
+    const device_id = try db.create_device(.{
+        .name = "ATmega328P",
+        .arch = .avr8,
+    });
+
+    _ = try db.create_device_peripheral(device_id, .{
+        .name = "PORTB",
+        .offset_bytes = 0x23,
+        .struct_id = struct_id,
+    });
 
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
-    defer vfs.deinit();
+    var vio: VirtualIo = try .init(std.testing.allocator);
+    defer vio.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try db.to_zig(vio.io(), VirtualIo.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "ATmega328P.zig",
@@ -2489,14 +2837,14 @@ test "gen.peripheral with reserved register" {
             ,
         },
         .{
-            .path = "peripherals.zig",
+            .path = "types/peripherals.zig",
             .content =
             \\pub const PORTB = @import("peripherals/PORTB.zig").PORTB;
             \\
             ,
         },
         .{
-            .path = "peripherals/PORTB.zig",
+            .path = "types/peripherals/PORTB.zig",
             .content =
             \\const microzig = @import("microzig");
             \\const mmio = microzig.mmio;
@@ -2514,20 +2862,39 @@ test "gen.peripheral with reserved register" {
             \\
             ,
         },
-    }, &vfs);
+    }, &vio);
 }
 
 test "gen.peripheral with count" {
-    var db = try tests.peripheral_with_count(std.testing.allocator);
+    var db = try Database.create(std.testing.allocator);
     defer db.destroy();
+
+    const device_id = try db.create_device(.{ .name = "ATmega328P", .arch = .avr8 });
+
+    const peripheral_id = try db.create_peripheral(.{
+        .name = "PORTB",
+        .size_bytes = 3,
+    });
+
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+    _ = try db.create_device_peripheral(device_id, .{
+        .name = "PORTB",
+        .offset_bytes = 0x23,
+        .count = 4,
+        .struct_id = struct_id,
+    });
+
+    _ = try db.create_register(struct_id, .{ .name = "PORTB", .size_bits = 8, .offset_bytes = 0 });
+    _ = try db.create_register(struct_id, .{ .name = "DDRB", .size_bits = 8, .offset_bytes = 1 });
+    _ = try db.create_register(struct_id, .{ .name = "PINB", .size_bits = 8, .offset_bytes = 2 });
 
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
-    defer vfs.deinit();
+    var vio: VirtualIo = try .init(std.testing.allocator);
+    defer vio.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try db.to_zig(vio.io(), VirtualIo.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "ATmega328P.zig",
@@ -2573,14 +2940,14 @@ test "gen.peripheral with count" {
             ,
         },
         .{
-            .path = "peripherals.zig",
+            .path = "types/peripherals.zig",
             .content =
             \\pub const PORTB = @import("peripherals/PORTB.zig").PORTB;
             \\
             ,
         },
         .{
-            .path = "peripherals/PORTB.zig",
+            .path = "types/peripherals/PORTB.zig",
             .content =
             \\const microzig = @import("microzig");
             \\const mmio = microzig.mmio;
@@ -2598,20 +2965,40 @@ test "gen.peripheral with count" {
             \\
             ,
         },
-    }, &vfs);
+    }, &vio);
 }
 
 test "gen.peripheral with count, padding required" {
-    var db = try tests.peripheral_with_count_padding_required(std.testing.allocator);
+    var db = try Database.create(std.testing.allocator);
     defer db.destroy();
+
+    const device_id = try db.create_device(.{ .name = "ATmega328P", .arch = .avr8 });
+
+    const peripheral_id = try db.create_peripheral(.{
+        .name = "PORTB",
+        .size_bytes = 4,
+    });
+
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+
+    _ = try db.create_device_peripheral(device_id, .{
+        .name = "PORTB",
+        .offset_bytes = 0x23,
+        .count = 4,
+        .struct_id = struct_id,
+    });
+
+    _ = try db.create_register(struct_id, .{ .name = "PORTB", .size_bits = 8, .offset_bytes = 0 });
+    _ = try db.create_register(struct_id, .{ .name = "DDRB", .size_bits = 8, .offset_bytes = 1 });
+    _ = try db.create_register(struct_id, .{ .name = "PINB", .size_bits = 8, .offset_bytes = 2 });
 
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
-    defer vfs.deinit();
+    var vio: VirtualIo = try .init(std.testing.allocator);
+    defer vio.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try db.to_zig(vio.io(), VirtualIo.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "ATmega328P.zig",
@@ -2657,14 +3044,14 @@ test "gen.peripheral with count, padding required" {
             ,
         },
         .{
-            .path = "peripherals.zig",
+            .path = "types/peripherals.zig",
             .content =
             \\pub const PORTB = @import("peripherals/PORTB.zig").PORTB;
             \\
             ,
         },
         .{
-            .path = "peripherals/PORTB.zig",
+            .path = "types/peripherals/PORTB.zig",
             .content =
             \\const microzig = @import("microzig");
             \\const mmio = microzig.mmio;
@@ -2683,20 +3070,40 @@ test "gen.peripheral with count, padding required" {
             \\
             ,
         },
-    }, &vfs);
+    }, &vio);
 }
 
 test "gen.register with count" {
-    var db = try tests.register_with_count(std.testing.allocator);
+    var db = try Database.create(std.testing.allocator);
     defer db.destroy();
+
+    const device_id = try db.create_device(.{
+        .name = "ATmega328P",
+        .arch = .avr8,
+    });
+
+    const peripheral_id = try db.create_peripheral(.{
+        .name = "PORTB",
+    });
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+
+    _ = try db.create_device_peripheral(device_id, .{
+        .name = "PORTB",
+        .offset_bytes = 0x23,
+        .struct_id = struct_id,
+    });
+
+    _ = try db.create_register(struct_id, .{ .name = "PORTB", .size_bits = 8, .offset_bytes = 0, .count = 4 });
+    _ = try db.create_register(struct_id, .{ .name = "DDRB", .size_bits = 8, .offset_bytes = 4 });
+    _ = try db.create_register(struct_id, .{ .name = "PINB", .size_bits = 8, .offset_bytes = 5 });
 
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
-    defer vfs.deinit();
+    var vio: VirtualIo = try .init(std.testing.allocator);
+    defer vio.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try db.to_zig(vio.io(), VirtualIo.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "ATmega328P.zig",
@@ -2742,14 +3149,14 @@ test "gen.register with count" {
             ,
         },
         .{
-            .path = "peripherals.zig",
+            .path = "types/peripherals.zig",
             .content =
             \\pub const PORTB = @import("peripherals/PORTB.zig").PORTB;
             \\
             ,
         },
         .{
-            .path = "peripherals/PORTB.zig",
+            .path = "types/peripherals/PORTB.zig",
             .content =
             \\const microzig = @import("microzig");
             \\const mmio = microzig.mmio;
@@ -2767,20 +3174,53 @@ test "gen.register with count" {
             \\
             ,
         },
-    }, &vfs);
+    }, &vio);
 }
 
 test "gen.register with count and fields" {
-    var db = try tests.register_with_count_and_fields(std.testing.allocator);
+    var db = try Database.create(std.testing.allocator);
     defer db.destroy();
+
+    const device_id = try db.create_device(.{
+        .name = "ATmega328P",
+        .arch = .avr8,
+    });
+
+    const peripheral_id = try db.create_peripheral(.{
+        .name = "PORTB",
+    });
+
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+
+    _ = try db.create_device_peripheral(device_id, .{
+        .name = "PORTB",
+        .offset_bytes = 0x23,
+        .struct_id = struct_id,
+    });
+
+    const portb_id = try db.create_register(struct_id, .{
+        .name = "PORTB",
+        .size_bits = 8,
+        .offset_bytes = 0,
+        .count = 4,
+    });
+
+    _ = try db.create_register(struct_id, .{ .name = "DDRB", .size_bits = 8, .offset_bytes = 4 });
+    _ = try db.create_register(struct_id, .{ .name = "PINB", .size_bits = 8, .offset_bytes = 5 });
+
+    try db.add_register_field(portb_id, .{
+        .name = "TEST_FIELD",
+        .size_bits = 4,
+        .offset_bits = 0,
+    });
 
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
-    defer vfs.deinit();
+    var vio: VirtualIo = try .init(std.testing.allocator);
+    defer vio.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try db.to_zig(vio.io(), VirtualIo.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "ATmega328P.zig",
@@ -2826,14 +3266,14 @@ test "gen.register with count and fields" {
             ,
         },
         .{
-            .path = "peripherals.zig",
+            .path = "types/peripherals.zig",
             .content =
             \\pub const PORTB = @import("peripherals/PORTB.zig").PORTB;
             \\
             ,
         },
         .{
-            .path = "peripherals/PORTB.zig",
+            .path = "types/peripherals/PORTB.zig",
             .content =
             \\const microzig = @import("microzig");
             \\const mmio = microzig.mmio;
@@ -2854,20 +3294,41 @@ test "gen.register with count and fields" {
             \\
             ,
         },
-    }, &vfs);
+    }, &vio);
 }
 
 test "gen.field with count, width of one, offset, and padding" {
-    var db = try tests.field_with_count_width_of_one_offset_and_padding(std.testing.allocator);
+    var db = try Database.create(std.testing.allocator);
     defer db.destroy();
+
+    const peripheral_id = try db.create_peripheral(.{
+        .name = "PORTB",
+    });
+
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+
+    const portb_id = try db.create_register(struct_id, .{
+        .name = "PORTB",
+        .size_bits = 8,
+        .offset_bytes = 0,
+    });
+
+    inline for (0..5) |i| {
+        const suffix = std.fmt.comptimePrint("{d}", .{i});
+        try db.add_register_field(portb_id, .{
+            .name = "TEST_FIELD" ++ suffix,
+            .size_bits = 1,
+            .offset_bits = 2 + i,
+        });
+    }
 
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
-    defer vfs.deinit();
+    var vio: VirtualIo = try .init(std.testing.allocator);
+    defer vio.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try db.to_zig(vio.io(), VirtualIo.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
@@ -2877,14 +3338,14 @@ test "gen.field with count, width of one, offset, and padding" {
             ,
         },
         .{
-            .path = "peripherals.zig",
+            .path = "types/peripherals.zig",
             .content =
             \\pub const PORTB = @import("peripherals/PORTB.zig").PORTB;
             \\
             ,
         },
         .{
-            .path = "peripherals/PORTB.zig",
+            .path = "types/peripherals/PORTB.zig",
             .content =
             \\const microzig = @import("microzig");
             \\const mmio = microzig.mmio;
@@ -2906,20 +3367,41 @@ test "gen.field with count, width of one, offset, and padding" {
             \\
             ,
         },
-    }, &vfs);
+    }, &vio);
 }
 
 test "gen.field with count, multi-bit width, offset, and padding" {
-    var db = try tests.field_with_count_multi_bit_width_offset_and_padding(std.testing.allocator);
+    var db = try Database.create(std.testing.allocator);
     defer db.destroy();
+
+    const peripheral_id = try db.create_peripheral(.{
+        .name = "PORTB",
+    });
+
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+
+    const portb_id = try db.create_register(struct_id, .{
+        .name = "PORTB",
+        .size_bits = 8,
+        .offset_bytes = 0,
+    });
+
+    inline for (0..2) |i| {
+        const suffix = std.fmt.comptimePrint("{d}", .{i});
+        try db.add_register_field(portb_id, .{
+            .name = "TEST_FIELD" ++ suffix,
+            .size_bits = 2,
+            .offset_bits = 2 + (i * 2),
+        });
+    }
 
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
-    defer vfs.deinit();
+    var vio: VirtualIo = try .init(std.testing.allocator);
+    defer vio.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try db.to_zig(vio.io(), VirtualIo.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
@@ -2929,14 +3411,14 @@ test "gen.field with count, multi-bit width, offset, and padding" {
             ,
         },
         .{
-            .path = "peripherals.zig",
+            .path = "types/peripherals.zig",
             .content =
             \\pub const PORTB = @import("peripherals/PORTB.zig").PORTB;
             \\
             ,
         },
         .{
-            .path = "peripherals/PORTB.zig",
+            .path = "types/peripherals/PORTB.zig",
             .content =
             \\const microzig = @import("microzig");
             \\const mmio = microzig.mmio;
@@ -2955,20 +3437,35 @@ test "gen.field with count, multi-bit width, offset, and padding" {
             \\
             ,
         },
-    }, &vfs);
+    }, &vio);
 }
 
 test "gen.interrupts.avr" {
-    var db = try tests.interrupts_avr(std.testing.allocator);
+    var db = try Database.create(std.testing.allocator);
     defer db.destroy();
+
+    const device_id = try db.create_device(.{
+        .name = "ATmega328P",
+        .arch = .avr8,
+    });
+
+    _ = try db.create_interrupt(device_id, .{
+        .name = "TEST_VECTOR1",
+        .idx = 1,
+    });
+
+    _ = try db.create_interrupt(device_id, .{
+        .name = "TEST_VECTOR2",
+        .idx = 3,
+    });
 
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
-    defer vfs.deinit();
+    var vio: VirtualIo = try .init(std.testing.allocator);
+    defer vio.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try db.to_zig(vio.io(), VirtualIo.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "ATmega328P.zig",
@@ -3025,25 +3522,46 @@ test "gen.interrupts.avr" {
             ,
         },
         .{
-            .path = "peripherals.zig",
+            .path = "types/peripherals.zig",
             .content =
             \\
             ,
         },
-    }, &vfs);
+    }, &vio);
 }
 
 test "gen.peripheral type with register and field" {
-    var db = try tests.peripheral_type_with_register_and_field(std.testing.allocator);
+    var db = try Database.create(std.testing.allocator);
     defer db.destroy();
+
+    const peripheral_id = try db.create_peripheral(.{
+        .name = "TEST_PERIPHERAL",
+        .description = "test peripheral",
+    });
+
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+
+    const register_id = try db.create_register(struct_id, .{
+        .name = "TEST_REGISTER",
+        .description = "test register",
+        .size_bits = 32,
+        .offset_bytes = 0,
+    });
+
+    try db.add_register_field(register_id, .{
+        .name = "TEST_FIELD",
+        .description = "test field",
+        .size_bits = 1,
+        .offset_bits = 0,
+    });
 
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
-    defer vfs.deinit();
+    var vio: VirtualIo = try .init(std.testing.allocator);
+    defer vio.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try db.to_zig(vio.io(), VirtualIo.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
@@ -3053,14 +3571,14 @@ test "gen.peripheral type with register and field" {
             ,
         },
         .{
-            .path = "peripherals.zig",
+            .path = "types/peripherals.zig",
             .content =
             \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
             \\
             ,
         },
         .{
-            .path = "peripherals/TEST_PERIPHERAL.zig",
+            .path = "types/peripherals/TEST_PERIPHERAL.zig",
             .content =
             \\const microzig = @import("microzig");
             \\const mmio = microzig.mmio;
@@ -3080,20 +3598,60 @@ test "gen.peripheral type with register and field" {
             \\
             ,
         },
-    }, &vfs);
+    }, &vio);
 }
 
 test "gen.name collisions in enum name cause them to be anonymous" {
-    var db = try tests.enums_with_name_collision(std.testing.allocator);
+    var db = try Database.create(std.testing.allocator);
     defer db.destroy();
+
+    const peripheral_id = try db.create_peripheral(.{
+        .name = "TEST_PERIPHERAL",
+    });
+
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+    const enum1_id = try db.create_enum(struct_id, .{
+        .name = "ENUM",
+        .size_bits = 4,
+    });
+
+    try db.add_enum_field(enum1_id, .{ .name = "TEST_ENUM_FIELD1", .value = 0 });
+    try db.add_enum_field(enum1_id, .{ .name = "TEST_ENUM_FIELD2", .value = 1 });
+
+    const enum2_id = try db.create_enum(struct_id, .{
+        .name = "ENUM",
+        .size_bits = 4,
+    });
+
+    try db.add_enum_field(enum2_id, .{ .name = "TEST_ENUM_FIELD1", .value = 0 });
+    try db.add_enum_field(enum2_id, .{ .name = "TEST_ENUM_FIELD2", .value = 1 });
+
+    const register_id = try db.create_register(struct_id, .{
+        .name = "TEST_REGISTER",
+        .size_bits = 8,
+        .offset_bytes = 0,
+    });
+
+    try db.add_register_field(register_id, .{
+        .name = "TEST_FIELD1",
+        .size_bits = 4,
+        .offset_bits = 0,
+        .enum_id = enum1_id,
+    });
+    try db.add_register_field(register_id, .{
+        .name = "TEST_FIELD2",
+        .size_bits = 4,
+        .offset_bits = 4,
+        .enum_id = enum2_id,
+    });
 
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
-    defer vfs.deinit();
+    var vio: VirtualIo = try .init(std.testing.allocator);
+    defer vio.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try db.to_zig(vio.io(), VirtualIo.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
@@ -3103,14 +3661,14 @@ test "gen.name collisions in enum name cause them to be anonymous" {
             ,
         },
         .{
-            .path = "peripherals.zig",
+            .path = "types/peripherals.zig",
             .content =
             \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
             \\
             ,
         },
         .{
-            .path = "peripherals/TEST_PERIPHERAL.zig",
+            .path = "types/peripherals/TEST_PERIPHERAL.zig",
             .content =
             \\const microzig = @import("microzig");
             \\const mmio = microzig.mmio;
@@ -3135,20 +3693,46 @@ test "gen.name collisions in enum name cause them to be anonymous" {
             \\
             ,
         },
-    }, &vfs);
+    }, &vio);
 }
 
 test "gen.pick one enum field in value collisions" {
-    var db = try tests.enum_with_value_collision(std.testing.allocator);
+    var db = try Database.create(std.testing.allocator);
     defer db.destroy();
+
+    const peripheral_id = try db.create_peripheral(.{
+        .name = "TEST_PERIPHERAL",
+    });
+
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+    const enum_id = try db.create_enum(null, .{
+        .name = "ENUM",
+        .size_bits = 4,
+    });
+
+    try db.add_enum_field(enum_id, .{ .name = "TEST_ENUM_FIELD1", .value = 0 });
+    try db.add_enum_field(enum_id, .{ .name = "TEST_ENUM_FIELD2", .value = 0 });
+
+    const register_id = try db.create_register(struct_id, .{
+        .name = "TEST_REGISTER",
+        .size_bits = 8,
+        .offset_bytes = 0,
+    });
+
+    try db.add_register_field(register_id, .{
+        .name = "TEST_FIELD",
+        .size_bits = 4,
+        .offset_bits = 0,
+        .enum_id = enum_id,
+    });
 
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
-    defer vfs.deinit();
+    var vio: VirtualIo = try .init(std.testing.allocator);
+    defer vio.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try db.to_zig(vio.io(), VirtualIo.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
@@ -3158,14 +3742,14 @@ test "gen.pick one enum field in value collisions" {
             ,
         },
         .{
-            .path = "peripherals.zig",
+            .path = "types/peripherals.zig",
             .content =
             \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
             \\
             ,
         },
         .{
-            .path = "peripherals/TEST_PERIPHERAL.zig",
+            .path = "types/peripherals/TEST_PERIPHERAL.zig",
             .content =
             \\const microzig = @import("microzig");
             \\const mmio = microzig.mmio;
@@ -3185,20 +3769,46 @@ test "gen.pick one enum field in value collisions" {
             \\
             ,
         },
-    }, &vfs);
+    }, &vio);
 }
 
 //test "gen.pick one enum field in name collisions" {
-//    var db = try tests.enum_fields_with_name_collision(std.testing.allocator);
+//    var db = try Database.create(std.testing.allocator);
 //    defer db.destroy();
+//
+//    const peripheral_id = try db.create_peripheral(.{
+//        .name = "TEST_PERIPHERAL",
+//    });
+//
+//    const struct_id = try db.get_peripheral_struct(peripheral_id);
+//    const enum_id = try db.create_enum(null, .{
+//        .name = "ENUM",
+//        .size_bits = 4,
+//    });
+//
+//    try db.add_enum_field(enum_id, .{ .name = "TEST_ENUM_FIELD1", .value = 0 });
+//    try db.add_enum_field(enum_id, .{ .name = "TEST_ENUM_FIELD1", .value = 1 });
+//
+//    const register_id = try db.create_register(struct_id, .{
+//        .name = "TEST_REGISTER",
+//        .size_bits = 8,
+//        .offset_bytes = 0,
+//    });
+//
+//    try db.add_register_field(register_id, .{
+//        .name = "TEST_FIELD",
+//        .size_bits = 4,
+//        .offset_bits = 0,
+//        .enum_id = enum_id,
+//    });
 //
 //    var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
 //    defer buffer.deinit();
 //
-//    var vfs: VirtualFilesystem = .init(std.testing.allocator);
-//    defer vfs.deinit();
+//    var vio: VirtualIo = try .init(std.testing.allocator);
+//    defer vio.deinit();
 //
-//    try db.to_zig(vfs.dir(), .{});
+//    try db.to_zig(vio.io(), VirtualIo.root_dir, .{});
 //    try expect_output(&.{
 //        .{
 //            .path = "types.zig",
@@ -3235,20 +3845,47 @@ test "gen.pick one enum field in value collisions" {
 //            \\
 //            ,
 //        },
-//    }, &vfs);
+//    }, &vio);
 //}
 
 //test "gen.register fields with name collision" {
-//    var db = try tests.register_fields_with_name_collision(std.testing.allocator);
+//    var db = try Database.create(std.testing.allocator);
 //    defer db.destroy();
+//
+//    const peripheral_id = try db.create_peripheral(.{
+//        .name = "TEST_PERIPHERAL",
+//        .description = "test peripheral",
+//    });
+//
+//    const struct_id = try db.get_peripheral_struct(peripheral_id);
+//
+//    const register_id = try db.create_register(struct_id, .{
+//        .name = "TEST_REGISTER",
+//        .description = "test register",
+//        .size_bits = 32,
+//        .offset_bytes = 0,
+//    });
+//
+//    try db.add_register_field(register_id, .{
+//        .name = "TEST_FIELD",
+//        .description = "test field 1",
+//        .size_bits = 1,
+//        .offset_bits = 0,
+//    });
+//    try db.add_register_field(register_id, .{
+//        .name = "TEST_FIELD",
+//        .description = "test field 2",
+//        .size_bits = 1,
+//        .offset_bits = 1,
+//    });
 //
 //    var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
 //    defer buffer.deinit();
 //
-//    var vfs: VirtualFilesystem = .init(std.testing.allocator);
-//    defer vfs.deinit();
+//    var vio: VirtualIo = try .init(std.testing.allocator);
+//    defer vio.deinit();
 //
-//    try db.to_zig(vfs.dir(), .{});
+//    try db.to_zig(vio.io(), VirtualIo.root_dir, .{});
 //    try expect_output(&.{
 //        .{
 //            .path = "types.zig",
@@ -3284,20 +3921,49 @@ test "gen.pick one enum field in value collisions" {
 //            \\
 //            ,
 //        },
-//    }, &vfs);
+//    }, &vio);
 //}
 
 test "gen.nested struct field in a peripheral" {
-    var db = try tests.nested_struct_field_in_a_peripheral(std.testing.allocator, 0);
+    var db = try Database.create(std.testing.allocator);
     defer db.destroy();
+
+    const peripheral_id = try db.create_peripheral(.{
+        .name = "TEST_PERIPHERAL",
+        .description = "test peripheral",
+    });
+
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+    const nested_struct_id = try db.create_struct(.{});
+
+    const register_id = try db.create_register(nested_struct_id, .{
+        .name = "TEST_REGISTER",
+        .description = "test register",
+        .size_bits = 32,
+        .offset_bytes = 0,
+    });
+
+    try db.add_register_field(register_id, .{
+        .name = "TEST_FIELD",
+        .description = "test field 1",
+        .size_bits = 1,
+        .offset_bits = 0,
+    });
+
+    try db.add_nested_struct_field(struct_id, .{
+        .name = "TEST_NESTED",
+        .description = "test nested struct",
+        .offset_bytes = 0,
+        .struct_id = nested_struct_id,
+    });
 
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
-    defer vfs.deinit();
+    var vio: VirtualIo = try .init(std.testing.allocator);
+    defer vio.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try db.to_zig(vio.io(), VirtualIo.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
@@ -3307,14 +3973,14 @@ test "gen.nested struct field in a peripheral" {
             ,
         },
         .{
-            .path = "peripherals.zig",
+            .path = "types/peripherals.zig",
             .content =
             \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
             \\
             ,
         },
         .{
-            .path = "peripherals/TEST_PERIPHERAL.zig",
+            .path = "types/peripherals/TEST_PERIPHERAL.zig",
             .content =
             \\const microzig = @import("microzig");
             \\const mmio = microzig.mmio;
@@ -3338,20 +4004,51 @@ test "gen.nested struct field in a peripheral" {
             \\
             ,
         },
-    }, &vfs);
+    }, &vio);
 }
 
 test "gen.nested struct field in a peripheral that has a named type" {
-    var db = try tests.nested_struct_field_in_a_peripheral_that_has_a_named_type(std.testing.allocator, 0);
+    var db = try Database.create(std.testing.allocator);
     defer db.destroy();
+
+    const peripheral_id = try db.create_peripheral(.{
+        .name = "TEST_PERIPHERAL",
+        .description = "test peripheral",
+    });
+
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+    const nested_struct_id = try db.create_nested_struct(struct_id, .{
+        .name = "TEST_NESTED_TYPE",
+    });
+
+    const register_id = try db.create_register(nested_struct_id, .{
+        .name = "TEST_REGISTER",
+        .description = "test register",
+        .size_bits = 32,
+        .offset_bytes = 0,
+    });
+
+    try db.add_register_field(register_id, .{
+        .name = "TEST_FIELD",
+        .description = "test field 1",
+        .size_bits = 1,
+        .offset_bits = 0,
+    });
+
+    try db.add_nested_struct_field(struct_id, .{
+        .name = "TEST_NESTED",
+        .description = "test nested struct",
+        .offset_bytes = 0,
+        .struct_id = nested_struct_id,
+    });
 
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
-    defer vfs.deinit();
+    var vio: VirtualIo = try .init(std.testing.allocator);
+    defer vio.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try db.to_zig(vio.io(), VirtualIo.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
@@ -3361,14 +4058,14 @@ test "gen.nested struct field in a peripheral that has a named type" {
             ,
         },
         .{
-            .path = "peripherals.zig",
+            .path = "types/peripherals.zig",
             .content =
             \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
             \\
             ,
         },
         .{
-            .path = "peripherals/TEST_PERIPHERAL.zig",
+            .path = "types/peripherals/TEST_PERIPHERAL.zig",
             .content =
             \\const microzig = @import("microzig");
             \\const mmio = microzig.mmio;
@@ -3394,20 +4091,49 @@ test "gen.nested struct field in a peripheral that has a named type" {
             \\
             ,
         },
-    }, &vfs);
+    }, &vio);
 }
 
 test "gen.nested struct field in a peripheral with offset" {
-    var db = try tests.nested_struct_field_in_a_peripheral(std.testing.allocator, 4);
+    var db = try Database.create(std.testing.allocator);
     defer db.destroy();
+
+    const peripheral_id = try db.create_peripheral(.{
+        .name = "TEST_PERIPHERAL",
+        .description = "test peripheral",
+    });
+
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+    const nested_struct_id = try db.create_struct(.{});
+
+    const register_id = try db.create_register(nested_struct_id, .{
+        .name = "TEST_REGISTER",
+        .description = "test register",
+        .size_bits = 32,
+        .offset_bytes = 0,
+    });
+
+    try db.add_register_field(register_id, .{
+        .name = "TEST_FIELD",
+        .description = "test field 1",
+        .size_bits = 1,
+        .offset_bits = 0,
+    });
+
+    try db.add_nested_struct_field(struct_id, .{
+        .name = "TEST_NESTED",
+        .description = "test nested struct",
+        .offset_bytes = 4,
+        .struct_id = nested_struct_id,
+    });
 
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
-    defer vfs.deinit();
+    var vio: VirtualIo = try .init(std.testing.allocator);
+    defer vio.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try db.to_zig(vio.io(), VirtualIo.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
@@ -3417,14 +4143,14 @@ test "gen.nested struct field in a peripheral with offset" {
             ,
         },
         .{
-            .path = "peripherals.zig",
+            .path = "types/peripherals.zig",
             .content =
             \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
             \\
             ,
         },
         .{
-            .path = "peripherals/TEST_PERIPHERAL.zig",
+            .path = "types/peripherals/TEST_PERIPHERAL.zig",
             .content =
             \\const microzig = @import("microzig");
             \\const mmio = microzig.mmio;
@@ -3450,20 +4176,56 @@ test "gen.nested struct field in a peripheral with offset" {
             \\
             ,
         },
-    }, &vfs);
+    }, &vio);
 }
 
 test "gen.nested struct field in nested struct field" {
-    var db = try tests.nested_struct_field_in_a_nested_struct_field(std.testing.allocator);
+    var db = try Database.create(std.testing.allocator);
     defer db.destroy();
+
+    const peripheral_id = try db.create_peripheral(.{
+        .name = "TEST_PERIPHERAL",
+        .description = "test peripheral",
+    });
+
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+    const nested_struct_id = try db.create_struct(.{});
+    const nested_nested_struct_id = try db.create_struct(.{});
+
+    const register_id = try db.create_register(nested_nested_struct_id, .{
+        .name = "TEST_REGISTER",
+        .description = "test register",
+        .size_bits = 32,
+        .offset_bytes = 0,
+    });
+
+    try db.add_register_field(register_id, .{
+        .name = "TEST_FIELD",
+        .description = "test field 1",
+        .size_bits = 1,
+        .offset_bits = 0,
+    });
+
+    try db.add_nested_struct_field(struct_id, .{
+        .name = "TEST_NESTED",
+        .description = "test nested struct",
+        .offset_bytes = 0,
+        .struct_id = nested_struct_id,
+    });
+
+    try db.add_nested_struct_field(nested_struct_id, .{
+        .name = "TEST_NESTED_NESTED",
+        .offset_bytes = 0,
+        .struct_id = nested_nested_struct_id,
+    });
 
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
-    defer vfs.deinit();
+    var vio: VirtualIo = try .init(std.testing.allocator);
+    defer vio.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try db.to_zig(vio.io(), VirtualIo.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
@@ -3473,14 +4235,14 @@ test "gen.nested struct field in nested struct field" {
             ,
         },
         .{
-            .path = "peripherals.zig",
+            .path = "types/peripherals.zig",
             .content =
             \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
             \\
             ,
         },
         .{
-            .path = "peripherals/TEST_PERIPHERAL.zig",
+            .path = "types/peripherals/TEST_PERIPHERAL.zig",
             .content =
             \\const microzig = @import("microzig");
             \\const mmio = microzig.mmio;
@@ -3507,20 +4269,65 @@ test "gen.nested struct field in nested struct field" {
             \\
             ,
         },
-    }, &vfs);
+    }, &vio);
 }
 
 test "gen.nested struct field next to register" {
-    var db = try tests.nested_struct_field_next_to_register(std.testing.allocator);
+    var db = try Database.create(std.testing.allocator);
     defer db.destroy();
+
+    const peripheral_id = try db.create_peripheral(.{
+        .name = "TEST_PERIPHERAL",
+        .description = "test peripheral",
+    });
+
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+    const nested_struct_id = try db.create_nested_struct(struct_id, .{
+        .name = "TEST_NESTED_TYPE",
+    });
+
+    const register1_id = try db.create_register(nested_struct_id, .{
+        .name = "TEST_REGISTER",
+        .description = "test register",
+        .size_bits = 32,
+        .offset_bytes = 0,
+    });
+
+    try db.add_register_field(register1_id, .{
+        .name = "TEST_FIELD",
+        .description = "test field 1",
+        .size_bits = 1,
+        .offset_bits = 0,
+    });
+
+    try db.add_nested_struct_field(struct_id, .{
+        .name = "TEST_NESTED",
+        .description = "test nested struct",
+        .offset_bytes = 0,
+        .struct_id = nested_struct_id,
+    });
+
+    const register2_id = try db.create_register(struct_id, .{
+        .name = "TEST_REGISTER",
+        .description = "test register",
+        .size_bits = 32,
+        .offset_bytes = 4,
+    });
+
+    try db.add_register_field(register2_id, .{
+        .name = "TEST_FIELD",
+        .description = "test field 1",
+        .size_bits = 1,
+        .offset_bits = 0,
+    });
 
     var buffer: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buffer.deinit();
 
-    var vfs: VirtualFilesystem = .init(std.testing.allocator);
-    defer vfs.deinit();
+    var vio: VirtualIo = try .init(std.testing.allocator);
+    defer vio.deinit();
 
-    try db.to_zig(vfs.dir(), .{});
+    try db.to_zig(vio.io(), VirtualIo.root_dir, .{});
     try expect_output(&.{
         .{
             .path = "types.zig",
@@ -3530,14 +4337,14 @@ test "gen.nested struct field next to register" {
             ,
         },
         .{
-            .path = "peripherals.zig",
+            .path = "types/peripherals.zig",
             .content =
             \\pub const TEST_PERIPHERAL = @import("peripherals/TEST_PERIPHERAL.zig").TEST_PERIPHERAL;
             \\
             ,
         },
         .{
-            .path = "peripherals/TEST_PERIPHERAL.zig",
+            .path = "types/peripherals/TEST_PERIPHERAL.zig",
             .content =
             \\const microzig = @import("microzig");
             \\const mmio = microzig.mmio;
@@ -3570,5 +4377,5 @@ test "gen.nested struct field next to register" {
             \\
             ,
         },
-    }, &vfs);
+    }, &vio);
 }

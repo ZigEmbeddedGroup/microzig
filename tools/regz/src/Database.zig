@@ -9,7 +9,7 @@ const assert = std.debug.assert;
 const zqlite = @import("zqlite");
 const c = zqlite.c;
 
-const xml = @import("xml.zig");
+const xml = @import("xml");
 const svd = @import("svd.zig");
 const atdf = @import("atdf.zig");
 const embassy = @import("embassy.zig");
@@ -19,7 +19,6 @@ const analysis = @import("analysis.zig");
 const Patch = @import("patch.zig").Patch;
 const SQL_Options = @import("SQL_Options.zig");
 const Arch = @import("arch.zig").Arch;
-pub const Directory = @import("Directory.zig");
 
 const log = std.log.scoped(.db);
 const file_size_max = 100 * 1024 * 1024;
@@ -365,10 +364,49 @@ pub const Access = enum {
     pub const default = .read_write;
 
     pub fn to_string(access: Access) []const u8 {
-        return inline for (@typeInfo(Access).@"enum".fields) |field| {
-            if (@field(Access, field.name) == access)
-                break field.name;
+        return inline for (@typeInfo(Access).@"enum".field_names) |field_name| {
+            if (@field(Access, field_name) == access)
+                break field_name;
         } else unreachable;
+    }
+
+    pub fn from_string(access: []const u8) ?Access {
+        // Convert to lowercase, to match zig enum style
+        var buf: [32]u8 = undefined;
+        // Matches nothing, used to avoid duplicating log statement
+        var lower: []u8 = "";
+
+        if (access.len <= buf.len) {
+            lower = std.ascii.lowerString(&buf, access);
+            std.mem.replaceScalar(u8, lower, '-', '_');
+            std.mem.replaceScalar(u8, lower, '/', '_');
+        }
+
+        // Try to match against all enum values
+        return if (std.meta.stringToEnum(Access, lower)) |ret|
+            ret
+        else if (std.mem.eql(u8, "r", lower))
+            .read_only
+        else if (std.mem.eql(u8, "w", lower))
+            .write_only
+        else if (std.mem.eql(u8, "rw", lower))
+            .read_write
+        else if (std.mem.eql(u8, "r_w", lower))
+            .read_write
+        else if (std.mem.eql(u8, "read", lower))
+            .read_only
+        else if (std.mem.eql(u8, "write", lower))
+            .write_only
+        else if (std.mem.eql(u8, "readwrite", lower))
+            .read_write
+        else if (std.mem.eql(u8, "writeonce", lower))
+            .write_once
+        else if (std.mem.eql(u8, "read_writeonce", lower))
+            .read_write_once
+        else {
+            log.warn("invalid access type: '{s}'", .{access});
+            return null;
+        };
     }
 };
 
@@ -384,14 +422,14 @@ fn gen_field_list(comptime T: type, opts: struct { prefix: ?[]const u8 = null })
     var buf: [4096]u8 = undefined;
     var fbs: std.Io.Writer = .fixed(&buf);
 
-    inline for (@typeInfo(T).@"struct".fields, 0..) |field, i| {
+    inline for (@typeInfo(T).@"struct".field_names, 0..) |field_name, i| {
         if (i != 0)
             fbs.writeAll(", ") catch unreachable;
 
         if (opts.prefix) |prefix|
             fbs.print("{s}.", .{prefix}) catch unreachable;
 
-        fbs.print("{s}", .{field.name}) catch unreachable;
+        fbs.print("{s}", .{field_name}) catch unreachable;
     }
 
     const buf_copy = buf;
@@ -424,9 +462,9 @@ fn gen_sql_table_impl(comptime name: []const u8, comptime T: type) ![:0]const u8
     var primary_key_found = T.sql_opts.primary_key == null;
 
     const info = @typeInfo(T);
-    inline for (info.@"struct".fields) |field| {
+    inline for (info.@"struct".field_names) |field_name| {
         if (T.sql_opts.primary_key) |primary_key| {
-            if (std.mem.eql(u8, primary_key.name, field.name))
+            if (std.mem.eql(u8, primary_key.name, field_name))
                 primary_key_found = true;
         }
     }
@@ -435,21 +473,21 @@ fn gen_sql_table_impl(comptime name: []const u8, comptime T: type) ![:0]const u8
 
     try fbs.print("CREATE TABLE {s} (\n", .{name});
     var first = true;
-    inline for (info.@"struct".fields) |field| {
+    inline for (info.@"struct".field_names, info.@"struct".field_types) |field_name, field_type| {
         if (first) {
             first = false;
         } else {
             try fbs.writeAll(",\n");
         }
-        try fbs.print("  {s}", .{field.name});
-        try fbs.print(" {s}", .{zig_type_to_sql_type(field.type)});
+        try fbs.print("  {s}", .{field_name});
+        try fbs.print(" {s}", .{zig_type_to_sql_type(field_type)});
 
-        const field_type_info = @typeInfo(field.type);
+        const field_type_info = @typeInfo(field_type);
         if (field_type_info != .optional)
             try fbs.writeAll(" NOT NULL");
 
         if (T.sql_opts.primary_key) |primary_key| {
-            if (std.mem.eql(u8, primary_key.name, field.name)) {
+            if (std.mem.eql(u8, primary_key.name, field_name)) {
                 try fbs.writeAll(" PRIMARY KEY");
 
                 if (primary_key.autoincrement)
@@ -475,16 +513,16 @@ fn gen_sql_table_impl(comptime name: []const u8, comptime T: type) ![:0]const u8
     for (T.sql_opts.foreign_keys) |foreign_key| {
         try fbs.writeAll(",\n");
 
-        const field = for (@typeInfo(T).@"struct".fields) |field| {
-            if (std.mem.eql(u8, field.name, foreign_key.name))
-                break field;
+        const field_type = for (@typeInfo(T).@"struct".field_names, @typeInfo(T).@"struct".field_types) |field_name, field_type| {
+            if (std.mem.eql(u8, field_name, foreign_key.name))
+                break field_type;
         } else unreachable;
 
         try fbs.print("  FOREIGN KEY ({s}) REFERENCES {s}(id) ON DELETE {s} ON UPDATE {s}\n", .{
             foreign_key.name,
-            (switch (@typeInfo(field.type)) {
+            (switch (@typeInfo(field_type)) {
                 .optional => |opt| opt.child,
-                else => field.type,
+                else => field_type,
             }).table,
             foreign_key.on_delete.to_string(),
             foreign_key.on_update.to_string(),
@@ -615,43 +653,43 @@ pub fn create_from_doc(allocator: Allocator, format: Format, doc: xml.Doc) !*Dat
     return db;
 }
 
-pub fn create_from_path(allocator: Allocator, format: Format, path: []const u8, device: ?[]const u8) !*Database {
+pub fn create_from_path(gpa: Allocator, io: std.Io, format: Format, path: []const u8, device: ?[]const u8) !*Database {
     return switch (format) {
         .embassy => blk: {
-            var db = try Database.create(allocator);
+            var db = try Database.create(gpa);
             errdefer {
                 std.log.err("sqlite: {s}", .{db.conn.lastError()});
                 db.destroy();
             }
 
-            try embassy.load_into_db(db, path, device);
+            try embassy.load_into_db(db, io, path, device);
             break :blk db;
         },
         .targetdb => blk: {
-            var db = try Database.create(allocator);
+            var db = try Database.create(gpa);
             errdefer {
                 std.log.err("sqlite: {s}", .{db.conn.lastError()});
                 db.destroy();
             }
 
-            try targetdb.load_into_db(db, path, device);
+            try targetdb.load_into_db(db, io, path, device);
             break :blk db;
         },
         .svd, .atdf => blk: {
-            const text = try std.fs.cwd().readFileAlloc(allocator, path, file_size_max);
-            defer allocator.free(text);
+            const text = try std.Io.Dir.cwd().readFileAlloc(io, path, gpa, .limited(file_size_max));
+            defer gpa.free(text);
 
-            break :blk create_from_xml(allocator, format, text);
+            break :blk create_from_xml(gpa, format, text);
         },
     };
 }
 
-pub fn create_from_xml(allocator: Allocator, format: Format, xml_text: []const u8) !*Database {
+pub fn create_from_xml(gpa: Allocator, format: Format, xml_text: []const u8) !*Database {
     assert(format.is_XML());
     var doc = try xml.Doc.from_memory(xml_text);
     defer doc.deinit();
 
-    return create_from_doc(allocator, format, doc);
+    return create_from_doc(gpa, format, doc);
 }
 
 pub const CreateDeviceOptions = struct {
@@ -776,31 +814,32 @@ pub fn get_device_id_by_name(db: *Database, name: []const u8) !?DeviceID {
 
 fn scan_row(comptime T: type, allocator: Allocator, row: zqlite.Row) !T {
     var entry: T = undefined;
-    inline for (@typeInfo(T).@"struct".fields, 0..) |field, i| {
-        if (@typeInfo(field.type) == .@"enum") {
-            if (@hasDecl(field.type, "to_string"))
-                @field(entry, field.name) = std.meta.stringToEnum(field.type, row.text(i)) orelse return error.Unknown
+    const info = @typeInfo(T).@"struct";
+    inline for (info.field_names, info.field_types, 0..) |field_name, field_type, i| {
+        if (@typeInfo(field_type) == .@"enum") {
+            if (@hasDecl(field_type, "to_string"))
+                @field(entry, field_name) = std.meta.stringToEnum(field_type, row.text(i)) orelse return error.Unknown
             else
-                @field(entry, field.name) = @enumFromInt(row.int(i));
-        } else if (@typeInfo(field.type) == .int) {
-            @field(entry, field.name) = @intCast(row.int(i));
-        } else switch (field.type) {
+                @field(entry, field_name) = @enumFromInt(row.int(i));
+        } else if (@typeInfo(field_type) == .int) {
+            @field(entry, field_name) = @intCast(row.int(i));
+        } else switch (field_type) {
             []const u8 => {
-                @field(entry, field.name) = try allocator.dupe(u8, row.text(i));
+                @field(entry, field_name) = try allocator.dupe(u8, row.text(i));
             },
             ?[]const u8 => {
-                @field(entry, field.name) = if (row.nullableText(i)) |text| try allocator.dupe(u8, text) else null;
+                @field(entry, field_name) = if (row.nullableText(i)) |text| try allocator.dupe(u8, text) else null;
             },
             ?u64, ?u16, ?u8 => {
-                @field(entry, field.name) = if (row.nullableInt(i)) |value| @intCast(value) else null;
+                @field(entry, field_name) = if (row.nullableInt(i)) |value| @intCast(value) else null;
             },
             ?StructID, ?EnumID => {
-                @field(entry, field.name) = if (row.nullableInt(i)) |value| @enumFromInt(value) else null;
+                @field(entry, field_name) = if (row.nullableInt(i)) |value| @enumFromInt(value) else null;
             },
             ?Access => {
-                @field(entry, field.name) = if (row.nullableText(i)) |text| (std.meta.stringToEnum(Access, text) orelse return error.Unknown) else null;
+                @field(entry, field_name) = if (row.nullableText(i)) |text| (std.meta.stringToEnum(Access, text) orelse return error.Unknown) else null;
             },
-            else => @compileError(std.fmt.comptimePrint("unhandled column type: {s}", .{@typeName(field.type)})),
+            else => @compileError(std.fmt.comptimePrint("unhandled column type: {s}", .{@typeName(field_type)})),
         }
     }
 
@@ -811,7 +850,7 @@ fn all(db: *Database, comptime T: type, comptime query: []const u8, allocator: A
     var rows = try db.conn.rows(query, args);
     defer rows.deinit();
 
-    var list: std.ArrayList(T) = .{};
+    var list: std.ArrayList(T) = .empty;
     while (rows.next()) |row| {
         try list.append(allocator, try scan_row(T, allocator, row));
     }
@@ -919,18 +958,18 @@ fn get_nested_struct_fields(
 fn recursively_calculate_struct_size(
     db: *Database,
     depth: *u8,
-    cache: *std.AutoArrayHashMap(StructID, u64),
-    allocator: Allocator,
+    cache: *std.AutoArrayHashMapUnmanaged(StructID, u64),
+    gpa: Allocator,
     struct_id: StructID,
 ) !u64 {
     if (depth.* >= max_recursion_depth)
         return error.MaxRecursionDepth;
 
-    const registers = try db.get_struct_registers(allocator, struct_id);
-    defer allocator.free(registers);
+    const registers = try db.get_struct_registers(gpa, struct_id);
+    defer gpa.free(registers);
 
-    const nested_struct_fields = try db.get_nested_struct_fields(allocator, struct_id);
-    defer allocator.free(nested_struct_fields);
+    const nested_struct_fields = try db.get_nested_struct_fields(gpa, struct_id);
+    defer gpa.free(nested_struct_fields);
 
     var max_end: ?u32 = null;
     for (registers) |register| {
@@ -946,7 +985,7 @@ fn recursively_calculate_struct_size(
     for (nested_struct_fields) |nsf| {
         const nested_struct_field_end = nsf.offset_bytes + ((nsf.size_bytes orelse
             cache.get(nsf.struct_id) orelse
-            try db.recursively_calculate_struct_size(depth, cache, allocator, nsf.struct_id)) * (nsf.count orelse 1));
+            try db.recursively_calculate_struct_size(depth, cache, gpa, nsf.struct_id)) * (nsf.count orelse 1));
         if (max_end) |end| {
             if (nested_struct_field_end > end)
                 max_end = @intCast(nested_struct_field_end);
@@ -974,8 +1013,8 @@ pub fn get_nested_struct_fields_with_calculated_size(
 
     log.debug("nested_struct_fields.len={} struct_id={f}", .{ nested_struct_fields.len, struct_id });
 
-    var size_cache: std.AutoArrayHashMap(StructID, u64) = .init(gpa);
-    defer size_cache.deinit();
+    var size_cache: std.AutoArrayHashMapUnmanaged(StructID, u64) = .empty;
+    defer size_cache.deinit(gpa);
 
     for (nested_struct_fields) |*nsf| {
         if (nsf.size_bytes != null) {
@@ -2060,7 +2099,7 @@ fn cleanup_unused_enums(db: *Database) !void {
 }
 
 pub fn apply_patch(db: *Database, zon_text: [:0]const u8, diags: *std.zon.parse.Diagnostics) !void {
-    const patches = try std.zon.parse.fromSlice([]const Patch, db.gpa, zon_text, diags, .{});
+    const patches = try std.zon.parse.fromSliceAlloc([]const Patch, db.gpa, zon_text, diags, .{});
     defer std.zon.parse.free(db.gpa, patches);
 
     for (patches) |patch| {
@@ -2166,8 +2205,8 @@ pub fn apply_patch(db: *Database, zon_text: [:0]const u8, diags: *std.zon.parse.
 
 pub const ToZigOptions = gen.ToZigOptions;
 
-pub fn to_zig(db: *Database, output_dir: Directory, opts: ToZigOptions) !void {
-    try gen.to_zig(db, output_dir, opts);
+pub fn to_zig(db: *Database, io: std.Io, output_dir: std.Io.Dir, opts: ToZigOptions) !void {
+    try gen.to_zig(db, io, output_dir, opts);
 }
 
 test "all" {

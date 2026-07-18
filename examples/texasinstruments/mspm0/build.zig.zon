@@ -1,0 +1,15 @@
+.{
+    .name = .mz_examples_ti_mspm0,
+    .fingerprint = 0x6dd3a36fb84aa34a,
+    .version = "0.0.1",
+    .minimum_zig_version = "0.17.0",
+    .dependencies = .{
+        .microzig = .{ .path = "../../.." },
+    },
+    .paths = .{
+        "src",
+        "build.zig",
+        "build.zig.zon",
+        "README.md",
+    },
+}

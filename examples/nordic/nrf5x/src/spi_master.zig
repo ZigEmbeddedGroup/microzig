@@ -8,7 +8,6 @@ const gpio = nrf.gpio;
 
 const uart = nrf.uart.num(0);
 
-const BUF_LEN = 0x100;
 const spi = nrf.spim.num(0);
 
 pub const panic = microzig.panic;
@@ -41,12 +40,10 @@ pub fn main() !void {
         .mosi_pin = gpio.num(0, 10),
     });
 
-    var out_buf: [BUF_LEN]u8 = .{ 'h', 'e', 'y', ' ', 'y', 'o', 'u', '!' } ** (BUF_LEN / 8);
-
     while (true) {
         std.log.info("Sending some data", .{});
         csn.put(0);
-        try spi.write_blocking(&out_buf, null);
+        try spi.write_blocking("hello world!\r\n", null);
         csn.put(1);
         time.sleep_ms(1000);
     }

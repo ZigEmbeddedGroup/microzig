@@ -30,11 +30,11 @@ boards: struct {
     },
 },
 
-pub fn init(dep: *std.Build.Dependency) Self {
+pub fn init(dep: *std.Build.Dependency) ?Self {
     const b = dep.builder;
 
     const riscv32_common_dep = b.dependency("microzig/modules/riscv32-common", .{});
-    const pico_sdk = b.dependency("pico-sdk", .{});
+    const pico_sdk = b.lazyDependency("pico-sdk", .{}) orelse return null;
     const bounded_array_dep = b.dependency("bounded-array", .{});
 
     const hal: microzig.HardwareAbstractionLayer = .{
@@ -60,7 +60,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .name = "RP2040",
             .register_definition = .{ .svd = pico_sdk.path("src/rp2040/hardware_regs/RP2040.svd") },
             .memory_regions = &.{
-                .{ .tag = .flash, .offset = 0x10000000, .length = 2048 * 1024, .access = .rx },
+                .{ .tag = .flash, .offset = 0x10000000, .length = 2 * 1024 * 1024, .access = .rx },
                 .{ .tag = .ram, .offset = 0x20000000, .length = 256 * 1024, .access = .rwx },
             },
             .patch_files = &.{b.path("patches/rp2040.zon")},
@@ -87,7 +87,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .name = "RP2350",
             .register_definition = .{ .svd = pico_sdk.path("src/rp2350/hardware_regs/RP2350.svd") },
             .memory_regions = &.{
-                .{ .tag = .flash, .offset = 0x10000000, .length = 2048 * 1024, .access = .rx },
+                .{ .tag = .flash, .offset = 0x10000000, .length = 4 * 1024 * 1024, .access = .rx },
                 .{ .tag = .ram, .offset = 0x20000000, .length = 512 * 1024, .access = .rwx },
                 // TODO: maybe these can be used for stacks
                 .{ .tag = .ram, .offset = 0x20080000, .length = 4 * 1024, .access = .rwx },
@@ -139,7 +139,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .name = "RP2350",
             .register_definition = .{ .svd = pico_sdk.path("src/rp2350/hardware_regs/RP2350.svd") },
             .memory_regions = &.{
-                .{ .tag = .flash, .offset = 0x10000000, .length = 2048 * 1024, .access = .rx },
+                .{ .tag = .flash, .offset = 0x10000000, .length = 4 * 1024 * 1024, .access = .rx },
                 .{ .tag = .ram, .offset = 0x20000000, .length = 512 * 1024, .access = .rwx },
                 // TODO: maybe these can be used for stacks
                 .{ .tag = .ram, .offset = 0x20080000, .length = 4 * 1024, .access = .rwx },
@@ -170,6 +170,17 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .boards = .{
             .adafruit = .{
                 .feather_rp2350 = chip_rp2350_arm.derive(.{
+                    .chip = .{
+                        .name = "RP2350",
+                        .register_definition = .{ .svd = pico_sdk.path("src/rp2350/hardware_regs/RP2350.svd") },
+                        .memory_regions = &.{
+                            .{ .tag = .flash, .offset = 0x10000000, .length = 8 * 1024 * 1024, .access = .rx },
+                            .{ .tag = .ram, .offset = 0x20000000, .length = 512 * 1024, .access = .rwx },
+                            .{ .tag = .ram, .offset = 0x20080000, .length = 4 * 1024, .access = .rwx },
+                            .{ .tag = .ram, .offset = 0x20081000, .length = 4 * 1024, .access = .rwx },
+                        },
+                        .patch_files = &.{b.path("patches/rp2350.zon")},
+                    },
                     .board = .{
                         .name = "Adafruit Feather RP2350",
                         .url = "https://www.adafruit.com/product/6000",
@@ -177,6 +188,17 @@ pub fn init(dep: *std.Build.Dependency) Self {
                     },
                 }),
                 .metro_rp2350 = chip_rp2350_arm.derive(.{
+                    .chip = .{
+                        .name = "RP2350",
+                        .register_definition = .{ .svd = pico_sdk.path("src/rp2350/hardware_regs/RP2350.svd") },
+                        .memory_regions = &.{
+                            .{ .tag = .flash, .offset = 0x10000000, .length = 16 * 1024 * 1024, .access = .rx },
+                            .{ .tag = .ram, .offset = 0x20000000, .length = 512 * 1024, .access = .rwx },
+                            .{ .tag = .ram, .offset = 0x20080000, .length = 4 * 1024, .access = .rwx },
+                            .{ .tag = .ram, .offset = 0x20081000, .length = 4 * 1024, .access = .rwx },
+                        },
+                        .patch_files = &.{b.path("patches/rp2350.zon")},
+                    },
                     .board = .{
                         .name = "Adafruit Metro RP2350",
                         .url = "https://www.adafruit.com/product/6267",
@@ -286,18 +308,26 @@ pub fn build(b: *std.Build) !void {
 
     const bounded_array_dep = b.dependency("bounded-array", .{});
 
+    const translate_c = b.addTranslateC(.{
+        .root_source_file = b.path("src/hal/pio/assembler/comparison_tests.h"),
+        .target = target,
+        .optimize = optimize,
+        .link_libc = false,
+    });
+    translate_c.defineCMacro("PICO_NO_HARDWARE", "1");
+
     const unit_tests = b.addTest(.{
         .root_module = b.createModule(.{
             .root_source_file = b.path("src/hal.zig"),
             .target = target,
             .optimize = optimize,
-            .imports = &.{.{
-                .name = "bounded-array",
-                .module = bounded_array_dep.module("bounded-array"),
-            }},
+            .imports = &.{
+                .{ .name = "bounded-array", .module = bounded_array_dep.module("bounded-array") },
+                .{ .name = "c", .module = translate_c.createModule() },
+            },
         }),
     });
-    unit_tests.addIncludePath(b.path("src/hal/pio/assembler"));
+    unit_tests.root_module.addIncludePath(b.path("src/hal/pio/assembler"));
 
     const unit_tests_run = b.addRunArtifact(unit_tests);
     const test_step = b.step("test", "Run platform agnostic unit tests");
@@ -330,12 +360,12 @@ fn get_bootrom(b: *std.Build, target: *const microzig.Target, rom: BootROM) std.
     //rom_exe.linkage = .static;
     rom_exe.build_id = .none;
     rom_exe.setLinkerScript(b.path(b.fmt("src/bootroms/{s}/shared/stage2.ld", .{target.chip.name})));
-    rom_exe.addAssemblyFile(b.path(b.fmt("src/bootroms/{s}/{s}.S", .{ target.chip.name, @tagName(rom) })));
+    rom_exe.root_module.addAssemblyFile(b.path(b.fmt("src/bootroms/{s}/{s}.S", .{ target.chip.name, @tagName(rom) })));
     rom_exe.entry = .{ .symbol_name = "_stage2_boot" };
 
     const rom_objcopy = b.addObjCopy(rom_exe.getEmittedBin(), .{
         .basename = b.fmt("{s}.bin", .{@tagName(rom)}),
-        .format = .bin,
+        .format = .binary,
     });
 
     return rom_objcopy.getOutput();

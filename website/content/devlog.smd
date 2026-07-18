@@ -1,9 +1,9 @@
 ---
 .title = "Devlog",
-.date = @date("2021-07-06T00:00:00"),
-.author = "ZEG contributors",
+.date = .date("2021-07-06T00:00:00"),
+.authors = ["ZEG contributors"],
 .layout = "devlog.shtml",
-.alternatives = [{
+.alternatives = [.{
   .name = "rss",
   .layout = "devlog.xml",
   .output = "devlog/rss.xml",

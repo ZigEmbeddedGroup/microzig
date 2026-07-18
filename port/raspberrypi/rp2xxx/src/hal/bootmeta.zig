@@ -24,7 +24,6 @@ pub const image_def_block = if (microzig.config.ram_image and arch == .arm) Bloc
             .sp = microzig.utilities.get_end_of_stack(),
         },
     },
-    .link = microzig.options.hal.bootmeta.next_block,
 } else Block(extern struct {
     image_def: ImageDef,
 }){
@@ -39,7 +38,6 @@ pub const image_def_block = if (microzig.config.ram_image and arch == .arm) Bloc
             },
         },
     },
-    .link = microzig.options.hal.bootmeta.next_block,
 };
 
 comptime {
@@ -55,17 +53,19 @@ pub fn Block(Items: type) type {
         header: u32 = 0xffffded3,
         items: Items,
         last_item: u32 = 0x000000ff | ((@sizeOf(Items) / 4) << 8),
-        link: ?*const anyopaque = null,
+        /// Relative offset from this block's header to the next block's
+        /// header.  Zero means self-loop (single-block chain).
+        link: i32 = 0,
         footer: u32 = 0xab123579,
     };
 }
 
-pub const ImageDef = packed struct {
+pub const ImageDef = packed struct(u32) {
     item_type: u8 = 0x42,
     block_size: u8 = 0x01,
     image_type_flags: ImageTypeFlags,
 
-    pub const ImageTypeFlags = packed struct {
+    pub const ImageTypeFlags = packed struct(u16) {
         image_type: ImageType,
         exe_security: ExeSecurity,
         reserved0: u2 = 0,
@@ -101,7 +101,7 @@ pub const ImageDef = packed struct {
 pub fn EntryPoint(with_stack_limit: bool) type {
     if (with_stack_limit) {
         return extern struct {
-            header: packed struct {
+            header: packed struct(u32) {
                 item_type: u8 = 0x44,
                 block_size: u8 = 0x04,
                 padding: u16 = 0,
@@ -112,7 +112,7 @@ pub fn EntryPoint(with_stack_limit: bool) type {
         };
     } else {
         return extern struct {
-            header: packed struct {
+            header: packed struct(u32) {
                 item_type: u8 = 0x44,
                 block_size: u8 = 0x03,
                 padding: u16 = 0,

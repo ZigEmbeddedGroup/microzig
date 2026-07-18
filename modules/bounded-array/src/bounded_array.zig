@@ -328,7 +328,7 @@ test BoundedArray {
     try a.resize(48);
     try testing.expectEqual(a.len, 48);
 
-    const x = [_]u8{1} ** 10;
+    const x: [10]u8 = @splat(1);
     a = try BoundedArray(u8, 64).from_slice(&x);
     try testing.expectEqualSlices(u8, &x, a.const_slice());
 

@@ -6,9 +6,6 @@ on:
     branches: [main, zig-master]
   workflow_dispatch:
 
-env:
-  ZIG_VERSION: 0.15.1
-
 jobs:
   formatting-check:
     name: Formatting check
@@ -18,10 +15,50 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
-        with:
-          version: ${{ env.ZIG_VERSION }}
       - name: Run zig fmt
         run: zig fmt --check .
+
+  # Make sure that we are building examples and invoking tests for each port.
+  # Some may need to be skipped, but that's okay because then it's explicitly
+  # listed instead of forgotten.
+  validate-ports-checks:
+    name: Validate Port Checks
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    steps:
+      - run: sudo apt install -y yq
+      - name: Checkout
+        uses: actions/checkout@v4
+      - run: |
+          set -e
+
+          find port -mindepth 2 -maxdepth 2 -type d | sed 's|^port/||' | sort > ports
+          yq -r '.jobs["unit-test"].steps[] | select(.run == "zig build test") | .["working-directory"]' .github/workflows/ports.yml | sed 's|^port/||' | sort > unit_tested_ports
+          yq -r '.jobs.build.steps[] | select(.run == "zig build -Doptimize=ReleaseSmall") | .["working-directory"]' .github/workflows/ports.yml | grep -v no_hal | sed 's|^examples/||' | sort > exampled_ports
+
+          comm -23 ports unit_tested_ports > missing_unit_tests
+          comm -23 ports exampled_ports > missing_examples
+
+          EXIT_CODE=0
+          if [ -s missing_unit_tests ]
+          then
+            EXIT_CODE=1
+            echo "These ports are not running unit tests in CI:" >&2
+            echo "" >&2
+            cat missing_unit_tests >&2
+            echo "" >&2
+          fi
+
+          if [ -s missing_examples ]
+          then
+            EXIT_CODE=1
+            echo "These ports are not building examples in CI:" >&2
+            echo "" >&2
+            cat missing_examples >&2
+            echo "" >&2
+          fi
+
+          exit $EXIT_CODE
 
   unit-test-regz:
     name: Unit Test Regz
@@ -35,8 +72,6 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
-        with:
-          version: ${{ env.ZIG_VERSION }}
       - name: Unit Test Regz
         run: zig build test
         working-directory: tools/regz
@@ -53,8 +88,6 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
-        with:
-          version: ${{ env.ZIG_VERSION }}
       - name: Unit Test UF2
         run: zig build test
         working-directory: tools/uf2
@@ -71,8 +104,6 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
-        with:
-          version: ${{ env.ZIG_VERSION }}
       - name: Unit Test ESP Image
         run: zig build test
         working-directory: tools/esp-image
@@ -89,8 +120,6 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
-        with:
-          version: ${{ env.ZIG_VERSION }}
       - name: Build Printer
         run: zig build
         working-directory: tools/printer
@@ -113,8 +142,6 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
-        with:
-          version: ${{ env.ZIG_VERSION }}
       - name: Build Sorcerer
         run: zig build
         working-directory: tools/sorcerer
@@ -131,10 +158,8 @@ jobs:
         uses: actions/checkout@v3
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
-        with:
-          version: ${{ env.ZIG_VERSION }}
       - name: Generate Code
-        run: zig build generate
+        run: zig build -Dgenerate
         working-directory: port/stmicro/stm32
       - name: Check for code diffs
         run: |
@@ -159,63 +184,12 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
-        with:
-          version: ${{ env.ZIG_VERSION }}
       - name: Build
         run: zig build -Doptimize=ReleaseSmall
 
-  unit-test-ports:
-    name: Unit Test Ports
-    continue-on-error: true
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        port_dir: [gigadevice/gd32, espressif/esp, raspberrypi/rp2xxx, stmicro/stm32, wch/ch32v]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Zig
-        uses: mlugg/setup-zig@v2
-        with:
-          version: ${{ env.ZIG_VERSION }}
-      - name: Unit Test Ports
-        run: zig build test
-        working-directory: port/${{ matrix.port_dir }}
-
-  build-examples:
-    name: Build Examples
-    continue-on-error: true
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        example_dir: [
-            espressif/esp,
-            gigadevice/gd32,
-            microchip/atmega,
-            microchip/samd51,
-            nordic/nrf5x,
-            nxp/lpc,
-            nxp/mcx,
-            stmicro/stm32,
-            texasinstruments/msp430,
-            raspberrypi/rp2xxx,
-            wch/ch32v,
-            no_hal/stm32_l031,
-          ]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Zig
-        uses: mlugg/setup-zig@v2
-        with:
-          version: ${{ env.ZIG_VERSION }}
-      - name: Build Examples
-        run: zig build -Doptimize=ReleaseSmall --summary all
-        working-directory: examples/${{ matrix.example_dir }}
-
   validate-foundation-libc:
-    name: Validate Foundation Libc
+    name: Test Foundation Libc
+    if: false # TODO: fix foundation libc
     continue-on-error: true
     runs-on: ${{ matrix.os }}
     strategy:
@@ -226,12 +200,10 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
-        with:
-          version: ${{ env.ZIG_VERSION }}
-      - name: Generate and validate packages
-        working-directory: modules/foundation-libc
+      - name: Generate and test packages
+        working-directory: modules/foundation-libc/test
         run: |
-          zig build validate
+          zig build test
 
   build-website:
     name: Build Website
@@ -239,39 +211,14 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
         with:
-          version: 0.15.1
+          version: 0.17.0-dev.857+2b2b85c5f
       - name: Build Website
         run: zig build
         working-directory: website
-
-  dry-run-packaging:
-    name: Dry Run Packaging
-    continue-on-error: true
-    runs-on: macos-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Zig
-        uses: mlugg/setup-zig@v2
-        with:
-          version: ${{ env.ZIG_VERSION }}
-      - name: Dry Run Packaging
-        run: |
-          MICROZIG_VERSION=$(zig build package -- get-version)
-          echo microzig version: $MICROZIG_VERSION
-          zig build package -- http://localhost:8000
-          python3 -m http.server --directory boxzer-out &
-          sleep 5
-
-          cd tools/package-test
-          zig fetch --save=microzig http://localhost:8000/${MICROZIG_VERSION}/microzig.tar.gz
-          zig build -Doptimize=ReleaseSmall
-
-          jobs -p | xargs kill

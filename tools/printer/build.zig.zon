@@ -2,11 +2,10 @@
     .name = .tools_printer,
     .version = "0.0.0",
     .fingerprint = 0x72009d00e5692d30,
-    .minimum_zig_version = "0.15.1",
     .dependencies = .{
         .serial = .{
-            .url = "git+https://github.com/ZigEmbeddedGroup/serial#fbd7389ff8bbc9fa362aa74081588755b5d028a0",
-            .hash = "serial-0.0.1-PoeRzF60AAAN8Iu0yXTIX-t3DVzsnmN7vWHKM2HA2Zbq",
+            .url = "git+https://github.com/ZigEmbeddedGroup/serial#25b58d0ea62f7bfc33e6c147c1c02193a50c65fb",
+            .hash = "serial-0.0.1-PoeRzD66AACCQUHzsIssi6bOcEtnQFPebT6WLvno0I_p",
         },
         // used to compile the test program
         // .microzig = .{ .path = "../..", .lazy = true },

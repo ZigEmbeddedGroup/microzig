@@ -1,4 +1,4 @@
-name: drivers
+name: Drivers
 on:
   push:
     branches: [main]
@@ -19,8 +19,6 @@ jobs:
 
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
-        with:
-          version: 0.15.1
 
       - name: Run Test Suite
         working-directory: drivers

@@ -14,20 +14,19 @@ boards: struct {
     stm32f303nucleo: *const microzig.Target,
 },
 
-pub fn init(dep: *std.Build.Dependency) Self {
+pub fn init(dep: *std.Build.Dependency) ?Self {
     const b = dep.builder;
 
-    const clockhelper_dep = b.dependency("ClockHelper", .{}).module("clockhelper");
-
+    const clockhelper_dep = b.lazyDependency("ClockHelper", .{}) orelse return null;
+    const clockhelper_module = clockhelper_dep.module("clockhelper");
     const hal_imports: []std.Build.Module.Import = b.allocator.dupe(std.Build.Module.Import, &.{
         .{
             .name = "ClockTree",
-            .module = clockhelper_dep,
+            .module = clockhelper_module,
         },
     }) catch @panic("out of memory");
 
-    const chips = Chips.init(dep, hal_imports);
-
+    const chips = Chips.init(dep, hal_imports) orelse return null;
     return .{
         .chips = chips,
         .boards = .{
@@ -82,30 +81,31 @@ pub fn init(dep: *std.Build.Dependency) Self {
 }
 
 pub fn build(b: *std.Build) !void {
-    const stm32_data_generated = b.lazyDependency("stm32-data-generated", .{}) orelse return;
+    const generate = b.option(bool, "generate", "") orelse false;
+    if (generate) {
+        const stm32_data_generated = b.lazyDependency("stm32-data-generated", .{}) orelse return;
 
-    const generate_optimize = .ReleaseSafe;
-    const regz_dep = b.dependency("microzig/tools/regz", .{
-        .optimize = generate_optimize,
-    });
-    const regz = regz_dep.module("regz");
-
-    const generate_exe = b.addExecutable(.{
-        .name = "generate",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/generate.zig"),
-            .target = b.graph.host,
+        const generate_optimize = .ReleaseSafe;
+        const regz_dep = b.dependency("microzig/tools/regz", .{
             .optimize = generate_optimize,
-        }),
-    });
-    generate_exe.root_module.addImport("regz", regz);
+        });
+        const regz = regz_dep.module("regz");
 
-    const generate_run = b.addRunArtifact(generate_exe);
-    generate_run.max_stdio_size = std.math.maxInt(usize);
-    generate_run.addFileArg(stm32_data_generated.path("."));
+        const generate_exe = b.addExecutable(.{
+            .name = "generate",
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("src/generate.zig"),
+                .target = b.graph.host,
+                .optimize = generate_optimize,
+            }),
+        });
+        generate_exe.root_module.addImport("regz", regz);
 
-    const generate_step = b.step("generate", "Generate chips file 'src/Chips.zig'");
-    generate_step.dependOn(&generate_run.step);
+        const generate_run = b.addRunArtifact(generate_exe);
+        generate_run.addFileArg(stm32_data_generated.path("."));
+
+        b.getInstallStep().dependOn(&generate_run.step);
+    }
 
     _ = b.step("test", "Run platform agnostic unit tests");
 }

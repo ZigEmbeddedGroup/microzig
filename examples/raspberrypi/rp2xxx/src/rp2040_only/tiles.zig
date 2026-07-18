@@ -55,7 +55,7 @@ const brightness: [256]u8 = blk: {
     break :blk data;
 };
 
-const RGB = extern struct {
+const RGB = packed struct(u32) {
     x: u8 = 0x00,
     b: u8,
     g: u8,
@@ -89,7 +89,7 @@ pub fn main() !void {
         (800_000 * cycles_per_bit);
 
     pio.sm_load_and_start_program(sm, ws2812_program, .{
-        .clkdiv = rp2xxx.pio.ClkDivOptions.from_float(div),
+        .clkdiv = .from_float(div),
         .pin_mappings = .{
             .side_set = .single(led_pin),
         },

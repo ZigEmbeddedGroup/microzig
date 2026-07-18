@@ -340,9 +340,9 @@ const vector_table_offset = 1; // First entry is reserved for the _reset_vector.
 fn vector_table_size() usize {
     const type_info = @typeInfo(Interrupt);
 
-    const interrupts_list = type_info.@"enum".fields;
+    const interrupts_list = type_info.@"enum".field_values;
     const last_interrupt = interrupts_list[interrupts_list.len - 1];
-    const last_interrupt_idx = last_interrupt.value;
+    const last_interrupt_idx = last_interrupt;
 
     return last_interrupt_idx + 1 - vector_table_offset;
 }
@@ -352,15 +352,16 @@ pub fn generate_vector_table() VectorTable {
     var tmp: VectorTable = @splat(microzig.options.interrupts.Exception orelse unhandled);
 
     const type_info = @typeInfo(Interrupt);
-    const interrupts_list = type_info.@"enum".fields;
+    const interrupt_names = type_info.@"enum".field_names;
+    const interrupt_values = type_info.@"enum".field_values;
 
     // Apply interrupts
     for (&tmp, vector_table_offset..) |_, idx| {
         // Find name of the interrupt by its number.
         var name: ?[:0]const u8 = null;
-        for (interrupts_list) |decl| {
-            if (decl.value == idx) {
-                name = decl.name;
+        for (interrupt_names, interrupt_values) |interrupt_name, interrupt_value| {
+            if (interrupt_value == idx) {
+                name = interrupt_name;
                 break;
             }
         }

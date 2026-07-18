@@ -1,16 +1,15 @@
 const std = @import("std");
 const ArenaAllocator = std.heap.ArenaAllocator;
 const Allocator = std.mem.Allocator;
-const assert = std.debug.assert;
 
-const xml = @import("xml.zig");
+const xml = @import("xml");
 const Arch = @import("arch.zig").Arch;
 
+const BitRange = @import("BitRange.zig");
 const Database = @import("Database.zig");
 const Access = Database.Access;
 const StructID = Database.StructID;
 const DeviceID = Database.DeviceID;
-const PeripheralID = Database.PeripheralID;
 const RegisterID = Database.RegisterID;
 const EnumID = Database.EnumID;
 
@@ -35,9 +34,9 @@ const Context = struct {
     ) !RegisterProperties {
         const register_props = try RegisterProperties.parse(node);
         var base_register_props = ctx.register_props.get(from) orelse unreachable;
-        inline for (@typeInfo(RegisterProperties).@"struct".fields) |field| {
-            if (@field(register_props, field.name)) |value|
-                @field(base_register_props, field.name) = value;
+        inline for (@typeInfo(RegisterProperties).@"struct".field_names) |field_name| {
+            if (@field(register_props, field_name)) |value|
+                @field(base_register_props, field_name) = value;
         }
 
         return base_register_props;
@@ -66,7 +65,7 @@ pub fn load_into_db(db: *Database, doc: xml.Doc) !void {
         var cpu_it = root.iterate(&.{}, &.{"cpu"});
         if (cpu_it.next()) |cpu| {
             if (cpu.get_value("name")) |cpu_name| {
-                break :blk arch_from_str(cpu_name);
+                break :blk .from_string(cpu_name);
             }
         }
 
@@ -198,73 +197,10 @@ fn derive_peripherals(ctx: *Context, device_id: DeviceID) !void {
             .description = node.get_value("description"),
             .struct_id = struct_id,
             .count = count,
-            .offset_bytes = if (node.get_value("baseAddress")) |base_address|
-                try std.fmt.parseInt(u64, base_address, 0)
-            else
+            .offset_bytes = try node.get_value_int(u64, "baseAddress") orelse
                 return error.PeripheralMissingBaseAddress,
         });
     }
-}
-
-fn arch_from_str(str: []const u8) Arch {
-    return if (std.mem.eql(u8, "CM0", str))
-        .cortex_m0
-    else if (std.mem.eql(u8, "CM0PLUS", str))
-        .cortex_m0plus
-    else if (std.mem.eql(u8, "CM0+", str))
-        .cortex_m0plus
-    else if (std.mem.eql(u8, "CM1", str))
-        .cortex_m1
-    else if (std.mem.eql(u8, "SC000", str))
-        .sc000
-    else if (std.mem.eql(u8, "CM23", str))
-        .cortex_m23
-    else if (std.mem.eql(u8, "CM3", str))
-        .cortex_m3
-    else if (std.mem.eql(u8, "CM33", str))
-        .cortex_m33
-    else if (std.mem.eql(u8, "CM35P", str))
-        .cortex_m35p
-    else if (std.mem.eql(u8, "CM55", str))
-        .cortex_m55
-    else if (std.mem.eql(u8, "SC300", str))
-        .sc300
-    else if (std.mem.eql(u8, "CM4", str))
-        .cortex_m4
-    else if (std.mem.eql(u8, "CM7", str))
-        .cortex_m7
-    else if (std.mem.eql(u8, "ARMV8MML", str))
-        .arm_v81_mml
-    else if (std.mem.eql(u8, "ARMV8MBL", str))
-        .arm_v8_mbl
-    else if (std.mem.eql(u8, "ARMV81MML", str))
-        .arm_v8_mml
-    else if (std.mem.eql(u8, "CA5", str))
-        .cortex_a5
-    else if (std.mem.eql(u8, "CA7", str))
-        .cortex_a7
-    else if (std.mem.eql(u8, "CA8", str))
-        .cortex_a8
-    else if (std.mem.eql(u8, "CA9", str))
-        .cortex_a9
-    else if (std.mem.eql(u8, "CA15", str))
-        .cortex_a15
-    else if (std.mem.eql(u8, "CA17", str))
-        .cortex_a17
-    else if (std.mem.eql(u8, "CA53", str))
-        .cortex_a53
-    else if (std.mem.eql(u8, "CA57", str))
-        .cortex_a57
-    else if (std.mem.eql(u8, "CA72", str))
-        .cortex_a72
-    else if (std.mem.eql(u8, "QINGKEV2", str))
-        .qingke_v2
-    else if (std.mem.eql(u8, "QINGKEV3", str))
-        .qingke_v3
-    else if (std.mem.eql(u8, "QINGKEV4", str))
-        .qingke_v4
-    else
-        .unknown;
 }
 
 pub fn load_peripheral(ctx: *Context, node: xml.Node, device_id: DeviceID) !void {
@@ -310,9 +246,7 @@ pub fn load_peripheral(ctx: *Context, node: xml.Node, device_id: DeviceID) !void
         .description = node.get_value("description"),
         .struct_id = struct_id,
         .count = count,
-        .offset_bytes = if (node.get_value("baseAddress")) |base_address|
-            try std.fmt.parseInt(u64, base_address, 0)
-        else
+        .offset_bytes = try node.get_value_int(u64, "baseAddress") orelse
             return error.PeripheralMissingBaseAddress,
     });
     _ = instance_id;
@@ -372,7 +306,8 @@ fn load_cluster(
     // Note that dimable identifier type means that it can include a %s in the name, it's a copy of a previous identifier
     const name = node.get_value("name") orelse return error.MissingClusterName;
     const description = node.get_value("description");
-    const address_offset_str = node.get_value("addressOffset") orelse return error.MissingClusterOffset;
+    const address_offset = try node.get_value_int(u64, "addressOffset") orelse
+        return error.MissingClusterOffset;
     const alternate_cluster = node.get_value("alternateCluster");
     if (alternate_cluster != null)
         return error.TodoAlternateCluster;
@@ -387,7 +322,7 @@ fn load_cluster(
             .name = name[0 .. name.len - "[%s]".len],
             .struct_id = struct_id,
             .description = description,
-            .offset_bytes = try std.fmt.parseInt(u32, address_offset_str, 0),
+            .offset_bytes = address_offset,
             .count = array.count,
             .size_bytes = array.increment,
         }),
@@ -408,7 +343,7 @@ fn load_cluster(
             .name = name,
             .struct_id = struct_id,
             .description = description,
-            .offset_bytes = try std.fmt.parseInt(u32, address_offset_str, 0),
+            .offset_bytes = address_offset,
         });
     }
 
@@ -423,7 +358,7 @@ fn load_cluster(
     while (cluster_it.next()) |cluster_node|
         try load_cluster(ctx, cluster_node, struct_id);
 
-    log.debug("loaded cluster name: {s} description={?s} offset={s}", .{ name, description, address_offset_str });
+    log.debug("loaded cluster name: {s} description={?s} offset=0x{X}", .{ name, description, address_offset });
 }
 
 fn get_name_without_suffix(node: xml.Node, suffix: []const u8) ![]const u8 {
@@ -530,7 +465,7 @@ fn load_single_register(ctx: *Context, node: xml.Node, parent: StructID) !void {
 
 fn load_field(ctx: *Context, node: xml.Node, register_id: RegisterID, props: *const RegisterProperties) !void {
     const db = ctx.db;
-    const bit_range = try BitRange.parse(node);
+    const bit_range: BitRange = try .parse_xml(node);
     const dim_elements = try DimElements.parse(ctx, node);
     const count: ?u16 = if (dim_elements) |elements| count: {
         if (elements.dim_name != null)
@@ -545,12 +480,12 @@ fn load_field(ctx: *Context, node: xml.Node, register_id: RegisterID, props: *co
     }
 
     const enum_id: ?EnumID = if (node.find_child(&.{"enumeratedValues"})) |enum_values_node|
-        try load_enumerated_values(ctx, enum_values_node, @intCast(bit_range.width))
+        try load_enumerated_values(ctx, enum_values_node, bit_range.width)
     else
         null;
 
     const access = if (node.get_value("access")) |access_str|
-        parse_access(access_str) catch blk: {
+        Access.from_string(access_str) orelse blk: {
             log.warn("Failed to parse access string '{s}', it must be one of 'read-value', 'write-only', 'read-write', 'writeOnce', or 'read-writeOnce', defaulting to 'read-write'", .{access_str});
             break :blk .read_write;
         }
@@ -571,8 +506,8 @@ fn load_field(ctx: *Context, node: xml.Node, register_id: RegisterID, props: *co
                 };
             } else try get_name_without_suffix(node, "%s"),
             .description = node.get_value("description"),
-            .size_bits = @intCast(bit_range.width),
-            .offset_bits = @intCast(bit_range.offset),
+            .size_bits = bit_range.width,
+            .offset_bits = bit_range.offset,
             .enum_id = enum_id,
             .access = access,
         });
@@ -680,11 +615,6 @@ pub const DimableIdentifier = struct {
 /// pattern: [0-9]+\-[0-9]+|[A-Z]-[A-Z]|[_0-9a-zA-Z]+(,\s*[_0-9a-zA-Z]+)+
 pub const DimIndex = struct {};
 
-const DimType = enum {
-    array,
-    list,
-};
-
 const expect = std.testing.expect;
 const expectEqual = std.testing.expectEqual;
 const expectError = std.testing.expectError;
@@ -746,7 +676,7 @@ const DimElements = struct {
         pattern: []const u8,
 
         fn expand(list: *const List, gpa: Allocator) ![]const []const u8 {
-            var ret: std.ArrayList([]const u8) = .{};
+            var ret: std.ArrayList([]const u8) = .empty;
             defer ret.deinit(gpa);
 
             if (std.mem.indexOf(u8, list.pattern, "-")) |dash_idx| {
@@ -810,14 +740,8 @@ const DimElements = struct {
     }
 
     fn parse(ctx: *Context, node: xml.Node) !?DimElements {
-        const dim_increment = if (node.get_value("dimIncrement")) |dim_increment_str|
-            try std.fmt.parseInt(u64, dim_increment_str, 0)
-        else
-            null;
-        const dim = if (node.get_value("dim")) |dim_str|
-            try std.fmt.parseInt(u64, dim_str, 0)
-        else
-            null;
+        const dim_increment = try node.get_value_int(u64, "dimIncrement");
+        const dim = try node.get_value_int(u64, "dim");
         var dim_index = node.get_value("dimIndex");
 
         // if "dimIncrement" exists, "dim" becomes a mandatory field
@@ -842,7 +766,7 @@ const DimElements = struct {
             const buf = try ctx.arena.allocator().allocSentinel(u8, 16, 0);
             @memset(buf, 0);
             // dim index range is with
-            dim_index = try std.fmt.bufPrintZ(buf, "0-{d}", .{dim.? - 1});
+            dim_index = try std.fmt.bufPrintSentinel(buf, "0-{d}", .{dim.? - 1}, 0);
         }
 
         if (node.get_value("dimArrayIndex") != null) {
@@ -858,9 +782,9 @@ const DimElements = struct {
     }
 
     fn dim_index_value(self: DimElements, ctx: *Context, index: usize) ![]const u8 {
-        if (std.mem.containsAtLeastScalar(u8, self.dim_index.?, 1, '-')) {
+        if (std.mem.containsAtLeastScalar(u8, self.dim_index.?, '-', 1)) {
             return try self.dim_index_value_range(ctx, index);
-        } else if (std.mem.containsAtLeastScalar(u8, self.dim_index.?, 1, ',')) {
+        } else if (std.mem.containsAtLeastScalar(u8, self.dim_index.?, ',', 1)) {
             return try self.dim_index_value_csv(ctx, index);
         } else return error.DimIndexInvalid;
     }
@@ -895,60 +819,9 @@ const DimElements = struct {
             if (start_index.len == 1 and std.ascii.isAlphabetic(start_index[0])) {
                 return start_index;
             }
+
             return error.DimIndexInvalid;
         }
-    }
-};
-
-const BitRange = struct {
-    offset: u64,
-    width: u64,
-
-    fn parse(node: xml.Node) !BitRange {
-        const lsb_opt = node.get_value("lsb");
-        const msb_opt = node.get_value("msb");
-
-        if (lsb_opt != null and msb_opt != null) {
-            const lsb = try std.fmt.parseInt(u8, lsb_opt.?, 0);
-            const msb = try std.fmt.parseInt(u8, msb_opt.?, 0);
-
-            if (msb < lsb)
-                return error.InvalidRange;
-
-            return BitRange{
-                .offset = lsb,
-                .width = msb - lsb + 1,
-            };
-        }
-
-        const bit_offset_opt = node.get_value("bitOffset");
-        const bit_width_opt = node.get_value("bitWidth");
-        if (bit_offset_opt != null and bit_width_opt != null) {
-            const offset = try std.fmt.parseInt(u8, bit_offset_opt.?, 0);
-            const width = try std.fmt.parseInt(u8, bit_width_opt.?, 0);
-
-            return BitRange{
-                .offset = offset,
-                .width = width,
-            };
-        }
-
-        const bit_range_opt = node.get_value("bitRange");
-        if (bit_range_opt) |bit_range_str| {
-            var it = std.mem.tokenizeAny(u8, bit_range_str, "[:]");
-            const msb = try std.fmt.parseInt(u8, it.next() orelse return error.NoMsb, 0);
-            const lsb = try std.fmt.parseInt(u8, it.next() orelse return error.NoLsb, 0);
-
-            if (msb < lsb)
-                return error.InvalidRange;
-
-            return BitRange{
-                .offset = lsb,
-                .width = msb - lsb + 1,
-            };
-        }
-
-        return error.InvalidRange;
     }
 };
 
@@ -973,12 +846,9 @@ const RegisterProperties = struct {
 
     fn parse(node: xml.Node) !RegisterProperties {
         return RegisterProperties{
-            .size = if (node.get_value("size")) |size_str|
-                try std.fmt.parseInt(u64, size_str, 0)
-            else
-                null,
+            .size = try node.get_value_int(u64, "size"),
             .access = if (node.get_value("access")) |access_str|
-                parse_access(access_str) catch blk: {
+                Access.from_string(access_str) orelse blk: {
                     log.warn("Failed to parse access string '{s}', it must be one of 'read-only'," ++
                         "'write-only', 'write', 'read-write', 'writeOnce', or 'read-writeOnce', " ++
                         "defaulting to 'read-write'", .{access_str});
@@ -987,36 +857,11 @@ const RegisterProperties = struct {
             else
                 null,
             .protection = null,
-            .reset_value = if (node.get_value("resetValue")) |size_str|
-                try std.fmt.parseInt(u64, size_str, 0)
-            else
-                null,
-            .reset_mask = if (node.get_value("resetMask")) |size_str|
-                try std.fmt.parseInt(u64, size_str, 0)
-            else
-                null,
+            .reset_value = try node.get_value_int(u64, "resetValue"),
+            .reset_mask = try node.get_value_int(u64, "resetMask"),
         };
     }
 };
-
-fn parse_access(str: []const u8) !Access {
-    return if (std.ascii.eqlIgnoreCase("read-only", str))
-        Access.read_only
-    else if (std.ascii.eqlIgnoreCase("write-only", str))
-        Access.write_only
-    else if (std.ascii.eqlIgnoreCase("write", str))
-        Access.write_only
-    else if (std.ascii.eqlIgnoreCase("read-write", str))
-        Access.read_write
-    else if (std.ascii.eqlIgnoreCase("writeOnce", str))
-        Access.write_once
-    else if (std.ascii.eqlIgnoreCase("read-writeOnce", str))
-        Access.read_write_once
-    else blk: {
-        log.warn("invalid access type: '{s}'", .{str});
-        break :blk error.UnknownAccessType;
-    };
-}
 
 test "svd.device register properties" {
     const text =

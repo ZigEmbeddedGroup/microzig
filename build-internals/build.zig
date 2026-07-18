@@ -103,9 +103,9 @@ pub const Target = struct {
         const ret = from.dep.builder.allocator.create(Target) catch @panic("out of memory");
         ret.* = from.*;
 
-        inline for (std.meta.fields(DeriveOptions)) |field| {
-            const value = @field(options, field.name);
-            if (value) |val| @field(ret, field.name) = val;
+        inline for (@typeInfo(DeriveOptions).@"struct".field_names) |field_name| {
+            const value = @field(options, field_name);
+            if (value) |val| @field(ret, field_name) = val;
         }
         ret.chip = chip;
         return ret;
@@ -210,7 +210,7 @@ pub const BinaryFormat = union(enum) {
     elf,
 
     /// A flat binary, contains only the loaded portions of the firmware with an unspecified base offset.
-    bin,
+    binary,
 
     /// The [Intel HEX](https://en.wikipedia.org/wiki/Intel_HEX) format, contains
     /// an ASCII description of what memory to load where.
@@ -233,7 +233,7 @@ pub const BinaryFormat = union(enum) {
     pub fn get_extension(format: BinaryFormat) []const u8 {
         return switch (format) {
             .elf => ".elf",
-            .bin, .esp => ".bin",
+            .binary, .esp => ".bin",
             .hex => ".hex",
             .dfu => ".dfu",
             .uf2 => ".uf2",
@@ -256,6 +256,8 @@ pub const LinkerScript = struct {
     generate: GenerateOptions = .{ .memory_regions_and_sections = .{} },
     /// Linker script path. Will be appended after what is auto-generated if it's not null.
     file: ?LazyPath = null,
+    /// Generate assert for existence of microzig_main
+    assert_microzig_main: bool = true,
 
     pub const GenerateOptions = union(enum) {
         /// Only generates a comment with target info.

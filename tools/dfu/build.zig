@@ -26,7 +26,7 @@ pub fn from_elf(dep: *Dependency, elf_file: std.Build.LazyPath, opts: Options) s
         .standard => blk: {
             // Use objcopy to extract binary from ELF
             const objcopy = b.addObjCopy(elf_file, .{
-                .format = .bin,
+                .format = .binary,
             });
             const bin_file = objcopy.getOutput();
 

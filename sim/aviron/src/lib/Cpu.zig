@@ -65,7 +65,7 @@ sram_size: u16 = 0,
 
 // State
 pc: u24 = 0,
-regs: [32]u8 = [1]u8{0} ** 32,
+regs: [32]u8 = @splat(0),
 sreg: SREG = @bitCast(@as(u8, 0)),
 instr_count: u64 = 0,
 
@@ -73,7 +73,7 @@ instr_effect: InstructionEffect = .none,
 
 pub fn reset(cpu: *Cpu) void {
     cpu.pc = 0;
-    cpu.regs = [1]u8{0} ** 32;
+    cpu.regs = @splat(0);
     cpu.sreg = @bitCast(@as(u8, 0));
 }
 
@@ -1760,16 +1760,16 @@ fn format_instruction(inst: isa.Instruction, writer: *std.Io.Writer) !void {
             if (T != void) {
                 const info = @typeInfo(T).@"struct";
 
-                inline for (info.fields, 0..) |field, i| {
+                inline for (info.field_names, info.field_types, 0..) |field_name, field_type, i| {
                     if (i > 0) {
                         try writer.writeAll(", ");
                     }
 
-                    const field_info = @typeInfo(field.type);
+                    const field_info = @typeInfo(field_type);
                     if (field_info == .int) {
-                        try writer.print("{s}={}", .{ field.name, @field(args, field.name) });
+                        try writer.print("{s}={}", .{ field_name, @field(args, field_name) });
                     } else {
-                        try writer.print("{s}={f}", .{ field.name, @field(args, field.name) });
+                        try writer.print("{s}={f}", .{ field_name, @field(args, field_name) });
                     }
                 }
             }

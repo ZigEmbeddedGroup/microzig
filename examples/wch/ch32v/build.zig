@@ -15,7 +15,7 @@ pub fn build(b: *std.Build) void {
     // Use GNU objcopy instead of LLVM objcopy to avoid 512MB binary issue.
     // LLVM objcopy includes LOAD segments for NOLOAD sections, causing the binary
     // to span from flash (0x0) to RAM (0x20000000) = 512MB of zeros.
-    const gnu_objcopy = b.findProgram(&.{"riscv64-unknown-elf-objcopy"}, &.{}) catch null;
+    const gnu_objcopy = b.findProgram(.{ .names = &.{"riscv64-unknown-elf-objcopy"} });
 
     const available_examples = [_]Example{
         // CH32V003

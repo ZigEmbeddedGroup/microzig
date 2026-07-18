@@ -186,7 +186,7 @@ pub const Config = struct {
 };
 
 var init: bool = false;
-var endpoints: [8]?Endpoint = .{null} ** 8;
+var endpoints: [8]?Endpoint = @splat(null);
 var iner_RX_buffer: []u8 = undefined;
 var reset_callback: ?ResetCallback = null;
 var reset_ctx: ?*anyopaque = null;

@@ -1,7 +1,7 @@
 ---
 .title = "Home",
-.date = @date("2020-07-06T00:00:00"),
-.author = "Matthew Knight",
+.date = .date("2020-07-06T00:00:00"),
+.authors = ["Matthew Knight"],
 .draft = false,
 .layout = "index.shtml",
 .description = "MicroZig Homepage",
@@ -28,7 +28,7 @@ Zig is an excellent programming language for embedded systems.
   explicit and even verbose at times. Nullable pointers, pointer casting,
   integer conversions, etc.
 
-To learn more: [The Zig Language Reference](https://ziglang.org/documentation/0.15.1/)
+To learn more: [The Zig Language Reference](https://ziglang.org/documentation/master/)
 
 ## Why MicroZig?
 

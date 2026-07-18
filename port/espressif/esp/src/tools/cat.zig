@@ -1,29 +1,31 @@
 const std = @import("std");
 
-pub fn main() !void {
-    var debug_allocator: std.heap.DebugAllocator(.{}) = .init;
-    defer _ = debug_allocator.deinit();
-
-    const allocator = debug_allocator.allocator();
-
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+pub fn main(init: std.process.Init) !void {
+    const io = init.io;
+    const args = try init.minimal.args.toSlice(init.arena.allocator());
     if (args.len < 2) {
         std.log.err("usage: ./cat [src_file ...] dst_file", .{});
         return error.InvalidArguments;
     }
 
-    const output_file = try std.fs.createFileAbsolute(args[args.len - 1], .{});
-    defer output_file.close();
+    const src_paths = args[1 .. args.len - 1];
+    const dst_path = args[args.len - 1];
 
-    for (args[1 .. args.len - 1]) |arg| {
-        const file = try std.fs.openFileAbsolute(arg, .{ .mode = .read_only });
-        defer file.close();
+    const output_file = try std.Io.Dir.cwd().createFile(io, dst_path, .{});
+    defer output_file.close(io);
 
-        const data = try file.readToEndAlloc(allocator, 1_000_000);
-        defer allocator.free(data);
+    var write_buf: [1024 * 1024]u8 = undefined;
+    var file_writer = output_file.writer(io, &write_buf);
+    const writer = &file_writer.interface;
+    for (src_paths) |src_path| {
+        const file = try std.Io.Dir.openFileAbsolute(io, src_path, .{ .mode = .read_only });
+        defer file.close(io);
 
-        try output_file.writeAll(data);
+        var read_buf: [1024 * 1024]u8 = undefined;
+        var reader = file.reader(io, &read_buf);
+
+        _ = try reader.interface.streamRemaining(writer);
     }
+
+    try writer.flush();
 }

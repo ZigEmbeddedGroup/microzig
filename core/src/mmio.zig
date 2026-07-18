@@ -1,40 +1,40 @@
 const std = @import("std");
 const assert = std.debug.assert;
 
-pub fn Mmio(comptime PackedT: type) type {
+pub fn Mmio(comptime Packed: type) type {
     @setEvalBranchQuota(2_000);
 
-    const size = @bitSizeOf(PackedT);
+    const size = @bitSizeOf(Packed);
     if ((size % 8) != 0)
         @compileError("size must be divisible by 8!");
 
     if (!std.math.isPowerOfTwo(size / 8))
         @compileError("size must encode a power of two number of bytes!");
 
-    const IntT = std.meta.Int(.unsigned, size);
+    const Int = @Int(.unsigned, size);
 
-    if (@sizeOf(PackedT) != (size / 8))
-        @compileError(std.fmt.comptimePrint("IntT and PackedT must have the same size!, they are {} and {} bytes respectively", .{ size / 8, @sizeOf(PackedT) }));
+    if (@sizeOf(Packed) != (size / 8))
+        @compileError(std.fmt.comptimePrint("Int and Packed must have the same size!, they are {} and {} bytes respectively", .{ size / 8, @sizeOf(Packed) }));
 
-    return extern struct {
+    return packed struct(Int) {
         const Self = @This();
 
-        raw: IntT,
+        raw: Int,
 
-        pub const underlying_type = PackedT;
+        pub const underlying_type = Packed;
 
-        pub inline fn read(addr: *volatile Self) PackedT {
+        pub inline fn read(addr: *volatile Self) Packed {
             return @bitCast(addr.raw);
         }
 
-        pub inline fn write(addr: *volatile Self, val: PackedT) void {
+        pub inline fn write(addr: *volatile Self, val: Packed) void {
             comptime {
-                assert(@bitSizeOf(PackedT) == @bitSizeOf(IntT));
+                assert(@bitSizeOf(Packed) == @bitSizeOf(Int));
             }
             addr.write_raw(@bitCast(val));
         }
 
-        pub inline fn write_raw(addr: *volatile Self, val: IntT) void {
+        pub inline fn write_raw(addr: *volatile Self, val: Int) void {
             addr.raw = val;
         }
 
@@ -50,8 +50,8 @@ pub fn Mmio(comptime PackedT: type) type {
         /// Set field `Field` of this register to `value`.
         pub inline fn modify(addr: *volatile Self, fields: anytype) void {
             var val = read(addr);
-            inline for (@typeInfo(@TypeOf(fields)).@"struct".fields) |field| {
-                @field(val, field.name) = @field(fields, field.name);
+            inline for (@typeInfo(@TypeOf(fields)).@"struct".field_names) |field_name| {
+                @field(val, field_name) = @field(fields, field_name);
             }
             write(addr, val);
         }
@@ -68,7 +68,7 @@ pub fn Mmio(comptime PackedT: type) type {
                     const U = enum_info.tag_type;
                     @field(val, field_name) =
                         @as(FieldType, @enumFromInt(@as(U, @intFromEnum(@field(val, field_name))) ^
-                        @as(U, @intFromEnum(@as(FieldType, value)))));
+                            @as(U, @intFromEnum(@as(FieldType, value)))));
                 },
                 else => |T| {
                     @compileError("unsupported register field type '" ++ @typeName(T) ++ "'");
@@ -88,8 +88,8 @@ pub fn Mmio(comptime PackedT: type) type {
         /// In field `F` of this register, toggle (only) all bits that are set in `value`.
         pub inline fn toggle(addr: *volatile Self, fields: anytype) void {
             var val = read(addr);
-            inline for (@typeInfo(@TypeOf(fields)).@"struct".fields) |field| {
-                toggle_field(&val, field.name, @field(fields, field.name));
+            inline for (@typeInfo(@TypeOf(fields)).@"struct".field_names) |field_name| {
+                toggle_field(&val, field_name, @field(fields, field_name));
             }
             write(addr, val);
         }
