@@ -1,5 +1,3 @@
-const std = @import("std");
-
 const common = @import("common.zig");
 const gpio = @import("../gpio.zig");
 

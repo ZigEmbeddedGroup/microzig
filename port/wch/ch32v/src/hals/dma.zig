@@ -7,7 +7,6 @@
 const std = @import("std");
 
 const microzig = @import("microzig");
-const mdf = microzig.drivers;
 const hal = microzig.hal;
 
 const DMA1 = microzig.chip.peripherals.DMA1;
