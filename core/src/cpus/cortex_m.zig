@@ -227,10 +227,7 @@ pub const interrupt = struct {
                 3 => &ppb.SHPR3,
             };
 
-            var raw = reg.raw;
-            raw &= ~(@as(u32, 0xFF) << shift);
-            raw |= @as(u32, @intFromEnum(priority)) << shift;
-            reg.raw = raw;
+            reg.modify_raw(@as(u32, 0xFF) << shift, @as(u32, @intFromEnum(priority)) << shift);
         }
 
         pub fn get_priority(comptime excpt: Exception) Priority {

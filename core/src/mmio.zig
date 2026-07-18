@@ -114,6 +114,16 @@ pub fn Mmio(T: type) type {
             mmio.write(val);
         }
 
+        /// First clears the bits in `clear_mask`,
+        /// then sets the bits in `set_mask`.
+        /// Operiation done by read-modify-write.
+        pub inline fn modify_raw(mmio: MmioPtr, clear_mask: Int, set_mask: Int) void {
+            var val = mmio.read_raw();
+            val &= ~clear_mask;
+            val |= set_mask;
+            mmio.write_raw(val);
+        }
+
         /// For each `.Field = value` entry of `fields`:
         /// Set field `Field` of this register to `value`.
         /// All unspecified fields are initialized to zero.
