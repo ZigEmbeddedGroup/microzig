@@ -84,7 +84,15 @@ pub const MPU_6050 = struct {
         self.accel_range = .@"2G";
         self.gyro_range = .@"250d";
 
-        while ((try self.read_reg(.pwr_mgmt_1, regs.PWR_MGMT_1)).DEVICE_RESET) {}
+        // Wait for device to complete reset
+        var timeout: usize = 1000;
+        while ((try self.read_reg(.pwr_mgmt_1, regs.PWR_MGMT_1)).DEVICE_RESET) {
+            timeout -= 1;
+            if (timeout == 0) {
+                return Error.Timeout;
+            }
+            self.clock.sleep_ms(1);
+        }
 
         try self.modify_reg(.user_ctrl, regs.USER_CTRL, .{
             .SIG_COND_RESET = true,

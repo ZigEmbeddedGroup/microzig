@@ -1,0 +1,11 @@
+.{
+    .name = .virtual_io,
+    .fingerprint = 0x9ed0871d23642986,
+    .version = "0.0.1",
+    .paths = .{
+        "src",
+        "build.zig",
+        "build.zig.zon",
+        "README.md",
+    },
+}
