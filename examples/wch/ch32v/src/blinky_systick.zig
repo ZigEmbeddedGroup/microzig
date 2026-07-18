@@ -45,13 +45,13 @@ pub fn main() !void {
 
     const PFIC = peripherals.PFIC;
     // Reset configuration.
-    PFIC.STK_CTLR.raw = 0;
+    PFIC.STK_CTLR.write_raw(0);
     // Reset the Count Register.
-    PFIC.STK_CNTL.raw = 0;
+    PFIC.STK_CNTL.write_raw(0);
     // Set the compare register to trigger once per second.
-    PFIC.STK_CMPLR.raw = cpu.cpu_frequency - 1;
+    PFIC.STK_CMPLR.write_raw(cpu.cpu_frequency - 1);
     // Set the SysTick Configuration.
-    PFIC.STK_CTLR.modify(.{
+    PFIC.STK_CTLR.write_raw_default_zero(.{
         // Turn on the system counter STK
         .STE = 1,
         // Enable counter interrupt.

@@ -160,7 +160,7 @@ pub const Spinlock = struct {
 
     lock_reg: *volatile u32,
 
-    const spinlock_base: usize = @intFromPtr(&SIO.SPINLOCK0.raw);
+    const spinlock_base: usize = @intFromPtr(&SIO.SPINLOCK0);
 
     /// Returns an initialized Spinlock struct.
     /// Parameters:

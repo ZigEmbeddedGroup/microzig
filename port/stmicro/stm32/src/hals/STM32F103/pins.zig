@@ -177,7 +177,7 @@ pub const GlobalConfiguration = struct {
                     const bit = @as(u32, 1 << offset);
                     RCC.APB2ENR.raw |= bit;
                     // Delay after setting
-                    _ = RCC.APB2ENR.raw & bit;
+                    _ = RCC.APB2ENR.read_raw() & bit;
                 }
 
                 inline for (@typeInfo(Port.Configuration).@"struct".field_names) |field_name| {

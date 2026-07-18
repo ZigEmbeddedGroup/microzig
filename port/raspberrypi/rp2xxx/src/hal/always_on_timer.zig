@@ -39,15 +39,12 @@ pub fn set_clock_source(source: ClockSource) void {
     disable();
     var val = POWMAN.TIMER.raw;
     val &= 0x0000_ffff;
-    val |= 0x5afe_0002;
-
-    switch (source) {
-        .lposc => val |= 0x0100,
-        .xosc => val |= 0x0200,
-        .gpio_1khz => val |= 0x0400,
+    val |= 0x5afe_0002 | switch (source) {
+        .lposc => 0x0100,
+        .xosc => 0x0200,
+        .gpio_1khz => 0x0400,
         .none => @panic("Cannot set clock source to none."),
-    }
-
+    };
     POWMAN.TIMER.raw = val;
 }
 
@@ -57,7 +54,7 @@ pub fn set_clock_source(source: ClockSource) void {
 ///
 /// * `ClockSource` - The current clock source
 pub fn get_clock_source() ClockSource {
-    const src = POWMAN.TIMER.raw;
+    const src = POWMAN.TIMER.read_raw();
 
     if ((src & 0x0001_0000) != 0) return .xosc;
     if ((src & 0x0002_0000) != 0) return .lposc;
@@ -75,8 +72,7 @@ pub fn get_clock_source() ClockSource {
 pub fn set_use_1hz_clock(use_1hz: bool) void {
     var val = POWMAN.TIMER.raw;
     val &= 0x0000_ffff;
-    val |= 0x5afe_000;
-    if (use_1hz) val |= 0x2000;
+    val |= 0x5afe_000 | (if (use_1hz) 0x2000 else 0);
     POWMAN.TIMER.raw = val;
 }
 
@@ -86,7 +82,7 @@ pub fn set_use_1hz_clock(use_1hz: bool) void {
 ///
 /// * `bool` - Whether the 1 Hz clock is enabled
 pub fn get_use_1hz_clock() bool {
-    return POWMAN.TIMER.raw & 0x2000 != 0;
+    return POWMAN.TIMER.read_raw() & 0x2000 != 0;
 }
 
 /// Get the frequency of the low power oscillator

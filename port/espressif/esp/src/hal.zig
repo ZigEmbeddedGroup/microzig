@@ -80,19 +80,19 @@ fn disable_watchdogs() void {
     const super_dogfood = 0x8F1D312A;
 
     // Feed and disable watchdog 0
-    TIMG0.WDTWPROTECT.raw = dogfood;
-    TIMG0.WDTCONFIG0.raw = 0;
-    TIMG0.WDTWPROTECT.raw = 0;
+    TIMG0.WDTWPROTECT.write_raw(dogfood);
+    TIMG0.WDTCONFIG0.write_raw(0);
+    TIMG0.WDTWPROTECT.write_raw(0);
 
     // Feed and disable rtc watchdog
-    RTC_CNTL.WDTWPROTECT.raw = dogfood;
-    RTC_CNTL.WDTCONFIG0.raw = 0;
-    RTC_CNTL.WDTWPROTECT.raw = 0;
+    RTC_CNTL.WDTWPROTECT.write_raw(dogfood);
+    RTC_CNTL.WDTCONFIG0.write_raw(0);
+    RTC_CNTL.WDTWPROTECT.write_raw(0);
 
     // Feed and disable rtc super watchdog
-    RTC_CNTL.SWD_WPROTECT.raw = super_dogfood;
+    RTC_CNTL.SWD_WPROTECT.write_raw(super_dogfood);
     RTC_CNTL.SWD_CONF.modify(.{ .SWD_DISABLE = 1 });
-    RTC_CNTL.SWD_WPROTECT.raw = 0;
+    RTC_CNTL.SWD_WPROTECT.write_raw(0);
 }
 
 // Don't change the name of this export, it is checked by espflash tool. Only

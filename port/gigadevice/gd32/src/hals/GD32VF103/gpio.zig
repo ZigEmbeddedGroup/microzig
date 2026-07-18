@@ -127,17 +127,14 @@ pub const Pin = packed struct(u8) {
     pub inline fn set_pull(gpio: Pin, pull: Pull) void {
         var port = gpio.get_port();
         switch (pull) {
-            .up => port.BOP.raw = gpio.mask(),
-            .down => port.BC.raw = gpio.mask(),
+            .up => port.BOP.write_raw(gpio.mask()),
+            .down => port.BC.write_raw(gpio.mask()),
         }
     }
 
     pub inline fn read(gpio: Pin) u1 {
         const port = gpio.get_port();
-        return if (port.ISTAT.raw & gpio.mask() != 0)
-            1
-        else
-            0;
+        return @intFromBool(port.ISTAT.read_raw() & gpio.mask() != 0);
     }
 
     pub inline fn put(gpio: Pin, value: u1) void {

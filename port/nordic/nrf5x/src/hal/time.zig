@@ -82,12 +82,12 @@ pub fn rtc_interrupt() callconv(.c) void {
             }
         },
         .nrf52 => {
-            if (rtc.EVENTS_OVRFLW.raw == 1) {
+            if (rtc.EVENTS_OVRFLW.read_raw() == 1) {
                 rtc.EVENTS_OVRFLW.write_raw(0);
                 next_period();
             }
 
-            if (rtc.EVENTS_COMPARE[COMPARE_INDEX].raw == 1) {
+            if (rtc.EVENTS_COMPARE[COMPARE_INDEX].read_raw() == 1) {
                 rtc.EVENTS_COMPARE[COMPARE_INDEX].write_raw(0);
                 next_period();
             }

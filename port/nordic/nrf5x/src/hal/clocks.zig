@@ -23,7 +23,7 @@ pub const hfxo = struct {
             },
             .nrf52 => {
                 CLOCK.TASKS_HFCLKSTART.write_raw(1);
-                while (CLOCK.EVENTS_HFCLKSTARTED.raw == 0) {}
+                while (CLOCK.EVENTS_HFCLKSTARTED.read_raw() == 0) {}
             },
         }
     }
@@ -70,7 +70,7 @@ pub const lfclk = struct {
             },
             .nrf52 => {
                 CLOCK.TASKS_CAL.write_raw(1);
-                while (CLOCK.EVENTS_DONE.raw == 0) {}
+                while (CLOCK.EVENTS_DONE.read_raw() == 0) {}
             },
         }
     }
@@ -138,7 +138,7 @@ pub const lfclk = struct {
             },
             .nrf52 => {
                 CLOCK.TASKS_LFCLKSTART.write_raw(1);
-                while (CLOCK.EVENTS_LFCLKSTARTED.raw == 0) {}
+                while (CLOCK.EVENTS_LFCLKSTARTED.read_raw() == 0) {}
             },
         }
     }

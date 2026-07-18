@@ -132,24 +132,21 @@ pub const Pin = enum(usize) {
     pub inline fn set_pull(gpio: Pin, pull: Pull) void {
         var port = gpio.get_port();
         switch (pull) {
-            .up => port.BSRR.raw = gpio.mask(),
-            .down => port.BRR.raw = gpio.mask(),
+            .up => port.BSRR.write_raw(gpio.mask()),
+            .down => port.BRR.write_raw(gpio.mask()),
         }
     }
 
     pub inline fn read(gpio: Pin) u1 {
         const port = gpio.get_port();
-        return if (port.IDR.raw & gpio.mask() != 0)
-            1
-        else
-            0;
+        @intFromBool(port.IDR.read_raw() & gpio.mask() != 0);
     }
 
     pub inline fn put(gpio: Pin, value: u1) void {
         var port = gpio.get_port();
         switch (value) {
-            0 => port.BSRR.raw = @intCast(gpio.mask() << 16),
-            1 => port.BSRR.raw = gpio.mask(),
+            0 => port.BSRR.write_raw(@intCast(gpio.mask() << 16)),
+            1 => port.BSRR.write_raw(gpio.mask()),
         }
     }
 

@@ -24,7 +24,7 @@ pub const GPIO = enum(u7) {
 
     pub fn put(gpio: GPIO, output: u1) void {
         const regs = gpio.get_regs();
-        const old: u32 = regs.PDOR.raw;
+        const old: u32 = regs.PDOR.read_raw();
         const new = @as(u32, output) << gpio.get_pin();
 
         regs.PDOR.write_raw(old & ~gpio.get_mask() | new);
@@ -33,19 +33,19 @@ pub const GPIO = enum(u7) {
     pub fn get(gpio: GPIO) bool {
         const regs = gpio.get_regs();
 
-        return regs.PDIR.raw >> gpio.get_pin() & 1 != 0;
+        return ((regs.PDIR.read_raw() >> gpio.get_pin()) & 1) != 0;
     }
 
     pub fn toggle(gpio: GPIO) void {
         const regs = gpio.get_regs();
-        const old: u32 = regs.PTOR.raw;
+        const old: u32 = regs.PTOR.read_raw();
 
         regs.PTOR.write_raw(old | gpio.get_mask());
     }
 
     pub fn set_direction(gpio: GPIO, direction: Direction) void {
         const regs = gpio.get_regs();
-        const old: u32 = regs.PDDR.raw;
+        const old: u32 = regs.PDDR.read_raw();
         const new = @as(u32, @intFromEnum(direction)) << gpio.get_pin();
 
         regs.PDDR.write_raw(old & ~gpio.get_mask() | new);
@@ -62,12 +62,12 @@ pub const GPIO = enum(u7) {
     pub fn get_interrupt_flag(gpio: GPIO) bool {
         const regs = gpio.get_regs();
 
-        return regs.ISFR0.raw >> gpio.get_pin() & 1 != 0;
+        return ((regs.ISFR0.read_raw() >> gpio.get_pin()) & 1) != 0;
     }
 
     pub fn clear_interrupt_flag(gpio: GPIO) void {
         const regs = gpio.get_regs();
-        const old: u32 = regs.ISFR0.raw;
+        const old: u32 = regs.ISFR0.read_raw();
 
         regs.ISFR0.write_raw(old | gpio.get_mask());
     }

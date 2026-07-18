@@ -69,7 +69,7 @@ pub fn DMA(comptime dma_ctrl: Instances, comptime ch: ChannelNumber) type {
 
         pub fn read_events() ChannelEvent {
             const ch_evt_idx: u5 = 4 * @as(u5, @intCast(@intFromEnum(ch)));
-            return @bitCast(@as(u4, @truncate(reg_dma.ISR.raw >> ch_evt_idx)));
+            return @bitCast(@as(u4, @truncate(reg_dma.ISR.read_raw() >> ch_evt_idx)));
         }
 
         pub fn enable_interrupt() void {

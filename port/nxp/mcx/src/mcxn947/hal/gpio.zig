@@ -42,7 +42,7 @@ pub const GPIO = enum(u8) {
     pub fn get(gpio: GPIO) bool {
         const regs = gpio.get_regs();
 
-        return regs.PDIR.raw >> gpio.get_pin() & 1 != 0;
+        return regs.PDIR.read_raw() >> gpio.get_pin() & 1 != 0;
     }
 
     /// Toggles the logical output of the GPIO.
@@ -54,7 +54,7 @@ pub const GPIO = enum(u8) {
 
     pub fn set_direction(gpio: GPIO, direction: Direction) void {
         const regs = gpio.get_regs();
-        const old: u32 = regs.PDDR.raw;
+        const old: u32 = regs.PDDR.read_raw();
         const new = @as(u32, @intFromEnum(direction)) << gpio.get_pin();
 
         regs.PDDR.write_raw((old & ~gpio.get_mask()) | new);

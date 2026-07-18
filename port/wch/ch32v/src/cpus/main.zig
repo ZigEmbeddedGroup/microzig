@@ -185,7 +185,7 @@ pub const interrupt = struct {
     }
 
     inline fn get_bit(self: anytype, pos: u5) u1 {
-        return @truncate(self.raw >> pos);
+        return @truncate(self.read_raw() >> pos);
     }
 };
 

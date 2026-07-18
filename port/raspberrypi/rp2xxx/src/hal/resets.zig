@@ -110,7 +110,7 @@ pub fn unreset_block_wait(mask: Mask) void {
 inline fn wait_for_reset_done(mask: Mask) void {
     const raw_mask: u32 = @bitCast(mask);
 
-    // have to bitcast after a read() instead of `RESETS.RESET_DONE.raw` due to
+    // have to bitcast after a read() instead of `RESETS.RESET_DONE.read_raw()` due to
     // some optimization bug. While loops will not be optimzed away if the
     // condition has side effects like dereferencing a volatile pointer.
     // It seems that volatile is not propagating correctly.

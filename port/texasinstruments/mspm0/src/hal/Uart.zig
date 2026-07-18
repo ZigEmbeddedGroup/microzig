@@ -37,7 +37,7 @@ pub const Config = struct {
 
 /// See Technical Reference Manual 14.2.6: Initialization
 pub fn configure(self: Uart, cfg: Config) void {
-    self.regs.UART0_PWREN.raw = 0x2600_0001;
+    self.regs.UART0_PWREN.write_raw(0)x2600_0001;
     // Technical reference manual part 2.2.6
     inline for (0..4) |_|
         asm volatile ("nop");

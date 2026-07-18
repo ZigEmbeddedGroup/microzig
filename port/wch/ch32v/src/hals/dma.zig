@@ -286,7 +286,7 @@ pub const Channel = enum(u3) {
         const flag_shift: u5 = (@as(u5, @intFromEnum(chan)) - 1) * 4;
         const tcif_bit: u5 = flag_shift + 1;
         const tcif_mask: u32 = @as(u32, 1) << tcif_bit;
-        const tcif = (regs.INTFR.raw & tcif_mask) != 0;
+        const tcif = (regs.INTFR.read_raw() & tcif_mask) != 0;
 
         // Not busy if transfer complete flag is set
         return !tcif;
@@ -316,7 +316,7 @@ pub const Channel = enum(u3) {
         const flag_shift: u5 = (@as(u5, @intFromEnum(chan)) - 1) * 4;
         const tcif_bit: u5 = flag_shift + 1;
         const tcif_mask: u32 = @as(u32, 1) << tcif_bit;
-        return (regs.INTFR.raw & tcif_mask) != 0;
+        return (regs.INTFR.read_raw() & tcif_mask) != 0;
     }
 
     /// Clear the transfer complete flag (useful in circular mode to detect next cycle)

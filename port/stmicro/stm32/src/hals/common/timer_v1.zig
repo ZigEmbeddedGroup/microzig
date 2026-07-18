@@ -219,25 +219,25 @@ pub const GPTimer = struct {
     ///This function clears all control registers of the timer.
     pub fn clear_all_control_registers(self: *const GPTimer) void {
         const regs = self.regs;
-        regs.CR1.raw = 0;
-        regs.CR2.raw = 0;
-        regs.SR.raw = 0;
-        regs.EGR.raw = 0;
-        regs.DIER.raw = 0;
-        regs.ARR.raw = 0;
-        regs.CNT.raw = 0;
-        regs.PSC.raw = 0;
-        regs.SMCR.raw = 0;
-        regs.CCER.raw = 0;
-        regs.DCR.raw = 0;
-        regs.DMAR.raw = 0;
+        regs.CR1.write_raw(0);
+        regs.CR2.write_raw(0);
+        regs.SR.write_raw(0);
+        regs.EGR.write_raw(0);
+        regs.DIER.write_raw(0);
+        regs.ARR.write_raw(0);
+        regs.CNT.write_raw(0);
+        regs.PSC.write_raw(0);
+        regs.SMCR.write_raw(0);
+        regs.CCER.write_raw(0);
+        regs.DCR.write_raw(0);
+        regs.DMAR.write_raw(0);
     }
 
     ///clear only CR1 and CR2 registers
     pub fn clear_configs(self: *const GPTimer) void {
-        self.regs.CR1.raw = 0;
-        self.regs.CR2.raw = 0;
-        self.regs.SMCR.raw = 0;
+        self.regs.CR1.write_raw(0);
+        self.regs.CR2.write_raw(0);
+        self.regs.SMCR.write_raw(0);
     }
     // ============ Timer control functions ============
     pub inline fn start(self: *const GPTimer) void {
@@ -254,7 +254,7 @@ pub const GPTimer = struct {
 
     pub fn reset(self: *const GPTimer) void {
         self.regs.CR1.modify(.{ .CEN = 0 });
-        self.regs.SR.raw = 0;
+        self.regs.SR.write_raw(0);
         self.regs.EGR.modify(.{ .UG = 1 });
         self.regs.CR1.modify(.{ .CEN = 1 });
     }
@@ -381,7 +381,7 @@ pub const GPTimer = struct {
     }
 
     pub inline fn clear_update_interrupt_flag(self: *const GPTimer) void {
-        self.regs.SR.raw = 0;
+        self.regs.SR.write_raw(0);
     }
 
     //=============== sync mode Functions ================

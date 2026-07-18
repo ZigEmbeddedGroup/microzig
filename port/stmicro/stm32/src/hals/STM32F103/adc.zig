@@ -39,7 +39,7 @@ pub const ADC = struct {
 
     pub fn enable(self: *const ADC) void {
         const regs = self.regs;
-        regs.CR2.raw = 0; //force reset
+        regs.CR2.write_raw(0); //force reset
         regs.CR2.modify(.{ .ADON = 1 }); //enable ADC
 
         //wait for ADC stabilization time
@@ -51,7 +51,7 @@ pub const ADC = struct {
         while (regs.CR2.read().CAL == 1) {
             asm volatile ("" ::: .{ .memory = true });
         }
-        regs.SR.raw = 0; //clear all status flags
+        regs.SR.write_raw(0); //clear all status flags
 
         regs.CR2.modify(.{
             .TSVREFE = 1, //enable temperature sensor and Vrefint
@@ -64,7 +64,7 @@ pub const ADC = struct {
 
     pub fn disable(self: *const ADC) void {
         const regs = self.regs;
-        regs.CR2.raw = 0; //force reset
+        regs.CR2.write_raw(0); //force reset
     }
 
     pub fn set_channel_sample_rate(self: *const ADC, channel: u5, sample_rate: SampleRate) void {
@@ -140,7 +140,7 @@ pub const ADC = struct {
         const len = @min(recv.len, seq_len);
         const to_read = recv[0..len];
 
-        regs.SR.raw = 0; //clear all status flag
+        regs.SR.write_raw(0); //clear all status flag
 
         regs.CR1.modify(.{
             .DISCEN = 1,
@@ -157,7 +157,7 @@ pub const ADC = struct {
             regs.CR2.modify(.{ .SWSTART = 1 }); //start conversion, if software trigger is not enabled, this will do nothing
 
         }
-        regs.SR.raw = 0; //clear all status flag
+        regs.SR.write_raw(0); //clear all status flag
 
         regs.CR1.modify(.{
             .DISCEN = 0,
@@ -401,13 +401,13 @@ pub const AdvancedADC = struct {
     /// NOTE: this is also put the ADC in power down mode.
     pub fn clear_config(self: *const AdvancedADC) void {
         const regs = self.regs;
-        regs.CR2.raw = 0; //force reset
-        regs.CR1.raw = 0; //force reset
-        regs.SQR1.raw = 0; //force reset
-        regs.SQR2.raw = 0; //force reset
-        regs.SQR3.raw = 0; //force reset
-        regs.SMPR1.raw = 0; //force reset
-        regs.SMPR2.raw = 0; //force reset
+        regs.CR2.write_raw(0); //force reset
+        regs.CR1.write_raw(0); //force reset
+        regs.SQR1.write_raw(0); //force reset
+        regs.SQR2.write_raw(0); //force reset
+        regs.SQR3.write_raw(0); //force reset
+        regs.SMPR1.write_raw(0); //force reset
+        regs.SMPR2.write_raw(0); //force reset
     }
 
     ///calibrate the ADC and return the calibration data.
@@ -454,7 +454,7 @@ pub const AdvancedADC = struct {
     }
 
     pub fn read_flags(self: *const AdvancedADC) Flags {
-        const val: u5 = @truncate(self.regs.SR.raw);
+        const val: u5 = @truncate(self.regs.SR.read_raw());
         return @bitCast(val);
     }
 

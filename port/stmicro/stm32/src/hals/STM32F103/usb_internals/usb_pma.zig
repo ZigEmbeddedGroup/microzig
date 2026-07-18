@@ -98,7 +98,7 @@ pub fn btable_init(config: Config) BTABLEError!void {
 
     var offset: usize = 32;
 
-    USB.BTABLE.raw = 0;
+    USB.BTABLE.write_raw(0);
 
     //init BTABLE;
     for (0..8) |i| {

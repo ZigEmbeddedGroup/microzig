@@ -124,7 +124,7 @@ pub const USBD = struct {
             },
             .connected => {
                 // Bus reset
-                if (peripherals.USBD.EVENTS_USBRESET.raw != 0) {
+                if (peripherals.USBD.EVENTS_USBRESET.read_raw() != 0) {
                     peripherals.USBD.EVENTS_USBRESET.write_raw(0);
 
                     self.reset();
@@ -133,7 +133,7 @@ pub const USBD = struct {
                 }
 
                 // SETUP packet captured by hardware
-                if (peripherals.USBD.EVENTS_EP0SETUP.raw != 0) {
+                if (peripherals.USBD.EVENTS_EP0SETUP.read_raw() != 0) {
                     peripherals.USBD.EVENTS_EP0SETUP.write_raw(0);
                     // Aborted control transfer: drop stale DATADONE so it can't
                     // trigger on_buffer for the next transfer.
@@ -141,11 +141,14 @@ pub const USBD = struct {
                     self.ep0_state.in_pending = false;
 
                     const setup: usb.types.SetupPacket = .{
-                        .request_type = @bitCast(@as(u8, @intCast(peripherals.USBD.BMREQUESTTYPE.raw))),
-                        .request = @intCast(peripherals.USBD.BREQUEST.raw),
-                        .value = .from(@as(u16, @intCast(peripherals.USBD.WVALUEH.raw)) << 8 | @as(u16, @intCast(peripherals.USBD.WVALUEL.raw))),
-                        .index = .from(@as(u16, @intCast(peripherals.USBD.WINDEXH.raw)) << 8 | @as(u16, @intCast(peripherals.USBD.WINDEXL.raw))),
-                        .length = .from(@as(u16, @intCast(peripherals.USBD.WLENGTHH.raw)) << 8 | @as(u16, @intCast(peripherals.USBD.WLENGTHL.raw))),
+                        .request_type = @bitCast(@as(u8, @intCast(peripherals.USBD.BMREQUESTTYPE.read_raw()))),
+                        .request = @intCast(peripherals.USBD.BREQUEST.read_raw()),
+                        .value = .from((@as(u16, @intCast(peripherals.USBD.WVALUEH.read_raw())) << 8) |
+                            @as(u16, @intCast(peripherals.USBD.WVALUEL.read_raw()))),
+                        .index = .from((@as(u16, @intCast(peripherals.USBD.WINDEXH.read_raw())) << 8) |
+                            @as(u16, @intCast(peripherals.USBD.WINDEXL.read_raw()))),
+                        .length = .from((@as(u16, @intCast(peripherals.USBD.WLENGTHH.read_raw())) << 8) |
+                            @as(u16, @intCast(peripherals.USBD.WLENGTHL.read_raw()))),
                     };
                     self.ep0_state.direction = switch (peripherals.USBD.BMREQUESTTYPE.read().DIRECTION) {
                         .HostToDevice => .Out,
@@ -156,7 +159,7 @@ pub const USBD = struct {
                 }
 
                 // EP0 data-phase completions
-                if (peripherals.USBD.EVENTS_EP0DATADONE.raw != 0) {
+                if (peripherals.USBD.EVENTS_EP0DATADONE.read_raw() != 0) {
                     // Here nrf-usbd doesn't clear OUT events
                     // (https://github.com/nrf-rs/nrf-usbd/blob/main/src/usbd.rs#L683)
                     // But this case is not handled in the controller yet
@@ -170,9 +173,9 @@ pub const USBD = struct {
                 }
 
                 // Data-endpoint completions
-                if (peripherals.USBD.EVENTS_EPDATA.raw != 0) {
+                if (peripherals.USBD.EVENTS_EPDATA.read_raw() != 0) {
                     peripherals.USBD.EVENTS_EPDATA.write_raw(0);
-                    const status = peripherals.USBD.EPDATASTATUS.raw;
+                    const status = peripherals.USBD.EPDATASTATUS.read_raw();
                     peripherals.USBD.EPDATASTATUS.write_raw(status); // W1C handled bits
                     // Calling on_buffer() for each set bit
                     // IN endpoints (bits 1-7)
@@ -313,7 +316,7 @@ pub const USBD = struct {
         const was_enabled = cpu.interrupt.is_enabled(.USBD);
         defer if (was_enabled) cpu.interrupt.enable(.USBD);
         peripherals.USBD.TASKS_STARTEPIN[i].write_raw(1);
-        while (peripherals.USBD.EVENTS_ENDEPIN[i].raw != 1) {}
+        while (peripherals.USBD.EVENTS_ENDEPIN[i].read_raw() != 1) {}
         peripherals.USBD.EVENTS_ENDEPIN[i].write_raw(0);
 
         return len;
@@ -330,7 +333,7 @@ pub const USBD = struct {
 
         const self: *Self = @fieldParentPtr("interface", itf);
         const i = @intFromEnum(ep_num);
-        const size = peripherals.USBD.SIZE.EPOUT[i].raw;
+        const size = peripherals.USBD.SIZE.EPOUT[i].read_raw();
 
         const scratch_buf = &self.bufs_out[i];
 
@@ -342,7 +345,7 @@ pub const USBD = struct {
         const was_enabled = cpu.interrupt.is_enabled(.USBD);
         defer if (was_enabled) cpu.interrupt.enable(.USBD);
         peripherals.USBD.TASKS_STARTEPOUT[i].write_raw(1);
-        while (peripherals.USBD.EVENTS_ENDEPOUT[i].raw != 1) {}
+        while (peripherals.USBD.EVENTS_ENDEPOUT[i].read_raw() != 1) {}
         peripherals.USBD.EVENTS_ENDEPOUT[i].write_raw(0);
 
         var scratch_slice: []align(1) u8 = scratch_buf[0..size];
@@ -379,11 +382,11 @@ pub const USBD = struct {
         switch (ep.dir) {
             .In => {
                 self.eps_in[i].max_packet_size = desc.max_packet_size.into();
-                peripherals.USBD.EPINEN.write_raw(peripherals.USBD.EPINEN.raw | mask);
+                peripherals.USBD.EPINEN.write_raw(peripherals.USBD.EPINEN.read_raw() | mask);
             },
             .Out => {
                 self.eps_out[i].max_packet_size = desc.max_packet_size.into();
-                peripherals.USBD.EPOUTEN.write_raw(peripherals.USBD.EPOUTEN.raw | mask);
+                peripherals.USBD.EPOUTEN.write_raw(peripherals.USBD.EPOUTEN.read_raw() | mask);
             },
         }
 

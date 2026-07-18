@@ -46,7 +46,7 @@ pub const InputGPIO = struct {
     pin: gpio.Pin,
     pub inline fn read(self: @This()) u1 {
         const port = self.pin.get_port();
-        return if (port.IDR.raw & self.pin.mask() != 0)
+        return if (port.IDR.read_raw() & self.pin.mask() != 0)
             1
         else
             0;
@@ -59,8 +59,8 @@ pub const OutputGPIO = struct {
     pub inline fn put(self: @This(), value: u1) void {
         var port = self.pin.get_port();
         switch (value) {
-            0 => port.BSRR.raw = @intCast(self.pin.mask() << 16),
-            1 => port.BSRR.raw = self.pin.mask(),
+            0 => port.BSRR.write_raw(@intCast(self.pin.mask() << 16)),
+            1 => port.BSRR.write_raw(self.pin.mask()),
         }
     }
 
@@ -114,14 +114,14 @@ pub const Digital_IO_Pin = struct {
         const self: *@This() = @ptrCast(@alignCast(ptr));
         var port = self.pin.get_port();
         switch (state) {
-            .low => port.BSRR.raw = @intCast(self.pin.mask() << 16),
-            .high => port.BSRR.raw = self.pin.mask(),
+            .low => port.BSRR.write_raw(@intCast(self.pin.mask() << 16)),
+            .high => port.BSRR.write_raw(self.pin.mask()),
         }
     }
     pub fn read_fn(ptr: *anyopaque) ReadError!State {
         const self: *@This() = @ptrCast(@alignCast(ptr));
         const port = self.pin.get_port();
-        return if (port.IDR.raw & self.pin.mask() != 0)
+        return if (port.IDR.read_raw() & self.pin.mask() != 0)
             .high
         else
             .low;

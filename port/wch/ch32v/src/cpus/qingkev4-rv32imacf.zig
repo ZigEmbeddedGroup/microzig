@@ -247,7 +247,7 @@ pub inline fn system_init(comptime chip: anytype) void {
         .CSSC = 1,
     });
     // RCC->CFGR2 = 0x00000000;
-    RCC.CFGR2.raw = 0;
+    RCC.CFGR2.write_raw(0);
 }
 
 pub const csr_types = struct {

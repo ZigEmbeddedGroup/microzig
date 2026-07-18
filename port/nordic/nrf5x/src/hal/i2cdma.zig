@@ -118,13 +118,13 @@ pub const I2C = enum(u1) {
     pub fn reset(i2c: I2C) void {
         i2c.disable();
         const regs = i2c.get_regs();
-        regs.SHORTS.raw = 0x00000000;
-        regs.INTENSET.raw = 0x00000000;
-        regs.ERRORSRC.raw = 0xFFFFFFFF;
-        regs.PSEL.SCL.raw = 0xFFFFFFFF;
-        regs.PSEL.SDA.raw = 0xFFFFFFFF;
-        regs.FREQUENCY.raw = 0x04000000;
-        regs.ADDRESS.raw = 0x00000000;
+        regs.SHORTS.write_raw(0x00000000);
+        regs.INTENSET.write_raw(0x00000000);
+        regs.ERRORSRC.write_raw(0xFFFFFFFF);
+        regs.PSEL.SCL.write_raw(0xFFFFFFFF);
+        regs.PSEL.SDA.write_raw(0xFFFFFFFF);
+        regs.FREQUENCY.write_raw(0x04000000);
+        regs.ADDRESS.write_raw(0x00000000);
     }
 
     /// Check if a TX byte has been sent by reading the TXDSENT event.
@@ -175,21 +175,21 @@ pub const I2C = enum(u1) {
     /// Clear all hardware shortcuts by resetting the SHORTS register.
     fn clear_shorts(i2c: I2C) void {
         const regs = i2c.get_regs();
-        regs.SHORTS.raw = 0x00000000;
+        regs.SHORTS.write_raw(0x00000000);
     }
 
     /// Clear pending I2C event flags (SUSPENDED, STOPPED, ERROR).
     fn clear_events(i2c: I2C) void {
         const regs = i2c.get_regs();
-        regs.EVENTS_SUSPENDED.raw = 0;
-        regs.EVENTS_STOPPED.raw = 0;
-        regs.EVENTS_ERROR.raw = 0;
+        regs.EVENTS_SUSPENDED.write_raw(0);
+        regs.EVENTS_STOPPED.write_raw(0);
+        regs.EVENTS_ERROR.write_raw(0);
     }
 
     /// Clear all error flags in the ERRORSRC register.
     fn clear_errors(i2c: I2C) void {
         const regs = i2c.get_regs();
-        regs.ERRORSRC.raw = 0xFFFFFFFF;
+        regs.ERRORSRC.write_raw(0xFFFFFFFF);
     }
 
     // NOTE: Probably not needed, we never set them
@@ -249,12 +249,12 @@ pub const I2C = enum(u1) {
             if (regs.EVENTS_SUSPENDED.read().EVENTS_SUSPENDED == .Generated or
                 regs.EVENTS_STOPPED.read().EVENTS_STOPPED == .Generated)
             {
-                regs.EVENTS_STOPPED.raw = 0;
+                regs.EVENTS_STOPPED.write_raw(0);
                 break;
             }
             // Stop the task on error, but we need to keep waiting until the stop event
             if (regs.EVENTS_ERROR.read().EVENTS_ERROR == .Generated) {
-                regs.EVENTS_ERROR.raw = 0;
+                regs.EVENTS_ERROR.write_raw(0);
                 regs.TASKS_STOP.write(.{ .TASKS_STOP = .Trigger });
             }
             if (deadline.is_reached_by(time.get_time_since_boot())) {

@@ -21,9 +21,9 @@ const TIM2 = peripherals.TIM2;
 /// This ensures we never get a value where low has rolled over but we read the old high value.
 inline fn read_stk_cnt() u64 {
     while (true) {
-        const high1: u32 = PFIC.STK_CNTH.raw;
-        const low: u32 = PFIC.STK_CNTL.raw;
-        const high2: u32 = PFIC.STK_CNTH.raw;
+        const high1: u32 = PFIC.STK_CNTH.read_raw();
+        const low: u32 = PFIC.STK_CNTL.read_raw();
+        const high2: u32 = PFIC.STK_CNTH.read_raw();
 
         // If high didn't change, we have a consistent reading
         if (high1 == high2) {
@@ -60,8 +60,8 @@ fn init_delay_counter() void {
     });
 
     // Reset the count registers
-    PFIC.STK_CNTL.raw = 0;
-    PFIC.STK_CNTH.raw = 0;
+    PFIC.STK_CNTL.write_raw(0);
+    PFIC.STK_CNTH.write_raw(0);
 }
 
 /// Initialize TIM2 to fire interrupts every 1ms for timekeeping.

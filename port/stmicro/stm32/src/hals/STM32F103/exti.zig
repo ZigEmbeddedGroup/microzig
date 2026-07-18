@@ -111,9 +111,9 @@ pub inline fn software_trigger(line: u5) void {
 
 ///check for pending lines (for both events and interrupts)
 pub inline fn pending() pendingLine {
-    return @bitCast(@as(u20, @intCast(EXTI.@"PR[0]".raw)));
+    return @bitCast(@as(u20, @intCast(EXTI.@"PR[0]".read_raw())));
 }
 ///clears all pending lines returned by: `pending()`.
 pub inline fn clear_pending(pendings: pendingLine) void {
-    EXTI.@"PR[0]".raw = @as(u20, @bitCast(pendings));
+    EXTI.@"PR[0]".write_raw(@as(u20, @bitCast(pendings)));
 }

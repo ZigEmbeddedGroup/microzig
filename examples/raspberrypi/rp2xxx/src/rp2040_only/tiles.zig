@@ -133,20 +133,20 @@ pub fn main() !void {
 
 fn sm_set_consecutive_pindirs(_pio: Pio, _sm: StateMachine, pin: u5, count: u3, is_out: bool) void {
     const sm_regs = _pio.get_sm_regs(_sm);
-    const pinctrl_saved = sm_regs.pinctrl.raw;
-    sm_regs.pinctrl.modify(.{
-        .SET_BASE = pin,
-        .SET_COUNT = count,
-    });
+    const pinctrl_saved = sm_regs.pinctrl.read();
+
+    var pinctrl_mod = pinctrl_saved;
+    pinctrl_mod.SET_BASE = pin;
+    pinctrl_mod.SET_COUNT = count;
+    sm_regs.pinctrl.write(pinctrl_mod);
+
     _pio.sm_exec(_sm, rp2xxx.pio.Instruction{
         .tag = .set,
         .delay_side_set = 0,
-        .payload = .{
-            .set = .{
-                .data = @intFromBool(is_out),
-                .destination = .pindirs,
-            },
-        },
+        .payload = .{ .set = .{
+            .data = @intFromBool(is_out),
+            .destination = .pindirs,
+        } },
     });
-    sm_regs.pinctrl.raw = pinctrl_saved;
+    sm_regs.pinctrl.write(pinctrl_saved);
 }

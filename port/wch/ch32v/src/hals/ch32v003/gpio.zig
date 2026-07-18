@@ -106,25 +106,22 @@ pub const Pin = packed struct(u8) {
     pub inline fn set_pull(gpio: Pin, pull: Pull) void {
         var port = gpio.get_port();
         switch (pull) {
-            .up => port.BSHR.raw = gpio.mask(),
-            .down => port.BCR.raw = gpio.mask(),
+            .up => port.BSHR.write_raw(gpio.mask()),
+            .down => port.BCR.write_raw(gpio.mask()),
         }
     }
 
     pub inline fn read(gpio: Pin) u1 {
         const port = gpio.get_port();
-        return if (port.IDR.raw & gpio.mask() != 0)
-            1
-        else
-            0;
+        return @intFromBool(port.IDR.read_raw() & gpio.mask() != 0);
     }
 
     pub inline fn put(gpio: Pin, value: u1) void {
         var port = gpio.get_port();
         switch (value) {
-            // 0 => port.BSHR.raw = gpio.mask() << 16, // BR
-            0 => port.BCR.raw = gpio.mask(), // clear, accessed only 16bit form
-            1 => port.BSHR.raw = gpio.mask(), // BS
+            // 0 => port.BSHR.write_raw(gpio.mask() << 16), // BR
+            0 => port.BCR.write_raw(gpio.mask()), // clear, accessed only 16bit form
+            1 => port.BSHR.write_raw(gpio.mask()), // BS
         }
     }
 

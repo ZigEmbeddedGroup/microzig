@@ -211,7 +211,7 @@ fn isr_common(self: *Self) void {
     // IC_CLR_INTR does not do this correctly.
 
     if (interruptStatus.TX_ABRT == .ACTIVE) {
-        self.regs.IC_CLR_TX_ABRT.raw = 0;
+        self.regs.IC_CLR_TX_ABRT.write_raw(0);
     }
 
     _ = self.regs.IC_CLR_INTR.read();

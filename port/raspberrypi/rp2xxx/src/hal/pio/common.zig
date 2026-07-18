@@ -203,7 +203,7 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
         pub fn set_input_sync_bypass(self: EnumType, pin: gpio.Pin) !void {
             const index = try pin_to_index(self, pin);
             const mask = @as(u32, 1) << index;
-            var val = self.get_regs().INPUT_SYNC_BYPASS.raw;
+            var val = self.get_regs().INPUT_SYNC_BYPASS.read_raw();
             val |= mask;
             self.get_regs().INPUT_SYNC_BYPASS.write_raw(val);
         }
@@ -424,7 +424,7 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
             };
 
             const regs = self.get_regs();
-            const levels = regs.FLEVEL.raw;
+            const levels = regs.FLEVEL.read_raw();
 
             return @as(u4, @truncate(levels >> (@as(u5, 8) * snum) + offset));
         }
@@ -508,7 +508,7 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
 
         pub fn sm_exec(self: EnumType, sm: StateMachine, instruction: Instruction(chip)) void {
             const sm_regs = self.get_sm_regs(sm);
-            sm_regs.instr.raw = @as(u16, @bitCast(instruction));
+            sm_regs.instr.write_raw(@as(u16, @bitCast(instruction)));
         }
 
         pub fn sm_load_and_start_program(
