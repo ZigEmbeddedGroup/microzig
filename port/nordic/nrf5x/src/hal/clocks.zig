@@ -1,5 +1,3 @@
-const std = @import("std");
-
 const microzig = @import("microzig");
 const CLOCK = microzig.chip.peripherals.CLOCK;
 

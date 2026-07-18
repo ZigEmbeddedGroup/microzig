@@ -1,12 +1,7 @@
 const std = @import("std");
-const assert = std.debug.assert;
-
-const microzig = @import("microzig");
 
 const common = @import("common.zig");
-
 const gpio = @import("../gpio.zig");
-const resets = @import("../resets.zig");
 
 pub const Pio = enum(u1) {
     pio0 = 0,

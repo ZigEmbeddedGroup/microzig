@@ -8,7 +8,6 @@ const std = @import("std");
 const microzig = @import("microzig");
 const time = microzig.drivers.time;
 const clocks = microzig.hal.clocks;
-const compatibility = microzig.hal.compatibility;
 
 const rtc = microzig.chip.peripherals.RTC0;
 const COMPARE_INDEX = 2;

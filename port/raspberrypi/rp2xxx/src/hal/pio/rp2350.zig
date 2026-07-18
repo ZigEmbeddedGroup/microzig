@@ -1,13 +1,8 @@
 const std = @import("std");
-const assert = std.debug.assert;
-
 const microzig = @import("microzig");
 
 const common = @import("common.zig");
-
 const gpio = @import("../gpio.zig");
-const resets = @import("../resets.zig");
-const hw = @import("../hw.zig");
 
 const PIO2 = microzig.chip.peripherals.PIO2;
 

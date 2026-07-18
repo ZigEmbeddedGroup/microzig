@@ -3,7 +3,7 @@
 // We need to fix this in the embassy gen from regz.
 const std = @import("std");
 const microzig = @import("microzig");
-const util = @import("../common/util.zig");
+
 const dma_common = @import("dma_common.zig");
 const enums = @import("../common/enums.zig");
 pub const Instances = enums.DMA_Type;

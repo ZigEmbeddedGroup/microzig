@@ -9,11 +9,9 @@ const enums = @import("../common/enums.zig");
 const assert = std.debug.assert;
 
 const mdf = microzig.drivers;
-const drivers = mdf.base;
 const Duration = mdf.time.Duration;
 const Deadline = mdf.time.Deadline;
 
-const peripherals = microzig.chip.peripherals;
 const USART_Peripheral = microzig.chip.types.peripherals.usart_v1.USART;
 const M0 = microzig.chip.types.peripherals.usart_v1.M0;
 const PS = microzig.chip.types.peripherals.usart_v1.PS;

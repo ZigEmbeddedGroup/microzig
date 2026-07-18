@@ -1,7 +1,6 @@
 const std = @import("std");
 const microzig = @import("microzig");
 
-const assert = std.debug.assert;
 pub const peripherals = microzig.chip.peripherals;
 
 const gpio_v2 = microzig.chip.types.peripherals.gpio_v2;
@@ -10,7 +9,6 @@ const MODER = gpio_v2.MODER;
 const PUPDR = gpio_v2.PUPDR;
 const OSPEEDR = gpio_v2.OSPEEDR;
 const OT = gpio_v2.OT;
-const AFIO = microzig.chip.peripherals.AFIO;
 
 pub const Port = enum {
     A,

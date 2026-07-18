@@ -1,5 +1,4 @@
 const std = @import("std");
-const EnumField = std.builtin.Type.EnumField;
 
 const microzig = @import("microzig");
 const RESETS = microzig.chip.peripherals.RESETS;

@@ -1,6 +1,5 @@
-const std = @import("std");
 const microzig = @import("microzig");
-const cpu = microzig.cpu;
+
 const peripherals = microzig.chip.peripherals;
 
 pub fn num(port: u3, n: u3) Pin {

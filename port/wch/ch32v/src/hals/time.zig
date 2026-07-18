@@ -1,7 +1,6 @@
-const std = @import("std");
 const microzig = @import("microzig");
+
 const cpu = microzig.cpu;
-const board = microzig.board;
 const time = microzig.drivers.time;
 
 const peripherals = microzig.chip.peripherals;

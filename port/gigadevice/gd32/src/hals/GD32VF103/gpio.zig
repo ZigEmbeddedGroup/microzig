@@ -1,5 +1,4 @@
 const std = @import("std");
-const assert = std.debug.assert;
 
 const microzig = @import("microzig");
 pub const peripherals = microzig.chip.peripherals;

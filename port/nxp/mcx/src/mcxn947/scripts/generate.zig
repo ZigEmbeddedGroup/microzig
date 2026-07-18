@@ -1,5 +1,5 @@
 const std = @import("std");
-const core = @import("out/MCXN947_cm33_core0.zig");
+// const core = @import("out/MCXN947_cm33_core0.zig");
 const peripherals = @import("out/types.zig").peripherals;
 
 const Field = struct { name: []const u8, i: usize, offset: usize };

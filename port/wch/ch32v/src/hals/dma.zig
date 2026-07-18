@@ -5,11 +5,9 @@
 //!
 //!
 const std = @import("std");
-const assert = std.debug.assert;
 
 const microzig = @import("microzig");
 const mdf = microzig.drivers;
-const drivers = mdf.base;
 const hal = microzig.hal;
 
 const DMA1 = microzig.chip.peripherals.DMA1;
