@@ -75,7 +75,7 @@ pub const Pin = packed struct(u8) {
     inline fn write_pin_config(gpio: Pin, config: u32) void {
         const port = gpio.get_port();
         const offset = @as(u5, @as(u3, @truncate(gpio.number))) << 2;
-        port.CR[gpio.number >> 3].modify_raw(
+        port.CR[gpio.number >> 3].raw.modify(
             @as(u32, 0b1111) << offset,
             config << offset,
         );
@@ -123,26 +123,26 @@ pub const Pin = packed struct(u8) {
     pub inline fn set_pull(gpio: Pin, pull: Pull) void {
         var port = gpio.get_port();
         switch (pull) {
-            .up => port.BOP.write_raw(gpio.mask()),
-            .down => port.BC.write_raw(gpio.mask()),
+            .up => port.BOP.raw.write(gpio.mask()),
+            .down => port.BC.raw.write(gpio.mask()),
         }
     }
 
     pub inline fn read(gpio: Pin) u1 {
         const port = gpio.get_port();
-        return @intFromBool(port.ISTAT.read_raw() & gpio.mask() != 0);
+        return @intFromBool(port.ISTAT.raw.read() & gpio.mask() != 0);
     }
 
     pub inline fn put(gpio: Pin, value: u1) void {
         var port = gpio.get_port();
         switch (value) {
-            0 => port.OCTL.clear_raw(gpio.mask()),
-            1 => port.OCTL.set_raw(gpio.mask()),
+            0 => port.OCTL.raw.clear(gpio.mask()),
+            1 => port.OCTL.raw.set(gpio.mask()),
         }
     }
 
     pub inline fn toggle(gpio: Pin) void {
         var port = gpio.get_port();
-        port.OCTL.toggle_raw(gpio.mask());
+        port.OCTL.raw.toggle(gpio.mask());
     }
 };

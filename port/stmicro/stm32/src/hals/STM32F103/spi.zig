@@ -27,7 +27,7 @@ pub const SPI = struct {
     spi: *volatile SPI_Peripheral,
 
     pub fn apply(self: *const SPI, config: Config) void {
-        self.spi.CR1.write_raw(0); // Disable SPI end clear configs before configuration
+        self.spi.CR1.raw.write(0); // Disable SPI end clear configs before configuration
         self.spi.CR1.modify(.{
             .CPOL = config.polarity,
             .CPHA = config.phase,
@@ -67,7 +67,7 @@ pub const SPI = struct {
     //trasmite only procedure | RM008 page 721
     pub fn write_blocking(self: *const SPI, data: []const u8) void {
         for (data) |byte| {
-            self.spi.DR.write_raw(byte);
+            self.spi.DR.raw.write(byte);
             while (!self.check_TX()) {}
         }
         self.busy_wait();
@@ -78,15 +78,15 @@ pub const SPI = struct {
     }
 
     pub fn read_blocking(self: *const SPI, data: []u8) void {
-        self.spi.DR.write_raw(0);
+        self.spi.DR.raw.write(0);
         for (data) |*byte| {
             //send dummy byte to generate clock
             while (!(self.check_TX())) {}
-            self.spi.DR.write_raw(0); // send dummy byte
+            self.spi.DR.raw.write(0); // send dummy byte
 
             //wait for data to be received
             while (!(self.check_RX())) {}
-            byte.* = @intCast(self.spi.DR.read_raw() & 0xFF);
+            byte.* = @intCast(self.spi.DR.raw.read() & 0xFF);
         }
         self.busy_wait();
 
@@ -111,19 +111,19 @@ pub const SPI = struct {
 
         //load the first byte
         //the RX value will be loaded into the shift register, and will be loaded into the DR register after the first clock cycle
-        self.spi.DR.write_raw(out[0]);
+        self.spi.DR.raw.write(out[0]);
         while ((out_remain > 0) or (in_remain > 0)) {
             while (!check_TX(self)) {}
             if (out_remain > 0) {
-                self.spi.DR.write_raw(out[out_len - out_remain]);
+                self.spi.DR.raw.write(out[out_len - out_remain]);
                 out_remain -= 1;
             } else {
-                self.spi.DR.write_raw(0); // send dummy byte
+                self.spi.DR.raw.write(0); // send dummy byte
             }
 
             while (!check_RX(self)) {}
             if (in_remain > 0) {
-                in[in_len - in_remain] = @intCast(self.spi.DR.read_raw() & 0xFF);
+                in[in_len - in_remain] = @intCast(self.spi.DR.raw.read() & 0xFF);
                 in_remain -= 1;
             }
         }

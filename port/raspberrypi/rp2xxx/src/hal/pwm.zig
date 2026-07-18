@@ -197,7 +197,7 @@ pub fn set_channel_inversion(
 ///   slice - the slice to set
 ///   wrap - the wrap value
 pub fn set_slice_wrap(slice: u32, wrap: u16) void {
-    get_regs(slice).top.write_raw(wrap);
+    get_regs(slice).top.raw.write(wrap);
 }
 
 /// Set the level of the channel.  This is the number of pwm clock

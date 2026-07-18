@@ -58,9 +58,9 @@ pub fn Uart(comptime index: UART_Type) type {
                 @panic("Trying to initialize USART while it is already enabled");
 
             // clear USART1 configuration to its default
-            regs.CR1.write_raw(0);
-            regs.CR2.write_raw(0);
-            regs.CR3.write_raw(0);
+            regs.CR1.raw.write(0);
+            regs.CR2.raw.write(0);
+            regs.CR3.raw.write(0);
 
             switch (config.word_bits) {
                 .seven => regs.CR1.modify(.{ .M0 = .Bit8, .M1 = .Bit7 }),
@@ -80,7 +80,7 @@ pub fn Uart(comptime index: UART_Type) type {
             // from the chip
             // TODO: Do some checks to see if the baud rate is too high (or perhaps too low)
             const usartdiv = @divTrunc(rcc.get_clock(enums.to_peripheral(index)), config.baud_rate);
-            regs.BRR.write_raw(@as(u16, @intCast(usartdiv)));
+            regs.BRR.raw.write(@as(u16, @intCast(usartdiv)));
             // TODO: We assume the default OVER8=0 configuration above.
 
             // enable USART1, and its transmitter and receiver

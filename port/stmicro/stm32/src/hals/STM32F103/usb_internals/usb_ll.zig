@@ -303,8 +303,8 @@ fn inner_init(config: Config, PMA_conf: PMA.Config, startup: Duration) InitError
     while (USB.ISTR.read().RESET == 0) {
         asm volatile ("nop");
     }
-    USB.CNTR.write_raw(0);
-    USB.ISTR.write_raw(0);
+    USB.CNTR.raw.write(0);
+    USB.ISTR.raw.write(0);
 
     for (config.endpoints) |ep_conf| {
         const epc_num: usize = @intFromEnum(ep_conf.ep_control);
@@ -416,7 +416,7 @@ pub fn default_reset_handler() void {
         });
     }
 
-    USB.ISTR.write_raw(0);
+    USB.ISTR.raw.write(0);
 
     //re-configure endpoints
     for (0..8) |i| {

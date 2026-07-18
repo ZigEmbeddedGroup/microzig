@@ -64,12 +64,12 @@ pub fn DMA(comptime dma_ctrl: Instances, comptime ch: ChannelNumber) type {
         pub fn clear_events(events: ChannelEvent) void {
             const ch_evt_idx: u5 = 4 * @as(u5, @intCast(@intFromEnum(ch)));
             const bits: u32 = @as(u4, @bitCast(events));
-            reg_dma.IFCR.set_raw((bits & 0xF) << ch_evt_idx);
+            reg_dma.IFCR.raw.set((bits & 0xF) << ch_evt_idx);
         }
 
         pub fn read_events() ChannelEvent {
             const ch_evt_idx: u5 = 4 * @as(u5, @intCast(@intFromEnum(ch)));
-            return @bitCast(@as(u4, @truncate(reg_dma.ISR.read_raw() >> ch_evt_idx)));
+            return @bitCast(@as(u4, @truncate(reg_dma.ISR.raw.read() >> ch_evt_idx)));
         }
 
         pub fn enable_interrupt() void {

@@ -866,12 +866,12 @@ pub const GlobalConfiguration = struct {
         const used_gpios = comptime input_gpios | output_gpios;
 
         if (used_gpios != 0) {
-            SIO.GPIO_OE_CLR.write_raw(@truncate(used_gpios));
-            SIO.GPIO_OUT_CLR.write_raw(@truncate(used_gpios));
+            SIO.GPIO_OE_CLR.raw.write(@truncate(used_gpios));
+            SIO.GPIO_OUT_CLR.raw.write(@truncate(used_gpios));
 
             if (chip == .RP2350) {
-                SIO.GPIO_HI_OE_CLR.write_raw(@intCast(used_gpios >> 32));
-                SIO.GPIO_HI_OUT_CLR.write_raw(@intCast(used_gpios >> 32));
+                SIO.GPIO_HI_OE_CLR.raw.write(@intCast(used_gpios >> 32));
+                SIO.GPIO_HI_OUT_CLR.raw.write(@intCast(used_gpios >> 32));
             }
         }
 
@@ -922,9 +922,9 @@ pub const GlobalConfiguration = struct {
         }
 
         if (output_gpios != 0) {
-            SIO.GPIO_OE_SET.write_raw(@truncate(output_gpios));
+            SIO.GPIO_OE_SET.raw.write(@truncate(output_gpios));
             if (chip == .RP2350)
-                SIO.GPIO_HI_OE_SET.write_raw(@truncate(output_gpios >> 32));
+                SIO.GPIO_HI_OE_SET.raw.write(@truncate(output_gpios >> 32));
         }
 
         inline for (@typeInfo(GlobalConfiguration).@"struct".field_names) |field_name|

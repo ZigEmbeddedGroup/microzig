@@ -309,8 +309,8 @@ pub const I2C = struct {
     fn clear_flags(i2c: *const I2C) void {
         const regs = i2c.regs;
         //clear ADDR register
-        std.mem.doNotOptimizeAway(regs.SR1.read_raw());
-        std.mem.doNotOptimizeAway(regs.SR2.read_raw());
+        std.mem.doNotOptimizeAway(regs.SR1.raw.read());
+        std.mem.doNotOptimizeAway(regs.SR2.raw.read());
     }
 
     fn send_7bits_addr(i2c: *const I2C, addr: u10, IO: u1, deadline: Deadline) Error!void {

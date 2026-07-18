@@ -126,8 +126,8 @@ pub fn Polled(config: Config) type {
 
                 // The SVD exposes this buffer as two 32-bit registers.
                 const setup: usb.types.SetupPacket = @bitCast([2]u32{
-                    peripherals.USB_DPRAM.SETUP_PACKET_LOW.read_raw(),
-                    peripherals.USB_DPRAM.SETUP_PACKET_HIGH.read_raw(),
+                    peripherals.USB_DPRAM.SETUP_PACKET_LOW.raw.read(),
+                    peripherals.USB_DPRAM.SETUP_PACKET_HIGH.raw.read(),
                 });
 
                 log.debug("setup {any}", .{setup});
@@ -138,7 +138,7 @@ pub fn Polled(config: Config) type {
             if (ints.BUFF_STATUS != 0) {
                 log.debug("-- buffer status --", .{});
 
-                const buff_status = peripherals.USB.BUFF_STATUS.read_raw();
+                const buff_status = peripherals.USB.BUFF_STATUS.raw.read();
 
                 inline for (0..2 * config.max_endpoints_count) |shift| {
                     if (buff_status & (@as(u32, 1) << shift) != 0) {
@@ -163,7 +163,7 @@ pub fn Polled(config: Config) type {
                         controller.on_buffer(&self.interface, ep);
                     }
                 }
-                peripherals.USB.BUFF_STATUS.write_raw(buff_status);
+                peripherals.USB.BUFF_STATUS.raw.write(buff_status);
             }
 
             // Has the host signaled a bus reset?
@@ -184,17 +184,17 @@ pub fn Polled(config: Config) type {
 
             // Clear the control portion of DPRAM. This may not be necessary -- the
             // datasheet is ambiguous -- but the C examples do it, and so do we.
-            peripherals.USB_DPRAM.SETUP_PACKET_LOW.write_raw(0);
-            peripherals.USB_DPRAM.SETUP_PACKET_HIGH.write_raw(0);
+            peripherals.USB_DPRAM.SETUP_PACKET_LOW.raw.write(0);
+            peripherals.USB_DPRAM.SETUP_PACKET_HIGH.raw.write(0);
 
             for (1..config.max_endpoints_count) |i| {
-                endpoint_control[i - 1].in.write_raw(0);
-                endpoint_control[i - 1].out.write_raw(0);
+                endpoint_control[i - 1].in.raw.write(0);
+                endpoint_control[i - 1].out.raw.write(0);
             }
 
             for (0..config.max_endpoints_count) |i| {
-                buffer_control[i].in.write_raw(0);
-                buffer_control[i].out.write_raw(0);
+                buffer_control[i].in.raw.write(0);
+                buffer_control[i].out.raw.write(0);
             }
 
             // Mux the controller to the onboard USB PHY. I was surprised that there are

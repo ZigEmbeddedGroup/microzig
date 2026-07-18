@@ -117,8 +117,8 @@ pub const Mask =
             pub fn set_direction(self: Mask, direction: Direction) void {
                 const raw_mask = @intFromEnum(self);
                 switch (direction) {
-                    .out => SIO.GPIO_OE_SET.write_raw(raw_mask),
-                    .in => SIO.GPIO_OE_CLR.write_raw(raw_mask),
+                    .out => SIO.GPIO_OE_SET.raw.write(raw_mask),
+                    .in => SIO.GPIO_OE_CLR.raw.write(raw_mask),
                 }
             }
 
@@ -159,11 +159,11 @@ pub const Mask =
             }
 
             pub fn put(self: Mask, value: u32) void {
-                SIO.GPIO_OUT_XOR.write_raw((SIO.GPIO_OUT.read_raw() ^ value) & @intFromEnum(self));
+                SIO.GPIO_OUT_XOR.raw.write((SIO.GPIO_OUT.raw.read() ^ value) & @intFromEnum(self));
             }
 
             pub fn read(self: Mask) u32 {
-                return SIO.GPIO_IN.read_raw() & @intFromEnum(self);
+                return SIO.GPIO_IN.raw.read() & @intFromEnum(self);
             }
         },
         .RP2350 => enum(u48) {
@@ -191,12 +191,12 @@ pub const Mask =
                 const upper_mask = self.upper_16_mask();
                 switch (direction) {
                     .out => {
-                        SIO.GPIO_OE_SET.write_raw(lower_mask);
-                        SIO.GPIO_HI_OE_SET.write_raw(upper_mask);
+                        SIO.GPIO_OE_SET.raw.write(lower_mask);
+                        SIO.GPIO_HI_OE_SET.raw.write(upper_mask);
                     },
                     .in => {
-                        SIO.GPIO_OE_CLR.write_raw(lower_mask);
-                        SIO.GPIO_HI_OE_CLR.write_raw(upper_mask);
+                        SIO.GPIO_OE_CLR.raw.write(lower_mask);
+                        SIO.GPIO_HI_OE_CLR.raw.write(upper_mask);
                     },
                 }
             }
@@ -242,15 +242,15 @@ pub const Mask =
                 const lower_val: u32 = @truncate(value);
                 const upper_mask = self.upper_16_mask();
                 const upper_val: u16 = @truncate(value >> 32);
-                SIO.GPIO_OUT_XOR.write_raw((SIO.GPIO_OUT.read_raw() ^ lower_val) & lower_mask);
-                SIO.GPIO_HI_OUT_XOR.write_raw((SIO.GPIO_HI_OUT.read_raw() ^ upper_val) & upper_mask);
+                SIO.GPIO_OUT_XOR.raw.write((SIO.GPIO_OUT.raw.read() ^ lower_val) & lower_mask);
+                SIO.GPIO_HI_OUT_XOR.raw.write((SIO.GPIO_HI_OUT.raw.read() ^ upper_val) & upper_mask);
             }
 
             pub fn read(self: Mask) u48 {
                 const lower_mask = self.lower_32_mask();
-                const lower_val: u32 = SIO.GPIO_IN.read_raw() & lower_mask;
+                const lower_val: u32 = SIO.GPIO_IN.raw.read() & lower_mask;
                 const upper_mask = self.upper_16_mask();
-                const upper_val: u16 = @truncate(SIO.GPIO_HI_IN.read_raw() & upper_mask);
+                const upper_val: u16 = @truncate(SIO.GPIO_HI_IN.raw.read() & upper_mask);
                 return (@as(u48, upper_val) << 32) | @as(u48, lower_val);
             }
         },
@@ -342,20 +342,20 @@ pub const Pin = enum(u6) {
         switch (chip) {
             .RP2040 => {
                 switch (direction) {
-                    .in => SIO.GPIO_OE_CLR.write_raw(gpio.mask()),
-                    .out => SIO.GPIO_OE_SET.write_raw(gpio.mask()),
+                    .in => SIO.GPIO_OE_CLR.raw.write(gpio.mask()),
+                    .out => SIO.GPIO_OE_SET.raw.write(gpio.mask()),
                 }
             },
             .RP2350 => {
                 if (gpio.is_upper()) {
                     switch (direction) {
-                        .in => SIO.GPIO_HI_OE_CLR.write_raw(gpio.mask()),
-                        .out => SIO.GPIO_HI_OE_SET.write_raw(gpio.mask()),
+                        .in => SIO.GPIO_HI_OE_CLR.raw.write(gpio.mask()),
+                        .out => SIO.GPIO_HI_OE_SET.raw.write(gpio.mask()),
                     }
                 } else {
                     switch (direction) {
-                        .in => SIO.GPIO_OE_CLR.write_raw(gpio.mask()),
-                        .out => SIO.GPIO_OE_SET.write_raw(gpio.mask()),
+                        .in => SIO.GPIO_OE_CLR.raw.write(gpio.mask()),
+                        .out => SIO.GPIO_OE_SET.raw.write(gpio.mask()),
                     }
                 }
             },
@@ -367,20 +367,20 @@ pub const Pin = enum(u6) {
         switch (chip) {
             .RP2040 => {
                 switch (value) {
-                    0 => SIO.GPIO_OUT_CLR.write_raw(gpio.mask()),
-                    1 => SIO.GPIO_OUT_SET.write_raw(gpio.mask()),
+                    0 => SIO.GPIO_OUT_CLR.raw.write(gpio.mask()),
+                    1 => SIO.GPIO_OUT_SET.raw.write(gpio.mask()),
                 }
             },
             .RP2350 => {
                 if (gpio.is_upper()) {
                     switch (value) {
-                        0 => SIO.GPIO_HI_OUT_CLR.write_raw(gpio.mask()),
-                        1 => SIO.GPIO_HI_OUT_SET.write_raw(gpio.mask()),
+                        0 => SIO.GPIO_HI_OUT_CLR.raw.write(gpio.mask()),
+                        1 => SIO.GPIO_HI_OUT_SET.raw.write(gpio.mask()),
                     }
                 } else {
                     switch (value) {
-                        0 => SIO.GPIO_OUT_CLR.write_raw(gpio.mask()),
-                        1 => SIO.GPIO_OUT_SET.write_raw(gpio.mask()),
+                        0 => SIO.GPIO_OUT_CLR.raw.write(gpio.mask()),
+                        1 => SIO.GPIO_OUT_SET.raw.write(gpio.mask()),
                     }
                 }
             },
@@ -390,13 +390,13 @@ pub const Pin = enum(u6) {
     pub inline fn toggle(gpio: Pin) void {
         switch (chip) {
             .RP2040 => {
-                SIO.GPIO_OUT_XOR.write_raw(gpio.mask());
+                SIO.GPIO_OUT_XOR.raw.write(gpio.mask());
             },
             .RP2350 => {
                 if (gpio.is_upper()) {
-                    SIO.GPIO_HI_OUT_XOR.write_raw(gpio.mask());
+                    SIO.GPIO_HI_OUT_XOR.raw.write(gpio.mask());
                 } else {
-                    SIO.GPIO_OUT_XOR.write_raw(gpio.mask());
+                    SIO.GPIO_OUT_XOR.raw.write(gpio.mask());
                 }
             },
         }
@@ -405,19 +405,19 @@ pub const Pin = enum(u6) {
     pub inline fn read(gpio: Pin) u1 {
         switch (chip) {
             .RP2040 => {
-                return if ((SIO.GPIO_IN.read_raw() & gpio.mask()) != 0)
+                return if ((SIO.GPIO_IN.raw.read() & gpio.mask()) != 0)
                     1
                 else
                     0;
             },
             .RP2350 => {
                 if (gpio.is_upper()) {
-                    return if ((SIO.GPIO_HI_IN.read_raw() & gpio.mask()) != 0)
+                    return if ((SIO.GPIO_HI_IN.raw.read() & gpio.mask()) != 0)
                         1
                     else
                         0;
                 } else {
-                    return if ((SIO.GPIO_IN.read_raw() & gpio.mask()) != 0)
+                    return if ((SIO.GPIO_IN.raw.read() & gpio.mask()) != 0)
                         1
                     else
                         0;

@@ -203,9 +203,9 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
         pub fn set_input_sync_bypass(self: EnumType, pin: gpio.Pin) !void {
             const index = try pin_to_index(self, pin);
             const mask = @as(u32, 1) << index;
-            var val = self.get_regs().INPUT_SYNC_BYPASS.read_raw();
+            var val = self.get_regs().INPUT_SYNC_BYPASS.raw.read();
             val |= mask;
-            self.get_regs().INPUT_SYNC_BYPASS.write_raw(val);
+            self.get_regs().INPUT_SYNC_BYPASS.raw.write(val);
         }
 
         pub fn get_sm_regs(self: EnumType, sm: StateMachine) *volatile StateMachine.Regs {
@@ -424,7 +424,7 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
             };
 
             const regs = self.get_regs();
-            const levels = regs.FLEVEL.read_raw();
+            const levels = regs.FLEVEL.raw.read();
 
             return @as(u4, @truncate(levels >> (@as(u5, 8) * snum) + offset));
         }
@@ -444,7 +444,7 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
             // TODO: why does the raw interrupt register no have irq1/0?
             _ = irq;
             const regs = self.get_regs();
-            regs.IRQ.set_raw(@as(u32, 1) << interrupt_bit_pos(sm, source));
+            regs.IRQ.raw.set(@as(u32, 1) << interrupt_bit_pos(sm, source));
         }
 
         // TODO: be able to disable an interrupt
@@ -455,7 +455,7 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
             source: Irq.Source,
         ) void {
             const irq_regs = self.get_irq_regs(irq);
-            irq_regs.enable.set_raw(@as(u32, 1) << interrupt_bit_pos(sm, source));
+            irq_regs.enable.raw.set(@as(u32, 1) << interrupt_bit_pos(sm, source));
         }
 
         pub fn sm_restart(self: EnumType, sm: StateMachine) void {
@@ -508,7 +508,7 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
 
         pub fn sm_exec(self: EnumType, sm: StateMachine, instruction: Instruction(chip)) void {
             const sm_regs = self.get_sm_regs(sm);
-            sm_regs.instr.write_raw(@as(u16, @bitCast(instruction)));
+            sm_regs.instr.raw.write(@as(u16, @bitCast(instruction)));
         }
 
         pub fn sm_load_and_start_program(

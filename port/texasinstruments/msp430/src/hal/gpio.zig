@@ -27,7 +27,7 @@ pub const Pin = struct {
         if (!@hasField(@typeInfo(@TypeOf(periph)).pointer.child, register_name))
             @panic("missing register " ++ register_name);
 
-        return &@field(periph, register_name).read_raw();
+        return &@field(periph, register_name).raw.read();
     }
 
     inline fn out(p: Pin) *volatile u8 {

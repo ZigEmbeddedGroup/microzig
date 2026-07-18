@@ -66,25 +66,25 @@ pub const USBD = struct {
     const Self = @This();
 
     pub fn init() Self {
-        peripherals.USBD.USBPULLUP.write_raw(0);
-        peripherals.USBD.ENABLE.write_raw(0);
-        peripherals.USBD.EPINEN.write_raw(0x01); // only EP0 IN by default
-        peripherals.USBD.EPOUTEN.write_raw(0x01); // only EP0 OUT by default
-        peripherals.USBD.EVENTCAUSE.write_raw(0xFFFFFFFF); // W1C all
-        peripherals.USBD.EPSTATUS.write_raw(0xFFFFFFFF); // W1C all
-        peripherals.USBD.EPDATASTATUS.write_raw(0xFFFFFFFF); // W1C all
-        peripherals.USBD.EVENTS_USBRESET.write_raw(0);
-        peripherals.USBD.EVENTS_EP0SETUP.write_raw(0);
-        peripherals.USBD.EVENTS_EP0DATADONE.write_raw(0);
-        peripherals.USBD.EVENTS_EPDATA.write_raw(0);
-        peripherals.USBD.EVENTS_USBEVENT.write_raw(0);
+        peripherals.USBD.USBPULLUP.raw.write(0);
+        peripherals.USBD.ENABLE.raw.write(0);
+        peripherals.USBD.EPINEN.raw.write(0x01); // only EP0 IN by default
+        peripherals.USBD.EPOUTEN.raw.write(0x01); // only EP0 OUT by default
+        peripherals.USBD.EVENTCAUSE.raw.write(0xFFFFFFFF); // W1C all
+        peripherals.USBD.EPSTATUS.raw.write(0xFFFFFFFF); // W1C all
+        peripherals.USBD.EPDATASTATUS.raw.write(0xFFFFFFFF); // W1C all
+        peripherals.USBD.EVENTS_USBRESET.raw.write(0);
+        peripherals.USBD.EVENTS_EP0SETUP.raw.write(0);
+        peripherals.USBD.EVENTS_EP0DATADONE.raw.write(0);
+        peripherals.USBD.EVENTS_EPDATA.raw.write(0);
+        peripherals.USBD.EVENTS_USBEVENT.raw.write(0);
         for (0..8) |i| {
-            peripherals.USBD.EVENTS_ENDEPIN[i].write_raw(0);
-            peripherals.USBD.EVENTS_ENDEPOUT[i].write_raw(0);
-            peripherals.USBD.EPIN[i].PTR.write_raw(0);
-            peripherals.USBD.EPIN[i].MAXCNT.write_raw(0);
-            peripherals.USBD.EPOUT[i].PTR.write_raw(0);
-            peripherals.USBD.EPOUT[i].MAXCNT.write_raw(0);
+            peripherals.USBD.EVENTS_ENDEPIN[i].raw.write(0);
+            peripherals.USBD.EVENTS_ENDEPOUT[i].raw.write(0);
+            peripherals.USBD.EPIN[i].PTR.raw.write(0);
+            peripherals.USBD.EPIN[i].MAXCNT.raw.write(0);
+            peripherals.USBD.EPOUT[i].PTR.raw.write(0);
+            peripherals.USBD.EPOUT[i].MAXCNT.raw.write(0);
         }
         return .{
             .interface = .{ .vtable = &vtable },
@@ -104,28 +104,28 @@ pub const USBD = struct {
             .detached => {
                 if (peripherals.POWER.USBREGSTATUS.read().VBUSDETECT == .VbusPresent) {
                     errata.pre_enable();
-                    peripherals.USBD.ENABLE.write_raw(1);
+                    peripherals.USBD.ENABLE.raw.write(1);
                     self.power = .enabling;
                 }
             },
             .enabling => {
                 if (peripherals.USBD.EVENTCAUSE.read().READY == .Ready) {
                     peripherals.USBD.EVENTCAUSE.write(.{ .READY = .Ready }); // W1C
-                    peripherals.USBD.EVENTS_USBEVENT.write_raw(0);
+                    peripherals.USBD.EVENTS_USBEVENT.raw.write(0);
                     errata.post_enable();
                     self.power = .waiting_pwrrdy;
                 }
             },
             .waiting_pwrrdy => {
                 if (peripherals.POWER.USBREGSTATUS.read().OUTPUTRDY == .Ready) {
-                    peripherals.USBD.USBPULLUP.write_raw(1);
+                    peripherals.USBD.USBPULLUP.raw.write(1);
                     self.power = .connected;
                 }
             },
             .connected => {
                 // Bus reset
-                if (peripherals.USBD.EVENTS_USBRESET.read_raw() != 0) {
-                    peripherals.USBD.EVENTS_USBRESET.write_raw(0);
+                if (peripherals.USBD.EVENTS_USBRESET.raw.read() != 0) {
+                    peripherals.USBD.EVENTS_USBRESET.raw.write(0);
 
                     self.reset();
                     controller.on_bus_reset(&self.interface);
@@ -133,22 +133,22 @@ pub const USBD = struct {
                 }
 
                 // SETUP packet captured by hardware
-                if (peripherals.USBD.EVENTS_EP0SETUP.read_raw() != 0) {
-                    peripherals.USBD.EVENTS_EP0SETUP.write_raw(0);
+                if (peripherals.USBD.EVENTS_EP0SETUP.raw.read() != 0) {
+                    peripherals.USBD.EVENTS_EP0SETUP.raw.write(0);
                     // Aborted control transfer: drop stale DATADONE so it can't
                     // trigger on_buffer for the next transfer.
-                    peripherals.USBD.EVENTS_EP0DATADONE.write_raw(0);
+                    peripherals.USBD.EVENTS_EP0DATADONE.raw.write(0);
                     self.ep0_state.in_pending = false;
 
                     const setup: usb.types.SetupPacket = .{
-                        .request_type = @bitCast(@as(u8, @intCast(peripherals.USBD.BMREQUESTTYPE.read_raw()))),
-                        .request = @intCast(peripherals.USBD.BREQUEST.read_raw()),
-                        .value = .from((@as(u16, @intCast(peripherals.USBD.WVALUEH.read_raw())) << 8) |
-                            @as(u16, @intCast(peripherals.USBD.WVALUEL.read_raw()))),
-                        .index = .from((@as(u16, @intCast(peripherals.USBD.WINDEXH.read_raw())) << 8) |
-                            @as(u16, @intCast(peripherals.USBD.WINDEXL.read_raw()))),
-                        .length = .from((@as(u16, @intCast(peripherals.USBD.WLENGTHH.read_raw())) << 8) |
-                            @as(u16, @intCast(peripherals.USBD.WLENGTHL.read_raw()))),
+                        .request_type = @bitCast(@as(u8, @intCast(peripherals.USBD.BMREQUESTTYPE.raw.read()))),
+                        .request = @intCast(peripherals.USBD.BREQUEST.raw.read()),
+                        .value = .from((@as(u16, @intCast(peripherals.USBD.WVALUEH.raw.read())) << 8) |
+                            @as(u16, @intCast(peripherals.USBD.WVALUEL.raw.read()))),
+                        .index = .from((@as(u16, @intCast(peripherals.USBD.WINDEXH.raw.read())) << 8) |
+                            @as(u16, @intCast(peripherals.USBD.WINDEXL.raw.read()))),
+                        .length = .from((@as(u16, @intCast(peripherals.USBD.WLENGTHH.raw.read())) << 8) |
+                            @as(u16, @intCast(peripherals.USBD.WLENGTHL.raw.read()))),
                     };
                     self.ep0_state.direction = switch (peripherals.USBD.BMREQUESTTYPE.read().DIRECTION) {
                         .HostToDevice => .Out,
@@ -159,24 +159,24 @@ pub const USBD = struct {
                 }
 
                 // EP0 data-phase completions
-                if (peripherals.USBD.EVENTS_EP0DATADONE.read_raw() != 0) {
+                if (peripherals.USBD.EVENTS_EP0DATADONE.raw.read() != 0) {
                     // Here nrf-usbd doesn't clear OUT events
                     // (https://github.com/nrf-rs/nrf-usbd/blob/main/src/usbd.rs#L683)
                     // But this case is not handled in the controller yet
-                    peripherals.USBD.EVENTS_EP0DATADONE.write_raw(0);
+                    peripherals.USBD.EVENTS_EP0DATADONE.raw.write(0);
                     self.ep0_state.in_pending = false;
                     switch (self.ep0_state.direction) {
                         .In => controller.on_buffer(&self.interface, .in(.ep0)),
                         // Control-OUT with data-phase is unhandled in the controller
-                        .Out => peripherals.USBD.TASKS_EP0STATUS.write_raw(1),
+                        .Out => peripherals.USBD.TASKS_EP0STATUS.raw.write(1),
                     }
                 }
 
                 // Data-endpoint completions
-                if (peripherals.USBD.EVENTS_EPDATA.read_raw() != 0) {
-                    peripherals.USBD.EVENTS_EPDATA.write_raw(0);
-                    const status = peripherals.USBD.EPDATASTATUS.read_raw();
-                    peripherals.USBD.EPDATASTATUS.write_raw(status); // W1C handled bits
+                if (peripherals.USBD.EVENTS_EPDATA.raw.read() != 0) {
+                    peripherals.USBD.EVENTS_EPDATA.raw.write(0);
+                    const status = peripherals.USBD.EPDATASTATUS.raw.read();
+                    peripherals.USBD.EPDATASTATUS.raw.write(status); // W1C handled bits
                     // Calling on_buffer() for each set bit
                     // IN endpoints (bits 1-7)
                     var status_in = status >> 1;
@@ -197,13 +197,13 @@ pub const USBD = struct {
                 // TODO: Implement `Suspend`
                 if (peripherals.USBD.EVENTCAUSE.read().SUSPEND == .Detected) {
                     peripherals.USBD.EVENTCAUSE.write(.{ .SUSPEND = .Detected });
-                    peripherals.USBD.EVENTS_USBEVENT.write_raw(0);
+                    peripherals.USBD.EVENTS_USBEVENT.raw.write(0);
                 }
 
                 // TODO: Implement `Resume`
                 if (peripherals.USBD.EVENTCAUSE.read().RESUME == .Detected) {
                     peripherals.USBD.EVENTCAUSE.write(.{ .RESUME = .Detected });
-                    peripherals.USBD.EVENTS_USBEVENT.write_raw(0);
+                    peripherals.USBD.EVENTS_USBEVENT.raw.write(0);
                 }
 
                 // TODO: ISO endpoints
@@ -216,8 +216,8 @@ pub const USBD = struct {
                 if (self.ep0_state.in_pending) {
                     const now = peripherals.USBD.FRAMECNTR.read().FRAMECNTR;
                     if ((now -% self.ep0_state.in_start_frame) >= EP0_IN_STATUS_TIMEOUT_FRAMES) {
-                        peripherals.USBD.TASKS_EP0STATUS.write_raw(1);
-                        peripherals.USBD.EVENTS_EP0DATADONE.write_raw(0);
+                        peripherals.USBD.TASKS_EP0STATUS.raw.write(1);
+                        peripherals.USBD.EVENTS_EP0DATADONE.raw.write(0);
                         self.ep0_state.in_pending = false;
                     }
                 }
@@ -231,30 +231,30 @@ pub const USBD = struct {
         //
         // But in this case it won't happen because
         // we busywait for ENDEP* with interrupts disabled
-        peripherals.USBD.USBPULLUP.write_raw(0);
-        peripherals.USBD.ENABLE.write_raw(0);
+        peripherals.USBD.USBPULLUP.raw.write(0);
+        peripherals.USBD.ENABLE.raw.write(0);
     }
 
     fn reset(self: *Self) void {
-        peripherals.USBD.EPDATASTATUS.write_raw(0xFFFFFFFF); // W1C all
-        peripherals.USBD.EPSTATUS.write_raw(0xFFFFFFFF); // W1C all
-        peripherals.USBD.EVENTS_EP0SETUP.write_raw(0);
-        peripherals.USBD.EVENTS_EP0DATADONE.write_raw(0);
-        peripherals.USBD.EVENTS_EPDATA.write_raw(0);
+        peripherals.USBD.EPDATASTATUS.raw.write(0xFFFFFFFF); // W1C all
+        peripherals.USBD.EPSTATUS.raw.write(0xFFFFFFFF); // W1C all
+        peripherals.USBD.EVENTS_EP0SETUP.raw.write(0);
+        peripherals.USBD.EVENTS_EP0DATADONE.raw.write(0);
+        peripherals.USBD.EVENTS_EPDATA.raw.write(0);
         peripherals.USBD.SHORTS.write(.{ .EP0DATADONE_EP0STATUS = .Disabled });
-        peripherals.USBD.EPINEN.write_raw(0x01); // only EP0 IN
-        peripherals.USBD.EPOUTEN.write_raw(0x01); // only EP0 OUT
+        peripherals.USBD.EPINEN.raw.write(0x01); // only EP0 IN
+        peripherals.USBD.EPOUTEN.raw.write(0x01); // only EP0 OUT
 
         for (1..NUM_EP) |i| {
             // NOTE: Data endpoints are automatically disabled on reset
-            peripherals.USBD.EPIN[i].PTR.write_raw(0);
-            peripherals.USBD.EPIN[i].MAXCNT.write_raw(0);
-            peripherals.USBD.EPOUT[i].PTR.write_raw(0);
-            peripherals.USBD.EPOUT[i].MAXCNT.write_raw(0);
+            peripherals.USBD.EPIN[i].PTR.raw.write(0);
+            peripherals.USBD.EPIN[i].MAXCNT.raw.write(0);
+            peripherals.USBD.EPOUT[i].PTR.raw.write(0);
+            peripherals.USBD.EPOUT[i].MAXCNT.raw.write(0);
 
             // When first enabled, bulk/interrupt endpoints
             // will return NAK until 0 is written to SIZE.EPOUT[n]
-            peripherals.USBD.SIZE.EPOUT[i].write_raw(0);
+            peripherals.USBD.SIZE.EPOUT[i].raw.write(0);
         }
 
         self.eps_in = @splat(.{});
@@ -271,7 +271,7 @@ pub const USBD = struct {
         log.debug("ep_writev {t}: ({} bytes) {X} ({s})", .{ ep_num, data[0].len, data[0], data[0] });
 
         if (data[0].len == 0) {
-            if (ep_num == .ep0) peripherals.USBD.TASKS_EP0STATUS.write_raw(1);
+            if (ep_num == .ep0) peripherals.USBD.TASKS_EP0STATUS.raw.write(1);
             return 0;
         }
 
@@ -289,8 +289,8 @@ pub const USBD = struct {
         const len: usb.types.Len = @intCast(scratch_cap - scratch_slice.len);
 
         // Prepare DMA transfer
-        peripherals.USBD.EPIN[i].PTR.write_raw(@intFromPtr(scratch));
-        peripherals.USBD.EPIN[i].MAXCNT.write_raw(len);
+        peripherals.USBD.EPIN[i].PTR.raw.write(@intFromPtr(scratch));
+        peripherals.USBD.EPIN[i].MAXCNT.raw.write(len);
 
         if (ep_num == .ep0) {
             // EPIN0: a short packet (len < max_packet_size) indicates the end of the data
@@ -315,9 +315,9 @@ pub const USBD = struct {
         // Start DMA
         const was_enabled = cpu.interrupt.is_enabled(.USBD);
         defer if (was_enabled) cpu.interrupt.enable(.USBD);
-        peripherals.USBD.TASKS_STARTEPIN[i].write_raw(1);
-        while (peripherals.USBD.EVENTS_ENDEPIN[i].read_raw() != 1) {}
-        peripherals.USBD.EVENTS_ENDEPIN[i].write_raw(0);
+        peripherals.USBD.TASKS_STARTEPIN[i].raw.write(1);
+        while (peripherals.USBD.EVENTS_ENDEPIN[i].raw.read() != 1) {}
+        peripherals.USBD.EVENTS_ENDEPIN[i].raw.write(0);
 
         return len;
     }
@@ -333,20 +333,20 @@ pub const USBD = struct {
 
         const self: *Self = @fieldParentPtr("interface", itf);
         const i = @intFromEnum(ep_num);
-        const size = peripherals.USBD.SIZE.EPOUT[i].read_raw();
+        const size = peripherals.USBD.SIZE.EPOUT[i].raw.read();
 
         const scratch_buf = &self.bufs_out[i];
 
         // Prepare DMA transfer
-        peripherals.USBD.EPOUT[i].PTR.write_raw(@intFromPtr(scratch_buf));
-        peripherals.USBD.EPOUT[i].MAXCNT.write_raw(size);
+        peripherals.USBD.EPOUT[i].PTR.raw.write(@intFromPtr(scratch_buf));
+        peripherals.USBD.EPOUT[i].MAXCNT.raw.write(size);
 
         // Start DMA
         const was_enabled = cpu.interrupt.is_enabled(.USBD);
         defer if (was_enabled) cpu.interrupt.enable(.USBD);
-        peripherals.USBD.TASKS_STARTEPOUT[i].write_raw(1);
-        while (peripherals.USBD.EVENTS_ENDEPOUT[i].read_raw() != 1) {}
-        peripherals.USBD.EVENTS_ENDEPOUT[i].write_raw(0);
+        peripherals.USBD.TASKS_STARTEPOUT[i].raw.write(1);
+        while (peripherals.USBD.EVENTS_ENDEPOUT[i].raw.read() != 1) {}
+        peripherals.USBD.EVENTS_ENDEPOUT[i].raw.write(0);
 
         var scratch_slice: []align(1) u8 = scratch_buf[0..size];
 
@@ -370,7 +370,7 @@ pub const USBD = struct {
         log.debug("ep_listen {t}: ({} bytes)", .{ ep_num, len });
 
         if (ep_num == .ep0) {
-            peripherals.USBD.TASKS_EP0RCVOUT.write_raw(1);
+            peripherals.USBD.TASKS_EP0RCVOUT.raw.write(1);
         }
     }
 
@@ -382,11 +382,11 @@ pub const USBD = struct {
         switch (ep.dir) {
             .In => {
                 self.eps_in[i].max_packet_size = desc.max_packet_size.into();
-                peripherals.USBD.EPINEN.write_raw(peripherals.USBD.EPINEN.read_raw() | mask);
+                peripherals.USBD.EPINEN.raw.write(peripherals.USBD.EPINEN.raw.read() | mask);
             },
             .Out => {
                 self.eps_out[i].max_packet_size = desc.max_packet_size.into();
-                peripherals.USBD.EPOUTEN.write_raw(peripherals.USBD.EPOUTEN.read_raw() | mask);
+                peripherals.USBD.EPOUTEN.raw.write(peripherals.USBD.EPOUTEN.raw.read() | mask);
             },
         }
 

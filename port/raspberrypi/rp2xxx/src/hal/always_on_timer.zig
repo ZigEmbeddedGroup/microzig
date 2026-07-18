@@ -37,14 +37,14 @@ pub const ClockSource = enum {
 /// * `source` - The clock source to use
 pub fn set_clock_source(source: ClockSource) void {
     disable();
-    POWMAN.TIMER.modify_raw(
+    POWMAN.TIMER.raw.modify(
         0xffff_0000,
-        0x5afe_0002 | switch (source) {
+        0x5afe_0002 | @as(u32, switch (source) {
             .lposc => 0x0100,
             .xosc => 0x0200,
             .gpio_1khz => 0x0400,
             .none => @panic("Cannot set clock source to none."),
-        },
+        }),
     );
 }
 
@@ -54,7 +54,7 @@ pub fn set_clock_source(source: ClockSource) void {
 ///
 /// * `ClockSource` - The current clock source
 pub fn get_clock_source() ClockSource {
-    const src = POWMAN.TIMER.read_raw();
+    const src = POWMAN.TIMER.raw.read();
 
     if ((src & 0x0001_0000) != 0) return .xosc;
     if ((src & 0x0002_0000) != 0) return .lposc;
@@ -70,7 +70,7 @@ pub fn get_clock_source() ClockSource {
 ///
 /// * `use_1hz` - Whether to use the 1 Hz clock
 pub fn set_use_1hz_clock(use_1hz: bool) void {
-    POWMAN.TIMER.modify_raw(
+    POWMAN.TIMER.raw.modify(
         0xffff_0000,
         0x5afe_0000 | (if (use_1hz) 0x2000 else 0),
     );
@@ -82,7 +82,7 @@ pub fn set_use_1hz_clock(use_1hz: bool) void {
 ///
 /// * `bool` - Whether the 1 Hz clock is enabled
 pub fn get_use_1hz_clock() bool {
-    return POWMAN.TIMER.read_raw() & 0x2000 != 0;
+    return POWMAN.TIMER.raw.read() & 0x2000 != 0;
 }
 
 /// Get the frequency of the low power oscillator
@@ -162,12 +162,12 @@ pub fn set_time(time: u64) void {
 
 /// Enable the timer
 pub fn enable() void {
-    POWMAN.TIMER.modify_raw(0xffff_0000, 0x5afe_0002);
+    POWMAN.TIMER.raw.modify(0xffff_0000, 0x5afe_0002);
 }
 
 /// Disable the timer
 pub fn disable() void {
-    POWMAN.TIMER.modify_raw(0xffff_0002, 0x5afe_0000);
+    POWMAN.TIMER.raw.modify(0xffff_0002, 0x5afe_0000);
 }
 
 /// Check if the timer is enabled
@@ -188,12 +188,12 @@ pub const alarm = struct {
 
     /// Disable the alarm
     pub fn disable() void {
-        POWMAN.TIMER.modify_raw(0x0000_ffef, 0x5afe_0000);
+        POWMAN.TIMER.raw.modify(0x0000_ffef, 0x5afe_0000);
     }
 
     /// Enable the alarm
     pub fn enable() void {
-        POWMAN.TIMER.modify_raw(0xffff_0010, 0x5afe_0010);
+        POWMAN.TIMER.raw.modify(0xffff_0010, 0x5afe_0010);
     }
 
     /// Get the raw alarm time in milliseconds
@@ -227,7 +227,7 @@ pub const alarm = struct {
 
     // Clear the alarm expired flag
     pub fn clear_expired() void {
-        POWMAN.TIMER.modify_raw(0xffff_0040, 0x5afe_0040);
+        POWMAN.TIMER.raw.modify(0xffff_0040, 0x5afe_0040);
     }
 
     // Get the alarm wake from low power flag.
@@ -237,12 +237,12 @@ pub const alarm = struct {
 
     // Clear the alarm wakes from low power flag.
     pub fn clear_power_up() void {
-        POWMAN.TIMER.modify_raw(0xffff_0020, 0x5afe_0000);
+        POWMAN.TIMER.raw.modify(0xffff_0020, 0x5afe_0000);
     }
 
     // Set the alarm wakes from low power flag.
     pub fn set_power_up() void {
-        POWMAN.TIMER.modify_raw(0xffff_0020, 0x5afe_0020);
+        POWMAN.TIMER.raw.modify(0xffff_0020, 0x5afe_0020);
     }
 };
 

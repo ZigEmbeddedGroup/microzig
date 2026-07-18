@@ -21,9 +21,9 @@ const TIM2 = peripherals.TIM2;
 /// This ensures we never get a value where low has rolled over but we read the old high value.
 inline fn read_stk_cnt() u64 {
     while (true) {
-        const high1: u32 = PFIC.STK_CNTH.read_raw();
-        const low: u32 = PFIC.STK_CNTL.read_raw();
-        const high2: u32 = PFIC.STK_CNTH.read_raw();
+        const high1: u32 = PFIC.STK_CNTH.raw.read();
+        const low: u32 = PFIC.STK_CNTL.raw.read();
+        const high2: u32 = PFIC.STK_CNTH.raw.read();
 
         // If high didn't change, we have a consistent reading
         if (high1 == high2) {
@@ -60,8 +60,8 @@ fn init_delay_counter() void {
     });
 
     // Reset the count registers
-    PFIC.STK_CNTL.write_raw(0);
-    PFIC.STK_CNTH.write_raw(0);
+    PFIC.STK_CNTL.raw.write(0);
+    PFIC.STK_CNTH.raw.write(0);
 }
 
 /// Initialize TIM2 to fire interrupts every 1ms for timekeeping.
@@ -72,7 +72,7 @@ fn init_tick_timer() void {
     const freq: u32 = microzig.hal.clocks.get_sysclk();
 
     // Enable TIM2 clock (bit 0 of APB1PCENR)
-    RCC.APB1PCENR.set_raw(1 << 0);
+    RCC.APB1PCENR.raw.set(1 << 0);
 
     // Set prescaler and auto-reload for 1ms ticks
     // For 48MHz: PSC = 47 (divide by 48), ARR = 999 (count to 1000)

@@ -24,31 +24,31 @@ pub const GPIO = enum(u7) {
 
     pub fn put(gpio: GPIO, output: u1) void {
         const regs = gpio.get_regs();
-        const old: u32 = regs.PDOR.read_raw();
+        const old: u32 = regs.PDOR.raw.read();
         const new = @as(u32, output) << gpio.get_pin();
 
-        regs.PDOR.write_raw(old & ~gpio.get_mask() | new);
+        regs.PDOR.raw.write(old & ~gpio.get_mask() | new);
     }
 
     pub fn get(gpio: GPIO) bool {
         const regs = gpio.get_regs();
 
-        return ((regs.PDIR.read_raw() >> gpio.get_pin()) & 1) != 0;
+        return ((regs.PDIR.raw.read() >> gpio.get_pin()) & 1) != 0;
     }
 
     pub fn toggle(gpio: GPIO) void {
         const regs = gpio.get_regs();
-        const old: u32 = regs.PTOR.read_raw();
+        const old: u32 = regs.PTOR.raw.read();
 
-        regs.PTOR.write_raw(old | gpio.get_mask());
+        regs.PTOR.raw.write(old | gpio.get_mask());
     }
 
     pub fn set_direction(gpio: GPIO, direction: Direction) void {
         const regs = gpio.get_regs();
-        const old: u32 = regs.PDDR.read_raw();
+        const old: u32 = regs.PDDR.raw.read();
         const new = @as(u32, @intFromEnum(direction)) << gpio.get_pin();
 
-        regs.PDDR.write_raw(old & ~gpio.get_mask() | new);
+        regs.PDDR.raw.write(old & ~gpio.get_mask() | new);
     }
 
     pub fn set_interrupt_config(gpio: GPIO, trigger: InterruptConfig) void {
@@ -56,20 +56,20 @@ pub const GPIO = enum(u7) {
         const irqc = @as(u32, @intFromEnum(trigger)) << 16;
         const isf = @as(u32, 1) << 24;
 
-        regs.ICR[gpio.get_pin()].write_raw(irqc | isf);
+        regs.ICR[gpio.get_pin()].raw.write(irqc | isf);
     }
 
     pub fn get_interrupt_flag(gpio: GPIO) bool {
         const regs = gpio.get_regs();
 
-        return ((regs.ISFR0.read_raw() >> gpio.get_pin()) & 1) != 0;
+        return ((regs.ISFR0.raw.read() >> gpio.get_pin()) & 1) != 0;
     }
 
     pub fn clear_interrupt_flag(gpio: GPIO) void {
         const regs = gpio.get_regs();
-        const old: u32 = regs.ISFR0.read_raw();
+        const old: u32 = regs.ISFR0.raw.read();
 
-        regs.ISFR0.write_raw(old | gpio.get_mask());
+        regs.ISFR0.raw.write(old | gpio.get_mask());
     }
 
     fn get_regs(gpio: GPIO) *volatile chip.types.peripherals.GPIO0 {

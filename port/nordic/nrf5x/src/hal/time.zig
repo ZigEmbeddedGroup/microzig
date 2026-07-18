@@ -42,8 +42,8 @@ pub fn init() void {
     rtc.CC[COMPARE_INDEX].write(.{ .COMPARE = 0x800000 });
 
     // Clear counter, then start timer
-    rtc.TASKS_CLEAR.write_raw(1);
-    rtc.TASKS_START.write_raw(1);
+    rtc.TASKS_CLEAR.raw.write(1);
+    rtc.TASKS_START.raw.write(1);
 
     // Wait for clear
     while (rtc.COUNTER.read().COUNTER != 0) {}
@@ -52,13 +52,13 @@ pub fn init() void {
 /// Handle both overflow and compare interrupts. Update the period which acts as the high bits of
 /// the elapsed time.
 pub fn rtc_interrupt() callconv(.c) void {
-    if (rtc.EVENTS_OVRFLW.read_raw() == 1) {
-        rtc.EVENTS_OVRFLW.write_raw(0);
+    if (rtc.EVENTS_OVRFLW.raw.read() == 1) {
+        rtc.EVENTS_OVRFLW.raw.write(0);
         next_period();
     }
 
-    if (rtc.EVENTS_COMPARE[COMPARE_INDEX].read_raw() == 1) {
-        rtc.EVENTS_COMPARE[COMPARE_INDEX].write_raw(0);
+    if (rtc.EVENTS_COMPARE[COMPARE_INDEX].raw.read() == 1) {
+        rtc.EVENTS_COMPARE[COMPARE_INDEX].raw.write(0);
         next_period();
     }
 }

@@ -161,7 +161,7 @@ pub const UART = struct {
         frac = frac % 16;
 
         const value: u32 = 0xFFFF & ((mantissa << 4) | frac);
-        regs.BRR.write_raw(value);
+        regs.BRR.raw.write(value);
     }
 
     fn set_wordbits(uart: *const UART, word: WordBits) void {
@@ -234,7 +234,7 @@ pub const UART = struct {
                 while (!uart.is_writeable()) {
                     if (deadline.is_reached_by(time.get_time_since_boot())) return error.Timeout;
                 }
-                regs.DR.write_raw(@intCast(byte));
+                regs.DR.raw.write(@intCast(byte));
                 n += 1;
             }
         }
@@ -261,7 +261,7 @@ pub const UART = struct {
                 } else if (SR.PE != 0) {
                     return error.ParityError;
                 }
-                const rx = regs.DR.read_raw();
+                const rx = regs.DR.raw.read();
 
                 bytes.* = @intCast(0xFF & rx);
                 n += 1;
@@ -283,8 +283,8 @@ pub const UART = struct {
 
     pub inline fn clear_errors(uart: *const UART) void {
         const regs = uart.regs;
-        std.mem.doNotOptimizeAway(regs.SR.read_raw());
-        std.mem.doNotOptimizeAway(regs.DR.read_raw());
+        std.mem.doNotOptimizeAway(regs.SR.raw.read());
+        std.mem.doNotOptimizeAway(regs.DR.raw.read());
     }
 
     pub fn write_blocking(uart: *const UART, data: []const u8, timeout: ?Duration) TransmitError!usize {

@@ -39,7 +39,7 @@ pub const ADC = struct {
 
     pub fn enable(self: *const ADC) void {
         const regs = self.regs;
-        regs.CR2.write_raw(0); //force reset
+        regs.CR2.raw.write(0); //force reset
         regs.CR2.modify(.{ .ADON = 1 }); //enable ADC
 
         //wait for ADC stabilization time
@@ -51,7 +51,7 @@ pub const ADC = struct {
         while (regs.CR2.read().CAL == 1) {
             asm volatile ("" ::: .{ .memory = true });
         }
-        regs.SR.write_raw(0); //clear all status flags
+        regs.SR.raw.write(0); //clear all status flags
 
         regs.CR2.modify(.{
             .TSVREFE = 1, //enable temperature sensor and Vrefint
@@ -64,7 +64,7 @@ pub const ADC = struct {
 
     pub fn disable(self: *const ADC) void {
         const regs = self.regs;
-        regs.CR2.write_raw(0); //force reset
+        regs.CR2.raw.write(0); //force reset
     }
 
     pub fn set_channel_sample_rate(self: *const ADC, channel: u5, sample_rate: SampleRate) void {
@@ -74,9 +74,9 @@ pub const ADC = struct {
         const rate: u32 = @intFromEnum(sample_rate);
         const smpr_val = rate << (smpr_index * 3);
         if (channel < 10) {
-            regs.SMPR2.set_raw(smpr_val);
+            regs.SMPR2.raw.set(smpr_val);
         } else {
-            regs.SMPR1.set_raw(smpr_val);
+            regs.SMPR1.raw.set(smpr_val);
         }
     }
 
@@ -119,11 +119,11 @@ pub const ADC = struct {
             const bit_index: u5 = @intCast((index % 6) * 5); //each channel takes 5 bits
             const mask = @as(u32, sq) << bit_index;
             if (index < 6) {
-                regs.SQR3.set_raw(mask); //load into SQR3
+                regs.SQR3.raw.set(mask); //load into SQR3
             } else if (index < 12) {
-                regs.SQR2.set_raw(mask); //load into SQR2
+                regs.SQR2.raw.set(mask); //load into SQR2
             } else {
-                regs.SQR1.set_raw(mask); //load into SQR1
+                regs.SQR1.raw.set(mask); //load into SQR1
             }
         }
         regs.SQR1.modify(.{ .L = @as(u4, @intCast(len - 1)) }); //set number of conversions
@@ -140,7 +140,7 @@ pub const ADC = struct {
         const len = @min(recv.len, seq_len);
         const to_read = recv[0..len];
 
-        regs.SR.write_raw(0); //clear all status flag
+        regs.SR.raw.write(0); //clear all status flag
 
         regs.CR1.modify(.{
             .DISCEN = 1,
@@ -157,7 +157,7 @@ pub const ADC = struct {
             regs.CR2.modify(.{ .SWSTART = 1 }); //start conversion, if software trigger is not enabled, this will do nothing
 
         }
-        regs.SR.write_raw(0); //clear all status flag
+        regs.SR.raw.write(0); //clear all status flag
 
         regs.CR1.modify(.{
             .DISCEN = 0,
@@ -401,13 +401,13 @@ pub const AdvancedADC = struct {
     /// NOTE: this is also put the ADC in power down mode.
     pub fn clear_config(self: *const AdvancedADC) void {
         const regs = self.regs;
-        regs.CR2.write_raw(0); //force reset
-        regs.CR1.write_raw(0); //force reset
-        regs.SQR1.write_raw(0); //force reset
-        regs.SQR2.write_raw(0); //force reset
-        regs.SQR3.write_raw(0); //force reset
-        regs.SMPR1.write_raw(0); //force reset
-        regs.SMPR2.write_raw(0); //force reset
+        regs.CR2.raw.write(0); //force reset
+        regs.CR1.raw.write(0); //force reset
+        regs.SQR1.raw.write(0); //force reset
+        regs.SQR2.raw.write(0); //force reset
+        regs.SQR3.raw.write(0); //force reset
+        regs.SMPR1.raw.write(0); //force reset
+        regs.SMPR2.raw.write(0); //force reset
     }
 
     ///calibrate the ADC and return the calibration data.
@@ -454,13 +454,13 @@ pub const AdvancedADC = struct {
     }
 
     pub fn read_flags(self: *const AdvancedADC) Flags {
-        const val: u5 = @truncate(self.regs.SR.read_raw());
+        const val: u5 = @truncate(self.regs.SR.raw.read());
         return @bitCast(val);
     }
 
     pub fn clear_flags(self: *const AdvancedADC, flags: Flags) void {
         const val: u5 = @bitCast(flags);
-        self.regs.SR.clear_raw(val);
+        self.regs.SR.raw.clear(val);
     }
 
     //========== ADC Regular conversion functions ===========
@@ -568,9 +568,9 @@ pub const AdvancedADC = struct {
         const rate: u32 = @intFromEnum(sample_rate);
         const smpr_val = rate << (smpr_index * 3);
         if (channel < 10) {
-            regs.SMPR2.set_raw(smpr_val);
+            regs.SMPR2.raw.set(smpr_val);
         } else {
-            regs.SMPR1.set_raw(smpr_val);
+            regs.SMPR1.raw.set(smpr_val);
         }
     }
 
@@ -597,11 +597,11 @@ pub const AdvancedADC = struct {
             const bit_index: u5 = @intCast((index % 6) * 5); //each channel takes 5 bits
             const mask = @as(u32, sq) << bit_index;
             if (index < 6) {
-                regs.SQR3.set_raw(mask); //load into SQR3
+                regs.SQR3.raw.set(mask); //load into SQR3
             } else if (index < 12) {
-                regs.SQR2.set_raw(mask); //load into SQR2
+                regs.SQR2.raw.set(mask); //load into SQR2
             } else {
-                regs.SQR1.set_raw(mask); //load into SQR1
+                regs.SQR1.raw.set(mask); //load into SQR1
             }
         }
         regs.SQR1.modify(.{ .L = @as(u4, @intCast(len - 1)) }); //set number of conversions
@@ -795,7 +795,7 @@ pub const AdvancedADC = struct {
         for (sequence[0..len], sti..4) |sq, index| {
             const bit_index: usize = index * 5; //each channel takes 5 bits
             const mask = @as(u32, sq) << @as(u5, @truncate(bit_index));
-            regs.JSQR.set_raw(mask); //load into JSQR
+            regs.JSQR.raw.set(mask); //load into JSQR
         }
 
         regs.JSQR.modify(.{ .JL = @as(u2, @intCast(len - 1)) }); //set number of conversions

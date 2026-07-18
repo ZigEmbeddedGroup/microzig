@@ -378,7 +378,7 @@ pub const Pin = enum(u5) {
     pub fn read(self: Pin) u1 {
         std.debug.assert(IO_MUX.GPIO[@intFromEnum(self)].read().FUN_IE == 1);
 
-        return @intCast((GPIO.IN.read_raw() >> @intFromEnum(self)) & 1);
+        return @intCast((GPIO.IN.raw.read() >> @intFromEnum(self)) & 1);
     }
 
     pub fn toggle(self: Pin) void {

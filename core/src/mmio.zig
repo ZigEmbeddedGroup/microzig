@@ -25,51 +25,11 @@ pub fn MmioRaw(T: type) type {
         pub const Int = T;
         /// Naturally aligned volatile pointer
         pub const MmioPtr = *align(@sizeOf(Int)) volatile @This();
+        /// MmioRaw of the backing integer
+        pub const Raw = MmioBacking(Int);
 
         /// Unstable API. Use read/write functions instead.
-        raw: Int,
-
-        pub inline fn read_raw(mmio: MmioPtr) Int {
-            return mmio.raw;
-        }
-
-        pub inline fn write_raw(mmio: MmioPtr, val: Int) void {
-            mmio.raw = val;
-        }
-
-        /// First clears the bits in `clear_mask`,
-        /// then sets the bits in `set_mask`.
-        /// Operiation done by read-modify-write.
-        pub inline fn modify_raw(mmio: MmioPtr, clear_mask: Int, set_mask: Int) void {
-            var val = mmio.read_raw();
-            val &= ~clear_mask;
-            val |= set_mask;
-            mmio.write_raw(val);
-        }
-
-        /// Sets the register's bits contained in `set_mask`.
-        /// Operiation done by read-modify-write.
-        pub inline fn set_raw(mmio: MmioPtr, set_mask: Int) void {
-            var val = mmio.read_raw();
-            val |= set_mask;
-            mmio.write_raw(val);
-        }
-
-        /// Clears the register's bits contained in  `clear_mask`,
-        /// Operiation done by read-modify-write.
-        pub inline fn clear_raw(mmio: MmioPtr, clear_mask: Int) void {
-            var val = mmio.read_raw();
-            val &= ~clear_mask;
-            mmio.write_raw(val);
-        }
-
-        /// Toggles the register's bits contained in `toggle_mask`.
-        /// Operiation done by read-modify-write.
-        pub inline fn toggle_raw(mmio: MmioPtr, toggle_mask: Int) void {
-            var val = mmio.read_raw();
-            val ^= toggle_mask;
-            mmio.write_raw(val);
-        }
+        raw: Raw,
     };
 }
 
@@ -101,7 +61,7 @@ pub fn Mmio(T: type) type {
         /// Backing integer
         pub const Int = @Int(.unsigned, @bitSizeOf(Fields));
         /// MmioRaw of the backing integer
-        pub const Raw = MmioRaw(Int);
+        pub const Raw = MmioBacking(Int);
         /// Naturally aligned volatile pointer
         pub const MmioPtr = *align(@sizeOf(Int)) volatile @This();
         /// Like `Fields`, but all fields are optional and default to `null`
@@ -144,23 +104,14 @@ pub fn Mmio(T: type) type {
             },
         );
 
-        /// Unstable API. Use read/write functions instead.
         raw: Raw,
 
-        pub inline fn read_raw(mmio: MmioPtr) Int {
-            return mmio.raw.read_raw();
-        }
-
-        pub inline fn write_raw(mmio: MmioPtr, val: Int) void {
-            mmio.raw.write_raw(val);
-        }
-
         pub inline fn read(mmio: MmioPtr) Fields {
-            return @bitCast(mmio.read_raw());
+            return @bitCast(mmio.raw.read());
         }
 
         pub inline fn write(mmio: MmioPtr, val: Fields) void {
-            mmio.write_raw(@bitCast(val));
+            mmio.raw.write(@bitCast(val));
         }
 
         /// For each `.Field = value` entry of `fields`:
@@ -194,30 +145,57 @@ pub fn Mmio(T: type) type {
             }
             mmio.write(val);
         }
+    };
+}
+
+fn MmioBacking(Int: type) type {
+    return extern struct {
+        /// Naturally aligned volatile pointer
+        pub const MmioPtr = *align(@sizeOf(Int)) volatile @This();
+
+        /// Do not access directly. Use read/write functions instead.
+        backing: Int,
+
+        pub inline fn read(mmio: MmioPtr) Int {
+            return mmio.backing;
+        }
+
+        pub inline fn write(mmio: MmioPtr, val: Int) void {
+            mmio.backing = val;
+        }
 
         /// First clears the bits in `clear_mask`,
         /// then sets the bits in `set_mask`.
         /// Operiation done by read-modify-write.
-        pub inline fn modify_raw(mmio: MmioPtr, clear_mask: Int, set_mask: Int) void {
-            mmio.raw.modify_raw(clear_mask, set_mask);
+        pub inline fn modify(mmio: MmioPtr, clear_mask: Int, set_mask: Int) void {
+            var val = mmio.read();
+            val &= ~clear_mask;
+            val |= set_mask;
+            mmio.write(val);
         }
 
         /// Sets the register's bits contained in `set_mask`.
         /// Operiation done by read-modify-write.
-        pub inline fn set_raw(mmio: MmioPtr, set_mask: Int) void {
-            mmio.raw.set_raw(set_mask);
+        pub inline fn set(mmio: MmioPtr, set_mask: Int) void {
+            var val = mmio.read();
+            val |= set_mask;
+            mmio.write(val);
         }
 
         /// Clears the register's bits contained in  `clear_mask`,
         /// Operiation done by read-modify-write.
-        pub inline fn clear_raw(mmio: MmioPtr, clear_mask: Int) void {
-            mmio.raw.clear_raw(clear_mask);
+        pub inline fn clear(mmio: MmioPtr, clear_mask: Int) void {
+            var val = mmio.read();
+            val &= ~clear_mask;
+            mmio.write(val);
         }
 
         /// Toggles the register's bits contained in `toggle_mask`.
         /// Operiation done by read-modify-write.
-        pub inline fn toggle_raw(mmio: MmioPtr, toggle_mask: Int) void {
-            mmio.raw.toggle_raw(toggle_mask);
+        pub inline fn toggle(mmio: MmioPtr, toggle_mask: Int) void {
+            var val = mmio.read();
+            val ^= toggle_mask;
+            mmio.write(val);
         }
     };
 }

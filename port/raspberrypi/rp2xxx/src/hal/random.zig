@@ -17,9 +17,9 @@ pub const trng = if (chip == .RP2350) struct {
     /// Generate a random number using the TRNG.
     /// Returns a random 32-bit unsigned integer,
     pub fn random_blocking() u32 {
-        TRNG.RND_SOURCE_ENABLE.write_raw(1);
+        TRNG.RND_SOURCE_ENABLE.raw.write(1);
 
-        defer TRNG.RND_SOURCE_ENABLE.write_raw(0);
+        defer TRNG.RND_SOURCE_ENABLE.raw.write(0);
 
         while (TRNG.TRNG_VALID.read().EHR_VALID == 0) {}
 
@@ -38,13 +38,13 @@ pub const trng = if (chip == .RP2350) struct {
 
         if (out.len == 0) return;
 
-        TRNG.RND_SOURCE_ENABLE.write_raw(1);
-        defer TRNG.RND_SOURCE_ENABLE.write_raw(0);
+        TRNG.RND_SOURCE_ENABLE.raw.write(1);
+        defer TRNG.RND_SOURCE_ENABLE.raw.write(0);
 
         while (i < out.len) {
             while (TRNG.TRNG_VALID.read().EHR_VALID == 0) {}
 
-            var data = reg.*;
+            var data = reg[0];
 
             if (reg == last) reg = first else reg += 1;
 
@@ -53,7 +53,7 @@ pub const trng = if (chip == .RP2350) struct {
                 data >>= 8;
             }
 
-            i += 4;
+            i += @sizeOf(u32);
         }
 
         // If we didn't read all the data, read DATA5 to clear the buffer

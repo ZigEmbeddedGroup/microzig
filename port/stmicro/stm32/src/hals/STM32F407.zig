@@ -256,9 +256,9 @@ pub fn Uart(comptime index: usize, comptime pins: microzig.uart.Pins) type {
             rx_gpio.init();
 
             // clear USART configuration to its default
-            @field(peripherals, usart_name).CR1.write_raw(0);
-            @field(peripherals, usart_name).CR2.write_raw(0);
-            @field(peripherals, usart_name).CR3.write_raw(0);
+            @field(peripherals, usart_name).CR1.raw.write(0);
+            @field(peripherals, usart_name).CR2.raw.write(0);
+            @field(peripherals, usart_name).CR3.raw.write(0);
 
             // Return error for unsupported combinations
             if (config.data_bits == .nine and config.parity != null) {
@@ -298,7 +298,7 @@ pub fn Uart(comptime index: usize, comptime pins: microzig.uart.Pins) type {
                 else => unreachable,
             };
             const usartdiv = @as(u16, @intCast(@divTrunc(bus_frequency, config.baud_rate)));
-            @field(peripherals, usart_name).BRR.write_raw(usartdiv);
+            @field(peripherals, usart_name).BRR.raw.write(usartdiv);
 
             // enable USART, and its transmitter and receiver
             @field(peripherals, usart_name).CR1.modify(.{ .UE = 1 });

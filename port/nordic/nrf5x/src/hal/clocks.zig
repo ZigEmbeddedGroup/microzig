@@ -22,8 +22,8 @@ pub const hfxo = struct {
                 while (CLOCK.EVENTS_HFCLKSTARTED == 0) {}
             },
             .nrf52 => {
-                CLOCK.TASKS_HFCLKSTART.write_raw(1);
-                while (CLOCK.EVENTS_HFCLKSTARTED.read_raw() == 0) {}
+                CLOCK.TASKS_HFCLKSTART.raw.write(1);
+                while (CLOCK.EVENTS_HFCLKSTARTED.raw.read() == 0) {}
             },
         }
     }
@@ -34,7 +34,7 @@ pub const hfxo = struct {
                 CLOCK.TASKS_HFCLKSTOP = 1;
             },
             .nrf52 => {
-                CLOCK.TASKS_HFCLKSTOP.write_raw(1);
+                CLOCK.TASKS_HFCLKSTOP.raw.write(1);
             },
         }
     }
@@ -63,8 +63,8 @@ pub const lfclk = struct {
     };
 
     pub fn calibrate() void {
-        CLOCK.TASKS_CAL.write_raw(1);
-        while (CLOCK.EVENTS_DONE.read_raw() == 0) {}
+        CLOCK.TASKS_CAL.raw.write(1);
+        while (CLOCK.EVENTS_DONE.raw.read() == 0) {}
     }
 
     pub fn set_source(comptime source: Source) void {
@@ -123,11 +123,11 @@ pub const lfclk = struct {
     }
 
     pub fn start() void {
-        CLOCK.TASKS_LFCLKSTART.write_raw(1);
-        while (CLOCK.EVENTS_LFCLKSTARTED.read_raw() == 0) {}
+        CLOCK.TASKS_LFCLKSTART.raw.write(1);
+        while (CLOCK.EVENTS_LFCLKSTARTED.raw.read() == 0) {}
     }
 
     pub fn stop() void {
-        CLOCK.TASKS_LFCLKSTOP.write_raw(1);
+        CLOCK.TASKS_LFCLKSTOP.raw.write(1);
     }
 };

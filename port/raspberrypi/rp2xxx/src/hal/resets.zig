@@ -85,24 +85,24 @@ pub const Mask =
 pub fn reset(mask: Mask) void {
     const raw_mask: u32 = @bitCast(mask);
 
-    RESETS.RESET.write_raw(raw_mask);
-    RESETS.RESET.write_raw(0);
+    RESETS.RESET.raw.write(raw_mask);
+    RESETS.RESET.raw.write(0);
 
     wait_for_reset_done(mask);
 }
 
 pub inline fn reset_block(mask: Mask) void {
-    hw.set_alias(RESETS).RESET.write_raw(@bitCast(mask));
+    hw.set_alias(RESETS).RESET.raw.write(@bitCast(mask));
 }
 
 pub inline fn unreset_block(mask: Mask) void {
-    hw.clear_alias(RESETS).RESET.write_raw(@bitCast(mask));
+    hw.clear_alias(RESETS).RESET.raw.write(@bitCast(mask));
 }
 
 pub fn unreset_block_wait(mask: Mask) void {
     const raw_mask: u32 = @bitCast(mask);
 
-    hw.clear_alias(RESETS).RESET.write_raw(raw_mask);
+    hw.clear_alias(RESETS).RESET.raw.write(raw_mask);
 
     wait_for_reset_done(mask);
 }
@@ -110,7 +110,7 @@ pub fn unreset_block_wait(mask: Mask) void {
 inline fn wait_for_reset_done(mask: Mask) void {
     const raw_mask: u32 = @bitCast(mask);
 
-    // have to bitcast after a read() instead of `RESETS.RESET_DONE.read_raw()` due to
+    // have to bitcast after a read() instead of `RESETS.RESET_DONE.raw.read()` due to
     // some optimization bug. While loops will not be optimzed away if the
     // condition has side effects like dereferencing a volatile pointer.
     // It seems that volatile is not propagating correctly.

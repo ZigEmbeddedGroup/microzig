@@ -64,7 +64,7 @@ pub const Pin = packed struct(u8) {
     inline fn write_pin_config(gpio: Pin, config: u32) void {
         const port = gpio.get_port();
         const offset = @as(u5, gpio.number) << 2; // number * 4
-        port.CFGLR.modify_raw(
+        port.CFGLR.raw.modify(
             @as(u32, 0b1111) << offset,
             config << offset,
         );
@@ -108,27 +108,27 @@ pub const Pin = packed struct(u8) {
     pub inline fn set_pull(gpio: Pin, pull: Pull) void {
         var port = gpio.get_port();
         switch (pull) {
-            .up => port.BSHR.write_raw(gpio.mask()),
-            .down => port.BCR.write_raw(gpio.mask()),
+            .up => port.BSHR.raw.write(gpio.mask()),
+            .down => port.BCR.raw.write(gpio.mask()),
         }
     }
 
     pub inline fn read(gpio: Pin) u1 {
         const port = gpio.get_port();
-        return @intFromBool(port.IDR.read_raw() & gpio.mask() != 0);
+        return @intFromBool(port.IDR.raw.read() & gpio.mask() != 0);
     }
 
     pub inline fn put(gpio: Pin, value: u1) void {
         var port = gpio.get_port();
         switch (value) {
-            // 0 => port.BSHR.write_raw(gpio.mask() << 16), // BR
-            0 => port.BCR.write_raw(gpio.mask()), // clear, accessed only 16bit form
-            1 => port.BSHR.write_raw(gpio.mask()), // BS
+            // 0 => port.BSHR.raw.write(gpio.mask() << 16), // BR
+            0 => port.BCR.raw.write(gpio.mask()), // clear, accessed only 16bit form
+            1 => port.BSHR.raw.write(gpio.mask()), // BS
         }
     }
 
     pub inline fn toggle(gpio: Pin) void {
         var port = gpio.get_port();
-        port.OUTDR.toggle_raw(gpio.mask()); // mask: 0 => stay, 1 => flip
+        port.OUTDR.raw.toggle(gpio.mask()); // mask: 0 => stay, 1 => flip
     }
 };
