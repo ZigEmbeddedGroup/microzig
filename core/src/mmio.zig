@@ -124,6 +124,30 @@ pub fn Mmio(T: type) type {
             mmio.write_raw(val);
         }
 
+        /// Sets the register's bits contained in `set_mask`.
+        /// Operiation done by read-modify-write.
+        pub inline fn set_raw(mmio: MmioPtr, set_mask: Int) void {
+            var val = mmio.read_raw();
+            val |= set_mask;
+            mmio.write_raw(val);
+        }
+
+        /// Clears the register's bits contained in  `clear_mask`,
+        /// Operiation done by read-modify-write.
+        pub inline fn clear_raw(mmio: MmioPtr, clear_mask: Int) void {
+            var val = mmio.read_raw();
+            val &= ~clear_mask;
+            mmio.write_raw(val);
+        }
+
+        /// Toggles the register's bits contained in `toggle_mask`.
+        /// Operiation done by read-modify-write.
+        pub inline fn toggle_raw(mmio: MmioPtr, toggle_mask: Int) void {
+            var val = mmio.read_raw();
+            val ^= toggle_mask;
+            mmio.write_raw(val);
+        }
+
         /// For each `.Field = value` entry of `fields`:
         /// Set field `Field` of this register to `value`.
         /// All unspecified fields are initialized to zero.

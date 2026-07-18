@@ -175,7 +175,7 @@ pub const GlobalConfiguration = struct {
                 if (used_gpios != 0) {
                     const offset = @intFromEnum(@field(Port, port_field_name)) + 2;
                     const bit = @as(u32, 1 << offset);
-                    RCC.APB2ENR.raw |= bit;
+                    RCC.APB2ENR.set_raw(bit);
                     // Delay after setting
                     _ = RCC.APB2ENR.read_raw() & bit;
                 }

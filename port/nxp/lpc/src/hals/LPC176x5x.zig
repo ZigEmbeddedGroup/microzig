@@ -69,10 +69,10 @@ pub fn route_pin(comptime pin: type, function: PinTarget) void {
 
 pub const gpio = struct {
     pub fn set_output(comptime pin: type) void {
-        pin.regs.dir.raw |= pin.gpio_mask;
+        pin.regs.dir.set_raw(pin.gpio_mask);
     }
     pub fn set_input(comptime pin: type) void {
-        pin.regs.dir.raw &= ~pin.gpio_mask;
+        pin.regs.dir.clear_raw(pin.gpio_mask);
     }
 
     pub fn read(comptime pin: type) microzig.gpio.State {

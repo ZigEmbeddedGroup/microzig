@@ -74,7 +74,7 @@ pub const OutputGPIO = struct {
 
     pub inline fn toggle(self: @This()) void {
         var port = self.pin.get_port();
-        port.ODR.raw ^= self.pin.mask();
+        port.ODR.toggle_raw(self.pin.mask());
     }
 };
 

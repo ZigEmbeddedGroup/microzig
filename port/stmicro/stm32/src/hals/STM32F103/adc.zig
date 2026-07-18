@@ -74,9 +74,9 @@ pub const ADC = struct {
         const rate: u32 = @intFromEnum(sample_rate);
         const smpr_val = rate << (smpr_index * 3);
         if (channel < 10) {
-            regs.SMPR2.raw |= smpr_val;
+            regs.SMPR2.set_raw(smpr_val);
         } else {
-            regs.SMPR1.raw |= smpr_val;
+            regs.SMPR1.set_raw(smpr_val);
         }
     }
 
@@ -119,11 +119,11 @@ pub const ADC = struct {
             const bit_index: u5 = @intCast((index % 6) * 5); //each channel takes 5 bits
             const mask = @as(u32, sq) << bit_index;
             if (index < 6) {
-                regs.SQR3.raw |= mask; //load into SQR3
+                regs.SQR3.set_raw(mask); //load into SQR3
             } else if (index < 12) {
-                regs.SQR2.raw |= mask; //load into SQR2
+                regs.SQR2.set_raw(mask); //load into SQR2
             } else {
-                regs.SQR1.raw |= mask; //load into SQR1
+                regs.SQR1.set_raw(mask); //load into SQR1
             }
         }
         regs.SQR1.modify(.{ .L = @as(u4, @intCast(len - 1)) }); //set number of conversions
@@ -460,7 +460,7 @@ pub const AdvancedADC = struct {
 
     pub fn clear_flags(self: *const AdvancedADC, flags: Flags) void {
         const val: u5 = @bitCast(flags);
-        self.regs.SR.raw &= ~val;
+        self.regs.SR.clear_raw(val);
     }
 
     //========== ADC Regular conversion functions ===========
@@ -568,9 +568,9 @@ pub const AdvancedADC = struct {
         const rate: u32 = @intFromEnum(sample_rate);
         const smpr_val = rate << (smpr_index * 3);
         if (channel < 10) {
-            regs.SMPR2.raw |= smpr_val;
+            regs.SMPR2.set_raw(smpr_val);
         } else {
-            regs.SMPR1.raw |= smpr_val;
+            regs.SMPR1.set_raw(smpr_val);
         }
     }
 
@@ -597,11 +597,11 @@ pub const AdvancedADC = struct {
             const bit_index: u5 = @intCast((index % 6) * 5); //each channel takes 5 bits
             const mask = @as(u32, sq) << bit_index;
             if (index < 6) {
-                regs.SQR3.raw |= mask; //load into SQR3
+                regs.SQR3.set_raw(mask); //load into SQR3
             } else if (index < 12) {
-                regs.SQR2.raw |= mask; //load into SQR2
+                regs.SQR2.set_raw(mask); //load into SQR2
             } else {
-                regs.SQR1.raw |= mask; //load into SQR1
+                regs.SQR1.set_raw(mask); //load into SQR1
             }
         }
         regs.SQR1.modify(.{ .L = @as(u4, @intCast(len - 1)) }); //set number of conversions
@@ -795,7 +795,7 @@ pub const AdvancedADC = struct {
         for (sequence[0..len], sti..4) |sq, index| {
             const bit_index: usize = index * 5; //each channel takes 5 bits
             const mask = @as(u32, sq) << @as(u5, @truncate(bit_index));
-            regs.JSQR.raw |= mask; //load into JSQR
+            regs.JSQR.set_raw(mask); //load into JSQR
         }
 
         regs.JSQR.modify(.{ .JL = @as(u2, @intCast(len - 1)) }); //set number of conversions

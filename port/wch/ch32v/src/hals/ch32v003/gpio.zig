@@ -64,8 +64,10 @@ pub const Pin = packed struct(u8) {
     inline fn write_pin_config(gpio: Pin, config: u32) void {
         const port = gpio.get_port();
         const offset = @as(u5, gpio.number) << 2; // number * 4
-        port.CFGLR.raw &= ~(@as(u32, 0b1111) << offset);
-        port.CFGLR.raw |= config << offset;
+        port.CFGLR.modify_raw(
+            @as(u32, 0b1111) << offset,
+            config << offset,
+        );
     }
 
     fn mask(gpio: Pin) u16 {
@@ -127,6 +129,6 @@ pub const Pin = packed struct(u8) {
 
     pub inline fn toggle(gpio: Pin) void {
         var port = gpio.get_port();
-        port.OUTDR.raw ^= gpio.mask(); // mask: 0 => stay, 1 => flip
+        port.OUTDR.toggle_raw(gpio.mask()); // mask: 0 => stay, 1 => flip
     }
 };

@@ -72,7 +72,7 @@ fn init_tick_timer() void {
     const freq: u32 = microzig.hal.clocks.get_sysclk();
 
     // Enable TIM2 clock (bit 0 of APB1PCENR)
-    RCC.APB1PCENR.raw |= 1 << 0;
+    RCC.APB1PCENR.set_raw(1 << 0);
 
     // Set prescaler and auto-reload for 1ms ticks
     // For 48MHz: PSC = 47 (divide by 48), ARR = 999 (count to 1000)

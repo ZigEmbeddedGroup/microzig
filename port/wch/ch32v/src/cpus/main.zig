@@ -92,10 +92,10 @@ pub const interrupt = struct {
         const num = irq_num >> 5;
         const pos = irq_num & 0x1F;
         switch (num) {
-            0 => PFIC.IENR1.raw |= @as(u32, 1) << pos,
-            1 => PFIC.IENR2.raw |= @as(u32, 1) << pos,
-            2 => PFIC.IENR3.raw |= @as(u32, 1) << pos,
-            3 => PFIC.IENR4.raw |= @as(u32, 1) << pos,
+            0 => PFIC.IENR1.set_raw(@as(u32, 1) << pos),
+            1 => PFIC.IENR2.set_raw(@as(u32, 1) << pos),
+            2 => PFIC.IENR3.set_raw(@as(u32, 1) << pos),
+            3 => PFIC.IENR4.set_raw(@as(u32, 1) << pos),
             else => @compileError("Invalid interrupt number!"),
         }
     }
@@ -105,10 +105,10 @@ pub const interrupt = struct {
         const num = irq_num >> 5;
         const pos = irq_num & 0x1F;
         switch (num) {
-            0 => PFIC.IRER1.raw |= @as(u32, 1) << pos,
-            1 => PFIC.IRER2.raw |= @as(u32, 1) << pos,
-            2 => PFIC.IRER3.raw |= @as(u32, 1) << pos,
-            3 => PFIC.IRER4.raw |= @as(u32, 1) << pos,
+            0 => PFIC.IRER1.set_raw(@as(u32, 1) << pos),
+            1 => PFIC.IRER2.set_raw(@as(u32, 1) << pos),
+            2 => PFIC.IRER3.set_raw(@as(u32, 1) << pos),
+            3 => PFIC.IRER4.set_raw(@as(u32, 1) << pos),
             else => @compileError("Invalid interrupt number!"),
         }
     }
@@ -132,10 +132,10 @@ pub const interrupt = struct {
         const num = irq_num >> 5;
         const pos = irq_num & 0x1F;
         switch (num) {
-            0 => PFIC.IPSR1.raw |= @as(u32, 1) << pos,
-            1 => PFIC.IPSR2.raw |= @as(u32, 1) << pos,
-            2 => PFIC.IPSR3.raw |= @as(u32, 1) << pos,
-            3 => PFIC.IPSR4.raw |= @as(u32, 1) << pos,
+            0 => PFIC.IPSR1.set_raw(@as(u32, 1) << pos),
+            1 => PFIC.IPSR2.set_raw(@as(u32, 1) << pos),
+            2 => PFIC.IPSR3.set_raw(@as(u32, 1) << pos),
+            3 => PFIC.IPSR4.set_raw(@as(u32, 1) << pos),
             else => @compileError("Invalid interrupt number!"),
         }
     }
@@ -145,10 +145,10 @@ pub const interrupt = struct {
         const num = irq_num >> 5;
         const pos = irq_num & 0x1F;
         switch (num) {
-            0 => PFIC.IPRR1.raw |= @as(u32, 1) << pos,
-            1 => PFIC.IPRR2.raw |= @as(u32, 1) << pos,
-            2 => PFIC.IPRR3.raw |= @as(u32, 1) << pos,
-            3 => PFIC.IPRR4.raw |= @as(u32, 1) << pos,
+            0 => PFIC.IPRR1.set_raw(@as(u32, 1) << pos),
+            1 => PFIC.IPRR2.set_raw(@as(u32, 1) << pos),
+            2 => PFIC.IPRR3.set_raw(@as(u32, 1) << pos),
+            3 => PFIC.IPRR4.set_raw(@as(u32, 1) << pos),
             else => @compileError("Invalid interrupt number!"),
         }
     }

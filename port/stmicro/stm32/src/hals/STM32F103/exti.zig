@@ -58,55 +58,57 @@ pub fn apply_line(config: Config) void {
 }
 
 pub fn set_line(line: u4, port: gpio.Port) void {
-    const reg_idx: usize = line / 4;
     const shift = (@as(u5, line) % 4) * 4;
     const port_sel: u32 = @intFromEnum(port);
 
-    AFIO.EXTICR[reg_idx].raw &= ~(@as(u32, 0xF) << shift); //clear the current value
-    AFIO.EXTICR[reg_idx].raw |= (port_sel << shift); //set the port value
+    AFIO.EXTICR[line / 4].modify_raw(
+        @as(u32, 0xF) << shift, //clear the current value
+        port_sel << shift, //set the port value
+    );
 }
 
 pub fn set_line_edge(line: u5, edge: TriggerEdge) void {
+    const mask = @as(u32, 1) << line;
     switch (edge) {
         .None => {
-            EXTI.@"RTSR[0]".raw &= ~(@as(u32, 1) << line);
-            EXTI.@"FTSR[0]".raw &= ~(@as(u32, 1) << line);
+            EXTI.@"RTSR[0]".clear_raw(mask);
+            EXTI.@"FTSR[0]".clear_raw(mask);
         },
         .rising => {
-            EXTI.@"RTSR[0]".raw |= (@as(u32, 1) << line);
-            EXTI.@"FTSR[0]".raw &= ~(@as(u32, 1) << line);
+            EXTI.@"RTSR[0]".set_raw(mask);
+            EXTI.@"FTSR[0]".clear_raw(mask);
         },
         .falling => {
-            EXTI.@"RTSR[0]".raw &= ~(@as(u32, 1) << line);
-            EXTI.@"FTSR[0]".raw |= (@as(u32, 1) << line);
+            EXTI.@"RTSR[0]".clear_raw(mask);
+            EXTI.@"FTSR[0]".set_raw(mask);
         },
         .both => {
-            EXTI.@"RTSR[0]".raw |= (@as(u32, 1) << line);
-            EXTI.@"FTSR[0]".raw |= (@as(u32, 1) << line);
+            EXTI.@"RTSR[0]".set_raw(mask);
+            EXTI.@"FTSR[0]".set_raw(mask);
         },
     }
 }
 
 pub fn set_event(line: u5, enable: bool) void {
-    if (enable) {
-        EXTI.@"EMR[0]".raw |= (@as(u32, 1) << line);
-    } else {
-        EXTI.@"EMR[0]".raw &= ~(@as(u32, 1) << line);
-    }
+    const mask = @as(u32, 1) << line;
+    if (enable)
+        EXTI.@"EMR[0]".set_raw(mask)
+    else
+        EXTI.@"EMR[0]".clear_raw(mask);
 }
 
 pub fn set_interrupt(line: u5, enable: bool) void {
-    if (enable) {
-        EXTI.@"IMR[0]".raw |= (@as(u32, 1) << line);
-    } else {
-        EXTI.@"IMR[0]".raw &= ~(@as(u32, 1) << line);
-    }
+    const mask = @as(u32, 1) << line;
+    if (enable)
+        EXTI.@"IMR[0]".set_raw(mask)
+    else
+        EXTI.@"IMR[0]".clear_raw(mask);
 }
 
 ///force a software trigger on the given line
 /// this trigger is cleared by `clear_pending()`
 pub inline fn software_trigger(line: u5) void {
-    EXTI.SWIER.raw |= (@as(u32, 1) << line);
+    EXTI.SWIER.set_raw(@as(u32, 1) << line);
 }
 
 ///check for pending lines (for both events and interrupts)

@@ -100,11 +100,11 @@ pub const interrupt = struct {
     }
 
     pub fn enable(int: Interrupt) void {
-        INTERRUPT_CORE0.CPU_INT_ENABLE.raw |= int.mask();
+        INTERRUPT_CORE0.CPU_INT_ENABLE.set_raw(int.mask());
     }
 
     pub fn disable(int: Interrupt) void {
-        INTERRUPT_CORE0.CPU_INT_ENABLE.raw &= ~int.mask();
+        INTERRUPT_CORE0.CPU_INT_ENABLE.clear_raw(int.mask());
     }
 
     /// Checks if a given interrupt is pending.
@@ -116,7 +116,7 @@ pub const interrupt = struct {
     /// NOTE: Pending state of an unclaimed (not executing) edge type interrupt can be flushed,
     /// if required, by first disabling it and only then call clearing it.
     pub fn clear_pending(int: Interrupt) void {
-        INTERRUPT_CORE0.CPU_INT_CLEAR.raw |= int.mask();
+        INTERRUPT_CORE0.CPU_INT_CLEAR.set_raw(int.mask());
     }
 
     pub const Priority = enum(u4) {
@@ -165,8 +165,8 @@ pub const interrupt = struct {
 
     pub fn set_type(int: Interrupt, typ: Type) void {
         switch (typ) {
-            .level => INTERRUPT_CORE0.CPU_INT_TYPE.raw &= ~int.mask(),
-            .edge => INTERRUPT_CORE0.CPU_INT_TYPE.raw |= int.mask(),
+            .level => INTERRUPT_CORE0.CPU_INT_TYPE.clear_raw(int.mask()),
+            .edge => INTERRUPT_CORE0.CPU_INT_TYPE.set_raw(int.mask()),
         }
     }
 

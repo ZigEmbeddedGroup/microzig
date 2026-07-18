@@ -22,6 +22,6 @@ pub fn main() !void {
             asm volatile ("nop");
             i += 1;
         }
-        GPIOB.ODR.raw ^= 0x8;
+        GPIOB.ODR.toggle_raw(0x8);
     }
 }

@@ -359,21 +359,20 @@ pub const GPTimer = struct {
     }
 
     pub fn set_channel_interrupt(self: *const GPTimer, channel: u2, set: bool) void {
-        const regs = self.regs;
-        if (set) {
-            regs.DIER.raw |= @as(u32, 0b1) << (@as(u5, channel) + 1); //CCxIE bits
-        } else {
-            regs.DIER.raw &= ~(@as(u32, 0b1) << (@as(u5, channel) + 1)); //CCxIE bits
-        }
+        const mask = @as(u32, 0b1) << (@as(u5, channel) + 1);
+        if (set)
+            self.regs.DIER.set_raw(mask) //CCxIE bits
+        else
+            self.regs.DIER.clear_raw(mask); //CCxIE bits
+
     }
 
     pub fn set_channel_dma_request(self: *const GPTimer, channel: u2, set: bool) void {
-        const regs = self.regs;
-        if (set) {
-            regs.DIER.raw |= @as(u32, 0b1) << (@as(u5, channel) + 9); //CCxDE bits
-        } else {
-            regs.DIER.raw &= ~(@as(u32, 0b1) << (@as(u5, channel) + 9)); //CCxDE bits
-        }
+        const mask = @as(u32, 0b1) << (@as(u5, channel) + 9);
+        if (set)
+            self.regs.DIER.set_raw(mask) //CCxDE bits
+        else
+            self.regs.DIER.clear_raw(mask); //CCxDE bits
     }
 
     pub inline fn software_update(self: *const GPTimer) void {
@@ -407,25 +406,19 @@ pub const GPTimer = struct {
     }
 
     pub fn set_channel(self: *const GPTimer, channel: u2, set: bool) void {
-        const regs = self.regs;
-        if (set) {
-            regs.CCER.raw |= @as(u32, 0b1) << (@as(u5, channel) * 4); //CCxE bits
-        } else {
-            regs.CCER.raw &= ~(@as(u32, 0b1) << (@as(u5, channel) * 4)); //CCxE bits
-        }
+        const mask = @as(u32, 1) << (@as(u5, channel) * 4);
+        if (set)
+            self.regs.CCER.set_raw(mask) //CCxE bits
+        else
+            self.regs.CCER.clear_raw(mask); //CCxE bits
     }
 
     pub fn set_polarity(self: *const GPTimer, channel: u2, polarity: Polarity) void {
-        const regs = self.regs;
-        const offset: u5 = @as(u5, channel) * 4 + 1; //CCxP bits offset
+        const mask = @as(u32, 1) << (@as(u5, channel) * 4 + 1); // CCxP bits offset
 
         switch (polarity) {
-            .high => {
-                regs.CCER.raw &= ~(@as(u32, 0b1) << offset); //clear CCxP bits
-            },
-            .low => {
-                regs.CCER.raw |= @as(u32, 0b1) << offset; //set CCxP bits
-            },
+            .low => self.regs.CCER.set_raw(mask), //set CCxP bits
+            .high => self.regs.CCER.clear_raw(mask), //clear CCxP bits
         }
     }
 
@@ -448,30 +441,34 @@ pub const GPTimer = struct {
         const regs = self.regs;
         const CCMR = if (channel < 2) &regs.CCMR_Input[0] else &regs.CCMR_Input[1];
         const offset: u5 = if (channel % 2 == 0) 0 else 8;
+        const mask_base = @as(u32, 1) << offset;
 
-        CCMR.raw &= ~(@as(u32, 0b11) << offset); //clear mode bits, set output compare mode (00)
+        // Instead of so many volatile reads and writes,
+        // maybe read once, do the modifications and then write the final value?
 
-        if (config.fast_mode) {
-            CCMR.raw |= @as(u32, 0b1) << (offset + 2); //OCxFE bits
-        } else {
-            CCMR.raw &= ~(@as(u32, 0b1) << (offset + 2)); //OCxFE bits
-        }
+        // clear mode bits, set output compare mode (00)
+        CCMR.clear_raw(@as(u32, 0b11) << offset);
 
-        if (config.pre_load) {
-            CCMR.raw |= @as(u32, 0b1) << (offset + 3); //CCxS bits
-        } else {
-            CCMR.raw &= ~(@as(u32, 0b1) << (offset + 3)); //CCxS bits
-        }
+        if (config.fast_mode)
+            CCMR.set_raw(mask_base << 2) //OCxFE bits
+        else
+            CCMR.clear_raw(mask_base << 2); //OCxFE bits
+
+        if (config.pre_load)
+            CCMR.set_raw(mask_base << 3) //CCxS bits
+        else
+            CCMR.clear_raw(mask_base << 3); //CCxS bits
 
         const mode: u32 = @intFromEnum(config.mode);
-        CCMR.raw &= ~(@as(u32, 0b111) << offset + 4); //clear mode bits
-        CCMR.raw |= mode << (offset + 4); //set mode bits
+        CCMR.modify_raw(
+            @as(u32, 0b111) << (offset + 4), //clear mode bits
+            mode << (offset + 4), //set mode bits
+        );
 
-        if (config.clear_enable) {
-            CCMR.raw |= @as(u32, 0b1) << (offset + 7); //CCxE bits
-        } else {
-            CCMR.raw &= ~(@as(u32, 0b1) << (offset + 7)); //CCxE bits
-        }
+        if (config.clear_enable)
+            CCMR.set_raw(mask_base << 7) //CCxE bits
+        else
+            CCMR.clear_raw(mask_base << 7); //CCxE bits
     }
 
     pub fn configure_input(self: *const GPTimer, channel: u2, config: Capture) void {

@@ -124,7 +124,7 @@ pub const Pin = enum(u6) {
 
     pub inline fn toggle(pin: Pin) void {
         const regs = pin.get_regs();
-        regs.OUT.raw ^= pin.mask();
+        regs.OUT.toggle_raw(pin.mask());
     }
 
     pub inline fn read(pin: Pin) u1 {

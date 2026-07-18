@@ -72,15 +72,11 @@ pub const Pin = enum(usize) {
     inline fn write_pin_config(gpio: Pin, config: u32) void {
         const port = gpio.get_port();
         const pin: u4 = @intCast(@intFromEnum(gpio) % 16);
-        if (pin <= 7) {
-            const offset = @as(u5, pin) << 2;
-            port.CR[0].raw &= ~(@as(u32, 0b1111) << offset);
-            port.CR[0].raw |= config << offset;
-        } else {
-            const offset = (@as(u5, pin) - 8) << 2;
-            port.CR[1].raw &= ~(@as(u32, 0b1111) << offset);
-            port.CR[1].raw |= config << offset;
-        }
+        const offset = @as(u5, @as(u3, @truncate(pin))) << 2;
+        port.CR[pin >> 3].modify_raw(
+            @as(u32, 0b1111) << offset,
+            config << offset,
+        );
     }
 
     fn mask(gpio: Pin) u32 {
@@ -152,7 +148,7 @@ pub const Pin = enum(usize) {
 
     pub inline fn toggle(gpio: Pin) void {
         var port = gpio.get_port();
-        port.ODR.raw ^= gpio.mask();
+        port.ODR.toggle_raw(gpio.mask());
     }
 
     pub fn num(pin: usize) Pin {

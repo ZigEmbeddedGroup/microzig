@@ -170,7 +170,7 @@ pub const GlobalConfiguration = struct {
 
                 if (used_gpios != 0) {
                     const offset = @as(u3, @intFromEnum(@field(Port, port_field_name))) + 2;
-                    RCC.APB2PCENR.raw |= @as(u32, 1 << offset);
+                    RCC.APB2PCENR.set_raw(@as(u32, 1 << offset));
                 }
 
                 // GPIO

@@ -444,7 +444,7 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
             // TODO: why does the raw interrupt register no have irq1/0?
             _ = irq;
             const regs = self.get_regs();
-            regs.IRQ.raw |= @as(u32, 1) << interrupt_bit_pos(sm, source);
+            regs.IRQ.set_raw(@as(u32, 1) << interrupt_bit_pos(sm, source));
         }
 
         // TODO: be able to disable an interrupt
@@ -455,7 +455,7 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
             source: Irq.Source,
         ) void {
             const irq_regs = self.get_irq_regs(irq);
-            irq_regs.enable.raw |= @as(u32, 1) << interrupt_bit_pos(sm, source);
+            irq_regs.enable.set_raw(@as(u32, 1) << interrupt_bit_pos(sm, source));
         }
 
         pub fn sm_restart(self: EnumType, sm: StateMachine) void {
