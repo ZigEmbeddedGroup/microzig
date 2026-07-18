@@ -12,7 +12,7 @@ fn instance(port: Port) *volatile microzig.chip.types.peripherals.gpioa {
 }
 
 pub fn enable(port: Port) void {
-    instance(port).GPIOA_PWREN.raw.write(0)x26000001;
+    instance(port).GPIOA_PWREN.raw.write(0x26000001);
     // Technical reference manual part 2.2.6
     inline for (0..4) |_|
         asm volatile ("nop");
