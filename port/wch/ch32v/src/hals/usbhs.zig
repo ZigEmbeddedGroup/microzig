@@ -31,7 +31,7 @@ pub const Config = struct {
 
 const Regs = peripherals.USBHS;
 
-const EpState = struct {
+const EP_State = struct {
     buf: []align(4) u8 = &[_]u8{},
     // OUT:
     rx_armed: bool = false,
@@ -42,7 +42,7 @@ const EpState = struct {
 };
 
 fn PerEndpointArray(comptime N: comptime_int) type {
-    return [N][2]EpState; // [ep][dir]
+    return [N][2]EP_State; // [ep][dir]
 }
 
 fn epn(ep: types.Endpoint.Num) u4 {
@@ -54,13 +54,6 @@ fn speed_type(comptime cfg: Config) u2 {
 }
 
 // --- USBHD token encodings ---
-const Token = enum(u2) {
-    Out = 0,
-    Sof = 1,
-    In = 2,
-    Setup = 3,
-};
-
 const TOKEN_OUT: u2 = 0;
 const TOKEN_SOF: u2 = 1;
 const TOKEN_IN: u2 = 2;
@@ -78,32 +71,17 @@ const UIF_ISO_ACT: u8 = 1 << 6;
 // --- endpoint response encodings (WCH style) ---
 const RES_ACK: u2 = 0;
 const RES_NAK: u2 = 2;
-const RES_STALL: u2 = 3;
-
-const Res = enum(u2) {
-    ACK = 0,
-    NAK = 2,
-    STALL = 3,
-};
 
 const TOG_DATA0: u2 = 0;
 const TOG_DATA1: u2 = 1;
-
-const Tog = enum(u2) {
-    DATA0 = 0,
-    DATA1 = 0b1,
-    DATA2 = 0b10,
-    MDATA = 0b11,
-};
 
 fn toggle_next(tog: u2) u2 {
     return if (tog == TOG_DATA0) TOG_DATA1 else TOG_DATA0;
 }
 
 // We use offset-based access for per-EP regs to keep helpers compact.
-const RegU32 = microzig.mmio.Mmio(packed struct(u32) { v: u32 = 0 });
-const RegU16 = microzig.mmio.Mmio(packed struct(u16) { v: u16 = 0 });
-const RegU8 = microzig.mmio.Mmio(packed struct(u8) { v: u8 = 0 });
+const Reg_U32 = microzig.mmio.Mmio(packed struct(u32) { v: u32 = 0 });
+const Reg_U16 = microzig.mmio.Mmio(packed struct(u16) { v: u16 = 0 });
 pub const RegCtrl = microzig.mmio.Mmio(packed struct(u8) {
     RES: u2 = 0,
     _reserved0: u1 = 0,
@@ -115,10 +93,10 @@ pub const RegCtrl = microzig.mmio.Mmio(packed struct(u8) {
 fn base_addr() usize {
     return @intFromPtr(peripherals.USBHS);
 }
-fn mmio_u32(off: usize) *volatile RegU32 {
+fn mmio_u32(off: usize) *volatile Reg_U32 {
     return @ptrFromInt(base_addr() + off);
 }
-fn mmio_u16(off: usize) *volatile RegU16 {
+fn mmio_u16(off: usize) *volatile Reg_U16 {
     return @ptrFromInt(base_addr() + off);
 }
 fn mmio_tx_ctrl(off: usize) *volatile RegCtrl {
@@ -130,22 +108,22 @@ fn mmio_rx_ctrl(off: usize) *volatile RegCtrl {
 
 // RX DMA: 0x20 + (ep-1)*4  (EP1..EP15)
 // EP0 has its own dedicated DMA reg.
-fn ep0_dma() *volatile RegU32 {
+fn ep0_dma() *volatile Reg_U32 {
     return mmio_u32(0x1C);
 }
-fn uep_rx_dma(ep: u4) *volatile RegU32 {
+fn uep_rx_dma(ep: u4) *volatile Reg_U32 {
     return mmio_u32(0x20 + (@as(usize, ep - 1) * 4));
 }
 // TX DMA: 0x5C + (ep-1)*4  (EP1..EP15)
-fn uep_tx_dma(ep: u4) *volatile RegU32 {
+fn uep_tx_dma(ep: u4) *volatile Reg_U32 {
     return mmio_u32(0x5C + (@as(usize, ep - 1) * 4));
 }
 // MAX_LEN: EP0..EP15 at 0x98 + ep*4
-fn uep_max_len(ep: u4) *volatile RegU16 {
+fn uep_max_len(ep: u4) *volatile Reg_U16 {
     return mmio_u16(0x98 + (@as(usize, ep) * 4));
 }
 // T_LEN: EP0..EP15 at 0xD8 + ep*4
-fn uep_t_len(ep: u4) *volatile RegU16 {
+fn uep_t_len(ep: u4) *volatile Reg_U16 {
     return mmio_u16(0xD8 + (@as(usize, ep) * 4));
 }
 // TX_CTRL: 0xDA + ep*4, RX_CTRL: 0xDB + ep*4
@@ -184,14 +162,17 @@ fn current_tx_tog(ep: u4) u2 {
     return uep_tx_ctrl(ep).read().TOG;
 }
 
-/// Polled USBHD device backend for microzig core USB controller.
-/// maybe we should pass a list of valid controller types, for validation
+/// Polled USBHS device backend for the MicroZig core USB controller.
 pub fn Polled(comptime cfg: Config) type {
     comptime {
+        if (cfg.max_endpoints_count < 1)
+            @compileError("USBHD max_endpoints_count must include endpoint 0");
         if (cfg.max_endpoints_count > USBHD_MAX_ENDPOINTS_COUNT)
             @compileError("USBHD max_endpoints_count cannot exceed 16");
-        if (cfg.buffer_bytes < 64)
-            @compileError("USBHD buffer_bytes must be at least 64");
+        if (cfg.buffer_bytes < 128)
+            @compileError("USBHD buffer_bytes must be at least 128");
+        if (cfg.use_interrupts)
+            @compileError("USBHD interrupt-driven operation is not supported");
     }
 
     return struct {
@@ -214,13 +195,13 @@ pub fn Polled(comptime cfg: Config) type {
 
         pub fn init(self: *Self) void {
             self.interface = .{ .vtable = &vtable };
-            @memset(std.mem.asBytes(&self.endpoints), 0);
+            self.endpoints = @splat(@splat(.{}));
             @memset(self.pool[0..64], 0x7e);
             @memset(self.pool[64..], 0);
 
             self.buffer_pool = @alignCast(self.pool[64..]);
 
-            usbhd_hw_init();
+            usbhs_hw_init();
 
             // EP0 is required; open OUT then IN (or vice versa), we will share buffer.
             self.interface.ep_open(&.{
@@ -256,7 +237,7 @@ pub fn Polled(comptime cfg: Config) type {
             return out;
         }
 
-        fn st(self: *Self, ep_num: types.Endpoint.Num, dir: types.Dir) *EpState {
+        fn st(self: *Self, ep_num: types.Endpoint.Num, dir: types.Dir) *EP_State {
             return &self.endpoints[@intFromEnum(ep_num)][@intFromEnum(dir)];
         }
 
@@ -319,7 +300,8 @@ pub fn Polled(comptime cfg: Config) type {
         pub fn poll(self: *Self, in_isr: bool, controller: anytype) void {
             _ = in_isr;
             while (true) {
-                const fg: u8 = Regs.USB_INT_FG.raw;
+                // ISO_ACT is status, not a W1C event flag.
+                const fg: u8 = Regs.USB_INT_FG.raw & ~UIF_ISO_ACT;
                 if (fg == 0) break;
 
                 if ((fg & UIF_HST_SOF) != 0) {
@@ -355,6 +337,7 @@ pub fn Polled(comptime cfg: Config) type {
                     // After SETUP, EP0 IN data stage starts with DATA1.
                     set_tx_ctrl(0, RES_NAK, TOG_DATA1, false);
                     set_rx_ctrl(0, RES_ACK, TOG_DATA1, false);
+                    self.st(.ep0, .In).tx_busy = false;
 
                     controller.on_setup_req(&self.interface, &setup);
                     Regs.USB_INT_FG.raw = UIF_SETUP_ACT;
@@ -365,13 +348,13 @@ pub fn Polled(comptime cfg: Config) type {
                     const stv = Regs.USB_INT_ST.read();
                     const ep: u4 = @as(u4, stv.MASK_UIS_H_RES__MASK_UIS_ENDP);
                     const token: u2 = @as(u2, stv.MASK_UIS_TOKEN);
-                    self.handle_transfer(ep, token, controller);
+                    self.handle_transfer(ep, token, (fg & UIF_SETUP_ACT) != 0, controller);
                     Regs.USB_INT_FG.raw = UIF_TRANSFER;
                 }
             }
         }
 
-        fn handle_transfer(self: *Self, ep: u4, token: u2, controller: anytype) void {
+        fn handle_transfer(self: *Self, ep: u4, token: u2, setup_already_handled: bool, controller: anytype) void {
             if (ep >= cfg.max_endpoints_count) return;
             if (token == TOKEN_SOF) return;
             switch (token) {
@@ -380,11 +363,12 @@ pub fn Polled(comptime cfg: Config) type {
                 TOKEN_IN => self.handle_in(ep, controller),
                 TOKEN_SETUP => {
                     // If UIF_SETUP_ACT isn't present, handle SETUP via TRANSFER.
-                    if (ep == 0) {
+                    if (ep == 0 and !setup_already_handled) {
                         const setup: types.SetupPacket = self.read_setup_from_ep0();
                         log.debug("Setup: {any}", .{setup});
                         set_tx_ctrl(0, RES_NAK, TOG_DATA1, false);
                         set_rx_ctrl(0, RES_ACK, TOG_DATA1, false);
+                        self.st(.ep0, .In).tx_busy = false;
                         controller.on_setup_req(&self.interface, &setup);
                     }
                 },
@@ -399,6 +383,8 @@ pub fn Polled(comptime cfg: Config) type {
                 "OUT ep{} len={} tog_ok={} rx_res={} rx_tog={}",
                 .{ ep, len, stv.RB_UIS_TOG_OK, rx_ctrl.RES, rx_ctrl.TOG },
             );
+            if (ep != 0 and stv.RB_UIS_TOG_OK == 0) return;
+
             // EP0 OUT is always armed; accept status ZLP.
             if (ep == 0) {
                 const st_out = self.st(.ep0, .Out);
@@ -550,7 +536,7 @@ pub fn Polled(comptime cfg: Config) type {
             }
 
             const ep_i: u4 = epn(ep_num);
-            if (ep_i > cfg.max_endpoints_count)
+            if (ep_i >= cfg.max_endpoints_count)
                 @panic("ep_listen called for invalid endpoint");
 
             const st_out = self.st(ep_num, .Out);
@@ -585,14 +571,14 @@ pub fn Polled(comptime cfg: Config) type {
             // Enforce by clearing rx_last_len after consumption.
             defer st_out.rx_last_len = 0;
 
-            var remaining: []align(4) u8 = st_out.buf[0..want];
+            var remaining: []u8 = st_out.buf[0..want];
             var copied: usize = 0;
 
             for (data) |dst| {
                 if (remaining.len == 0) break;
                 const n = @min(dst.len, remaining.len);
                 @memcpy(dst[0..n], remaining[0..n]);
-                remaining = @alignCast(remaining[n..]);
+                remaining = remaining[n..];
                 copied += n;
             }
 
@@ -637,7 +623,7 @@ pub fn Polled(comptime cfg: Config) type {
 
         // ---- HW init ---------------------------------------------------------
 
-        fn usbhd_hw_init() void {
+        fn usbhs_hw_init() void {
             // Reset SIE and clear FIFO
             Regs.UHOST_CTRL.raw = 0;
             Regs.UHOST_CTRL.modify(.{ .RB_UH_PHY_SUSPENDM = 1 });
