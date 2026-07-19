@@ -1,4 +1,4 @@
-//! WCH USBHD/USBHS device backend
+//! WCH USBFS/OTG device backend
 //!
 
 const std = @import("std");
@@ -13,7 +13,7 @@ const descriptor = usb.descriptor;
 
 pub const max_packet_size: u11 = 64;
 
-pub const USB_MAX_ENDPOINTS_COUNT = 7;
+pub const USB_MAX_ENDPOINTS_COUNT = 8;
 
 const max_buffer_pool_size = USB_MAX_ENDPOINTS_COUNT * 2 * 64 + 64;
 
@@ -30,7 +30,7 @@ pub const Config = struct {
 
 const Regs = peripherals.USB_OTG_FS;
 
-const EpState = struct {
+const EP_State = struct {
     buf: []align(4) u8 = &[_]u8{},
     // OUT:
     rx_armed: bool = false,
@@ -41,7 +41,7 @@ const EpState = struct {
 };
 
 fn PerEndpointArray(comptime N: comptime_int) type {
-    return [N][2]EpState; // [ep][dir]
+    return [N][2]EP_State; // [ep][dir]
 }
 
 fn epn(ep: types.Endpoint.Num) u4 {
@@ -66,7 +66,6 @@ const UIF_IS_NAK: u8 = 1 << 7;
 // --- endpoint response encodings (WCH style) ---
 const RES_ACK: u2 = 0;
 const RES_NAK: u2 = 2;
-const RES_STALL: u2 = 3;
 
 const TOG_DATA0: u1 = 0;
 const TOG_DATA1: u1 = 1;
@@ -76,9 +75,8 @@ fn toggle_next(tog: u1) u1 {
 }
 
 // We use offset-based access for per-EP regs to keep helpers compact.
-const RegU32 = microzig.mmio.Mmio(packed struct(u32) { v: u32 = 0 });
-const RegU16 = microzig.mmio.Mmio(packed struct(u16) { v: u16 = 0 });
-const RegU8 = microzig.mmio.Mmio(packed struct(u8) { v: u8 = 0 });
+const Reg_U32 = microzig.mmio.Mmio(packed struct(u32) { v: u32 = 0 });
+const Reg_U8 = microzig.mmio.Mmio(packed struct(u8) { v: u8 = 0 });
 pub const RegCtrl = microzig.mmio.Mmio(packed struct(u8) {
     /// bit mask of handshake response type for USB endpoint X receiving (OUT)
     RES: u2 = 0x0,
@@ -89,32 +87,32 @@ pub const RegCtrl = microzig.mmio.Mmio(packed struct(u8) {
     padding: u4 = 0,
 });
 
-fn baseAddr() usize {
+fn base_addr() usize {
     return @intFromPtr(Regs);
 }
-fn mmio_u32(off: usize) *volatile RegU32 {
-    return @ptrFromInt(baseAddr() + off);
+fn mmio_u32(off: usize) *volatile Reg_U32 {
+    return @ptrFromInt(base_addr() + off);
 }
-fn mmio_u16(off: usize) *volatile RegU16 {
-    return @ptrFromInt(baseAddr() + off);
+fn mmio_u8(off: usize) *volatile Reg_U8 {
+    return @ptrFromInt(base_addr() + off);
 }
 fn mmio_tx_ctrl(off: usize) *volatile RegCtrl {
-    return @ptrFromInt(baseAddr() + off);
+    return @ptrFromInt(base_addr() + off);
 }
 fn mmio_rx_ctrl(off: usize) *volatile RegCtrl {
-    return @ptrFromInt(baseAddr() + off);
+    return @ptrFromInt(base_addr() + off);
 }
 
-// Endpoint DMA: 0x10 + (ep)*4  (EP1..EP8)
+// Endpoint DMA: 0x10 + ep*4 (EP0..EP7)
 // Depending on mode, DMA buffers must have at least 128
 // or 256 bytes, and contain the TX and RX buffers
-fn uep_dma(ep: u4) *volatile RegU32 {
+fn uep_dma(ep: u4) *volatile Reg_U32 {
     return mmio_u32(0x10 + (@as(usize, ep) * 4));
 }
 
 // T_LEN: EP0..EP7 at 0x30 + ep*4
-fn uep_t_len(ep: u4) *volatile RegU8 {
-    return @ptrFromInt(baseAddr() + 0x30 + (@as(usize, ep) * 4));
+fn uep_t_len(ep: u4) *volatile Reg_U8 {
+    return mmio_u8(0x30 + (@as(usize, ep) * 4));
 }
 // TX_CTRL: 0x32 + ep*4, RX_CTRL: 0x33 + ep*4
 pub fn uep_tx_ctrl(ep: u4) *volatile RegCtrl {
@@ -150,16 +148,39 @@ fn current_tx_tog(ep: u4) u1 {
     return uep_tx_ctrl(ep).read().TOG;
 }
 
-/// Polled USBHD device backend for microzig core USB controller.
-/// maybe we should pass a list of valid controller types, for validation
+fn enable_endpoint(ep: u4) void {
+    if (ep == 0) return;
+
+    const mode_offset: usize = switch (ep) {
+        1, 4 => 0x0c,
+        2, 3 => 0x0d,
+        5, 6 => 0x0e,
+        7 => 0x0f,
+        else => unreachable,
+    };
+    const enable_bits: u8 = switch (ep) {
+        1, 3, 6 => (1 << 6) | (1 << 7),
+        2, 4, 5, 7 => (1 << 2) | (1 << 3),
+        else => unreachable,
+    };
+    const mode = mmio_u8(mode_offset);
+    // With RX and TX enabled and BUF_MOD clear, the hardware uses a
+    // contiguous 128-byte buffer: OUT at UEPn_DMA and IN at UEPn_DMA + 64.
+    // The unused direction remains disabled at the protocol level by NAK.
+    mode.raw |= enable_bits;
+}
+
+/// Polled USBFS device backend for the MicroZig core USB controller.
 pub fn Polled(comptime cfg: Config) type {
     comptime {
+        if (cfg.max_endpoints_count < 1)
+            @compileError("USBFS max_endpoints_count must include endpoint 0");
         if (cfg.prefer_high_speed)
             @compileError("This peripheral only supports Full Speed, not High Speed");
         if (cfg.max_endpoints_count > USB_MAX_ENDPOINTS_COUNT)
             @compileError("USBFS max_endpoints_count cannot exceed 8");
-        if (cfg.buffer_bytes < 64)
-            @compileError("USBFS buffer_bytes must be at least 64");
+        if (cfg.buffer_bytes < 128)
+            @compileError("USBFS buffer_bytes must be at least 128");
     }
 
     return struct {
@@ -182,13 +203,13 @@ pub fn Polled(comptime cfg: Config) type {
 
         pub fn init(self: *Self) void {
             self.interface = .{ .vtable = &vtable };
-            @memset(std.mem.asBytes(&self.endpoints), 0);
+            self.endpoints = @splat(@splat(.{}));
             @memset(self.pool[0..64], 0x7e);
             @memset(self.pool[64..], 0);
 
             self.buffer_pool = @alignCast(self.pool[64..]);
 
-            usbhd_hw_init();
+            usbfs_hw_init();
 
             // EP0 is required; open OUT then IN (or vice versa), we will share buffer.
             self.interface.ep_open(&.{
@@ -212,6 +233,7 @@ pub fn Polled(comptime cfg: Config) type {
             // Must happen AFTER EP0 is configured.
             Regs.R8_USB_CTRL.write(.{
                 .RB_UC_DMA_EN = 1,
+                .RB_UC_INT_BUSY = 1,
                 .MASK_UC_SYS_CTRL_RB_UC_DEV_PU_EN = 0b10, // DEV_PU_EN
             });
         }
@@ -224,7 +246,7 @@ pub fn Polled(comptime cfg: Config) type {
             return out;
         }
 
-        fn st(self: *Self, ep_num: types.Endpoint.Num, dir: types.Dir) *EpState {
+        fn st(self: *Self, ep_num: types.Endpoint.Num, dir: types.Dir) *EP_State {
             return &self.endpoints[@intFromEnum(ep_num)][@intFromEnum(dir)];
         }
 
@@ -341,6 +363,8 @@ pub fn Polled(comptime cfg: Config) type {
                 "OUT ep{} len={} tog_ok={} rx_res={} rx_tog={}",
                 .{ ep, len, stv.RB_UIS_TOG_OK, rx_ctrl.RES, rx_ctrl.TOG },
             );
+            if (ep != 0 and stv.RB_UIS_TOG_OK == 0) return;
+
             // EP0 OUT is always armed; accept status ZLP.
             if (ep == 0) {
                 const st_out = self.st(.ep0, .Out);
@@ -411,10 +435,11 @@ pub fn Polled(comptime cfg: Config) type {
             log.debug("ep_open ep{} dir={}", .{ ep_i, e.dir });
 
             const mps: u16 = desc.max_packet_size.into();
-            assert(mps > 0 and mps <= 2047);
+            assert(mps > 0 and mps <= 64);
 
             const out_st = self.st(e.num, .Out);
             const in_st = self.st(e.num, .In);
+            const first_open = out_st.buf.len == 0;
 
             // We "open" the endpoint for both directions at once because the DMA buffers
             // must be contiguous
@@ -439,10 +464,17 @@ pub fn Polled(comptime cfg: Config) type {
             const ptr_val: u32 = @as(u32, @intCast(@intFromPtr(out_st.buf.ptr)));
 
             uep_dma(ep_i).raw = ptr_val;
-            set_rx_ctrl(ep_i, RES_NAK, TOG_DATA1, false);
-            set_tx_ctrl(ep_i, RES_NAK, TOG_DATA1, false);
+            if (first_open) {
+                set_rx_ctrl(ep_i, RES_NAK, TOG_DATA0, false);
+                set_tx_ctrl(ep_i, RES_NAK, TOG_DATA0, false);
+            }
+            switch (e.dir) {
+                .Out => set_rx_ctrl(ep_i, RES_NAK, TOG_DATA0, false),
+                .In => set_tx_ctrl(ep_i, RES_NAK, TOG_DATA0, false),
+            }
 
             uep_t_len(ep_i).raw = 0;
+            enable_endpoint(ep_i);
 
             // EP0 OUT always ACK
             if (e.num == .ep0) {
@@ -462,7 +494,7 @@ pub fn Polled(comptime cfg: Config) type {
             }
 
             const ep_i: u4 = epn(ep_num);
-            if (ep_i > cfg.max_endpoints_count)
+            if (ep_i >= cfg.max_endpoints_count)
                 @panic("ep_listen called for invalid endpoint");
 
             const st_out = self.st(ep_num, .Out);
@@ -495,14 +527,14 @@ pub fn Polled(comptime cfg: Config) type {
             // Enforce by clearing rx_last_len after consumption.
             defer st_out.rx_last_len = 0;
 
-            var remaining: []align(4) u8 = st_out.buf[0..want];
+            var remaining: []u8 = st_out.buf[0..want];
             var copied: usize = 0;
 
             for (data) |dst| {
                 if (remaining.len == 0) break;
                 const n = @min(dst.len, remaining.len);
                 @memcpy(dst[0..n], remaining[0..n]);
-                remaining = @alignCast(remaining[n..]);
+                remaining = remaining[n..];
                 copied += n;
             }
 
@@ -546,7 +578,7 @@ pub fn Polled(comptime cfg: Config) type {
 
         // ---- HW init ---------------------------------------------------------
 
-        fn usbhd_hw_init() void {
+        fn usbfs_hw_init() void {
             // 1. SIE reset + FIFO clear
             Regs.R8_USB_CTRL.write(.{
                 .RB_UC_RST_SIE = 1,
@@ -565,20 +597,10 @@ pub fn Polled(comptime cfg: Config) type {
                 .RB_UIE_SUSPEND = 1,
             });
 
-            // 3. Enable endpoint modes.
-            // EP4 shares its DMA buffer with EP0 — enabling EP4 causes
-            // DMA conflicts that prevent EP0 SETUP after SET_ADDRESS.
-            // Only enable endpoints used by CDC-ACM (EP1-EP3).
-            Regs.R8_UEP4_1_MOD.write(.{
-                .RB_UEP1_TX_EN = 1,
-                .RB_UEP1_RX_EN = 1,
-            });
-            Regs.R8_UEP2_3_MOD__R8_UH_EP_MOD.write(.{
-                .RB_UEP2_TX_EN = 1,
-                .RB_UEP2_RX_EN__RB_UH_EP_RX_EN = 1,
-                .RB_UEP3_TX_EN__RB_UH_EP_TX_EN = 1,
-                .RB_UEP3_RX_EN = 1,
-            });
+            // 3. Disable non-control endpoints. ep_open enables both hardware
+            // directions so its contiguous OUT/IN DMA-buffer layout is used.
+            Regs.R8_UEP4_1_MOD.write(.{});
+            Regs.R8_UEP2_3_MOD__R8_UH_EP_MOD.write(.{});
             Regs.R8_UEP5_6_MOD.write(.{});
             Regs.R8_UEP7_MOD.write(.{});
 
@@ -586,9 +608,12 @@ pub fn Polled(comptime cfg: Config) type {
             Regs.R8_USB_INT_FG.raw = 0xFF; // W1C: clear all
             Regs.R8_USB_DEV_AD.write(.{});
 
-            // 5. Enable DMA, no pull-up yet (enabled after EP0 setup)
+            // 5. Enable DMA and make the SIE answer busy until software clears
+            // UIF_TRANSFER. This prevents a following token from overwriting
+            // the status of the transfer currently being processed.
             Regs.R8_USB_CTRL.write(.{
                 .RB_UC_DMA_EN = 1,
+                .RB_UC_INT_BUSY = 1,
             });
 
             // 6. Enable USB port with pull-down disabled
@@ -600,9 +625,9 @@ pub fn Polled(comptime cfg: Config) type {
     };
 }
 
-///! Skeleton ISR
-pub fn usbhs_interrupt_handler() callconv(microzig.cpu.riscv_calling_convention) void {
+/// Skeleton ISR; interrupt-driven operation is not implemented yet.
+pub fn usbfs_interrupt_handler() callconv(microzig.cpu.riscv_calling_convention) void {
     const fg = Regs.R8_USB_INT_FG.raw;
     Regs.R8_USB_INT_FG.raw = fg;
-    @panic("Don't Enable USBHS Interrupt, Not yet supported!");
+    @panic("USBFS interrupt-driven operation is not supported");
 }
