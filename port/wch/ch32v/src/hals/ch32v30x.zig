@@ -5,7 +5,6 @@ pub const clocks = @import("clocks.zig");
 pub const time = @import("time.zig");
 pub const i2c = @import("i2c.zig");
 pub const usart = @import("usart.zig");
-const std = @import("std");
 pub const usb = @import("usbhs.zig");
 pub const usbfs = @import("usbfs.zig");
 

@@ -28,7 +28,7 @@ comptime {
     _ = microzig.export_startup();
 }
 
-const USBController = usb.DeviceController(.{
+const USB_Controller = usb.DeviceController(.{
     .bcd_usb = .v2_00,
     .device_triple = .unspecified,
     .vendor = .{ .id = 0x1209, .str = "MicroZig" },
@@ -47,7 +47,7 @@ const USBController = usb.DeviceController(.{
 
 pub var usb_dev: hal.usb.Polled(.{}) = undefined;
 
-var usb_controller: USBController = .init;
+var usb_controller: USB_Controller = .init;
 
 pub fn main() !void {
     // Board brings up clocks and time

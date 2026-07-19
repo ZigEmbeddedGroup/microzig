@@ -29,4 +29,5 @@ pub const pin_config = ch32v.pins.GlobalConfiguration{
 pub fn init() void {
     ch32v.clocks.init(clock_config);
     ch32v.time.init();
+    ch32v.clocks.enable_usbfs_clock();
 }

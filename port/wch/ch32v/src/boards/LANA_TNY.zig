@@ -5,8 +5,6 @@ pub const microzig = @import("microzig");
 pub const chip = @import("chip");
 const ch32v = microzig.hal;
 
-pub const product_string = "LANA TNY";
-
 /// Clock configuration for this board
 pub const clock_config: ch32v.clocks.Config = .{
     .source = .hsi,

@@ -66,8 +66,7 @@ pub fn enable_peripheral_clock(p: peripheral) void {
         .USBOTG => RCC.AHBPCENR.modify(.{ .OTG_EN = 1 }),
 
         // APB2 peripherals (high-speed bus)
-        .USART1,
-        => RCC.APB2PCENR.modify(.{ .USART1EN = 1 }),
+        .USART1 => RCC.APB2PCENR.modify(.{ .USART1EN = 1 }),
         .SPI1 => RCC.APB2PCENR.modify(.{ .SPI1EN = 1 }),
         .ADC1 => RCC.APB2PCENR.modify(.{ .ADC1EN = 1 }),
         .ADC2 => RCC.APB2PCENR.modify(.{ .ADC2EN = 1 }),
@@ -418,7 +417,6 @@ pub fn get_freqs() ClockSpeeds {
     };
 }
 
-// TODO: USBFS Clock helper, don't just tag on USBHS
 // ============================================================================
 // Enable + configure USBFS/OTG clocks.
 // ============================================================================
@@ -430,10 +428,6 @@ pub fn enable_usbfs_clock() void {
         144_000_000 => RCC.CFGR0.modify(.{ .USBPRE = 2 }),
         else => @panic("Unsupported sysclock for USB OTG"),
     }
-
-    RCC.CFGR2.modify(.{
-        .USBFSSRC = 1,
-    });
 
     // Enable the AHB clock gate for the USBFS peripheral block.
     enable_peripheral_clock(.USBOTG);
@@ -448,7 +442,7 @@ pub fn enable_usbfs_clock() void {
 ///
 /// Note: The SVD names bit31 as `USBFSSRC`, but the reference manual
 /// describes it as `USBHSSRC` ("USBHS 48MHz clock source selection").
-pub const UsbHsClockConfig = struct {
+pub const USB_HS_ClockConfig = struct {
     pub const RefSource = enum { hse, hsi };
     /// Desired PHY PLL reference frequency (the USBHSCLK field selects one of these).
     /// If null, we'll pick the highest one we can generate exactly: 8MHz, then 5MHz, 4MHz, 3MHz.
@@ -479,7 +473,7 @@ fn div_to_usbhsdiv(div: u32) u3 {
     return @as(u3, @intCast(div - 1));
 }
 
-fn hz_for_ref(ref: UsbHsClockConfig.RefFreq) u32 {
+fn hz_for_ref(ref: USB_HS_ClockConfig.RefFreq) u32 {
     return switch (ref) {
         .mhz3 => 3_000_000,
         .mhz4 => 4_000_000,
@@ -488,11 +482,6 @@ fn hz_for_ref(ref: UsbHsClockConfig.RefFreq) u32 {
     };
 }
 
-const HSPLLSRC = enum(u2) {
-    hse = 0,
-    hsi = 1,
-};
-
 // TODO: ch32v30x 144MHz config
 
 /// Selects USBHS Clock source, options are:
@@ -500,9 +489,7 @@ const HSPLLSRC = enum(u2) {
 /// - "USB PHY" 48MHz source (cfg.use_phy_48mhz = true),
 ///   in which case it also configures the PHY PLL reference (USBHSCLK/USBHSPLLSRC/USBHSDIV)
 ///   and enables the PHY internal PLL (USBHSPLL).
-pub fn enable_usbhs_clock(comptime cfg: UsbHsClockConfig) void {
-    RCC.CFGR0.modify(.{ .USBPRE = 0 });
-
+pub fn enable_usbhs_clock(comptime cfg: USB_HS_ClockConfig) void {
     // If caller prefers PLL CLK, set PLL CLK selection and keep PHY PLL off.
     if (!cfg.use_phy_48mhz) {
         RCC.CFGR2.modify(.{
@@ -510,6 +497,7 @@ pub fn enable_usbhs_clock(comptime cfg: UsbHsClockConfig) void {
             .USBFSSRC = 0, // 0: PLL CLK
             .USBHSPLL = 0, // PHY internal PLL disabled
         });
+        enable_peripheral_clock(.USBHS);
         return;
     }
 
@@ -526,9 +514,9 @@ pub fn enable_usbhs_clock(comptime cfg: UsbHsClockConfig) void {
     }
 
     // Choose a reference frequency and divider that is exactly achievable.
-    const candidates = [_]UsbHsClockConfig.RefFreq{ .mhz8, .mhz5, .mhz4, .mhz3 };
+    const candidates = [_]USB_HS_ClockConfig.RefFreq{ .mhz8, .mhz5, .mhz4, .mhz3 };
 
-    comptime var chosen_ref: UsbHsClockConfig.RefFreq = undefined;
+    comptime var chosen_ref: USB_HS_ClockConfig.RefFreq = undefined;
     comptime var chosen_div: u32 = 0;
     comptime {
         if (cfg.ref_freq) |forced| {
@@ -582,7 +570,6 @@ pub fn enable_usbhs_clock(comptime cfg: UsbHsClockConfig) void {
     });
 
     enable_peripheral_clock(.USBHS);
-    enable_peripheral_clock(.USBOTG);
 }
 
 // ============================================================================
