@@ -122,7 +122,15 @@ pub const Descriptor = extern struct {
                     .master_interface = itf_notifi,
                     .slave_interface_0 = itf_data,
                 },
-                .ep_notifi = .interrupt(alloc.next_ep(.In), 8, 16),
+                // High-speed interrupt intervals are encoded as
+                // 2^(bInterval - 1) microframes, while full-speed intervals
+                // are expressed directly in milliseconds. Keep the intended
+                // polling period at 16 ms for both speeds.
+                .ep_notifi = .interrupt(
+                    alloc.next_ep(.In),
+                    8,
+                    if (max_supported_packet_size > 64) 8 else 16,
+                ),
                 .itf_data = .{
                     .interface_number = itf_data,
                     .alternate_setting = 0,
