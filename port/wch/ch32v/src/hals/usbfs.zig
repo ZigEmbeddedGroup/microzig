@@ -195,7 +195,8 @@ pub fn Polled(comptime cfg: Config) type {
         };
 
         endpoints: PerEndpointArray(cfg.max_endpoints_count),
-        pool: [cfg.buffer_bytes]u8 = undefined,
+        // USB DMA addresses must be 4-byte aligned.
+        pool: [cfg.buffer_bytes]u8 align(4) = undefined,
 
         buffer_pool: []align(4) u8,
 

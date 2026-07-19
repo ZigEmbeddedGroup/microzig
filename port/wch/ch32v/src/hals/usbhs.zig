@@ -187,7 +187,8 @@ pub fn Polled(comptime cfg: Config) type {
         };
 
         endpoints: PerEndpointArray(cfg.max_endpoints_count),
-        pool: [cfg.buffer_bytes]u8 = undefined,
+        // USB DMA addresses must be 4-byte aligned.
+        pool: [cfg.buffer_bytes]u8 align(4) = undefined,
 
         buffer_pool: []align(4) u8,
 
@@ -340,7 +341,13 @@ pub fn Polled(comptime cfg: Config) type {
                     self.st(.ep0, .In).tx_busy = false;
 
                     controller.on_setup_req(&self.interface, &setup);
-                    Regs.USB_INT_FG.raw = UIF_SETUP_ACT;
+
+                    // A new SETUP aborts the previous control transfer. The
+                    // TRANSFER bit may still describe that previous packet;
+                    // handling it after queueing this response would consume
+                    // the new response as if it had already completed.
+                    Regs.USB_INT_FG.raw = UIF_SETUP_ACT | (fg & UIF_TRANSFER);
+                    continue;
                 }
 
                 if ((fg & UIF_TRANSFER) != 0) {
@@ -657,7 +664,6 @@ pub fn Polled(comptime cfg: Config) type {
                 .RB_UIE_SUSPEND = 1,
                 .RB_UIE_FIFO_OV = 1,
                 // .RB_UIE_HST_SOF = 1,
-                .RB_UIE_DEV_NAK = 1,
             });
         }
     };
