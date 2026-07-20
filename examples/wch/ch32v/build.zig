@@ -40,6 +40,7 @@ pub fn build(b: *std.Build) void {
         .{ .target = mb.ports.ch32v.boards.ch32v203.nano_ch32v203, .name = "nano_ch32v203_usb_cdc", .file = "src/usb_cdc.zig" },
         .{ .target = mb.ports.ch32v.boards.ch32v203.suzuduino_uno_v1b, .name = "suzuduino_blinky", .file = "src/board_blinky.zig" },
         .{ .target = mb.ports.ch32v.boards.ch32v203.suzuduino_uno_v1b, .name = "suzuduino_usb_cdc", .file = "src/usb_cdc.zig" },
+        .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_usb_cdc", .file = "src/usb_cdc.zig" },
         .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_dma", .file = "src/dma.zig" },
         .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_ws2812", .file = "src/ws2812.zig" },
         .{ .target = mb.ports.ch32v.boards.ch32v203.lana_tny, .name = "lana_tny_uart_log", .file = "src/uart_log.zig" },
