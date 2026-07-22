@@ -22,10 +22,10 @@ pub const Config = struct {
 
     prefer_high_speed: bool = true,
 
-    /// Static buffer pool in SRAM, bump-allocated.
+    /// Static buffer pool in SRAM, bump-allocated
     buffer_bytes: comptime_int = max_buffer_pool_size,
 
-    /// Future seam only; not implemented in this initial version.
+    /// not implemented yet
     use_interrupts: bool = false,
 };
 
@@ -59,16 +59,7 @@ const TOKEN_SOF: u2 = 1;
 const TOKEN_IN: u2 = 2;
 const TOKEN_SETUP: u2 = 3;
 
-// --- INT_FG raw bits (match USBHS.zig packed order) ---
-const UIF_BUS_RST: u8 = 1 << 0;
-const UIF_TRANSFER: u8 = 1 << 1;
-const UIF_SUSPEND: u8 = 1 << 2;
-const UIF_HST_SOF: u8 = 1 << 3;
-const UIF_FIFO_OV: u8 = 1 << 4;
-const UIF_SETUP_ACT: u8 = 1 << 5;
-const UIF_ISO_ACT: u8 = 1 << 6;
-
-// --- endpoint response encodings (WCH style) ---
+// --- endpoint response encodings ---
 const RES_ACK: u2 = 0;
 const RES_NAK: u2 = 2;
 
@@ -90,55 +81,21 @@ pub const RegCtrl = microzig.mmio.Mmio(packed struct(u8) {
     _reserved1: u2 = 0,
 });
 
-fn base_addr() usize {
-    return @intFromPtr(peripherals.USBHS);
-}
-fn mmio_u32(off: usize) *volatile Reg_U32 {
-    return @ptrFromInt(base_addr() + off);
-}
-fn mmio_u16(off: usize) *volatile Reg_U16 {
-    return @ptrFromInt(base_addr() + off);
-}
-fn mmio_tx_ctrl(off: usize) *volatile RegCtrl {
-    return @ptrFromInt(base_addr() + off);
-}
-fn mmio_rx_ctrl(off: usize) *volatile RegCtrl {
-    return @ptrFromInt(base_addr() + off);
-}
-
 // RX DMA: 0x20 + (ep-1)*4  (EP1..EP15)
 // EP0 has its own dedicated DMA reg.
-fn ep0_dma() *volatile Reg_U32 {
-    return mmio_u32(0x1C);
-}
-fn uep_rx_dma(ep: u4) *volatile Reg_U32 {
-    return mmio_u32(0x20 + (@as(usize, ep - 1) * 4));
-}
-// TX DMA: 0x5C + (ep-1)*4  (EP1..EP15)
-fn uep_tx_dma(ep: u4) *volatile Reg_U32 {
-    return mmio_u32(0x5C + (@as(usize, ep - 1) * 4));
-}
-// MAX_LEN: EP0..EP15 at 0x98 + ep*4
-fn uep_max_len(ep: u4) *volatile Reg_U16 {
-    return mmio_u16(0x98 + (@as(usize, ep) * 4));
-}
-// T_LEN: EP0..EP15 at 0xD8 + ep*4
-fn uep_t_len(ep: u4) *volatile Reg_U16 {
-    return mmio_u16(0xD8 + (@as(usize, ep) * 4));
-}
-// TX_CTRL: 0xDA + ep*4, RX_CTRL: 0xDB + ep*4
-pub fn uep_tx_ctrl(ep: u4) *volatile RegCtrl {
-    const ret: *volatile RegCtrl = mmio_tx_ctrl(0xDA + (@as(usize, ep) * 4));
-    return ret;
-}
-
-fn uep_rx_ctrl(ep: u4) *volatile RegCtrl {
-    return mmio_rx_ctrl(0xDB + (@as(usize, ep) * 4));
-}
+const EP0_DMA: *Reg_U32 = @ptrFromInt(0x4002341c);
+const UEP_RX_DMA: *volatile [15]Reg_U32 = @ptrFromInt(0x40023420);
+const UEP_TX_DMA: *volatile [15]Reg_U32 = @ptrFromInt(0x4002345c);
+const UEP_MAX_LEN: *volatile [15]Reg_U16 = @ptrFromInt(0x40023498);
+const EP_Regs: *volatile [16]extern struct {
+    UEP_T_LEN: Reg_U16,
+    UEP_TX_CTRL: RegCtrl,
+    UEP_RX_CTRL: RegCtrl,
+} = @ptrFromInt(0x400234d8);
 
 fn set_tx_ctrl(ep: u4, res: u2, tog: u2, auto: bool) void {
     // [1:0]=RES, [4:3]=TOG, [5]=AUTO
-    const tx_ctrl: *volatile RegCtrl = uep_tx_ctrl(ep);
+    const tx_ctrl: *volatile RegCtrl = &EP_Regs[ep].UEP_TX_CTRL;
     tx_ctrl.write(.{
         .RES = res,
         .TOG = tog,
@@ -147,7 +104,7 @@ fn set_tx_ctrl(ep: u4, res: u2, tog: u2, auto: bool) void {
 }
 fn set_rx_ctrl(ep: u4, res: u2, tog: u2, auto: bool) void {
     // std.log.debug("ch32: set_rx_ctrl ep={} res={} tog={} auto={}", .{ ep, res, tog, auto });
-    const ctrl: *volatile RegCtrl = uep_rx_ctrl(ep);
+    const ctrl: *volatile RegCtrl = &EP_Regs[ep].UEP_RX_CTRL;
     ctrl.write(.{
         .RES = res,
         .TOG = tog,
@@ -156,10 +113,12 @@ fn set_rx_ctrl(ep: u4, res: u2, tog: u2, auto: bool) void {
 }
 
 fn current_rx_tog(ep: u4) u2 {
-    return uep_rx_ctrl(ep).read().TOG;
+    const rx_ctrl: *volatile RegCtrl = &EP_Regs[ep].UEP_RX_CTRL;
+    return rx_ctrl.read().TOG;
 }
 fn current_tx_tog(ep: u4) u2 {
-    return uep_tx_ctrl(ep).read().TOG;
+    const tx_ctrl: *volatile RegCtrl = &EP_Regs[ep].UEP_TX_CTRL;
+    return tx_ctrl.read().TOG;
 }
 
 /// Polled USBHS device backend for the MicroZig core USB controller.
@@ -301,28 +260,42 @@ pub fn Polled(comptime cfg: Config) type {
         pub fn poll(self: *Self, in_isr: bool, controller: anytype) void {
             _ = in_isr;
             while (true) {
-                // ISO_ACT is status, not a W1C event flag.
-                const fg: u8 = Regs.USB_INT_FG.raw & ~UIF_ISO_ACT;
-                if (fg == 0) break;
+                const flags = Regs.USB_INT_FG.read();
+                if (flags.RB_UIF_HST_SOF == 0 and flags.RB_UIF_SUSPEND == 0 and
+                    flags.RB_UIF_FIFO_OV == 0 and flags.RB_UIF_BUS_RST__RB_UIF_DETECT == 0 and
+                    flags.RB_UIF_SETUP_ACT == 0 and flags.RB_UIF_TRANSFER == 0)
+                    break;
 
-                if ((fg & UIF_HST_SOF) != 0) {
+                if (flags.RB_UIF_HST_SOF != 0) {
                     // acknowledge SOF but ignore
-                    Regs.USB_INT_FG.raw = UIF_HST_SOF;
+                    Regs.USB_INT_FG.write(.{
+                        .RB_UIF_HST_SOF = 1,
+                        .RB_UIF_SETUP_ACT = 0,
+                    });
                 }
-                if ((fg & UIF_SUSPEND) != 0) {
+                if (flags.RB_UIF_SUSPEND != 0) {
                     // acknowledge SUSPEND but ignore
-                    Regs.USB_INT_FG.raw = UIF_SUSPEND;
+                    Regs.USB_INT_FG.write(.{
+                        .RB_UIF_SUSPEND = 1,
+                        .RB_UIF_SETUP_ACT = 0,
+                    });
                 }
 
-                if (fg & UIF_FIFO_OV != 0) {
+                if (flags.RB_UIF_FIFO_OV != 0) {
                     log.warn("FIFO overflow!", .{});
-                    Regs.USB_INT_FG.raw = UIF_FIFO_OV;
+                    Regs.USB_INT_FG.write(.{
+                        .RB_UIF_FIFO_OV = 1,
+                        .RB_UIF_SETUP_ACT = 0,
+                    });
                 }
 
-                if ((fg & UIF_BUS_RST) != 0) {
+                if (flags.RB_UIF_BUS_RST__RB_UIF_DETECT != 0) {
                     log.info("bus reset\n\n\n", .{});
                     // clear
-                    Regs.USB_INT_FG.raw = UIF_BUS_RST;
+                    Regs.USB_INT_FG.write(.{
+                        .RB_UIF_BUS_RST__RB_UIF_DETECT = 1,
+                        .RB_UIF_SETUP_ACT = 0,
+                    });
 
                     // address back to 0
                     set_address(&self.interface, 0);
@@ -331,7 +304,7 @@ pub fn Polled(comptime cfg: Config) type {
                     controller.on_bus_reset(&self.interface);
                 }
 
-                if ((fg & UIF_SETUP_ACT) != 0) {
+                if (flags.RB_UIF_SETUP_ACT != 0) {
                     log.info("SETUP received", .{});
                     const setup: types.SetupPacket = self.read_setup_from_ep0();
 
@@ -346,17 +319,23 @@ pub fn Polled(comptime cfg: Config) type {
                     // TRANSFER bit may still describe that previous packet;
                     // handling it after queueing this response would consume
                     // the new response as if it had already completed.
-                    Regs.USB_INT_FG.raw = UIF_SETUP_ACT | (fg & UIF_TRANSFER);
+                    Regs.USB_INT_FG.write(.{
+                        .RB_UIF_SETUP_ACT = 1,
+                        .RB_UIF_TRANSFER = flags.RB_UIF_TRANSFER,
+                    });
                     continue;
                 }
 
-                if ((fg & UIF_TRANSFER) != 0) {
+                if (flags.RB_UIF_TRANSFER != 0) {
                     // clear transfer
                     const stv = Regs.USB_INT_ST.read();
                     const ep: u4 = @as(u4, stv.MASK_UIS_H_RES__MASK_UIS_ENDP);
                     const token: u2 = @as(u2, stv.MASK_UIS_TOKEN);
-                    self.handle_transfer(ep, token, (fg & UIF_SETUP_ACT) != 0, controller);
-                    Regs.USB_INT_FG.raw = UIF_TRANSFER;
+                    self.handle_transfer(ep, token, flags.RB_UIF_SETUP_ACT != 0, controller);
+                    Regs.USB_INT_FG.write(.{
+                        .RB_UIF_TRANSFER = 1,
+                        .RB_UIF_SETUP_ACT = 0,
+                    });
                 }
             }
         }
@@ -385,7 +364,8 @@ pub fn Polled(comptime cfg: Config) type {
         fn handle_out(self: *Self, ep: u4, controller: anytype) void {
             const len: u16 = Regs.USB_RX_LEN.read().R16_USB_RX_LEN;
             const stv = Regs.USB_INT_ST.read();
-            const rx_ctrl = uep_rx_ctrl(ep).read();
+            const rx_ctrl_reg: *volatile RegCtrl = &EP_Regs[ep].UEP_RX_CTRL;
+            const rx_ctrl = rx_ctrl_reg.read();
             log.debug(
                 "OUT ep{} len={} tog_ok={} rx_res={} rx_tog={}",
                 .{ ep, len, stv.RB_UIS_TOG_OK, rx_ctrl.RES, rx_ctrl.TOG },
@@ -465,7 +445,8 @@ pub fn Polled(comptime cfg: Config) type {
             if (e.num == .ep0) {
                 const out_st = self.st(.ep0, .Out);
                 const in_st = self.st(.ep0, .In);
-                if (ep0_dma().raw == 0) {
+                const dma: *volatile Reg_U32 = EP0_DMA;
+                if (dma.raw == 0) {
                     log.warn("EP0 DMA is null!", .{});
                 }
                 if (out_st.buf.len == 0 and in_st.buf.len == 0) {
@@ -476,8 +457,9 @@ pub fn Polled(comptime cfg: Config) type {
 
                     const ptr_val = @as(u32, @intCast(@intFromPtr(buf.ptr)));
                     log.debug("Setting EP0 DMA buffer at {x}, len={}", .{ ptr_val, buf.len });
-                    ep0_dma().raw = ptr_val;
-                    uep_max_len(0).raw = @intCast(64);
+                    dma.raw = ptr_val;
+                    const max_len: *volatile Reg_U16 = &UEP_MAX_LEN[0];
+                    max_len.raw = @intCast(64);
                 } else {
                     // Ensure both directions point at the same backing buffer.
                     if (out_st.buf.len == 0) out_st.buf = in_st.buf;
@@ -495,17 +477,21 @@ pub fn Polled(comptime cfg: Config) type {
                 const ptr_val: u32 = @as(u32, @intCast(@intFromPtr(st_ep.buf.ptr)));
 
                 if (e.dir == .Out) {
-                    uep_rx_dma(ep_i).raw = ptr_val;
-                    uep_max_len(ep_i).raw = mps;
+                    const rx_dma: *volatile Reg_U32 = &UEP_RX_DMA[ep_i - 1];
+                    rx_dma.raw = ptr_val;
+                    const max_len: *volatile Reg_U16 = &UEP_MAX_LEN[ep_i];
+                    max_len.raw = mps;
                     set_rx_ctrl(ep_i, RES_NAK, TOG_DATA0, false);
                 } else {
-                    uep_tx_dma(ep_i).raw = ptr_val;
+                    const tx_dma: *volatile Reg_U32 = &UEP_TX_DMA[ep_i - 1];
+                    tx_dma.raw = ptr_val;
                     set_tx_ctrl(ep_i, RES_NAK, TOG_DATA0, false);
                 }
             }
             log.debug("allocation and DMA setup done for ep{}", .{ep_i});
 
-            uep_t_len(ep_i).raw = 0;
+            const tx_len: *volatile Reg_U16 = &EP_Regs[ep_i].UEP_T_LEN;
+            tx_len.raw = 0;
 
             // Enable endpoint direction in UEP_CONFIG bitmaps.
             // TODO: make this a function, too ugly here
@@ -559,7 +545,8 @@ pub fn Polled(comptime cfg: Config) type {
             st_out.rx_armed = true;
             st_out.rx_last_len = 0;
 
-            uep_max_len(ep_i).raw = @as(u16, @intCast(limit));
+            const max_len: *volatile Reg_U16 = &UEP_MAX_LEN[ep_i];
+            max_len.raw = @as(u16, @intCast(limit));
 
             asm volatile ("");
             set_rx_ctrl(ep_i, RES_ACK, current_rx_tog(ep_i), false);
@@ -617,7 +604,8 @@ pub fn Polled(comptime cfg: Config) type {
                 w += n;
             }
 
-            uep_t_len(ep_i).raw = @as(u16, @intCast(w));
+            const tx_len: *volatile Reg_U16 = &EP_Regs[ep_i].UEP_T_LEN;
+            tx_len.raw = @as(u16, @intCast(w));
 
             st_in.tx_busy = true;
             // Arm IN
@@ -671,7 +659,6 @@ pub fn Polled(comptime cfg: Config) type {
 
 ///! Skeleton ISR
 pub fn usbhs_interrupt_handler() callconv(microzig.cpu.riscv_calling_convention) void {
-    const fg = Regs.USB_INT_FG.raw;
-    Regs.USB_INT_FG.raw = fg;
+    Regs.USB_INT_FG.write(Regs.USB_INT_FG.read());
     @panic("Don't Enable USBHS Interrupt, Not yet supported!");
 }
