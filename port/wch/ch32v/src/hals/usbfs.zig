@@ -53,17 +53,7 @@ const TOKEN_SOF: u2 = 1;
 const TOKEN_IN: u2 = 2;
 const TOKEN_SETUP: u2 = 3;
 
-// --- INT_FG raw bits (match USBHS.zig packed order) ---
-const UIF_BUS_RST: u8 = 1 << 0;
-const UIF_TRANSFER: u8 = 1 << 1;
-const UIF_SUSPEND: u8 = 1 << 2;
-const UIF_HST_SOF: u8 = 1 << 3;
-const UIF_FIFO_OV: u8 = 1 << 4;
-const UIF_SIE_FREE: u8 = 1 << 5;
-const UIF_TOG_OK: u8 = 1 << 6;
-const UIF_IS_NAK: u8 = 1 << 7;
-
-// --- endpoint response encodings (WCH style) ---
+// --- endpoint response encodings ---
 const RES_ACK: u2 = 0;
 const RES_NAK: u2 = 2;
 
@@ -87,45 +77,20 @@ pub const RegCtrl = microzig.mmio.Mmio(packed struct(u8) {
     padding: u4 = 0,
 });
 
-fn base_addr() usize {
-    return @intFromPtr(Regs);
-}
-fn mmio_u32(off: usize) *volatile Reg_U32 {
-    return @ptrFromInt(base_addr() + off);
-}
-fn mmio_u8(off: usize) *volatile Reg_U8 {
-    return @ptrFromInt(base_addr() + off);
-}
-fn mmio_tx_ctrl(off: usize) *volatile RegCtrl {
-    return @ptrFromInt(base_addr() + off);
-}
-fn mmio_rx_ctrl(off: usize) *volatile RegCtrl {
-    return @ptrFromInt(base_addr() + off);
-}
-
 // Endpoint DMA: 0x10 + ep*4 (EP0..EP7)
 // Depending on mode, DMA buffers must have at least 128
 // or 256 bytes, and contain the TX and RX buffers
-fn uep_dma(ep: u4) *volatile Reg_U32 {
-    return mmio_u32(0x10 + (@as(usize, ep) * 4));
-}
-
-// T_LEN: EP0..EP7 at 0x30 + ep*4
-fn uep_t_len(ep: u4) *volatile Reg_U8 {
-    return mmio_u8(0x30 + (@as(usize, ep) * 4));
-}
-// TX_CTRL: 0x32 + ep*4, RX_CTRL: 0x33 + ep*4
-pub fn uep_tx_ctrl(ep: u4) *volatile RegCtrl {
-    return mmio_tx_ctrl(0x32 + (@as(usize, ep) * 4));
-}
-
-fn uep_rx_ctrl(ep: u4) *volatile RegCtrl {
-    return mmio_rx_ctrl(0x33 + (@as(usize, ep) * 4));
-}
+const UEP_DMA: *volatile [8]Reg_U32 = @ptrFromInt(0x50000010); // Regs.R32_UEP0_DMA
+const EP_Regs: *volatile [8]extern struct {
+    UEP_T_LEN: Reg_U8,
+    padding: u8,
+    UEP_TX_CTRL: RegCtrl,
+    UEP_RX_CTRL: RegCtrl,
+} = @ptrFromInt(0x50000030); // Regs.R8_UEP0_T_LEN
 
 fn set_tx_ctrl(ep: u4, res: u2, tog: u1, auto: bool) void {
     // [1:0]=RES, [2]=TOG, [3]=AUTO
-    const tx_ctrl: *volatile RegCtrl = uep_tx_ctrl(ep);
+    const tx_ctrl: *volatile RegCtrl = &EP_Regs[ep].UEP_TX_CTRL;
     tx_ctrl.write(.{
         .RES = res,
         .TOG = tog,
@@ -133,7 +98,7 @@ fn set_tx_ctrl(ep: u4, res: u2, tog: u1, auto: bool) void {
     });
 }
 fn set_rx_ctrl(ep: u4, res: u2, tog: u1, auto: bool) void {
-    const ctrl: *volatile RegCtrl = uep_rx_ctrl(ep);
+    const ctrl: *volatile RegCtrl = &EP_Regs[ep].UEP_RX_CTRL;
     ctrl.write(.{
         .RES = res,
         .TOG = tog,
@@ -142,20 +107,22 @@ fn set_rx_ctrl(ep: u4, res: u2, tog: u1, auto: bool) void {
 }
 
 fn current_rx_tog(ep: u4) u1 {
-    return uep_rx_ctrl(ep).read().TOG;
+    const rx_ctrl: *volatile RegCtrl = &EP_Regs[ep].UEP_RX_CTRL;
+    return rx_ctrl.read().TOG;
 }
 fn current_tx_tog(ep: u4) u1 {
-    return uep_tx_ctrl(ep).read().TOG;
+    const tx_ctrl: *volatile RegCtrl = &EP_Regs[ep].UEP_TX_CTRL;
+    return tx_ctrl.read().TOG;
 }
 
 fn enable_endpoint(ep: u4) void {
     if (ep == 0) return;
 
-    const mode_offset: usize = switch (ep) {
-        1, 4 => 0x0c,
-        2, 3 => 0x0d,
-        5, 6 => 0x0e,
-        7 => 0x0f,
+    const mode: *volatile Reg_U8 = switch (ep) {
+        1, 4 => @ptrCast(&Regs.R8_UEP4_1_MOD),
+        2, 3 => @ptrCast(&Regs.R8_UEP2_3_MOD__R8_UH_EP_MOD),
+        5, 6 => @ptrCast(&Regs.R8_UEP5_6_MOD),
+        7 => @ptrCast(&Regs.R8_UEP7_MOD),
         else => unreachable,
     };
     const enable_bits: u8 = switch (ep) {
@@ -163,7 +130,6 @@ fn enable_endpoint(ep: u4) void {
         2, 4, 5, 7 => (1 << 2) | (1 << 3),
         else => unreachable,
     };
-    const mode = mmio_u8(mode_offset);
     // With RX and TX enabled and BUF_MOD clear, the hardware uses a
     // contiguous 128-byte buffer: OUT at UEPn_DMA and IN at UEPn_DMA + 64.
     // The unused direction remains disabled at the protocol level by NAK.
@@ -306,34 +272,34 @@ pub fn Polled(comptime cfg: Config) type {
 
         pub fn poll(self: *Self, in_isr: bool, controller: anytype) void {
             _ = in_isr;
-            // Mask out read-only status bits and SOF (reasserts every 1 ms).
-            const ignore = UIF_IS_NAK | UIF_SIE_FREE | UIF_TOG_OK | UIF_HST_SOF;
-            const fg: u8 = Regs.R8_USB_INT_FG.raw & ~ignore;
-            if (fg == 0) return;
+            const flags = Regs.R8_USB_INT_FG.read();
+            if (flags.RB_UIF_SUSPEND == 0 and flags.RB_UIF_FIFO_OV == 0 and
+                flags.RB_UIF_BUS_RST__RB_UIF_DETECT == 0 and flags.RB_UIF_TRANSFER == 0)
+                return;
 
-            if ((fg & UIF_SUSPEND) != 0) {
-                Regs.R8_USB_INT_FG.raw = UIF_SUSPEND;
+            if (flags.RB_UIF_SUSPEND != 0) {
+                Regs.R8_USB_INT_FG.write(.{ .RB_UIF_SUSPEND = 1 });
             }
 
-            if ((fg & UIF_FIFO_OV) != 0) {
+            if (flags.RB_UIF_FIFO_OV != 0) {
                 log.warn("FIFO overflow!", .{});
-                Regs.R8_USB_INT_FG.raw = UIF_FIFO_OV;
+                Regs.R8_USB_INT_FG.write(.{ .RB_UIF_FIFO_OV = 1 });
             }
 
-            if ((fg & UIF_BUS_RST) != 0) {
+            if (flags.RB_UIF_BUS_RST__RB_UIF_DETECT != 0) {
                 log.debug("bus reset", .{});
-                Regs.R8_USB_INT_FG.raw = UIF_BUS_RST;
+                Regs.R8_USB_INT_FG.write(.{ .RB_UIF_BUS_RST__RB_UIF_DETECT = 1 });
                 set_address(&self.interface, 0);
                 self.on_bus_reset_local();
                 controller.on_bus_reset(&self.interface);
             }
 
-            if ((fg & UIF_TRANSFER) != 0) {
+            if (flags.RB_UIF_TRANSFER != 0) {
                 const stv = Regs.R8_USB_INT_ST.read();
                 const ep: u4 = @as(u4, stv.MASK_UIS_H_RES__MASK_UIS_ENDP);
                 const token: u2 = @as(u2, stv.MASK_UIS_TOKEN);
                 self.handle_transfer(ep, token, controller);
-                Regs.R8_USB_INT_FG.raw = UIF_TRANSFER;
+                Regs.R8_USB_INT_FG.write(.{ .RB_UIF_TRANSFER = 1 });
             }
         }
 
@@ -359,7 +325,8 @@ pub fn Polled(comptime cfg: Config) type {
         fn handle_out(self: *Self, ep: u4, controller: anytype) void {
             const len: u16 = Regs.R16_USB_RX_LEN;
             const stv = Regs.R8_USB_INT_ST.read();
-            const rx_ctrl = uep_rx_ctrl(ep).read();
+            const rx_ctrl_reg: *volatile RegCtrl = &EP_Regs[ep].UEP_RX_CTRL;
+            const rx_ctrl = rx_ctrl_reg.read();
             log.debug(
                 "OUT ep{} len={} tog_ok={} rx_res={} rx_tog={}",
                 .{ ep, len, stv.RB_UIS_TOG_OK, rx_ctrl.RES, rx_ctrl.TOG },
@@ -464,7 +431,9 @@ pub fn Polled(comptime cfg: Config) type {
             }
             const ptr_val: u32 = @as(u32, @intCast(@intFromPtr(out_st.buf.ptr)));
 
-            uep_dma(ep_i).raw = ptr_val;
+            const dma: *volatile Reg_U32 = &UEP_DMA[ep_i];
+            dma.raw = ptr_val;
+
             if (first_open) {
                 set_rx_ctrl(ep_i, RES_NAK, TOG_DATA0, false);
                 set_tx_ctrl(ep_i, RES_NAK, TOG_DATA0, false);
@@ -474,7 +443,8 @@ pub fn Polled(comptime cfg: Config) type {
                 .In => set_tx_ctrl(ep_i, RES_NAK, TOG_DATA0, false),
             }
 
-            uep_t_len(ep_i).raw = 0;
+            const tx_len: *volatile Reg_U8 = &EP_Regs[ep_i].UEP_T_LEN;
+            tx_len.raw = 0;
             enable_endpoint(ep_i);
 
             // EP0 OUT always ACK
@@ -568,7 +538,8 @@ pub fn Polled(comptime cfg: Config) type {
                 w += n;
             }
 
-            uep_t_len(ep_i).raw = @as(u8, @intCast(w));
+            const tx_len: *volatile Reg_U8 = &EP_Regs[ep_i].UEP_T_LEN;
+            tx_len.raw = @as(u8, @intCast(w));
 
             st_in.tx_busy = true;
             set_tx_ctrl(ep_i, RES_ACK, current_tx_tog(ep_i), false);
@@ -606,7 +577,13 @@ pub fn Polled(comptime cfg: Config) type {
             Regs.R8_UEP7_MOD.write(.{});
 
             // 4. Clear all pending flags, reset address
-            Regs.R8_USB_INT_FG.raw = 0xFF; // W1C: clear all
+            Regs.R8_USB_INT_FG.write(.{
+                .RB_UIF_BUS_RST__RB_UIF_DETECT = 1,
+                .RB_UIF_TRANSFER = 1,
+                .RB_UIF_SUSPEND = 1,
+                .RB_UIF_HST_SOF = 1,
+                .RB_UIF_FIFO_OV = 1,
+            });
             Regs.R8_USB_DEV_AD.write(.{});
 
             // 5. Enable DMA and make the SIE answer busy until software clears
@@ -628,7 +605,6 @@ pub fn Polled(comptime cfg: Config) type {
 
 /// Skeleton ISR; interrupt-driven operation is not implemented yet.
 pub fn usbfs_interrupt_handler() callconv(microzig.cpu.riscv_calling_convention) void {
-    const fg = Regs.R8_USB_INT_FG.raw;
-    Regs.R8_USB_INT_FG.raw = fg;
+    Regs.R8_USB_INT_FG.write(Regs.R8_USB_INT_FG.read());
     @panic("USBFS interrupt-driven operation is not supported");
 }
