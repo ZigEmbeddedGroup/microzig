@@ -9,6 +9,7 @@ const log = std.log.scoped(.usb_dev);
 
 const microzig = @import("microzig");
 const peripherals = microzig.chip.peripherals;
+const peri_types = microzig.chip.types.peripherals;
 const chip = microzig.hal.compatibility.chip;
 const usb = microzig.core.usb;
 
@@ -65,10 +66,10 @@ fn PerEndpoint(T: type) type {
 }
 
 // It would be nice to instead generate those arrays automatically with a regz patch.
-const BufferControlMmio = microzig.mmio.Mmio(@TypeOf(peripherals.USB_DPRAM.EP0_IN_BUFFER_CONTROL).underlying_type);
+const BufferControlMmio = @FieldType(peri_types.USB_DPRAM, "EP0_IN_BUFFER_CONTROL");
 const buffer_control: *volatile [16]PerEndpoint(BufferControlMmio) = @ptrCast(&peripherals.USB_DPRAM.EP0_IN_BUFFER_CONTROL);
 
-const EndpointControlMmio = microzig.mmio.Mmio(@TypeOf(peripherals.USB_DPRAM.EP1_IN_CONTROL).underlying_type);
+const EndpointControlMmio = @FieldType(peri_types.USB_DPRAM, "EP1_IN_CONTROL");
 const endpoint_control: *volatile [15]PerEndpoint(EndpointControlMmio) = @ptrCast(&peripherals.USB_DPRAM.EP1_IN_CONTROL);
 
 // +++++++++++++++++++++++++++++++++++++++++++++++++
@@ -121,12 +122,12 @@ pub fn Polled(config: Config) type {
                 buffer_control[0].in.modify(.{ .PID_0 = 0 });
 
                 // Clear the status flag (write-one-to-clear)
-                peripherals.USB.SIE_STATUS.modify(.{ .SETUP_REC = 1 });
+                peripherals.USB.SIE_STATUS.write_default_zero(.{ .SETUP_REC = 1 });
 
                 // The SVD exposes this buffer as two 32-bit registers.
                 const setup: usb.types.SetupPacket = @bitCast([2]u32{
-                    peripherals.USB_DPRAM.SETUP_PACKET_LOW.raw,
-                    peripherals.USB_DPRAM.SETUP_PACKET_HIGH.raw,
+                    peripherals.USB_DPRAM.SETUP_PACKET_LOW.raw.read(),
+                    peripherals.USB_DPRAM.SETUP_PACKET_HIGH.raw.read(),
                 });
 
                 log.debug("setup {any}", .{setup});
@@ -137,7 +138,7 @@ pub fn Polled(config: Config) type {
             if (ints.BUFF_STATUS != 0) {
                 log.debug("-- buffer status --", .{});
 
-                const buff_status = peripherals.USB.BUFF_STATUS.raw;
+                const buff_status = peripherals.USB.BUFF_STATUS.raw.read();
 
                 inline for (0..2 * config.max_endpoints_count) |shift| {
                     if (buff_status & (@as(u32, 1) << shift) != 0) {
@@ -162,7 +163,7 @@ pub fn Polled(config: Config) type {
                         controller.on_buffer(&self.interface, ep);
                     }
                 }
-                peripherals.USB.BUFF_STATUS.raw = buff_status;
+                peripherals.USB.BUFF_STATUS.raw.write(buff_status);
             }
 
             // Has the host signaled a bus reset?
@@ -183,17 +184,17 @@ pub fn Polled(config: Config) type {
 
             // Clear the control portion of DPRAM. This may not be necessary -- the
             // datasheet is ambiguous -- but the C examples do it, and so do we.
-            peripherals.USB_DPRAM.SETUP_PACKET_LOW.write_raw(0);
-            peripherals.USB_DPRAM.SETUP_PACKET_HIGH.write_raw(0);
+            peripherals.USB_DPRAM.SETUP_PACKET_LOW.raw.write(0);
+            peripherals.USB_DPRAM.SETUP_PACKET_HIGH.raw.write(0);
 
             for (1..config.max_endpoints_count) |i| {
-                endpoint_control[i - 1].in.write_raw(0);
-                endpoint_control[i - 1].out.write_raw(0);
+                endpoint_control[i - 1].in.raw.write(0);
+                endpoint_control[i - 1].out.raw.write(0);
             }
 
             for (0..config.max_endpoints_count) |i| {
-                buffer_control[i].in.write_raw(0);
-                buffer_control[i].out.write_raw(0);
+                buffer_control[i].in.raw.write(0);
+                buffer_control[i].out.raw.write(0);
             }
 
             // Mux the controller to the onboard USB PHY. I was surprised that there are

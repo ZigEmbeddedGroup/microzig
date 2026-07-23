@@ -10,7 +10,6 @@
 /// Note: We generally cannot use the Mmio function to write to the timer
 /// since all timer write operations require the "magic" value 0x5afe
 /// to be written to the top 16 bits of the register.
-const std = @import("std");
 const microzig = @import("microzig");
 
 const peripherals = microzig.chip.peripherals;
@@ -37,18 +36,15 @@ pub const ClockSource = enum {
 /// * `source` - The clock source to use
 pub fn set_clock_source(source: ClockSource) void {
     disable();
-    var val = POWMAN.TIMER.raw;
-    val &= 0x0000_ffff;
-    val |= 0x5afe_0002;
-
-    switch (source) {
-        .lposc => val |= 0x0100,
-        .xosc => val |= 0x0200,
-        .gpio_1khz => val |= 0x0400,
-        .none => @panic("Cannot set clock source to none."),
-    }
-
-    POWMAN.TIMER.raw = val;
+    POWMAN.TIMER.raw.modify(
+        0xffff_0000,
+        0x5afe_0002 | @as(u32, switch (source) {
+            .lposc => 0x0100,
+            .xosc => 0x0200,
+            .gpio_1khz => 0x0400,
+            .none => @panic("Cannot set clock source to none."),
+        }),
+    );
 }
 
 /// Get the current clock source for the timer
@@ -57,7 +53,7 @@ pub fn set_clock_source(source: ClockSource) void {
 ///
 /// * `ClockSource` - The current clock source
 pub fn get_clock_source() ClockSource {
-    const src = POWMAN.TIMER.raw;
+    const src = POWMAN.TIMER.raw.read();
 
     if ((src & 0x0001_0000) != 0) return .xosc;
     if ((src & 0x0002_0000) != 0) return .lposc;
@@ -73,11 +69,10 @@ pub fn get_clock_source() ClockSource {
 ///
 /// * `use_1hz` - Whether to use the 1 Hz clock
 pub fn set_use_1hz_clock(use_1hz: bool) void {
-    var val = POWMAN.TIMER.raw;
-    val &= 0x0000_ffff;
-    val |= 0x5afe_000;
-    if (use_1hz) val |= 0x2000;
-    POWMAN.TIMER.raw = val;
+    POWMAN.TIMER.raw.modify(
+        0xffff_0000,
+        0x5afe_0000 | (if (use_1hz) 0x2000 else 0),
+    );
 }
 
 /// Get whether the 1 Hz clock is enabled
@@ -86,7 +81,7 @@ pub fn set_use_1hz_clock(use_1hz: bool) void {
 ///
 /// * `bool` - Whether the 1 Hz clock is enabled
 pub fn get_use_1hz_clock() bool {
-    return POWMAN.TIMER.raw & 0x2000 != 0;
+    return POWMAN.TIMER.raw.read() & 0x2000 != 0;
 }
 
 /// Get the frequency of the low power oscillator
@@ -166,18 +161,12 @@ pub fn set_time(time: u64) void {
 
 /// Enable the timer
 pub fn enable() void {
-    var val = POWMAN.TIMER.raw;
-    val &= 0x0000_ffff;
-    val |= 0x5afe_0002;
-    POWMAN.TIMER.raw = val;
+    POWMAN.TIMER.raw.modify(0xffff_0000, 0x5afe_0002);
 }
 
 /// Disable the timer
 pub fn disable() void {
-    var val = POWMAN.TIMER.raw;
-    val &= 0x0000_fffd;
-    val |= 0x5afe_0000;
-    POWMAN.TIMER.raw = val;
+    POWMAN.TIMER.raw.modify(0xffff_0002, 0x5afe_0000);
 }
 
 /// Check if the timer is enabled
@@ -198,18 +187,12 @@ pub const alarm = struct {
 
     /// Disable the alarm
     pub fn disable() void {
-        var val = POWMAN.TIMER.raw;
-        val &= 0x0000_ffef;
-        val |= 0x5afe_0000;
-        POWMAN.TIMER.raw = val;
+        POWMAN.TIMER.raw.modify(0x0000_ffef, 0x5afe_0000);
     }
 
     /// Enable the alarm
     pub fn enable() void {
-        var val = POWMAN.TIMER.raw;
-        val &= 0x0000_ffef;
-        val |= 0x5afe_0010;
-        POWMAN.TIMER.raw = val;
+        POWMAN.TIMER.raw.modify(0xffff_0010, 0x5afe_0010);
     }
 
     /// Get the raw alarm time in milliseconds
@@ -243,10 +226,7 @@ pub const alarm = struct {
 
     // Clear the alarm expired flag
     pub fn clear_expired() void {
-        var val = POWMAN.TIMER.raw;
-        val &= 0x0000_ffbf;
-        val |= 0x5afe_0040;
-        POWMAN.TIMER.raw = val;
+        POWMAN.TIMER.raw.modify(0xffff_0040, 0x5afe_0040);
     }
 
     // Get the alarm wake from low power flag.
@@ -256,18 +236,12 @@ pub const alarm = struct {
 
     // Clear the alarm wakes from low power flag.
     pub fn clear_power_up() void {
-        var val = POWMAN.TIMER.raw;
-        val &= 0x0000_ffdf;
-        val |= 0x5afe_0000;
-        POWMAN.TIMER.raw = val;
+        POWMAN.TIMER.raw.modify(0xffff_0020, 0x5afe_0000);
     }
 
     // Set the alarm wakes from low power flag.
     pub fn set_power_up() void {
-        var val = POWMAN.TIMER.raw;
-        val &= 0x0000_ffdf;
-        val |= 0x5afe_0020;
-        POWMAN.TIMER.raw = val;
+        POWMAN.TIMER.raw.modify(0xffff_0020, 0x5afe_0020);
     }
 };
 

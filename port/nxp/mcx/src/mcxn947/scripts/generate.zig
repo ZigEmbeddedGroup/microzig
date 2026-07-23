@@ -1,5 +1,5 @@
 const std = @import("std");
-const core = @import("out/MCXN947_cm33_core0.zig");
+// const core = @import("out/MCXN947_cm33_core0.zig");
 const peripherals = @import("out/types.zig").peripherals;
 
 const Field = struct { name: []const u8, i: usize, offset: usize };
@@ -30,6 +30,7 @@ pub fn main() void {
         std.debug.print("preset \"{s}\" not in ahb\n", .{field.name});
     }
 }
+
 pub fn print_fields(comptime ty: []const u8, comptime suffix_: ?[]const u8) []Field {
     @setEvalBranchQuota(100000);
     var fields_: [4 * 32]Field = undefined;
@@ -38,7 +39,7 @@ pub fn print_fields(comptime ty: []const u8, comptime suffix_: ?[]const u8) []Fi
 
     inline for (0..4) |i| {
         const num: []const u8 = &[_]u8{comptime std.fmt.digitToChar(i, .lower)};
-        const T = @FieldType(peripherals.SYSCON0, ty ++ num).underlying_type;
+        const T = @FieldType(peripherals.SYSCON0, ty ++ num).Fields;
         inline for (comptime std.meta.fieldNames(T)) |name| {
             if (comptime std.mem.indexOf(u8, name, "reserved") != null or std.mem.indexOf(u8, name, "padding") != null) continue;
             const suf_i: ?usize = if (suffix_) |suffix| comptime std.mem.indexOf(u8, name, suffix) else name.len;

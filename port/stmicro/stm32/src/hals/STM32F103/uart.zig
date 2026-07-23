@@ -9,11 +9,9 @@ const enums = @import("../common/enums.zig");
 const assert = std.debug.assert;
 
 const mdf = microzig.drivers;
-const drivers = mdf.base;
 const Duration = mdf.time.Duration;
 const Deadline = mdf.time.Deadline;
 
-const peripherals = microzig.chip.peripherals;
 const USART_Peripheral = microzig.chip.types.peripherals.usart_v1.USART;
 const M0 = microzig.chip.types.peripherals.usart_v1.M0;
 const PS = microzig.chip.types.peripherals.usart_v1.PS;
@@ -161,7 +159,7 @@ pub const UART = struct {
         frac = frac % 16;
 
         const value: u32 = 0xFFFF & ((mantissa << 4) | frac);
-        regs.BRR.raw = value;
+        regs.BRR.raw.write(value);
     }
 
     fn set_wordbits(uart: *const UART, word: WordBits) void {
@@ -234,7 +232,7 @@ pub const UART = struct {
                 while (!uart.is_writeable()) {
                     if (deadline.is_reached_by(time.get_time_since_boot())) return error.Timeout;
                 }
-                regs.DR.raw = @intCast(byte);
+                regs.DR.raw.write(@intCast(byte));
                 n += 1;
             }
         }
@@ -261,7 +259,7 @@ pub const UART = struct {
                 } else if (SR.PE != 0) {
                     return error.ParityError;
                 }
-                const rx = regs.DR.raw;
+                const rx = regs.DR.raw.read();
 
                 bytes.* = @intCast(0xFF & rx);
                 n += 1;
@@ -283,8 +281,8 @@ pub const UART = struct {
 
     pub inline fn clear_errors(uart: *const UART) void {
         const regs = uart.regs;
-        std.mem.doNotOptimizeAway(regs.SR.raw);
-        std.mem.doNotOptimizeAway(regs.DR.raw);
+        std.mem.doNotOptimizeAway(regs.SR.raw.read());
+        std.mem.doNotOptimizeAway(regs.DR.raw.read());
     }
 
     pub fn write_blocking(uart: *const UART, data: []const u8, timeout: ?Duration) TransmitError!usize {

@@ -1,7 +1,6 @@
 const std = @import("std");
 const microzig = @import("microzig");
 const enums = @import("enums.zig");
-const periferals = microzig.chip.peripherals;
 
 const TIM_GP16 = microzig.chip.types.peripherals.timer_v1.TIM_GP16;
 const DIR = microzig.chip.types.peripherals.timer_v1.DIR;
@@ -188,7 +187,7 @@ pub const GPTimer = struct {
         //disable timer before configuring
         self.clear_configs();
         self.set_update_event(false); //disable update event to prevent unwanted updates
-        regs.PSC = config.prescaler;
+        regs.PSC.raw.write(config.prescaler);
         regs.ARR.modify(.{ .ARR = config.auto_reload });
         regs.CR1.modify(.{
             .CKD = config.clock_division,
@@ -219,25 +218,25 @@ pub const GPTimer = struct {
     ///This function clears all control registers of the timer.
     pub fn clear_all_control_registers(self: *const GPTimer) void {
         const regs = self.regs;
-        regs.CR1.raw = 0;
-        regs.CR2.raw = 0;
-        regs.SR.raw = 0;
-        regs.EGR.raw = 0;
-        regs.DIER.raw = 0;
-        regs.ARR.raw = 0;
-        regs.CNT.raw = 0;
-        regs.PSC.raw = 0;
-        regs.SMCR.raw = 0;
-        regs.CCER.raw = 0;
-        regs.DCR.raw = 0;
-        regs.DMAR.raw = 0;
+        regs.CR1.raw.write(0);
+        regs.CR2.raw.write(0);
+        regs.SR.raw.write(0);
+        regs.EGR.raw.write(0);
+        regs.DIER.raw.write(0);
+        regs.ARR.raw.write(0);
+        regs.CNT.raw.write(0);
+        regs.PSC.raw.write(0);
+        regs.SMCR.raw.write(0);
+        regs.CCER.raw.write(0);
+        regs.DCR.raw.write(0);
+        regs.DMAR.raw.write(0);
     }
 
     ///clear only CR1 and CR2 registers
     pub fn clear_configs(self: *const GPTimer) void {
-        self.regs.CR1.raw = 0;
-        self.regs.CR2.raw = 0;
-        self.regs.SMCR.raw = 0;
+        self.regs.CR1.raw.write(0);
+        self.regs.CR2.raw.write(0);
+        self.regs.SMCR.raw.write(0);
     }
     // ============ Timer control functions ============
     pub inline fn start(self: *const GPTimer) void {
@@ -254,7 +253,7 @@ pub const GPTimer = struct {
 
     pub fn reset(self: *const GPTimer) void {
         self.regs.CR1.modify(.{ .CEN = 0 });
-        self.regs.SR.raw = 0;
+        self.regs.SR.raw.write(0);
         self.regs.EGR.modify(.{ .UG = 1 });
         self.regs.CR1.modify(.{ .CEN = 1 });
     }
@@ -272,11 +271,11 @@ pub const GPTimer = struct {
     }
 
     pub inline fn get_prescaler(self: *const GPTimer) u32 {
-        return self.regs.PSC;
+        return self.regs.PSC.raw.read();
     }
 
     pub inline fn set_prescaler(self: *const GPTimer, value: u32) void {
-        self.regs.PSC = value;
+        self.regs.PSC.raw.write(value);
     }
 
     pub inline fn get_auto_reload(self: *const GPTimer) u16 {
@@ -359,21 +358,20 @@ pub const GPTimer = struct {
     }
 
     pub fn set_channel_interrupt(self: *const GPTimer, channel: u2, set: bool) void {
-        const regs = self.regs;
-        if (set) {
-            regs.DIER.raw |= @as(u32, 0b1) << (@as(u5, channel) + 1); //CCxIE bits
-        } else {
-            regs.DIER.raw &= ~(@as(u32, 0b1) << (@as(u5, channel) + 1)); //CCxIE bits
-        }
+        const mask = @as(u32, 0b1) << (@as(u5, channel) + 1);
+        if (set)
+            self.regs.DIER.raw.set(mask) //CCxIE bits
+        else
+            self.regs.DIER.raw.clear(mask); //CCxIE bits
+
     }
 
     pub fn set_channel_dma_request(self: *const GPTimer, channel: u2, set: bool) void {
-        const regs = self.regs;
-        if (set) {
-            regs.DIER.raw |= @as(u32, 0b1) << (@as(u5, channel) + 9); //CCxDE bits
-        } else {
-            regs.DIER.raw &= ~(@as(u32, 0b1) << (@as(u5, channel) + 9)); //CCxDE bits
-        }
+        const mask = @as(u32, 0b1) << (@as(u5, channel) + 9);
+        if (set)
+            self.regs.DIER.raw.set(mask) //CCxDE bits
+        else
+            self.regs.DIER.raw.clear(mask); //CCxDE bits
     }
 
     pub inline fn software_update(self: *const GPTimer) void {
@@ -381,7 +379,7 @@ pub const GPTimer = struct {
     }
 
     pub inline fn clear_update_interrupt_flag(self: *const GPTimer) void {
-        self.regs.SR.raw = 0;
+        self.regs.SR.raw.write(0);
     }
 
     //=============== sync mode Functions ================
@@ -407,25 +405,19 @@ pub const GPTimer = struct {
     }
 
     pub fn set_channel(self: *const GPTimer, channel: u2, set: bool) void {
-        const regs = self.regs;
-        if (set) {
-            regs.CCER.raw |= @as(u32, 0b1) << (@as(u5, channel) * 4); //CCxE bits
-        } else {
-            regs.CCER.raw &= ~(@as(u32, 0b1) << (@as(u5, channel) * 4)); //CCxE bits
-        }
+        const mask = @as(u32, 1) << (@as(u5, channel) * 4);
+        if (set)
+            self.regs.CCER.raw.set(mask) //CCxE bits
+        else
+            self.regs.CCER.raw.clear(mask); //CCxE bits
     }
 
     pub fn set_polarity(self: *const GPTimer, channel: u2, polarity: Polarity) void {
-        const regs = self.regs;
-        const offset: u5 = @as(u5, channel) * 4 + 1; //CCxP bits offset
+        const mask = @as(u32, 1) << (@as(u5, channel) * 4 + 1); // CCxP bits offset
 
         switch (polarity) {
-            .high => {
-                regs.CCER.raw &= ~(@as(u32, 0b1) << offset); //clear CCxP bits
-            },
-            .low => {
-                regs.CCER.raw |= @as(u32, 0b1) << offset; //set CCxP bits
-            },
+            .low => self.regs.CCER.raw.set(mask), //set CCxP bits
+            .high => self.regs.CCER.raw.clear(mask), //clear CCxP bits
         }
     }
 
@@ -448,30 +440,34 @@ pub const GPTimer = struct {
         const regs = self.regs;
         const CCMR = if (channel < 2) &regs.CCMR_Input[0] else &regs.CCMR_Input[1];
         const offset: u5 = if (channel % 2 == 0) 0 else 8;
+        const mask_base = @as(u32, 1) << offset;
 
-        CCMR.raw &= ~(@as(u32, 0b11) << offset); //clear mode bits, set output compare mode (00)
+        // Instead of so many volatile reads and writes,
+        // maybe read once, do the modifications and then write the final value?
 
-        if (config.fast_mode) {
-            CCMR.raw |= @as(u32, 0b1) << (offset + 2); //OCxFE bits
-        } else {
-            CCMR.raw &= ~(@as(u32, 0b1) << (offset + 2)); //OCxFE bits
-        }
+        // clear mode bits, set output compare mode (00)
+        CCMR.raw.clear(@as(u32, 0b11) << offset);
 
-        if (config.pre_load) {
-            CCMR.raw |= @as(u32, 0b1) << (offset + 3); //CCxS bits
-        } else {
-            CCMR.raw &= ~(@as(u32, 0b1) << (offset + 3)); //CCxS bits
-        }
+        if (config.fast_mode)
+            CCMR.raw.set(mask_base << 2) //OCxFE bits
+        else
+            CCMR.raw.clear(mask_base << 2); //OCxFE bits
+
+        if (config.pre_load)
+            CCMR.raw.set(mask_base << 3) //CCxS bits
+        else
+            CCMR.raw.clear(mask_base << 3); //CCxS bits
 
         const mode: u32 = @intFromEnum(config.mode);
-        CCMR.raw &= ~(@as(u32, 0b111) << offset + 4); //clear mode bits
-        CCMR.raw |= mode << (offset + 4); //set mode bits
+        CCMR.raw.modify(
+            @as(u32, 0b111) << (offset + 4), //clear mode bits
+            mode << (offset + 4), //set mode bits
+        );
 
-        if (config.clear_enable) {
-            CCMR.raw |= @as(u32, 0b1) << (offset + 7); //CCxE bits
-        } else {
-            CCMR.raw &= ~(@as(u32, 0b1) << (offset + 7)); //CCxE bits
-        }
+        if (config.clear_enable)
+            CCMR.raw.set(mask_base << 7) //CCxE bits
+        else
+            CCMR.raw.clear(mask_base << 7); //CCxE bits
     }
 
     pub fn configure_input(self: *const GPTimer, channel: u2, config: Capture) void {

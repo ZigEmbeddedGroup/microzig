@@ -3,6 +3,7 @@ const microzig = @import("microzig");
 
 const peri_types = microzig.chip.types.peripherals;
 const Uart = @This();
+const utils = microzig.utilities;
 
 regs: *volatile peri_types.uart0,
 
@@ -15,17 +16,20 @@ pub fn num(n: comptime_int) Uart {
 }
 
 pub const Config = struct {
+    pub const Bits = utils.RegFieldType(peri_types.uart0, "UART0_LCRH", "WLEN");
+
     pub const Clock = struct {
         pub const Source = enum { BUSCLK, MFCLK, LFCLK };
+        pub const Ovs = utils.RegFieldType(peri_types.uart0, "UART0_CTL0", "HSE");
 
         src: Source = .BUSCLK,
         div0: peri_types.uart0.ClkdivRatio = .@"1",
-        ovs: RegFieldType("UART0_CTL0", "HSE") = .OVS16,
-        div: microzig.utilities.IntFracDiv(16, 6),
+        ovs: Ovs = .OVS16,
+        div: utils.IntFracDiv(16, 6),
     };
 
     clk: Clock,
-    bits: RegFieldType("UART0_LCRH", "WLEN") = .DATABIT8,
+    bits: Bits = .DATABIT8,
     loopback: bool = false,
     manchester_encode: bool = false,
     enable: bool = true,
@@ -33,7 +37,7 @@ pub const Config = struct {
 
 /// See Technical Reference Manual 14.2.6: Initialization
 pub fn configure(self: Uart, cfg: Config) void {
-    self.regs.UART0_PWREN.raw = 0x2600_0001;
+    self.regs.UART0_PWREN.raw.write(0x2600_0001);
     // Technical reference manual part 2.2.6
     inline for (0..4) |_|
         asm volatile ("nop");
@@ -171,14 +175,4 @@ pub fn log(
         w.interface.print(prefix ++ format ++ "\r\n", args) catch {};
         w.interface.flush() catch {};
     }
-}
-
-fn RegFieldType(register_name: []const u8, field_name: []const u8) type {
-    const reg_idx = std.meta.fieldIndex(peri_types.uart0, register_name) orelse
-        @compileError("No register " ++ register_name ++ " in uart0.");
-    const Reg = std.meta.fieldTypes(peri_types.uart0)[reg_idx].underlying_type;
-
-    const fld_idx = std.meta.fieldIndex(Reg, field_name) orelse
-        @compileError("No field " ++ field_name ++ " in uart0." ++ register_name ++ ".");
-    return std.meta.fieldTypes(Reg)[fld_idx];
 }

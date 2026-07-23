@@ -1174,25 +1174,12 @@ fn write_register(
             array_prefix,
             ref_type,
         });
-    } else if (array_prefix.len != 0) {
-        try writer.print("{f}: {s}u{},\n", .{
+    } else {
+        try writer.print("{f}: {s}mmio.MmioRaw(u{}),\n", .{
             std.zig.fmtId(register.name),
             array_prefix,
             register.size_bits,
         });
-    } else {
-        try writer.print("{f}: u{}", .{
-            std.zig.fmtId(register.name),
-            register.size_bits,
-        });
-
-        // Just assume non-masked areas are zero I guess
-        if (register_reset) |rr| {
-            const mask = (@as(u64, 1) << @intCast(register.size_bits)) - 1;
-            try writer.print(" = 0x{X}", .{rr.value & mask});
-        }
-
-        try writer.writeAll(",\n");
     }
 
     try out_writer.writeAll(buf.written());
@@ -2078,7 +2065,7 @@ test "gen.peripheral with modes" {
             \\
             \\    TEST_MODE1: extern struct {
             \\        /// offset: 0x00
-            \\        TEST_REGISTER1: u32,
+            \\        TEST_REGISTER1: mmio.MmioRaw(u32),
             \\        /// offset: 0x04
             \\        COMMON_REGISTER: mmio.Mmio(packed struct(u32) {
             \\            TEST_FIELD: u1,
@@ -2087,7 +2074,7 @@ test "gen.peripheral with modes" {
             \\    },
             \\    TEST_MODE2: extern struct {
             \\        /// offset: 0x00
-            \\        TEST_REGISTER2: u32,
+            \\        TEST_REGISTER2: mmio.MmioRaw(u32),
             \\        /// offset: 0x04
             \\        COMMON_REGISTER: mmio.Mmio(packed struct(u32) {
             \\            TEST_FIELD: u1,
@@ -2163,7 +2150,7 @@ test "gen.peripheral with enum" {
             \\    };
             \\
             \\    /// offset: 0x00
-            \\    TEST_REGISTER: u8,
+            \\    TEST_REGISTER: mmio.MmioRaw(u8),
             \\};
             \\
             ,
@@ -2231,7 +2218,7 @@ test "gen.peripheral with enum, enum is exhausted of values" {
             \\    };
             \\
             \\    /// offset: 0x00
-            \\    TEST_REGISTER: u8,
+            \\    TEST_REGISTER: mmio.MmioRaw(u8),
             \\};
             \\
             ,
@@ -2741,20 +2728,20 @@ test "gen.namespaced register groups" {
             \\
             \\pub const PORTB = extern struct {
             \\    /// offset: 0x00
-            \\    PORTB: u8,
+            \\    PORTB: mmio.MmioRaw(u8),
             \\    /// offset: 0x01
-            \\    DDRB: u8,
+            \\    DDRB: mmio.MmioRaw(u8),
             \\    /// offset: 0x02
-            \\    PINB: u8,
+            \\    PINB: mmio.MmioRaw(u8),
             \\};
             \\
             \\pub const PORTC = extern struct {
             \\    /// offset: 0x00
-            \\    PORTC: u8,
+            \\    PORTC: mmio.MmioRaw(u8),
             \\    /// offset: 0x01
-            \\    DDRC: u8,
+            \\    DDRC: mmio.MmioRaw(u8),
             \\    /// offset: 0x02
-            \\    PINC: u8,
+            \\    PINC: mmio.MmioRaw(u8),
             \\};
             \\
             ,
@@ -2853,11 +2840,11 @@ test "gen.peripheral with reserved register" {
             \\
             \\pub const PORTB = extern struct {
             \\    /// offset: 0x00
-            \\    PORTB: u32,
+            \\    PORTB: mmio.MmioRaw(u32),
             \\    /// offset: 0x04
             \\    reserved4: [4]u8,
             \\    /// offset: 0x08
-            \\    PINB: u32,
+            \\    PINB: mmio.MmioRaw(u32),
             \\};
             \\
             ,
@@ -2956,11 +2943,11 @@ test "gen.peripheral with count" {
             \\
             \\pub const PORTB = extern struct {
             \\    /// offset: 0x00
-            \\    PORTB: u8,
+            \\    PORTB: mmio.MmioRaw(u8),
             \\    /// offset: 0x01
-            \\    DDRB: u8,
+            \\    DDRB: mmio.MmioRaw(u8),
             \\    /// offset: 0x02
-            \\    PINB: u8,
+            \\    PINB: mmio.MmioRaw(u8),
             \\};
             \\
             ,
@@ -3060,11 +3047,11 @@ test "gen.peripheral with count, padding required" {
             \\
             \\pub const PORTB = extern struct {
             \\    /// offset: 0x00
-            \\    PORTB: u8,
+            \\    PORTB: mmio.MmioRaw(u8),
             \\    /// offset: 0x01
-            \\    DDRB: u8,
+            \\    DDRB: mmio.MmioRaw(u8),
             \\    /// offset: 0x02
-            \\    PINB: u8,
+            \\    PINB: mmio.MmioRaw(u8),
             \\    padding: [1]u8,
             \\};
             \\
@@ -3165,11 +3152,11 @@ test "gen.register with count" {
             \\
             \\pub const PORTB = extern struct {
             \\    /// offset: 0x00
-            \\    PORTB: [4]u8,
+            \\    PORTB: [4]mmio.MmioRaw(u8),
             \\    /// offset: 0x04
-            \\    DDRB: u8,
+            \\    DDRB: mmio.MmioRaw(u8),
             \\    /// offset: 0x05
-            \\    PINB: u8,
+            \\    PINB: mmio.MmioRaw(u8),
             \\};
             \\
             ,
@@ -3287,9 +3274,9 @@ test "gen.register with count and fields" {
             \\        padding: u4 = 0,
             \\    }),
             \\    /// offset: 0x04
-            \\    DDRB: u8,
+            \\    DDRB: mmio.MmioRaw(u8),
             \\    /// offset: 0x05
-            \\    PINB: u8,
+            \\    PINB: mmio.MmioRaw(u8),
             \\};
             \\
             ,

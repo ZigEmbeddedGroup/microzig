@@ -26,9 +26,9 @@ var wbuf: [1024]u32 = @splat(0);
 inline fn read_stk_cnt() u64 {
     const PFIC = microzig.chip.peripherals.PFIC;
     while (true) {
-        const high1: u32 = PFIC.STK_CNTH.raw;
-        const low: u32 = PFIC.STK_CNTL.raw;
-        const high2: u32 = PFIC.STK_CNTH.raw;
+        const high1: u32 = PFIC.STK_CNTH.raw.read();
+        const low: u32 = PFIC.STK_CNTL.raw.read();
+        const high2: u32 = PFIC.STK_CNTH.raw.read();
 
         // If high didn't change, we have a consistent reading
         if (high1 == high2) {

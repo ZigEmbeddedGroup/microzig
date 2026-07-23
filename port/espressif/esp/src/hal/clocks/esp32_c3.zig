@@ -155,7 +155,7 @@ fn switch_to_xtal(div: u10) void {
 fn apb_freq_update(freq: u32) void {
     const value = ((freq >> 12) & @as(u32, std.math.maxInt(u16))) |
         (((freq >> 12) & @as(u32, std.math.maxInt(u16))) << 16);
-    RTC_CNTL.STORE5.write_raw(value);
+    RTC_CNTL.STORE5.raw.write(value);
 }
 
 fn rom_cpu_frequency_update(freq: u32) void {

@@ -1,6 +1,5 @@
-const std = @import("std");
 const microzig = @import("microzig");
-const cpu = microzig.cpu;
+
 const peripherals = microzig.chip.peripherals;
 
 pub fn num(port: u3, n: u3) Pin {
@@ -27,7 +26,7 @@ pub const Pin = struct {
         if (!@hasField(@typeInfo(@TypeOf(periph)).pointer.child, register_name))
             @panic("missing register " ++ register_name);
 
-        return &@field(periph, register_name).raw;
+        return &@field(periph, register_name).raw.read();
     }
 
     inline fn out(p: Pin) *volatile u8 {

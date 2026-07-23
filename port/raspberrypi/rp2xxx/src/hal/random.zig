@@ -17,9 +17,9 @@ pub const trng = if (chip == .RP2350) struct {
     /// Generate a random number using the TRNG.
     /// Returns a random 32-bit unsigned integer,
     pub fn random_blocking() u32 {
-        TRNG.RND_SOURCE_ENABLE.raw = 1;
+        TRNG.RND_SOURCE_ENABLE.raw.write(1);
 
-        defer TRNG.RND_SOURCE_ENABLE.raw = 0;
+        defer TRNG.RND_SOURCE_ENABLE.raw.write(0);
 
         while (TRNG.TRNG_VALID.read().EHR_VALID == 0) {}
 
@@ -30,39 +30,36 @@ pub const trng = if (chip == .RP2350) struct {
 
     /// Fill buffer with random data
     pub fn random_bytes_blocking(out: []u8) void {
-        var reg: *volatile u32 = &TRNG.EHR_DATA0.raw;
+        const first: [*]volatile u32 = @ptrCast(&TRNG.EHR_DATA0);
+        const last: [*]volatile u32 = @ptrCast(&TRNG.EHR_DATA5);
+
+        var reg = first;
         var i: u32 = 0;
 
         if (out.len == 0) return;
 
-        TRNG.RND_SOURCE_ENABLE.raw = 1;
-
-        defer TRNG.RND_SOURCE_ENABLE.raw = 0;
+        TRNG.RND_SOURCE_ENABLE.raw.write(1);
+        defer TRNG.RND_SOURCE_ENABLE.raw.write(0);
 
         while (i < out.len) {
             while (TRNG.TRNG_VALID.read().EHR_VALID == 0) {}
 
-            var data = reg.*;
+            var data = reg[0];
 
-            if (reg == &TRNG.EHR_DATA5.raw) {
-                reg = &TRNG.EHR_DATA0.raw;
-            } else {
-                reg = @ptrFromInt(@intFromPtr(reg) + @sizeOf(u32));
-            }
+            if (reg == last) reg = first else reg += 1;
 
             for (0..@min(4, out.len - i)) |j| {
                 out[i + j] = @truncate(data);
                 data >>= 8;
             }
 
-            i += 4;
+            i += @sizeOf(u32);
         }
 
         // If we didn't read all the data, read DATA5 to clear the buffer
 
-        if (reg != &TRNG.EHR_DATA0.raw) {
+        if (reg != first)
             _ = TRNG.EHR_DATA5.read().EHR_DATA5;
-        }
     }
 
     /// Generate an internal reset in the RNG block.

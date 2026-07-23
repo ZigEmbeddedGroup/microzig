@@ -1,5 +1,3 @@
-const std = @import("std");
-
 const microzig = @import("microzig");
 const CLOCKS = microzig.chip.peripherals.CLOCKS;
 
@@ -39,7 +37,7 @@ pub const start_ticks = chip_specific.start_ticks;
 pub fn default_startup_procedure(comptime cfg: config.Global) void {
 
     // disable resus if it has been turned on elsewhere
-    CLOCKS.CLK_SYS_RESUS_CTRL.raw = 0;
+    CLOCKS.CLK_SYS_RESUS_CTRL.raw.write(0);
 
     xosc.init();
     cfg.apply();

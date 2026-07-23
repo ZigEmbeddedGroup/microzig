@@ -1,6 +1,3 @@
-const std = @import("std");
-const assert = std.debug.assert;
-
 const microzig = @import("microzig");
 pub const peripherals = microzig.chip.peripherals;
 
@@ -74,15 +71,11 @@ pub const Pin = packed struct(u8) {
     }
     inline fn write_pin_config(gpio: Pin, config: u32) void {
         const port = gpio.get_port();
-        if (gpio.number <= 7) {
-            const offset = @as(u5, gpio.number) << 2;
-            port.CTL0.raw &= ~(@as(u32, 0b1111) << offset);
-            port.CTL0.raw |= config << offset;
-        } else {
-            const offset = (@as(u5, gpio.number) - 8) << 2;
-            port.CTL1.raw &= ~(@as(u32, 0b1111) << offset);
-            port.CTL1.raw |= config << offset;
-        }
+        const offset = @as(u5, @as(u3, @truncate(gpio.number))) << 2;
+        port.CR[gpio.number >> 3].raw.modify(
+            @as(u32, 0b1111) << offset,
+            config << offset,
+        );
     }
 
     fn mask(gpio: Pin) u16 {
@@ -127,29 +120,26 @@ pub const Pin = packed struct(u8) {
     pub inline fn set_pull(gpio: Pin, pull: Pull) void {
         var port = gpio.get_port();
         switch (pull) {
-            .up => port.BOP.raw = gpio.mask(),
-            .down => port.BC.raw = gpio.mask(),
+            .up => port.BOP.raw.write(gpio.mask()),
+            .down => port.BC.raw.write(gpio.mask()),
         }
     }
 
     pub inline fn read(gpio: Pin) u1 {
         const port = gpio.get_port();
-        return if (port.ISTAT.raw & gpio.mask() != 0)
-            1
-        else
-            0;
+        return @intFromBool(port.ISTAT.raw.read() & gpio.mask() != 0);
     }
 
     pub inline fn put(gpio: Pin, value: u1) void {
         var port = gpio.get_port();
         switch (value) {
-            0 => port.OCTL.raw &= ~gpio.mask(),
-            1 => port.OCTL.raw |= gpio.mask(),
+            0 => port.OCTL.raw.clear(gpio.mask()),
+            1 => port.OCTL.raw.set(gpio.mask()),
         }
     }
 
     pub inline fn toggle(gpio: Pin) void {
         var port = gpio.get_port();
-        port.OCTL.raw ^= gpio.mask();
+        port.OCTL.raw.toggle(gpio.mask());
     }
 };

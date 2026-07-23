@@ -704,3 +704,15 @@ pub fn IntFracDiv(int_bits: comptime_int, frac_bits: comptime_int) type {
         }
     };
 }
+
+pub fn RegFieldType(Peri: type, reg_name: []const u8, field_name: []const u8) type {
+    const Field = @FieldType(Peri, reg_name);
+    const Reg = switch (@typeInfo(Field)) {
+        .@"struct" => Field.Fields,
+        .array => |info| info.child.Fields,
+        else => @compileError("Error getting " ++ @typeName(Peri) ++
+            "." ++ reg_name ++ "." ++ field_name ++
+            " type. Encountered field of type " ++ @typeName(Field)),
+    };
+    return @FieldType(Reg, field_name);
+}

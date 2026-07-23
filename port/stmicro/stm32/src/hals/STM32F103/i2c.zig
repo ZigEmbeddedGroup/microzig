@@ -6,7 +6,6 @@ const enums = @import("../common/enums.zig");
 const I2C_Peripheral = microzig.chip.types.peripherals.i2c_v1.I2C;
 const DUTY = microzig.chip.types.peripherals.i2c_v1.DUTY;
 const F_S = microzig.chip.types.peripherals.i2c_v1.F_S;
-const peripherals = microzig.chip.peripherals;
 const mdf = microzig.drivers;
 const drivers = mdf.base;
 const Duration = mdf.time.Duration;
@@ -309,8 +308,8 @@ pub const I2C = struct {
     fn clear_flags(i2c: *const I2C) void {
         const regs = i2c.regs;
         //clear ADDR register
-        std.mem.doNotOptimizeAway(regs.SR1.raw);
-        std.mem.doNotOptimizeAway(regs.SR2.raw);
+        std.mem.doNotOptimizeAway(regs.SR1.raw.read());
+        std.mem.doNotOptimizeAway(regs.SR2.raw.read());
     }
 
     fn send_7bits_addr(i2c: *const I2C, addr: u10, IO: u1, deadline: Deadline) Error!void {

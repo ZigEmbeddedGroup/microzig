@@ -46,7 +46,7 @@ pub const SPI = struct {
             else => .Div256,
         };
 
-        self.spi.CR1.raw = 0; // Disable SPI end clear configs before configuration
+        self.spi.CR1.raw.write(0); // Disable SPI end clear configs before configuration
         self.spi.CR1.modify(.{
             .CPOL = config.polarity,
             .CPHA = config.phase,
