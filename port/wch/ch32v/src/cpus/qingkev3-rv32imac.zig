@@ -138,6 +138,25 @@ pub inline fn system_init(comptime chip: anytype) void {
     });
 }
 
+/// Wait for interrupt. Clears WFITOWFE so the wfi instruction behaves as
+/// a true wait-for-interrupt.
+pub inline fn wfi(comptime chip: anytype) void {
+    const PFIC = chip.peripherals.PFIC;
+    PFIC.SCTLR.modify(.{ .WFITOWFE = 0 });
+    asm volatile ("wfi");
+}
+
+/// Wait for event. Sets SETEVENT to clear any stale event latch, enables
+/// WFITOWFE so the wfi instruction acts as wfe, then executes wfi twice:
+/// the first clears the just-set event, the second sleeps until a real event.
+/// Matches OpenWCH reference: _SEV() + _WFE() + _WFE().
+pub inline fn wfe(comptime chip: anytype) void {
+    const PFIC = chip.peripherals.PFIC;
+    PFIC.SCTLR.modify(.{ .SETEVENT = 1, .WFITOWFE = 1 });
+    asm volatile ("wfi");
+    asm volatile ("wfi");
+}
+
 pub const csr_types = struct {
     pub const intsyscr = packed struct(u32) {
         /// [0] Hardware stack enable

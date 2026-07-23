@@ -190,16 +190,11 @@ pub const interrupt = struct {
 };
 
 pub inline fn wfi() void {
-    PFIC.SCTLR.modify(.{ .WFITOWFE = 0 });
-    asm volatile ("wfi");
+    cpu_impl.wfi(microzig.chip);
 }
 
 pub inline fn wfe() void {
-    // We SETEVENT so the wfe immediately wakes and clears any pending events.
-    // This ensures the second one actually stays asleep.
-    PFIC.SCTLR.modify(.{ .WFITOWFE = 1 });
-    asm volatile ("wfi");
-    asm volatile ("wfi");
+    cpu_impl.wfe(microzig.chip);
 }
 
 pub fn unhandled() callconv(riscv_calling_convention) void {

@@ -105,6 +105,30 @@ pub inline fn system_init(comptime chip: anytype) void {
     RCC.CTLR.modify(.{ .HSITRIM = 0x10 });
 }
 
+/// Wait for interrupt. Clears WFITOWFE so the wfi instruction behaves as
+/// a true wait-for-interrupt (not wait-for-event).
+pub inline fn wfi(comptime chip: anytype) void {
+    const PFIC = chip.peripherals.PFIC;
+    PFIC.SCTLR.modify(.{ .WFITOWFE = 0 });
+    asm volatile ("wfi");
+}
+
+/// Wait for event. Sets SETEVENT to clear any stale event latch, enables
+/// WFITOWFE so the wfi instruction acts as wfe, then executes wfi twice:
+/// the first clears the just-set event, the second sleeps until a real event.
+///
+/// NOTE: OpenWCH's CH32V003 reference implementation has a more complex WFE
+/// that handles deep sleep (SLEEPDEEP) mode by manipulating EXTI.EVENR and
+/// EXTI.INTENR registers, and the non-deep-sleep path sets SEVONPEND.
+/// This simplified version does not handle those cases. See:
+/// https://github.com/openwch/ch32v003/blob/main/EVT/EXAM/SRC/Core/core_riscv.h
+pub inline fn wfe(comptime chip: anytype) void {
+    const PFIC = chip.peripherals.PFIC;
+    PFIC.SCTLR.modify(.{ .SETEVENT = 1, .WFITOWFE = 1 });
+    asm volatile ("wfi");
+    asm volatile ("wfi");
+}
+
 pub const csr_types = struct {
     pub const intsyscr = packed struct(u32) {
         /// [0] Hardware Prologue/Epilogue (HPE) enable
