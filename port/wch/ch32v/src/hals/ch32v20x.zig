@@ -9,6 +9,7 @@ pub const i2c = @import("i2c.zig");
 pub const usart = @import("usart.zig");
 pub const spi = @import("spi.zig");
 pub const dma = @import("dma.zig");
+pub const usb = @import("usbfs.zig");
 
 /// HSI (High Speed Internal) oscillator frequency
 /// This is the fixed internal RC oscillator frequency for CH32V20x
@@ -31,4 +32,5 @@ test "hal tests" {
     _ = i2c;
     _ = usart;
     _ = spi;
+    _ = usb;
 }

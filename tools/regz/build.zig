@@ -12,12 +12,15 @@ pub fn build(b: *Build) !void {
         .optimize = .ReleaseSafe,
     });
 
-    const zqlite_dep = b.dependency("zqlite", .{
+    const virtual_io = b.dependency("virtual_io", .{
         .target = target,
         .optimize = optimize,
-    });
+    }).module("virtual-io");
 
-    const zqlite = zqlite_dep.module("zqlite");
+    const zqlite = b.dependency("zqlite", .{
+        .target = target,
+        .optimize = optimize,
+    }).module("zqlite");
 
     const xml_module = b.createModule(.{
         .root_source_file = b.path("src/xml.zig"),
@@ -33,14 +36,9 @@ pub fn build(b: *Build) !void {
         .target = target,
         .optimize = optimize,
         .imports = &.{
-            .{
-                .name = "zqlite",
-                .module = zqlite,
-            },
-            .{
-                .name = "xml",
-                .module = xml_module,
-            },
+            .{ .name = "virtual-io", .module = virtual_io },
+            .{ .name = "xml", .module = xml_module },
+            .{ .name = "zqlite", .module = zqlite },
         },
     });
     regz_module.linkLibrary(libxml2_dep.artifact("xml"));
@@ -52,14 +50,8 @@ pub fn build(b: *Build) !void {
             .target = target,
             .optimize = optimize,
             .imports = &.{
-                .{
-                    .name = "regz",
-                    .module = regz_module,
-                },
-                .{
-                    .name = "xml",
-                    .module = xml_module,
-                },
+                .{ .name = "regz", .module = regz_module },
+                .{ .name = "xml", .module = xml_module },
             },
         }),
         .use_llvm = true,

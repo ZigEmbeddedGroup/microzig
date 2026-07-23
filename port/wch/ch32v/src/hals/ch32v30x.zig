@@ -5,6 +5,8 @@ pub const clocks = @import("clocks.zig");
 pub const time = @import("time.zig");
 pub const i2c = @import("i2c.zig");
 pub const usart = @import("usart.zig");
+pub const usb = @import("usbhs.zig");
+pub const usbfs = @import("usbfs.zig");
 
 /// HSI (High Speed Internal) oscillator frequency
 /// This is the fixed internal RC oscillator frequency for CH32V30x
@@ -17,6 +19,5 @@ pub const default_interrupts: microzig.cpu.InterruptOptions = .{
 
 /// Initialize HAL subsystems used by default
 pub fn init() void {
-    // Configure TIM2 timing driver
     time.init();
 }

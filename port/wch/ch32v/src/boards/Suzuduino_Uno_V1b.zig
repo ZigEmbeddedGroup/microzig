@@ -5,6 +5,8 @@ pub const microzig = @import("microzig");
 pub const chip = @import("chip");
 const ch32v = microzig.hal;
 
+pub const product_string = "Suzuduino Uno";
+
 /// Clock configuration for this board
 pub const clock_config: ch32v.clocks.Config = .{
     .source = .hsi,
@@ -27,4 +29,5 @@ pub const pin_config = ch32v.pins.GlobalConfiguration{
 pub fn init() void {
     ch32v.clocks.init(clock_config);
     ch32v.time.init();
+    ch32v.clocks.enable_usbfs_clock();
 }
