@@ -368,6 +368,7 @@ pub const UART = enum(u1) {
         var iter = microzig.utilities.SliceVector([]const u8).init(payloads).iterator();
         while (iter.next_chunk(null)) |payload| {
             var offset: usize = uart.prime_tx_fifo(payload);
+            written += offset;
             while (offset < payload.len) {
                 while (!uart.is_writeable()) {
                     try deadline.check(time.get_time_since_boot());
