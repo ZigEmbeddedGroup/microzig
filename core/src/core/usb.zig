@@ -566,7 +566,7 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
             const desc_type: descriptor.Type = @enumFromInt(value >> 8);
             const desc_idx: u8 = @truncate(value);
             log.debug("Request for {any} descriptor {}", .{ desc_type, desc_idx });
-            const result = switch (desc_type) {
+            return switch (desc_type) {
                 .Device => asBytes(&device_descriptor),
                 .DeviceQualifier => asBytes(comptime &device_descriptor.qualifier()),
                 .Configuration => asBytes(&config_descriptor),
@@ -581,19 +581,6 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
                 },
                 else => nak,
             };
-            // DEBUG: log raw descriptor bytes for configuration descriptor
-            if (result) |data| {
-                if (desc_type == .Configuration) {
-                    log.warn("CONFIG DESC ({} bytes):", .{data.len});
-                    var off: usize = 0;
-                    while (off < data.len) {
-                        const end = @min(off + 16, data.len);
-                        log.warn("  [{x:0>4}] {any}", .{ off, data[off..end] });
-                        off = end;
-                    }
-                }
-            }
-            return result;
         }
 
         fn process_set_config(self: *@This(), device_itf: *DeviceInterface, cfg_num: u16) void {

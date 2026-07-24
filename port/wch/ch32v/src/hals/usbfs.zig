@@ -204,12 +204,6 @@ pub fn Polled(comptime cfg: Config) type {
                 .RB_UC_INT_BUSY = 1,
                 .MASK_UC_SYS_CTRL_RB_UC_DEV_PU_EN = 0b10, // DEV_PU_EN
             });
-
-            log.warn("USBFS init done: CTRL=0x{x:0>2} EP0_DMA=0x{x:0>8} INT_FG=0x{x:0>2}", .{
-                Regs.R8_USB_CTRL.raw,
-                UEP_DMA[0].raw,
-                Regs.R8_USB_INT_FG.raw,
-            });
         }
 
         // TODO: replace with fixedbuffer allocator?
@@ -276,8 +270,6 @@ pub fn Polled(comptime cfg: Config) type {
         }
 
         // ---- Poll loop -------------------------------------------------------
-
-        var poll_dbg_counter: u32 = 0;
 
         pub fn poll(self: *Self, in_isr: bool, controller: anytype) void {
             _ = in_isr;
@@ -608,13 +600,6 @@ pub fn Polled(comptime cfg: Config) type {
             Regs.UDEV_CTRL__UHOST_CTRL.write(.{
                 .RB_UH_PORT_EN__RB_UD_PORT_EN = 1,
                 .RB_UH_PD_DIS__RB_UD_PD_DIS = 1,
-            });
-
-            log.warn("USBFS hw_init done: CTRL=0x{x:0>2} INT_EN=0x{x:0>2} INT_FG=0x{x:0>2} UDEV=0x{x:0>2}", .{
-                Regs.R8_USB_CTRL.raw,
-                Regs.R8_USB_INT_EN.raw,
-                Regs.R8_USB_INT_FG.raw,
-                Regs.UDEV_CTRL__UHOST_CTRL.raw,
             });
         }
     };
