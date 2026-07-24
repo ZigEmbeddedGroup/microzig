@@ -746,7 +746,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <description>LOCKUP RESET</description>
               <bitOffset>7</bitOffset>
               <bitWidth>1</bitWidth>
-              <access>read/clear</access>
+              <access>read-write</access>
             </field>
             <field>
               <name>LDO_TRIM</name>
