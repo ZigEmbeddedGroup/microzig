@@ -43,7 +43,7 @@ pub fn build(b: *std.Build) void {
         const ti_data = b.lazyDependency("ti_data", .{}) orelse return;
         const targetdb = ti_data.path("targetdb");
 
-        const generate_optimize = .ReleaseSafe;
+        const generate_optimize: std.lang.Optimize = .safe;
         const regz_dep = b.dependency("microzig/tools/regz", .{
             .optimize = generate_optimize,
         });
