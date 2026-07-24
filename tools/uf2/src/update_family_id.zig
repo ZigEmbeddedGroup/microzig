@@ -6,19 +6,25 @@ const FamilyEntry = struct {
     description: []const u8,
 };
 
-pub fn main() !void {
-    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    defer arena.deinit();
-    const allocator = arena.allocator();
+pub fn main(init: std.process.Init) !void {
+    // var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    // defer arena.deinit();
+    // const allocator = arena.allocator();
 
-    const args = try std.process.argsAlloc(allocator);
+    //const args = try std.process.argsAlloc(allocator);
+    const io = init.io;
+    var area = init.arena;
+    defer area.deinit();
+    const allocator = area.allocator();
+    const args = try init.minimal.args.toSlice(init.arena.allocator());
+
     if (args.len != 3) return error.UsageError;
 
-    const json_data = try std.fs.cwd().readFileAlloc(allocator, args[1], 100_000);
+    const json_data = try std.Io.Dir.cwd().readFileAlloc(io, args[1], allocator, .limited(100_000));
 
-    const output_file = try std.fs.cwd().createFile(args[2], .{});
-    defer output_file.close();
-    var output_file_writer = output_file.writer(&.{});
+    const output_file = try std.Io.Dir.cwd().createFile(io, args[2], .{});
+    defer output_file.close(io);
+    var output_file_writer = output_file.writer(io,&.{});
 
     const entries = try std.json.parseFromSliceLeaky([]FamilyEntry, allocator, json_data, .{});
 

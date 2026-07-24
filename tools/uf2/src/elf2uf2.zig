@@ -72,7 +72,7 @@ pub fn main(init: std.process.Init) !void {
     else
         null;
 
-    var archive = uf2.Archive.init(gpa);
+    var archive = uf2.Archive.init(gpa,io);
     defer archive.deinit();
 
     const elf_file = try std.Io.Dir.cwd().openFile(io, elf_path, .{});
