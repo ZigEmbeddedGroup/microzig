@@ -7,11 +7,6 @@ const FamilyEntry = struct {
 };
 
 pub fn main(init: std.process.Init) !void {
-    // var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    // defer arena.deinit();
-    // const allocator = arena.allocator();
-
-    //const args = try std.process.argsAlloc(allocator);
     const io = init.io;
     var area = init.arena;
     defer area.deinit();
@@ -24,7 +19,7 @@ pub fn main(init: std.process.Init) !void {
 
     const output_file = try std.Io.Dir.cwd().createFile(io, args[2], .{});
     defer output_file.close(io);
-    var output_file_writer = output_file.writer(io,&.{});
+    var output_file_writer = output_file.writer(io, &.{});
 
     const entries = try std.json.parseFromSliceLeaky([]FamilyEntry, allocator, json_data, .{});
 
