@@ -7,7 +7,7 @@ pub fn main(init: std.process.Init) !void {
     const args = try init.minimal.args.toSlice(init.arena.allocator());
 
     if (args.len == 3) {
-        var archive = uf2.Archive.init(gpa);
+        var archive = uf2.Archive.init(gpa,io);
         defer archive.deinit();
 
         const file = try std.Io.Dir.cwd().openFile(io, args[1], .{});
@@ -33,7 +33,7 @@ pub fn main(init: std.process.Init) !void {
         var buf: [4096]u8 = undefined;
         var reader = file.reader(io, &buf);
 
-        var archive: uf2.Archive = .init(gpa);
+        var archive: uf2.Archive = .init(gpa,io);
         defer archive.deinit();
         try archive.read_from(&reader.interface, .{});
 
