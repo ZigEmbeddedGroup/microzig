@@ -258,22 +258,8 @@ pub fn Polled(comptime cfg: Config) type {
 
         // ---- Poll loop -------------------------------------------------------
 
-        var poll_dbg_counter: u32 = 0;
-
         pub fn poll(self: *Self, in_isr: bool, controller: anytype) void {
             _ = in_isr;
-
-            // Periodic raw register dump to verify HW is alive
-            poll_dbg_counter +%= 1;
-            if (poll_dbg_counter % 500_000 == 0) {
-                log.warn("USBHS poll heartbeat: raw_FG=0x{x:0>2} CTRL=0x{x:0>2} MIS=0x{x:0>2} INT_ST=0x{x:0>2} SPD={}", .{
-                    Regs.USB_INT_FG.raw,
-                    Regs.USB_CTRL.raw,
-                    Regs.USB_MIS_ST.raw,
-                    Regs.USB_INT_ST.raw,
-                    Regs.USB_CTRL.read().RB_UC_SPEED_TYPE,
-                });
-            }
 
             while (true) {
                 const flags = Regs.USB_INT_FG.read();
@@ -670,14 +656,6 @@ pub fn Polled(comptime cfg: Config) type {
                 .RB_UIE_SUSPEND = 1,
                 .RB_UIE_FIFO_OV = 1,
                 // .RB_UIE_HST_SOF = 1,
-            });
-
-            log.warn("USBHS hw_init done: CTRL=0x{x:0>2} INT_EN=0x{x:0>2} INT_FG=0x{x:0>2} SPD={} UHOST=0x{x:0>8}", .{
-                Regs.USB_CTRL.raw,
-                Regs.USB_INT_EN.raw,
-                Regs.USB_INT_FG.raw,
-                Regs.USB_CTRL.read().RB_UC_SPEED_TYPE,
-                Regs.UHOST_CTRL.raw,
             });
         }
     };
