@@ -78,12 +78,14 @@ const EPR_CTR_RX: u16 = 0x8000; // [15]    Correct Transfer RX (W0C)
 const EPR_RW_MASK: u16 = EPR_EA_MASK | EPR_EP_KIND | EPR_EP_TYPE_MASK;
 
 // EP_TYPE values (written into EPR bits [10:9])
+// TODO: Enum
 const EP_TYPE_BULK: u16 = 0x0000;
 const EP_TYPE_CONTROL: u16 = 0x0200;
 const EP_TYPE_ISO: u16 = 0x0400;
 const EP_TYPE_INTERRUPT: u16 = 0x0600;
 
 // STAT_TX / STAT_RX values (2-bit field)
+// TODO: Enum
 const STAT_DISABLED: u2 = 0b00;
 const STAT_STALL: u2 = 0b01;
 const STAT_NAK: u2 = 0b10;
