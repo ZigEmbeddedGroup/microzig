@@ -4,15 +4,10 @@ const microzig = @import("microzig");
 const hal = microzig.hal;
 const board = microzig.board;
 const time = hal.time;
-const gpio = hal.gpio;
 const usb = microzig.core.usb;
 const USB_Serial = usb.drivers.CDC;
 
-const RCC = microzig.chip.peripherals.RCC;
-
-const usart = hal.usart.instance.USART1;
-
-const usart_tx_pin = gpio.Pin.init(0, 9); // PA9
+const uart_cfg: hal.usart.UartConfig = if (@hasDecl(board, "uart_config")) board.uart_config else .{};
 
 pub const std_options = microzig.std_options(.{
     .logFn = hal.usart.log,
@@ -53,20 +48,9 @@ pub fn main() !void {
     // Board brings up clocks and time
     microzig.board.init();
     microzig.hal.init();
-    // Enable peripheral clocks for USART1 and GPIOA
-    RCC.APB2PCENR.modify(.{
-        .IOPAEN = 1, // Enable GPIOA clock
-        .IOPCEN = 1,
-        .AFIOEN = 1, // Enable AFIO clock
-        .USART1EN = 1, // Enable USART1 clock
-    });
-    // Configure TX pin as alternate function push-pull
-    usart_tx_pin.set_output_mode(.alternate_function_push_pull, .max_50MHz);
 
-    // Initialize USART1 at 115200 baud
-    usart.apply(.{ .baud_rate = 115200 });
-
-    hal.usart.init_logger(usart);
+    hal.usart.setup_uart(uart_cfg);
+    hal.usart.init_logger(uart_cfg.instance);
     std.log.info("UART logging initialized.", .{});
 
     std.log.info("Initializing USB device.", .{});
