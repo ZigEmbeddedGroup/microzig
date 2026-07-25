@@ -10,8 +10,8 @@
     },
     .dependencies = .{
         .libxml2 = .{
-            .url = "git+https://github.com/allyourcodebase/libxml2.git#e2c881ccb72dc96b03bb80f1f4c4b386969b76f7",
-            .hash = "libxml2-2.15.1-2-qHdjhjJXAAAF6fWNrfH_GFaXDHRNjlYQoeKF_RBnWtVu",
+            .url = "git+https://github.com/allyourcodebase/libxml2.git#38fb69d375bc364490a5cc9ac465732d03c836d3",
+            .hash = "libxml2-2.15.1-2-qHdjhjJXAADjFgEs5a_JV1oMyd9G6EsY12PvbfRAZwG-",
         },
         .virtual_io = .{ .path = "../../modules/virtual-io" },
         .zqlite = .{
