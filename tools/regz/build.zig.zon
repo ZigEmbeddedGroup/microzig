@@ -15,8 +15,8 @@
         },
         .virtual_io = .{ .path = "../../modules/virtual-io" },
         .zqlite = .{
-            .url = "git+https://github.com/karlseguin/zqlite.zig#bf33be0d0a9e440015485221fb15921a1d7d8da2",
-            .hash = "zqlite-0.0.1-RWLaY2E8nABOD3eN1tGEGWV7AqkKfatsaddSzRKn5e_2",
+            .url = "git+https://github.com/karlseguin/zqlite.zig?ref=dev#b6e439d83fe7a06c2c7e8eed8e07bd79c87b0925",
+            .hash = "zqlite-0.0.1-RWLaY8k8nACL-MBb7ZkqdAESSZDG-1aCWwnathuy7Mzb",
         },
     },
 }
