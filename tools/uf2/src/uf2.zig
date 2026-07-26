@@ -20,8 +20,6 @@ pub const Archive = struct {
     families: std.AutoArrayHashMapUnmanaged(FamilyId, void),
     files: std.ArrayList(FileEntry),
 
-    // TODO: keep track of contained files
-
     pub fn init(allocator: std.mem.Allocator, io: std.Io) Archive {
         return .{ .allocator = allocator, .blocks = .empty, .families = .empty, .files = .empty, .io = io };
     }
@@ -29,7 +27,6 @@ pub const Archive = struct {
     pub fn deinit(self: *Archive) void {
         self.blocks.deinit(self.allocator);
         self.families.deinit(self.allocator);
-        //free file name at line 236
         for (self.files.items) |*file| {
             self.allocator.free(file.name);
         }
@@ -208,19 +205,17 @@ pub const Archive = struct {
                 const n_read = try reader.interface.readSliceShort(block.data[0..]);
                 target_addr += @as(u32, @intCast(n_read));
                 block.payload_size = @as(u32, @intCast(n_read));
-                if (n_read != block.data.len) {
-                    if (n_read < block.data.len) {
-                        const copy_len = @min(block.data.len - n_read, path.len);
-                        path_pos = @intCast(copy_len);
-                        @memcpy(block.data[n_read..][0..copy_len], path[0..copy_len]);
-                        if (n_read + copy_len < block.data.len) {
-                            block.data[n_read + copy_len] = 0;
-                            break;
-                        }
+                if (n_read < block.data.len) {
+                    const copy_len = @min(block.data.len - n_read, path.len);
+                    path_pos = @intCast(copy_len);
+                    @memcpy(block.data[n_read..][0..copy_len], path[0..copy_len]);
+                    if (n_read + copy_len < block.data.len) {
+                        block.data[n_read + copy_len] = 0;
+                        break;
                     }
                 }
             } else {
-                // 文件已读完，只复制剩余的路径
+                // File fully read, copy remaining path
                 const copy_len = @min(block.data.len, path.len - path_pos);
                 @memcpy(block.data[0..copy_len], path[path_pos..][0..copy_len]);
                 path_pos += @intCast(copy_len);
@@ -413,11 +408,11 @@ test "File tracking" {
     var archive = Archive.init(allocator, io);
     defer archive.deinit();
 
-    // 创建临时测试文件
+    // Create temporary test files
     {
         var file = try std.Io.Dir.cwd().createFile(io, "test1.uf2", .{});
         defer file.close(io);
-        // 写入一些数据 先至少一个 block，然后再写入更多数据。
+        // Write at least one block, then more data
         var buf: [512]u8 = @splat(0);
         var writer_buf: [512]u8 = undefined;
         var writer = file.writer(io, &writer_buf);
@@ -437,23 +432,23 @@ test "File tracking" {
     }
     defer std.Io.Dir.cwd().deleteFile(io, "test2.uf2") catch {};
 
-    // 添加测试文件
+    // Add test files
     try archive.add_file("test1.uf2");
     try archive.add_file("test2.uf2");
 
-    // 验证文件记录
+    // Verify file records
     try std.testing.expectEqual(@as(usize, 2), archive.files.items.len);
     try std.testing.expectEqualStrings("test1.uf2", archive.files.items[0].name);
     try std.testing.expectEqualStrings("test2.uf2", archive.files.items[1].name);
 
-    // 验证 block 范围
+    // Verify block range
     const file1_blocks = archive.get_file_blocks(0).?;
     try std.testing.expect(file1_blocks.start < file1_blocks.end);
 
-    // 测试重复检测
+    // Test duplicate detection
     try std.testing.expectError(error.FileAlreadyAdded, archive.add_file("test1.uf2"));
 
-    // 测试 has_file
+    // Test has_file
     try std.testing.expect(archive.has_file("test1.uf2"));
     try std.testing.expect(!archive.has_file("test3.uf2"));
 }
@@ -463,12 +458,12 @@ test "File tracking comprehensive" {
     var archive = Archive.init(allocator, io);
     defer archive.deinit();
 
-    // 创建测试文件
+    // Create test files
     {
         var file = try std.Io.Dir.cwd().createFile(io, "test1.uf2", .{});
         defer file.close(io);
-        // 写入超过 476 字节（触发多 block）
-        var buf: [1024]u8 = @splat(0x41); // 全部填 'A'
+        // Write more than 476 bytes (triggers multiple blocks)
+        var buf: [1024]u8 = @splat(0x41); // Fill with 'A'
         var writer_buf: [1024]u8 = undefined;
         var writer = file.writer(io, &writer_buf);
         try writer.interface.writeAll(&buf);
@@ -479,7 +474,7 @@ test "File tracking comprehensive" {
     {
         var file = try std.Io.Dir.cwd().createFile(io, "test2.uf2", .{});
         defer file.close(io);
-        var buf: [512]u8 = @splat(0x42); // 全部填 'B'
+        var buf: [512]u8 = @splat(0x42); // Fill with 'B'
         var writer_buf: [512]u8 = undefined;
         var writer = file.writer(io, &writer_buf);
         try writer.interface.writeAll(&buf);
@@ -487,31 +482,31 @@ test "File tracking comprehensive" {
     }
     defer std.Io.Dir.cwd().deleteFile(io, "test2.uf2") catch {};
 
-    // 测试 1: 添加文件
+    // Test 1: Add files
     try archive.add_file("test1.uf2");
     try archive.add_file("test2.uf2");
     try std.testing.expectEqual(@as(usize, 2), archive.files.items.len);
 
-    // 测试 2: 验证 block 范围不重叠
+    // Test 2: Verify block ranges don't overlap
     const file1 = archive.get_file_blocks(0).?;
     const file2 = archive.get_file_blocks(1).?;
     try std.testing.expect(file1.end <= file2.start);
 
-    // 测试 3: 验证 block 数据
+    // Test 3: Verify block data
     const block0 = archive.blocks.items[file1.start];
-    try std.testing.expectEqual(@as(u8, 0x41), block0.data[0]); // 文件1的数据
+    try std.testing.expectEqual(@as(u8, 0x41), block0.data[0]); // File 1 data
     if (block0.payload_size < block0.data.len) {
         try std.testing.expectEqual(@as(u8, 0), block0.data[block0.payload_size]); // null terminator
     }
 
-    // 测试 4: 重复检测
+    // Test 4: Duplicate detection
     try std.testing.expectError(error.FileAlreadyAdded, archive.add_file("test1.uf2"));
 
-    // 测试 5: has_file
+    // Test 5: has_file
     try std.testing.expect(archive.has_file("test1.uf2"));
     try std.testing.expect(!archive.has_file("nonexistent.uf2"));
 
-    // 测试 6: get_files
+    // Test 6: get_files
     const files = archive.get_files();
     try std.testing.expectEqual(@as(usize, 2), files.len);
     try std.testing.expectEqualStrings("test1.uf2", files[0].name);
@@ -522,7 +517,7 @@ test "File tracking - deinit cleanup" {
     const io = std.testing.io;
     var archive = Archive.init(allocator, io);
 
-    // 添加文件
+    // Add file
     {
         var file = try std.Io.Dir.cwd().createFile(io, "cleanup_test.uf2", .{});
         defer file.close(io);
@@ -537,10 +532,10 @@ test "File tracking - deinit cleanup" {
     try archive.add_file("cleanup_test.uf2");
     try std.testing.expectEqual(@as(usize, 1), archive.files.items.len);
 
-    // deinit 应该释放所有内存
+    // deinit should free all memory
     archive.deinit();
 
-    // 重新初始化验证没有内存泄漏
+    // Reinitialize to verify no memory leak
     var archive2 = Archive.init(allocator, io);
     defer archive2.deinit();
     try std.testing.expectEqual(@as(usize, 0), archive2.files.items.len);
@@ -552,7 +547,7 @@ test "File tracking - long path" {
     var archive = Archive.init(allocator, io);
     defer archive.deinit();
 
-    // 创建一个长路径文件名（超过 block 容量）
+    // Create a long filename that exceeds block capacity
     const long_name = "very_long_filename_that_should_exceed_block_capacity.uf2";
     {
         var file = try std.Io.Dir.cwd().createFile(io, long_name, .{});
