@@ -163,7 +163,7 @@ fn dma_read(self: *Self, data: []u32) void {
         .enable = true,
         .read_increment = false,
         .write_increment = true,
-        .dreq = @fromBackingInt(@intCast(@backingInt(self.pio) * @as(u6, 8) + @backingInt(self.sm) + 4)),
+        .dreq = @fromBackingInt(@backingInt(self.pio) * @as(u6, 8) + @backingInt(self.sm) + 4),
     });
     ch.wait_for_finish_blocking();
 }
@@ -177,7 +177,7 @@ fn dma_write(self: *Self, data: []const u32) void {
         .enable = true,
         .read_increment = true,
         .write_increment = false,
-        .dreq = @fromBackingInt(@intCast(@backingInt(self.pio) * @as(u6, 8) + @backingInt(self.sm))),
+        .dreq = @fromBackingInt(@backingInt(self.pio) * @as(u6, 8) + @backingInt(self.sm)),
     });
     ch.wait_for_finish_blocking();
 }

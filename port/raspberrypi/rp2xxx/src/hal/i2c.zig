@@ -158,10 +158,10 @@ test "i2c.translate_baudrate" {
 }
 
 pub const instance = struct {
-    pub const I2C0: I2C = @as(I2C, @fromBackingInt(@intCast(0)));
-    pub const I2C1: I2C = @as(I2C, @fromBackingInt(@intCast(1)));
+    pub const I2C0: I2C = @as(I2C, @fromBackingInt(0));
+    pub const I2C1: I2C = @as(I2C, @fromBackingInt(1));
     pub fn num(instance_number: u1) I2C {
-        return @as(I2C, @fromBackingInt(@intCast(instance_number)));
+        return @as(I2C, @fromBackingInt(instance_number));
     }
 };
 
@@ -217,10 +217,10 @@ pub const I2C = enum(u1) {
             .IC_RESTART_EN = if (config.repeated_start) .ENABLED else .DISABLED,
             .IC_SLAVE_DISABLE = .SLAVE_DISABLED,
             .TX_EMPTY_CTRL = .ENABLED,
-            .IC_10BITADDR_SLAVE = @fromBackingInt(@intCast(0)),
-            .IC_10BITADDR_MASTER = @fromBackingInt(@intCast(0)),
-            .STOP_DET_IFADDRESSED = @fromBackingInt(@intCast(0)),
-            .RX_FIFO_FULL_HLD_CTRL = @fromBackingInt(@intCast(0)),
+            .IC_10BITADDR_SLAVE = @fromBackingInt(0),
+            .IC_10BITADDR_MASTER = @fromBackingInt(0),
+            .STOP_DET_IFADDRESSED = @fromBackingInt(0),
+            .RX_FIFO_FULL_HLD_CTRL = @fromBackingInt(0),
             .STOP_DET_IF_MASTER_ACTIVE = 0,
         });
 
@@ -399,8 +399,8 @@ pub const I2C = enum(u1) {
         var iter = write_vec.iterator();
         while (iter.next_element()) |element| {
             regs.IC_DATA_CMD.write(.{
-                .RESTART = @fromBackingInt(@intCast(0)),
-                .STOP = @fromBackingInt(@intCast(@intFromBool(element.last))),
+                .RESTART = @fromBackingInt(0),
+                .STOP = @fromBackingInt(@intFromBool(element.last)),
                 .CMD = .WRITE,
                 .DAT = element.value,
 
@@ -475,8 +475,8 @@ pub const I2C = enum(u1) {
         var iter = read_vec.iterator();
         while (iter.next_element_ptr()) |element| {
             regs.IC_DATA_CMD.write(.{
-                .RESTART = @fromBackingInt(@intCast(0)),
-                .STOP = @fromBackingInt(@intCast(@intFromBool(element.last))),
+                .RESTART = @fromBackingInt(0),
+                .STOP = @fromBackingInt(@intFromBool(element.last)),
                 .CMD = .READ,
                 .DAT = 0,
 
@@ -545,8 +545,8 @@ pub const I2C = enum(u1) {
         var write_iter = write_vec.iterator();
         while (write_iter.next_element()) |element| {
             regs.IC_DATA_CMD.write(.{
-                .RESTART = @fromBackingInt(@intCast(0)),
-                .STOP = @fromBackingInt(@intCast(0)),
+                .RESTART = @fromBackingInt(0),
+                .STOP = @fromBackingInt(0),
                 .CMD = .WRITE,
                 .DAT = element.value,
 
@@ -576,8 +576,8 @@ pub const I2C = enum(u1) {
         var read_iter = read_vec.iterator();
         recv_loop: while (read_iter.next_element_ptr()) |element| {
             regs.IC_DATA_CMD.write(.{
-                .RESTART = @fromBackingInt(@intCast(@intFromBool(element.first))),
-                .STOP = @fromBackingInt(@intCast(@intFromBool(element.last))),
+                .RESTART = @fromBackingInt(@intFromBool(element.first)),
+                .STOP = @fromBackingInt(@intFromBool(element.last)),
                 .CMD = .READ,
                 .DAT = 0,
 

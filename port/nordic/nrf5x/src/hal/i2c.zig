@@ -38,7 +38,7 @@ pub const AddressError = drivers.I2C_Device.Address.Error;
 pub const Error = drivers.I2C_Device.Error || error{Overrun};
 
 pub fn num(n: u1) I2C {
-    return @as(I2C, @fromBackingInt(@intCast(n)));
+    return @as(I2C, @fromBackingInt(n));
 }
 
 pub const I2C = enum(u1) {

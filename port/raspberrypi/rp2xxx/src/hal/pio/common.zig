@@ -194,7 +194,7 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
                 const sm_mask = (@as(u4, 1) << @as(u2, @intCast(i)));
                 if (0 == (claimed_mask & sm_mask)) {
                     ClaimedStateMachines(chip).val[@backingInt(self)] |= sm_mask;
-                    break @as(StateMachine, @fromBackingInt(@intCast(i)));
+                    break @as(StateMachine, @fromBackingInt(i));
                 }
             } else error.NoSpace;
         }
@@ -287,7 +287,7 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
 
             for (0..count) |counter| {
                 const pin_config: PinMappingOptions = .{
-                    .set = .single(@fromBackingInt(@intCast(@backingInt(base) + counter))),
+                    .set = .single(@fromBackingInt(@backingInt(base) + counter)),
                 };
                 try sm_set_pin_mappings(self, sm, pin_config, false);
 
@@ -313,7 +313,7 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
 
             for (0..count) |counter| {
                 const pin_config: PinMappingOptions = .{
-                    .set = .single(@fromBackingInt(@intCast(@backingInt(base) + counter))),
+                    .set = .single(@fromBackingInt(@backingInt(base) + counter)),
                 };
                 try sm_set_pin_mappings(self, sm, pin_config, false);
                 self.sm_exec(sm, .{

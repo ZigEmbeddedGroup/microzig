@@ -60,10 +60,10 @@ pub const Config = struct {
 };
 
 pub const instance = struct {
-    pub const SPI0: SPI = @as(SPI, @fromBackingInt(@intCast(0)));
-    pub const SPI1: SPI = @as(SPI, @fromBackingInt(@intCast(1)));
+    pub const SPI0: SPI = @as(SPI, @fromBackingInt(0));
+    pub const SPI1: SPI = @as(SPI, @fromBackingInt(1));
     pub fn num(instance_number: u1) SPI {
-        return @as(SPI, @fromBackingInt(@intCast(instance_number)));
+        return @as(SPI, @fromBackingInt(instance_number));
     }
 };
 

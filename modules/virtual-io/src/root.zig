@@ -66,7 +66,7 @@ pub const Dir = struct {
         if (node == null or node.? != T.kind)
             return error.Unexpected;
 
-        return @fromBackingInt(@intCast(id));
+        return @fromBackingInt(id);
     }
 
     pub fn create(dir: *Dir, vio: *VirtualIo, name: []const u8, T: type) !ResultID(T) {
@@ -95,7 +95,7 @@ pub const Dir = struct {
             result.value_ptr.* = T.empty;
         } else |_| return error.NoSpaceLeft;
 
-        return @fromBackingInt(@intCast(id));
+        return @fromBackingInt(id);
     }
 };
 
@@ -277,7 +277,7 @@ pub fn from_handle(T: type, handle: std.posix.fd_t) !T {
         .windows => @intFromPtr(handle),
         else => handle,
     })) |int|
-        @fromBackingInt(@intCast(int))
+        @fromBackingInt(int)
     else
         error.Unexpected;
 }

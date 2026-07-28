@@ -4,7 +4,7 @@ const compatibility = @import("compatibility.zig");
 
 pub fn num(n: u1) Timer {
     if (compatibility.chip == .RP2040) std.debug.assert(n == 0);
-    return @fromBackingInt(@intCast(n));
+    return @fromBackingInt(n);
 }
 
 pub const Timer = enum(u1) {

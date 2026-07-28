@@ -26,7 +26,7 @@ pub const Pin = struct {
 
     pub fn set_function(p: Pin, function: u6) void {
         peri.iomux.IOMUX_PINCM[p.num].write(.{
-            .PF = @fromBackingInt(@intCast(function)),
+            .PF = @fromBackingInt(function),
             .PC = .CONNECTED,
             .WAKESTAT = .DISABLE,
             .PIPD = .DISABLE,

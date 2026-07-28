@@ -55,7 +55,7 @@ pub const LP_UART = enum(u4) {
     pub fn init(interface: u4, config: Config) ConfigError!LP_UART {
         FlexComm.num(interface).init(.UART);
 
-        const uart: LP_UART = @fromBackingInt(@intCast(interface));
+        const uart: LP_UART = @fromBackingInt(interface);
         const regs = uart.get_regs();
         uart.reset();
         _ = uart.disable();
@@ -188,7 +188,7 @@ pub const LP_UART = enum(u4) {
 
         var baud = regs.BAUD.read();
         baud.SBR = best_sbr;
-        baud.OSR = @fromBackingInt(@intCast(best_osr - 1));
+        baud.OSR = @fromBackingInt(best_osr - 1);
         baud.BOTHEDGE = if (best_osr <= 7) .ENABLED else .DISABLED;
         regs.BAUD.write(baud);
     }

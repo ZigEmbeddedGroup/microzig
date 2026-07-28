@@ -292,7 +292,7 @@ pub const WifiMode = enum(u32) {
 pub fn get_mode() InternalError!WifiMode {
     var mode: c.wifi_mode_t = undefined;
     try c_err(c.esp_wifi_get_mode(&mode));
-    return @fromBackingInt(@intCast(mode));
+    return @fromBackingInt(mode);
 }
 
 pub fn set_mode(mode: WifiMode) InternalError!void {
@@ -662,7 +662,7 @@ pub const Event = union(EventType) {
 
 /// Internal function. Called by osi layer.
 pub fn on_event_post(id: i32, data: ?*anyopaque, data_size: usize) void {
-    const event_type: EventType = @fromBackingInt(@intCast(id));
+    const event_type: EventType = @fromBackingInt(id);
     log.debug("event received: {t}", .{event_type});
 
     update_sta_state(event_type);

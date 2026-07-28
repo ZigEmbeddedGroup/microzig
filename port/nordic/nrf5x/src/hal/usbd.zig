@@ -179,14 +179,14 @@ pub const USBD = struct {
                     var status_in = status >> 1;
                     inline for (1..8) |i| {
                         if (status_in == 0) break;
-                        if (status_in & 1 == 1) controller.on_buffer(&self.interface, .in(@fromBackingInt(@intCast(i))));
+                        if (status_in & 1 == 1) controller.on_buffer(&self.interface, .in(@fromBackingInt(i)));
                         status_in >>= 1;
                     }
                     // OUT endpoints (bits 17-23)
                     var status_out = status >> 17;
                     inline for (1..8) |i| {
                         if (status_out == 0) break;
-                        if (status_out & 1 == 1) controller.on_buffer(&self.interface, .out(@fromBackingInt(@intCast(i))));
+                        if (status_out & 1 == 1) controller.on_buffer(&self.interface, .out(@fromBackingInt(i)));
                         status_out >>= 1;
                     }
                 }

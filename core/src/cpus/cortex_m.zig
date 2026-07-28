@@ -364,7 +364,7 @@ pub const interrupt = struct {
                 3 => ppb.SHPR3.raw,
             } >> shift) & 0xFF;
 
-            return @fromBackingInt(@intCast(raw));
+            return @fromBackingInt(raw);
         }
     };
 
@@ -501,7 +501,7 @@ pub const interrupt = struct {
     }
 
     pub fn get_priority(comptime int: ExternalInterrupt) Priority {
-        return @fromBackingInt(@intCast(peripherals.nvic.IPR[@backingInt(int)]));
+        return @fromBackingInt(peripherals.nvic.IPR[@backingInt(int)]);
     }
 };
 

@@ -94,7 +94,7 @@ pub inline fn get_datetime() DateTime {
         .year = RTC1.YEAR,
         .month = RTC1.MONTH,
         .day = RTC1.DAY,
-        .day_of_week = @fromBackingInt(@intCast(RTC0.DOTW)),
+        .day_of_week = @fromBackingInt(RTC0.DOTW),
         .hour = RTC0.HOUR,
         .minute = RTC0.MIN,
         .second = RTC0.SEC,

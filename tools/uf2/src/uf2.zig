@@ -133,7 +133,7 @@ pub const Archive = struct {
                             .family_id = if (opts.family_id) |family_id|
                                 family_id
                             else
-                                @as(FamilyId, @fromBackingInt(@intCast(0))),
+                                @as(FamilyId, @fromBackingInt(0)),
                         },
                         .data = @splat(0),
                     });

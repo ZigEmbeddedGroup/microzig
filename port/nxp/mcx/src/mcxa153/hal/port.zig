@@ -3,7 +3,7 @@ const syscon = @import("./syscon.zig");
 const gpio = @import("./gpio.zig");
 
 pub fn num(comptime n: u2) Port {
-    return @fromBackingInt(@intCast(n));
+    return @fromBackingInt(n);
 }
 
 pub const Port = enum(u2) {

@@ -42,7 +42,7 @@ pub fn to_peripheral(comptime val: anytype) Peripherals {
         DMA_Type,
         TIMGP16_Type,
         ADC_Type,
-        => @as(Peripherals, @fromBackingInt(@intCast(@backingInt(val)))),
+        => @as(Peripherals, @fromBackingInt(@backingInt(val))),
         else => @panic("Value must be one of the sur peripheral enum define below"),
     };
 }

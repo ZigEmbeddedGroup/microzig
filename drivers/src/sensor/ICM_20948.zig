@@ -905,7 +905,7 @@ test "set_bank" {
     defer d.deinit();
     const id = d.i2c_device();
 
-    var dev = try ICM_20948.init(id, @fromBackingInt(@intCast(0)), ttd.clock_device(), .{});
+    var dev = try ICM_20948.init(id, @fromBackingInt(0), ttd.clock_device(), .{});
 
     // Nothing is sent in init
     try d.expect_sent(&.{});
@@ -933,7 +933,7 @@ test "reset" {
     defer d.deinit();
     const id = d.i2c_device();
 
-    var dev = try ICM_20948.init(id, @fromBackingInt(@intCast(0)), ttd.clock_device(), .{});
+    var dev = try ICM_20948.init(id, @fromBackingInt(0), ttd.clock_device(), .{});
 
     // Nothing is sent in init
     try d.expect_sent(&.{});
@@ -951,7 +951,7 @@ test "read_byte" {
     defer d.deinit();
     const id = d.i2c_device();
 
-    var dev = try ICM_20948.init(id, @fromBackingInt(@intCast(0)), ttd.clock_device(), .{});
+    var dev = try ICM_20948.init(id, @fromBackingInt(0), ttd.clock_device(), .{});
 
     // Read byte will set the bank
     // -- Put in the values it expects to read
@@ -968,7 +968,7 @@ test "error handling in setup" {
     defer d.deinit();
     const id = d.i2c_device();
 
-    var dev = try ICM_20948.init(id, @fromBackingInt(@intCast(0)), ttd.clock_device(), .{});
+    var dev = try ICM_20948.init(id, @fromBackingInt(0), ttd.clock_device(), .{});
 
     // Test wrong WHO_AM_I response, first byte is read during reset()
     d.input_sequence = &.{ &.{0x00}, &.{0xFF} }; // Wrong ID after reset
@@ -982,7 +982,7 @@ test "device responsiveness check" {
     defer d.deinit();
     const id = d.i2c_device();
 
-    var dev = try ICM_20948.init(id, @fromBackingInt(@intCast(0)), ttd.clock_device(), .{});
+    var dev = try ICM_20948.init(id, @fromBackingInt(0), ttd.clock_device(), .{});
 
     // Test with correct WHO_AM_I
     d.input_sequence = &.{&.{ICM_20948.WHOAMI}};

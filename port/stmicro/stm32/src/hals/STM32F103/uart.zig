@@ -167,14 +167,14 @@ pub const UART = struct {
     fn set_wordbits(uart: *const UART, word: WordBits) void {
         const regs = uart.regs;
         regs.CR1.modify(.{
-            .M0 = @as(M0, @fromBackingInt(@intCast(@backingInt(word)))),
+            .M0 = @as(M0, @fromBackingInt(@backingInt(word))),
         });
     }
 
     fn set_stopbits(uart: *const UART, stops: StopBits) void {
         const regs = uart.regs;
         regs.CR2.modify(.{
-            .STOP = @as(STOP, @fromBackingInt(@intCast(@backingInt(stops)))),
+            .STOP = @as(STOP, @fromBackingInt(@backingInt(stops))),
         });
     }
 
@@ -187,7 +187,7 @@ pub const UART = struct {
                 });
             },
             else => |ps| {
-                const val: PS = @fromBackingInt(@intCast(@backingInt(ps) - 1));
+                const val: PS = @fromBackingInt(@backingInt(ps) - 1);
                 regs.CR1.modify(.{
                     .PCE = 1,
                     .PS = val,

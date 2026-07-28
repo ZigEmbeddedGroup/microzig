@@ -267,7 +267,7 @@ pub const ClockDevice = struct {
     fn get_time_since_boot_fn(td: *anyopaque) time.Absolute {
         _ = td;
         const t = hal.time.get_time_since_boot().to_us();
-        return @fromBackingInt(@intCast(t));
+        return @fromBackingInt(t);
     }
 };
 

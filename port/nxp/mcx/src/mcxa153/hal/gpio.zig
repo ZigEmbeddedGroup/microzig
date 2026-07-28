@@ -4,7 +4,7 @@ const syscon = @import("./syscon.zig");
 const chip = microzig.chip;
 
 pub fn num(comptime n: u2, comptime pin: u5) GPIO {
-    return @fromBackingInt(@intCast(@as(u7, n) << 5 | pin));
+    return @fromBackingInt(@as(u7, n) << 5 | pin);
 }
 
 pub const GPIO = enum(u7) {

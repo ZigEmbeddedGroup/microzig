@@ -60,7 +60,7 @@ pub const LP_I2C = enum(u4) {
     pub fn init(interface: u4, config: Config) ConfigError!LP_I2C {
         FlexComm.num(interface).init(.I2C);
 
-        const i2c: LP_I2C = @fromBackingInt(@intCast(interface));
+        const i2c: LP_I2C = @fromBackingInt(interface);
         const regs = i2c.get_regs();
         i2c.reset();
 
@@ -72,13 +72,13 @@ pub const LP_I2C = enum(u4) {
 
             .CIRFIFO = .DISABLED,
             .RDMO = .DISABLED, // TODO: address match
-            .RELAX = @fromBackingInt(@intCast(@intFromBool(config.relaxed))),
+            .RELAX = @fromBackingInt(@intFromBool(config.relaxed)),
             .ABORT = .DISABLED,
         });
         regs.MCFGR1.write(.{
             .PRESCALE = .DIVIDE_BY_1,
             .AUTOSTOP = .DISABLED,
-            .IGNACK = @fromBackingInt(@intCast(@intFromBool(config.ignore_nack))),
+            .IGNACK = @fromBackingInt(@intFromBool(config.ignore_nack)),
             .TIMECFG = .IF_SCL_LOW,
             .STARTCFG = .BOTH_I2C_AND_LPI2C_IDLE,
             .STOPCFG = .ANY_STOP,
@@ -284,7 +284,7 @@ pub const LP_I2C = enum(u4) {
         defer i2c.set_enabled(enabled);
         regs.MCCR0.write(.{ .CLKLO = clk_lo, .CLKHI = clk_hi, .SETHOLD = @intCast(sethold), .DATAVD = @intCast(datavd) });
 
-        regs.MCFGR1.modify_one("PRESCALE", @fromBackingInt(@intCast(prescale)));
+        regs.MCFGR1.modify_one("PRESCALE", @fromBackingInt(prescale));
     }
 
     /// Computes the current baudrate.
@@ -487,7 +487,7 @@ pub const LP_I2C = enum(u4) {
 
 // TODO: check for reserved addresses
 fn writev(d: *anyopaque, addr: I2C_Device.Address, datagrams: []const []const u8) I2C_Device.Error!void {
-    const dev: LP_I2C = @fromBackingInt(@intCast(@intFromPtr(d)));
+    const dev: LP_I2C = @fromBackingInt(@intFromPtr(d));
     const message: LP_I2C.I2C_Msg = .{ .address = @backingInt(addr), .flags = .{ .direction = .write }, .chunks = .{ .write = datagrams } };
     dev.transfer_blocking(&.{message}) catch |err| switch (err) {
         LP_I2C.Error.UnexpectedNack, LP_I2C.Error.FifoError, LP_I2C.Error.BusBusy, LP_I2C.Error.ArbitrationLost => {
@@ -498,7 +498,7 @@ fn writev(d: *anyopaque, addr: I2C_Device.Address, datagrams: []const []const u8
     };
 }
 fn readv(d: *anyopaque, addr: I2C_Device.Address, datagrams: []const []u8) I2C_Device.Error!usize {
-    const dev: LP_I2C = @fromBackingInt(@intCast(@intFromPtr(d)));
+    const dev: LP_I2C = @fromBackingInt(@intFromPtr(d));
     const message: LP_I2C.I2C_Msg = .{ .address = @backingInt(addr), .flags = .{ .direction = .write }, .chunks = .{ .write = datagrams } };
     dev.transfer_blocking(&.{message}) catch |err| switch (err) {
         LP_I2C.Error.UnexpectedNack, LP_I2C.Error.FifoError, LP_I2C.Error.BusBusy, LP_I2C.Error.ArbitrationLost => {
@@ -517,7 +517,7 @@ fn writev_then_readv(
     write_chunks: []const []const u8,
     read_chunks: []const []u8,
 ) I2C_Device.Error!void {
-    const dev: LP_I2C = @fromBackingInt(@intCast(@intFromPtr(d)));
+    const dev: LP_I2C = @fromBackingInt(@intFromPtr(d));
     const messages: []const LP_I2C.I2C_Msg = &.{ .{ .address = @backingInt(addr), .flags = .{ .direction = .write }, .chunks = .{ .write = write_chunks } }, .{ .address = @backingInt(addr), .flags = .{ .direction = .read }, .chunks = .{ .read = read_chunks } } };
     dev.transfer_blocking(messages) catch |err| switch (err) {
         LP_I2C.Error.UnexpectedNack, LP_I2C.Error.FifoError, LP_I2C.Error.BusBusy, LP_I2C.Error.ArbitrationLost => {

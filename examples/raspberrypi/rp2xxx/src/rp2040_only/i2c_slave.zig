@@ -37,7 +37,7 @@ pub const microzig_options: microzig.Options = .{
 };
 
 var i2c_buffer: [10]u8 = undefined;
-var slave_addr: i2c.Address = @fromBackingInt(@intCast(0x42));
+var slave_addr: i2c.Address = @fromBackingInt(0x42);
 
 pub fn main() !void {
     // init uart logging

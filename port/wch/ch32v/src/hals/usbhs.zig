@@ -242,13 +242,13 @@ pub fn Polled(comptime cfg: Config) type {
             switch (dir) {
                 .In => switch (ep) {
                     inline 0...15 => |i| {
-                        const num: types.Endpoint.Num = @fromBackingInt(@intCast(i));
+                        const num: types.Endpoint.Num = @fromBackingInt(i);
                         controller.on_buffer(&self.interface, .{ .num = num, .dir = .In });
                     },
                 },
                 .Out => switch (ep) {
                     inline 0...15 => |i| {
-                        const num: types.Endpoint.Num = @fromBackingInt(@intCast(i));
+                        const num: types.Endpoint.Num = @fromBackingInt(i);
                         controller.on_buffer(&self.interface, .{ .num = num, .dir = .Out });
                     },
                 },
@@ -383,7 +383,7 @@ pub fn Polled(comptime cfg: Config) type {
                 return;
             }
 
-            const num: types.Endpoint.Num = @fromBackingInt(@intCast(ep));
+            const num: types.Endpoint.Num = @fromBackingInt(ep);
             const st_out = self.st(num, .Out);
 
             // Only read if previously armed (ep_listen)
@@ -405,7 +405,7 @@ pub fn Polled(comptime cfg: Config) type {
 
         // IN => into host from device
         fn handle_in(self: *Self, ep: u4, controller: anytype) void {
-            const num: types.Endpoint.Num = @fromBackingInt(@intCast(ep));
+            const num: types.Endpoint.Num = @fromBackingInt(ep);
             const st_in = self.st(num, .In);
 
             if (!st_in.tx_busy) {

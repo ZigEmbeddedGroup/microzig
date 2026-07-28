@@ -477,7 +477,7 @@ pub const GPTimer = struct {
     pub fn configure_input(self: *const GPTimer, channel: u2, config: Capture) void {
         const regs = self.regs;
         const CCMR = if (channel < 2) &regs.CCMR_Input[0] else &regs.CCMR_Input[1];
-        const ccs: CCMR_Input_CCS = @fromBackingInt(@intCast(@backingInt(config.mode)));
+        const ccs: CCMR_Input_CCS = @fromBackingInt(@backingInt(config.mode));
         const psc: u2 = @backingInt(config.prescaler);
         if (channel % 2 == 0) {
             CCMR.modify(.{

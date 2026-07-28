@@ -172,6 +172,6 @@ pub const Pin = enum(usize) {
 
     pub fn from_port(port: Port, pin: u4) Pin {
         const value: usize = pin + (@as(usize, 16) * @backingInt(port));
-        return @fromBackingInt(@intCast(value));
+        return @fromBackingInt(value);
     }
 };

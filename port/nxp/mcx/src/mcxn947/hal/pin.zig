@@ -15,7 +15,7 @@ pub const Pin = enum(u8) {
     pub fn num(port: u8, pin: u5) Pin {
         @import("std").debug.assert(port <= 5);
 
-        return @fromBackingInt(@intCast((port << 5) | pin));
+        return @fromBackingInt((port << 5) | pin);
     }
 
     pub fn get_port(pin: Pin) hal.Port {

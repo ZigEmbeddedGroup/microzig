@@ -18,7 +18,7 @@ pub const Config = struct {
 };
 
 pub const HTS221 = struct {
-    const address: mdf_base.I2C_Device.Address = @fromBackingInt(@intCast(0b1011111));
+    const address: mdf_base.I2C_Device.Address = @fromBackingInt(0b1011111);
     const RegsAddr = enum(u8) {
         WHO_AM_I = 0x0F,
         AV_CONF = 0x10,

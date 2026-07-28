@@ -39,7 +39,7 @@ pub const TickFrequency = enum(u32) {
 
     pub fn from_hz(v: u32) TickFrequency {
         assert(v < 100_000); // frequency too high
-        return @fromBackingInt(@intCast(v));
+        return @fromBackingInt(v);
     }
 
     pub fn from_khz(v: u32) TickFrequency {
@@ -81,7 +81,7 @@ pub const Priority = enum(@Int(.unsigned, rtos_options.priority_bits)) {
     lowest = 1,
     _,
 
-    pub const highest: @This() = @fromBackingInt(@intCast(std.math.maxInt(@typeInfo(@This()).@"enum".tag_type)));
+    pub const highest: @This() = @fromBackingInt(std.math.maxInt(@typeInfo(@This()).@"enum".tag_type));
 };
 
 const ready_queue_use_buckets = !rtos_options.ready_queue_force_no_buckets and @bitSizeOf(@typeInfo(Priority).@"enum".tag_type) <= 5;
@@ -844,15 +844,15 @@ pub const Duration = enum(u32) {
     pub const ms_per_tick = @max(1, us_per_tick / 1_000);
 
     pub fn from_us(v: u32) Duration {
-        return @fromBackingInt(@intCast(v / us_per_tick));
+        return @fromBackingInt(v / us_per_tick);
     }
 
     pub fn from_ms(v: u32) Duration {
-        return @fromBackingInt(@intCast(v / ms_per_tick));
+        return @fromBackingInt(v / ms_per_tick);
     }
 
     pub fn from_ticks(v: u32) Duration {
-        return @fromBackingInt(@intCast(v));
+        return @fromBackingInt(v);
     }
 
     pub fn to_ticks(duration: Duration) u32 {
@@ -936,7 +936,7 @@ pub const ResolvedTimeout = enum(u64) {
             .never => .never,
             .after => |duration| blk: {
                 const current_ticks = (@as(u64, rtos_state.overflow_count) << 32) | rtos_state.current_ticks;
-                break :blk @fromBackingInt(@intCast(current_ticks + duration.to_ticks()));
+                break :blk @fromBackingInt(current_ticks + duration.to_ticks());
             },
         };
     }

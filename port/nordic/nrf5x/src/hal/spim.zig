@@ -61,7 +61,7 @@ pub const TransactionError = error{
 };
 
 pub fn num(n: u2) SPIM {
-    return @as(SPIM, @fromBackingInt(@intCast(n)));
+    return @as(SPIM, @fromBackingInt(n));
 }
 
 pub const SPIM = enum(u1) {
@@ -113,22 +113,22 @@ pub const SPIM = enum(u1) {
         // TODO: Does MOSI idle change here?
         switch (config.mode) {
             .mode0 => regs.CONFIG.write(.{
-                .ORDER = @fromBackingInt(@intCast(@intFromBool(config.bit_order == .lsb_first))),
+                .ORDER = @fromBackingInt(@intFromBool(config.bit_order == .lsb_first)),
                 .CPHA = .Leading,
                 .CPOL = .ActiveHigh,
             }),
             .mode1 => regs.CONFIG.write(.{
-                .ORDER = @fromBackingInt(@intCast(@intFromBool(config.bit_order == .lsb_first))),
+                .ORDER = @fromBackingInt(@intFromBool(config.bit_order == .lsb_first)),
                 .CPHA = .Trailing,
                 .CPOL = .ActiveHigh,
             }),
             .mode2 => regs.CONFIG.write(.{
-                .ORDER = @fromBackingInt(@intCast(@intFromBool(config.bit_order == .lsb_first))),
+                .ORDER = @fromBackingInt(@intFromBool(config.bit_order == .lsb_first)),
                 .CPHA = .Leading,
                 .CPOL = .ActiveLow,
             }),
             .mode3 => regs.CONFIG.write(.{
-                .ORDER = @fromBackingInt(@intCast(@intFromBool(config.bit_order == .lsb_first))),
+                .ORDER = @fromBackingInt(@intFromBool(config.bit_order == .lsb_first)),
                 .CPHA = .Trailing,
                 .CPOL = .ActiveLow,
             }),

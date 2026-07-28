@@ -40,7 +40,7 @@ pub const Pull = Regs.Pull;
 pub const DriveStrength = Regs.DriveStrength;
 
 pub fn num(bank: u1, n: u5) Pin {
-    return @fromBackingInt(@intCast(@as(u6, bank) * 32 + n));
+    return @fromBackingInt(@as(u6, bank) * 32 + n);
 }
 
 // TODO: Do we want to follow the rp2350 design where we encode the package

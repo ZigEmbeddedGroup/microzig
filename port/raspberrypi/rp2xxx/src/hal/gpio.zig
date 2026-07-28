@@ -84,18 +84,18 @@ pub fn num(n: u9) Pin {
         },
     }
 
-    return @fromBackingInt(@intCast(n));
+    return @fromBackingInt(n);
 }
 
 pub const mask = switch (chip) {
     .RP2040 => struct {
         pub fn mask(m: u30) Mask {
-            return @fromBackingInt(@intCast(m));
+            return @fromBackingInt(m);
         }
     }.mask,
     .RP2350 => struct {
         pub fn mask(m: u48) Mask {
-            return @fromBackingInt(@intCast(m));
+            return @fromBackingInt(m);
         }
     }.mask,
 };

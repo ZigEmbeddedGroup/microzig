@@ -66,7 +66,7 @@ pub const DS18B20 = struct {
         }
 
         fn from_int(value: u2) Resolution {
-            return @fromBackingInt(@intCast(value));
+            return @fromBackingInt(value);
         }
     };
 

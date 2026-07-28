@@ -52,7 +52,7 @@ pub fn decode(inst_val: u16) !Instruction {
 
                 const Dst = @TypeOf(@field(result, name));
                 @field(result, name) = switch (@typeInfo(Dst)) {
-                    .@"enum" => @fromBackingInt(@intCast(raw)),
+                    .@"enum" => @fromBackingInt(raw),
                     else => raw,
                 };
             }

@@ -9,12 +9,12 @@ pub fn ticks_per_us() u52 {
 }
 
 pub fn unit(num: u1) Unit {
-    return @fromBackingInt(@intCast(num));
+    return @fromBackingInt(num);
 }
 
 pub fn alarm(num: u2) Alarm {
     std.debug.assert(num <= 2);
-    return @fromBackingInt(@intCast(num));
+    return @fromBackingInt(num);
 }
 
 pub const Unit = enum(u1) {

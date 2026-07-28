@@ -10,7 +10,7 @@ pub const Address = enum(u8) {
     _,
 
     pub fn from_int(value: u8) Address {
-        return @fromBackingInt(@intCast(value));
+        return @fromBackingInt(value);
     }
 };
 
@@ -31,7 +31,7 @@ pub fn update_byte(address: Address, value: u8) void {
 pub fn read_slice(comptime len: usize, start: Address) [len]u8 {
     var out: [len]u8 = undefined;
     for (&out, 0..) |*byte, offset| {
-        byte.* = read_byte(@fromBackingInt(@intCast(@backingInt(start) + offset)));
+        byte.* = read_byte(@fromBackingInt(@backingInt(start) + offset));
     }
     return out;
 }

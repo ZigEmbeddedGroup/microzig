@@ -118,10 +118,10 @@ pub const Config = struct {
 };
 
 pub const instance = struct {
-    pub const SPI1: SPI = @fromBackingInt(@intCast(0));
-    pub const SPI2: SPI = @fromBackingInt(@intCast(1));
+    pub const SPI1: SPI = @fromBackingInt(0);
+    pub const SPI2: SPI = @fromBackingInt(1);
     pub fn num(instance_number: u2) SPI {
-        return @fromBackingInt(@intCast(instance_number - 1));
+        return @fromBackingInt(instance_number - 1);
     }
 };
 

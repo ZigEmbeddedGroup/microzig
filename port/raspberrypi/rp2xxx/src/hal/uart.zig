@@ -128,10 +128,10 @@ test "uart.validate_baudrate" {
 }
 
 pub const instance = struct {
-    pub const UART0: UART = @fromBackingInt(@intCast(0));
-    pub const UART1: UART = @fromBackingInt(@intCast(1));
+    pub const UART0: UART = @fromBackingInt(0);
+    pub const UART1: UART = @fromBackingInt(1);
     pub fn num(n: u1) UART {
-        return @fromBackingInt(@intCast(n));
+        return @fromBackingInt(n);
     }
 };
 

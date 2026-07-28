@@ -91,7 +91,7 @@ pub fn HD44780(comptime config: HD44780_Config) type {
 
         //LCD functions
         fn set_rs_pin(lcd: *Self, value: u1) !void {
-            try lcd.io_interface.RS.write(@fromBackingInt(@intCast(value)));
+            try lcd.io_interface.RS.write(@fromBackingInt(value));
         }
 
         fn pulse_en_pin(lcd: *Self) !void {
@@ -125,7 +125,7 @@ pub fn HD44780(comptime config: HD44780_Config) type {
             for (0..4) |index| {
                 const pin_bit: u3 = @as(u3, @intCast(index)) + 4;
                 const value: u1 = if (data & (@as(u8, 1) << pin_bit) != 0) 1 else 0;
-                try lcd.io_interface.high_pins[index].write(@fromBackingInt(@intCast(value)));
+                try lcd.io_interface.high_pins[index].write(@fromBackingInt(value));
             }
 
             if (lcd.full_bus) {
@@ -133,7 +133,7 @@ pub fn HD44780(comptime config: HD44780_Config) type {
                     //load lower-bits
                     for (0..4) |index| {
                         const value: u1 = if (data & (@as(u8, 1) << @intCast(index)) != 0) 1 else 0;
-                        try pins[index].write(@fromBackingInt(@intCast(value)));
+                        try pins[index].write(@fromBackingInt(value));
                     }
                 } else {
                     return error.UnsupportedBus;
@@ -266,7 +266,7 @@ pub fn HD44780(comptime config: HD44780_Config) type {
 
         pub fn set_backlight(lcd: *Self, value: u1) !void {
             if (lcd.io_interface.BK) |bk| {
-                try bk.write(@fromBackingInt(@intCast(value)));
+                try bk.write(@fromBackingInt(value));
                 return;
             }
             return error.NoBacklight;

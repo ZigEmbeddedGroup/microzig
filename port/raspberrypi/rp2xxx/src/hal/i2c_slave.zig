@@ -191,7 +191,7 @@ inline fn enable(self: *Self) void {
 ///
 pub fn set_slave_address(self: *Self, addr: u7) void {
     self.disable();
-    self.regs.IC_SAR.write(.{ .IC_SAR = @fromBackingInt(@intCast(addr)) });
+    self.regs.IC_SAR.write(.{ .IC_SAR = @fromBackingInt(addr) });
     self.enable();
 }
 

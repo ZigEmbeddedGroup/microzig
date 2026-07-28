@@ -27,15 +27,15 @@ pub fn set_clock_source(clock_source: ClockSource) void {
 }
 
 pub fn get_clock_source() ClockSource {
-    return @fromBackingInt(@intCast(LEDC.CONF.read().APB_CLK_SEL));
+    return @fromBackingInt(LEDC.CONF.read().APB_CLK_SEL);
 }
 
 pub fn timer(num: u4) Timer {
-    return @fromBackingInt(@intCast(num));
+    return @fromBackingInt(num);
 }
 
 pub fn channel(num: u4) Channel {
-    return @fromBackingInt(@intCast(num));
+    return @fromBackingInt(num);
 }
 
 inline fn comptime_fail_or_error(msg: []const u8, fmt_args: anytype, err: anytype) !void {

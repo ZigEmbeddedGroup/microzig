@@ -414,7 +414,7 @@ pub const GPIO_Device = struct {
     }
 
     pub fn read(dio: GPIO_Device) ReadError!State {
-        return @fromBackingInt(@intCast(dio.pin.read()));
+        return @fromBackingInt(dio.pin.read());
     }
 
     const vtable = Digital_IO.VTable{

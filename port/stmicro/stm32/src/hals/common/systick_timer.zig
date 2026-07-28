@@ -10,7 +10,7 @@ const Error = error{
 
 pub fn get_time_since_boot(_: *anyopaque) time.Absolute {
     const us = cpu_systick.get_time_since_boot();
-    return @fromBackingInt(@intCast(us));
+    return @fromBackingInt(us);
 }
 
 pub fn clock_device() Error!ClockDevice {

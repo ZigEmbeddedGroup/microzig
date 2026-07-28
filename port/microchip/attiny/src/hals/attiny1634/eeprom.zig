@@ -5,7 +5,7 @@ pub const size = 256;
 pub const Address = enum(u8) { _ };
 
 pub inline fn address(value: u8) Address {
-    return @fromBackingInt(@intCast(value));
+    return @fromBackingInt(value);
 }
 
 pub inline fn busy_wait() void {

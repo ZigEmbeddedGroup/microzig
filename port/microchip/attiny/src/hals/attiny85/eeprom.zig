@@ -8,7 +8,7 @@ pub const Address = enum(u16) {
 };
 
 pub inline fn address(value: u16) Address {
-    return @fromBackingInt(@intCast(value));
+    return @fromBackingInt(value);
 }
 
 pub inline fn is_ready() bool {

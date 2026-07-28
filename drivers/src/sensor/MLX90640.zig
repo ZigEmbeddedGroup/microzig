@@ -974,7 +974,7 @@ test "control_register_values" {
 
     var tc = TestClock.init();
 
-    var camera = try MLX90640.init(.{ .i2c = td.i2c_device(), .address = @fromBackingInt(@intCast(0x7f)), .clock = tc.clock_device() });
+    var camera = try MLX90640.init(.{ .i2c = td.i2c_device(), .address = @fromBackingInt(0x7f), .clock = tc.clock_device() });
 
     const rr = try camera.refresh_rate();
     try std.testing.expectEqual(5, rr);
@@ -1016,7 +1016,7 @@ test "temperature" {
 
     var tc = TestClock.init();
 
-    var camera = try MLX90640.init(.{ .i2c = td.i2c_device(), .address = @fromBackingInt(@intCast(0x7f)), .clock = tc.clock_device() });
+    var camera = try MLX90640.init(.{ .i2c = td.i2c_device(), .address = @fromBackingInt(0x7f), .clock = tc.clock_device() });
 
     var temp: [834]f32 = undefined;
     try camera.temperature(&temp);

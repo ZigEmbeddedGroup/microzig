@@ -67,7 +67,7 @@ pub fn Mmio(comptime Packed: type) type {
                     // same as for the .Int case, but casting to and from the u... tag type U of the enum FieldType
                     const U = enum_info.tag_type;
                     @field(val, field_name) =
-                        @as(FieldType, @fromBackingInt(@intCast(@as(U, @backingInt(@field(val, field_name))) ^
+                        @as(FieldType, @fromBackingInt(@as(U, @backingInt(@field(val, field_name)) ^
                             @as(U, @backingInt(@as(FieldType, value))))));
                 },
                 else => |T| {

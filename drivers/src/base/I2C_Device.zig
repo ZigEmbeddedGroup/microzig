@@ -25,7 +25,7 @@ pub const InterfaceError = Error || error{Unsupported};
 pub const Address = enum(u7) {
     _,
     /// The general call addresses all devices on the bus using the I²C address 0.
-    pub const general_call: Address = @fromBackingInt(@intCast(0x00));
+    pub const general_call: Address = @fromBackingInt(0x00);
 
     pub const Error = error{
         GeneralCall,
@@ -159,7 +159,7 @@ pub const TestDevice = struct {
 
             .write_enabled = write_enabled,
 
-            .addr = @fromBackingInt(@intCast(0)),
+            .addr = @fromBackingInt(0),
         };
     }
 
@@ -293,7 +293,7 @@ test "Address.check_reserved returns correct error types" {
     };
 
     for (test_cases) |test_case| {
-        const addr: Address = @fromBackingInt(@intCast(test_case.address));
+        const addr: Address = @fromBackingInt(test_case.address);
         if (test_case.expected_error) |expected_error| {
             std.testing.expectError(expected_error, addr.check_reserved()) catch |err| {
                 std.debug.print(
@@ -325,7 +325,7 @@ test TestDevice {
     var buffer: [16]u8 = undefined;
 
     const id = td.i2c_device();
-    const addr: Address = @fromBackingInt(@intCast(0));
+    const addr: Address = @fromBackingInt(0);
 
     {
         // The first input datagram will be received here:

@@ -91,7 +91,7 @@ pub const channel = struct {
             }
 
             fn mode(self: *Self) Mode {
-                return @fromBackingInt(@intCast(self.flags & 3));
+                return @fromBackingInt(self.flags & 3);
             }
 
             fn set_mode(self: *Self, mode_: Mode) void {
@@ -305,7 +305,7 @@ pub const channel = struct {
             }
 
             pub fn mode(self: *Self) Mode {
-                return @fromBackingInt(@intCast(self.mode & 3));
+                return @fromBackingInt(self.mode & 3);
             }
 
             pub fn set_mode(self: *Self, mode_: Mode) void {

@@ -24,7 +24,7 @@ const version: enum {
 var uart_logger: ?UART.Writer = null;
 
 pub fn num(n: u1) UART {
-    return @fromBackingInt(@intCast(n));
+    return @fromBackingInt(n);
 }
 
 /// Set a specific uart instance to be used for logging.
@@ -189,7 +189,7 @@ pub const UART = enum(u1) {
             .nrf52840 => regs.PSEL.CTS.write(.{
                 .PIN = pin.index(),
                 .PORT = pin.port(),
-                .CONNECT = @fromBackingInt(@intCast(0)), // 0 means connected lol
+                .CONNECT = @fromBackingInt(0), // 0 means connected lol
             }),
         }
     }
@@ -201,7 +201,7 @@ pub const UART = enum(u1) {
             .nrf52840 => regs.PSEL.RTS.write(.{
                 .PIN = pin.index(),
                 .PORT = pin.port(),
-                .CONNECT = @fromBackingInt(@intCast(0)), // 0 means connected lol
+                .CONNECT = @fromBackingInt(0), // 0 means connected lol
             }),
         }
     }

@@ -38,9 +38,9 @@ pub fn configure(self: Uart, cfg: Config) void {
     inline for (0..4) |_|
         asm volatile ("nop");
     self.regs.UART0_CLKSEL.write(.{
-        .LFCLK_SEL = @fromBackingInt(@intCast(@intFromBool(cfg.clk.src == .LFCLK))),
-        .MFCLK_SEL = @fromBackingInt(@intCast(@intFromBool(cfg.clk.src == .MFCLK))),
-        .BUSCLK_SEL = @fromBackingInt(@intCast(@intFromBool(cfg.clk.src == .BUSCLK))),
+        .LFCLK_SEL = @fromBackingInt(@intFromBool(cfg.clk.src == .LFCLK)),
+        .MFCLK_SEL = @fromBackingInt(@intFromBool(cfg.clk.src == .MFCLK)),
+        .BUSCLK_SEL = @fromBackingInt(@intFromBool(cfg.clk.src == .BUSCLK)),
     });
     self.regs.UART0_CLKDIV.write(.{ .RATIO = cfg.clk.div0 });
     var ctl0 = self.regs.UART0_CTL0.read();
@@ -48,8 +48,8 @@ pub fn configure(self: Uart, cfg: Config) void {
         ctl0.ENABLE = .DISABLE;
         self.regs.UART0_CTL0.write(ctl0);
     }
-    self.regs.UART0_IBRD.write(.{ .DIVINT = @fromBackingInt(@intCast(cfg.clk.div.int)) });
-    self.regs.UART0_FBRD.write(.{ .DIVFRAC = @fromBackingInt(@intCast(cfg.clk.div.frac)) });
+    self.regs.UART0_IBRD.write(.{ .DIVINT = @fromBackingInt(cfg.clk.div.int) });
+    self.regs.UART0_FBRD.write(.{ .DIVFRAC = @fromBackingInt(cfg.clk.div.frac) });
 
     // There are more ctl0 options
     ctl0.LBE = if (cfg.loopback) .ENABLE else .DISABLE;
@@ -65,8 +65,8 @@ pub fn configure(self: Uart, cfg: Config) void {
         .WLEN = cfg.bits,
         .SPS = .DISABLE,
         .SENDIDLE = .DISABLE,
-        .EXTDIR_SETUP = @fromBackingInt(@intCast(0)),
-        .EXTDIR_HOLD = @fromBackingInt(@intCast(0)),
+        .EXTDIR_SETUP = @fromBackingInt(0),
+        .EXTDIR_HOLD = @fromBackingInt(0),
     });
     if (cfg.enable) {
         ctl0.ENABLE = .ENABLE;
@@ -81,7 +81,7 @@ pub fn disable(self: Uart) void {
 pub fn write(self: Uart, b: u8) bool {
     const stat = self.regs.UART0_STAT.read();
     if (stat.TXFF == .SET) return false;
-    self.regs.UART0_TXDATA.write(.{ .DATA = @fromBackingInt(@intCast(b)) });
+    self.regs.UART0_TXDATA.write(.{ .DATA = @fromBackingInt(b) });
     return true;
 }
 

@@ -209,7 +209,7 @@ pub const I2C = struct {
         const regs = i2c.regs;
         const val: u6 = @intCast(config.pclk / 1_000_000);
         const duty: usize = if (config.enable_duty) 1 else 0;
-        const mode: F_S = @fromBackingInt(@intCast(@backingInt(config.mode)));
+        const mode: F_S = @fromBackingInt(@backingInt(config.mode));
 
         regs.CR1.modify(.{ .PE = 0 });
         i2c.reset();
@@ -220,7 +220,7 @@ pub const I2C = struct {
 
         regs.CCR.modify(.{
             .CCR = @as(u12, @intCast(CCR)),
-            .DUTY = @as(DUTY, @fromBackingInt(@intCast(duty))),
+            .DUTY = @as(DUTY, @fromBackingInt(duty)),
             .F_S = mode,
         });
 

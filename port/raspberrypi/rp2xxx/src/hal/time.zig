@@ -6,7 +6,7 @@ const system_timer = @import("system_timer.zig");
 const timer = system_timer.num(0);
 
 pub fn get_time_since_boot() time.Absolute {
-    return @fromBackingInt(@intCast(timer.read()));
+    return @fromBackingInt(timer.read());
 }
 
 pub fn sleep_ms(time_ms: u32) void {

@@ -417,7 +417,7 @@ pub const fs = struct {
             .path_len = path.len,
         };
         const ret = sys_open(&file);
-        return if (ret < 0) FileError.OpenFail else @fromBackingInt(@intCast(@as(usize, @bitCast(ret))));
+        return if (ret < 0) FileError.OpenFail else @fromBackingInt(@as(usize, @bitCast(ret)));
     }
 
     pub fn remove(path: [:0]const u8) FileError!void {

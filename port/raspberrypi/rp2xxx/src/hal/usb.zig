@@ -146,7 +146,7 @@ pub fn Polled(config: Config) type {
                         // registers, IN being first
                         const ep_num = shift / 2;
                         const ep: usb.types.Endpoint = comptime .{
-                            .num = @fromBackingInt(@intCast(ep_num)),
+                            .num = @fromBackingInt(ep_num),
                             .dir = if (shift % 2 == 0) .In else .Out,
                         };
 
@@ -423,7 +423,7 @@ pub fn Polled(config: Config) type {
                 endpoint_control[@backingInt(ep.num) - 1].get(ep.dir).write(.{
                     .ENABLE = 1,
                     .INTERRUPT_PER_BUFF = 1,
-                    .ENDPOINT_TYPE = @fromBackingInt(@intCast(@backingInt(attr.transfer_type))),
+                    .ENDPOINT_TYPE = @fromBackingInt(@backingInt(attr.transfer_type)),
                     .BUFFER_ADDRESS = rp2xxx_buffers.data_offset(ep_hard.data_buffer),
                 });
             }
@@ -463,8 +463,8 @@ pub fn ResetDriver(bootsel_activity_led: ?u5, interface_disable_mask: u32) type 
                     .num_endpoints = 0,
                     .interface_triple = .from(
                         .VendorSpecific,
-                        @fromBackingInt(@intCast(0x00)),
-                        @fromBackingInt(@intCast(0x01)),
+                        @fromBackingInt(0x00),
+                        @fromBackingInt(0x01),
                     ),
                     .interface_s = alloc.string(interface_str),
                 } } };

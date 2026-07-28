@@ -75,10 +75,10 @@ pub const ConfigError = error{
 };
 
 pub const instance = struct {
-    pub const I2C1: I2C = @fromBackingInt(@intCast(0));
-    pub const I2C2: I2C = @fromBackingInt(@intCast(1));
+    pub const I2C1: I2C = @fromBackingInt(0);
+    pub const I2C2: I2C = @fromBackingInt(1);
     pub fn num(instance_number: u2) I2C {
-        return @fromBackingInt(@intCast(instance_number - 1));
+        return @fromBackingInt(instance_number - 1);
     }
 };
 

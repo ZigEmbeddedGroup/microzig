@@ -8,7 +8,7 @@ pub const GPIO = enum(u8) {
     /// Get a GPIO pin. Does not check whether the pin is available.
     // TODO: check unavailable pins
     pub fn num(comptime n: u3, comptime pin: u5) GPIO {
-        return @fromBackingInt(@intCast(@as(u8, n) << 5 | pin));
+        return @fromBackingInt(@as(u8, n) << 5 | pin);
     }
 
     /// Init the GPIO by releasing an eventual reset and enabling its clock.
@@ -84,7 +84,7 @@ pub const GPIO = enum(u8) {
     }
 
     fn get_module(gpio: GPIO) syscon.Module {
-        return @fromBackingInt(@intCast(@backingInt(syscon.Module.GPIO0) + gpio.get_n()));
+        return @fromBackingInt(@backingInt(syscon.Module.GPIO0) + gpio.get_n());
     }
 };
 

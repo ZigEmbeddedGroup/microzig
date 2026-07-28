@@ -78,7 +78,7 @@ pub fn DMA(comptime dma_ctrl: Instances, comptime ch: ChannelNumber) type {
                 const vector_table: *microzig.cpu.VectorTable = @ptrFromInt(0x0);
                 std.debug.assert(@field(vector_table, interrupt_name).* == @intFromPtr(&DMA_Handler));
             }
-            microzig.interrupt.enable(@as(microzig.cpu.ExternalInterrupt, @fromBackingInt(@intCast(interrupt_index))));
+            microzig.interrupt.enable(@as(microzig.cpu.ExternalInterrupt, @fromBackingInt(interrupt_index)));
         }
 
         pub fn get_channel() *Channel {

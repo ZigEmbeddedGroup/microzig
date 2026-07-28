@@ -122,7 +122,7 @@ pub const interrupt = struct {
         const index: u5 = @intCast(num >> 2);
         const shift: u4 = @intCast(4 * (num & 0x4));
         const mask: u16 = @as(u16, 0xf) << shift;
-        return @fromBackingInt(@intCast((csr.meipra.read_set(.{ .index = index }).window & mask) >> shift));
+        return @fromBackingInt((csr.meipra.read_set(.{ .index = index }).window & mask) >> shift);
     }
 };
 

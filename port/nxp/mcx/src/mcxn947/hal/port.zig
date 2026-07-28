@@ -16,7 +16,7 @@ pub const Port = enum(u3) {
     /// `n` must be at most 5 (inclusive).
     pub fn num(n: u3) Port {
         assert(n <= 5);
-        return @fromBackingInt(@intCast(n));
+        return @fromBackingInt(n);
     }
 
     /// Returns the port's index.
@@ -25,7 +25,7 @@ pub const Port = enum(u3) {
     }
 
     fn get_module(port: Port) syscon.Module {
-        return @fromBackingInt(@intCast(@backingInt(syscon.Module.PORT0) + port.get_n()));
+        return @fromBackingInt(@backingInt(syscon.Module.PORT0) + port.get_n());
     }
 
     /// Init the port by releasing an eventual reset and enabling its clock.

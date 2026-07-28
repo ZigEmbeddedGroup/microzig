@@ -165,7 +165,7 @@ pub const Register3 = enum(u3) {
     }
 
     pub fn reg(r: Register3) Register {
-        return @fromBackingInt(@intCast(r.num()));
+        return @fromBackingInt(r.num());
     }
 };
 
@@ -204,7 +204,7 @@ pub const Register4 = enum(u4) {
     }
 
     pub fn reg(r4: Register4) Register {
-        return @fromBackingInt(@intCast(r4.num()));
+        return @fromBackingInt(r4.num());
     }
 };
 
@@ -244,7 +244,7 @@ pub const Register4_pair = enum(u4) {
     }
 
     pub fn reg(r4: Register4_pair) Register {
-        return @fromBackingInt(@intCast(r4.num()));
+        return @fromBackingInt(r4.num());
     }
 };
 

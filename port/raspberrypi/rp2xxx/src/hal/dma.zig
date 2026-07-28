@@ -20,7 +20,7 @@ const MaskType = @Int(.unsigned, num_channels);
 pub fn channel(n: u4) Channel {
     assert(n < num_channels);
 
-    return @fromBackingInt(@intCast(n));
+    return @fromBackingInt(n);
 }
 
 pub fn claim_unused_channel() ?Channel {

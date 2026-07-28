@@ -151,7 +151,7 @@ pub const Key = enum(u16) {
 
         pub fn to_key(enc: Encoding) Key {
             const int: u16 = @bitCast(enc);
-            return @fromBackingInt(@intCast(int));
+            return @fromBackingInt(int);
         }
     };
 };

@@ -1492,8 +1492,8 @@ fn expect_nested_struct_field(expected: *const NestedStructField, actual: *const
 
 test "gen.StructFieldIterator.single register" {
     const expected: Register = .{
-        .id = @fromBackingInt(@intCast(1)),
-        .struct_id = @fromBackingInt(@intCast(1)),
+        .id = @fromBackingInt(1),
+        .struct_id = @fromBackingInt(1),
         .description = "This is a description",
         .name = "TEST_REGISTER",
         .ref_type = null,
@@ -1520,8 +1520,8 @@ test "gen.StructFieldIterator.single register" {
 test "gen.StructFieldIterator.two registers perfect overlap" {
     const registers: []const Register = &.{
         .{
-            .id = @fromBackingInt(@intCast(1)),
-            .struct_id = @fromBackingInt(@intCast(1)),
+            .id = @fromBackingInt(1),
+            .struct_id = @fromBackingInt(1),
             .description = "This is a description",
             .name = "TEST_REGISTER1",
             .ref_type = null,
@@ -1533,8 +1533,8 @@ test "gen.StructFieldIterator.two registers perfect overlap" {
             .count = null,
         },
         .{
-            .id = @fromBackingInt(@intCast(2)),
-            .struct_id = @fromBackingInt(@intCast(2)),
+            .id = @fromBackingInt(2),
+            .struct_id = @fromBackingInt(2),
             .description = "This is a description",
             .name = "TEST_REGISTER2",
             .ref_type = null,
@@ -1563,8 +1563,8 @@ test "gen.StructFieldIterator.two registers perfect overlap" {
 test "gen.StructFieldIterator.two registers overlap but one is smaller" {
     const registers: []const Register = &.{
         .{
-            .id = @fromBackingInt(@intCast(1)),
-            .struct_id = @fromBackingInt(@intCast(1)),
+            .id = @fromBackingInt(1),
+            .struct_id = @fromBackingInt(1),
             .description = "This is a description",
             .name = "TEST_REGISTER1",
             .ref_type = null,
@@ -1576,8 +1576,8 @@ test "gen.StructFieldIterator.two registers overlap but one is smaller" {
             .count = null,
         },
         .{
-            .id = @fromBackingInt(@intCast(2)),
-            .struct_id = @fromBackingInt(@intCast(2)),
+            .id = @fromBackingInt(2),
+            .struct_id = @fromBackingInt(2),
             .description = "This is a description",
             .name = "TEST_REGISTER2",
             .ref_type = null,
@@ -1606,8 +1606,8 @@ test "gen.StructFieldIterator.two registers overlap but one is smaller" {
 test "gen.StructFieldIterator.two registers overlap with different offsets" {
     const registers: []const Register = &.{
         .{
-            .id = @fromBackingInt(@intCast(1)),
-            .struct_id = @fromBackingInt(@intCast(1)),
+            .id = @fromBackingInt(1),
+            .struct_id = @fromBackingInt(1),
             .description = "This is a description",
             .name = "TEST_REGISTER1",
             .ref_type = null,
@@ -1619,8 +1619,8 @@ test "gen.StructFieldIterator.two registers overlap with different offsets" {
             .count = null,
         },
         .{
-            .id = @fromBackingInt(@intCast(2)),
-            .struct_id = @fromBackingInt(@intCast(2)),
+            .id = @fromBackingInt(2),
+            .struct_id = @fromBackingInt(2),
             .description = "This is a description",
             .name = "TEST_REGISTER2",
             .ref_type = null,
@@ -1648,8 +1648,8 @@ test "gen.StructFieldIterator.two registers overlap with different offsets" {
 
 test "gen.StructFieldIterator.one nested struct field" {
     const expected = NestedStructField{
-        .parent_id = @fromBackingInt(@intCast(1)),
-        .struct_id = @fromBackingInt(@intCast(2)),
+        .parent_id = @fromBackingInt(1),
+        .struct_id = @fromBackingInt(2),
         .offset_bytes = 0,
         .name = "TEST_NESTED",
         .description = "a desc",
@@ -1671,8 +1671,8 @@ test "gen.StructFieldIterator.one nested struct field" {
 
 test "gen.StructFieldIterator.one nested struct field and a register" {
     const expected_register: Register = .{
-        .id = @fromBackingInt(@intCast(1)),
-        .struct_id = @fromBackingInt(@intCast(3)),
+        .id = @fromBackingInt(1),
+        .struct_id = @fromBackingInt(3),
         .description = "This is a description",
         .name = "TEST_REGISTER",
         .ref_type = null,
@@ -1685,8 +1685,8 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
     };
 
     const expected_nsf = NestedStructField{
-        .parent_id = @fromBackingInt(@intCast(1)),
-        .struct_id = @fromBackingInt(@intCast(2)),
+        .parent_id = @fromBackingInt(1),
+        .struct_id = @fromBackingInt(2),
         .offset_bytes = 8,
         .name = "TEST_NESTED",
         .description = "a desc",
@@ -2470,7 +2470,7 @@ test "gen.field with named enum and unnamed default" {
             \\
             \\    /// offset: 0x00
             \\    TEST_REGISTER: mmio.Mmio(packed struct(u8) {
-            \\        TEST_FIELD: TEST_ENUM = @fromBackingInt(@intCast(0xA)),
+            \\        TEST_FIELD: TEST_ENUM = @fromBackingInt(0xA),
             \\        padding: u4 = 0,
             \\    }),
             \\};

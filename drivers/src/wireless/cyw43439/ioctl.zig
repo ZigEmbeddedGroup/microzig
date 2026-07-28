@@ -170,7 +170,7 @@ pub const Response = struct {
         return if (self.cdc_hdr) |cdc_hdr|
             cdc_hdr
         else blk: {
-            _ = self.reader.discard(@fromBackingInt(@intCast(self.padding()))) catch unreachable;
+            _ = self.reader.discard(@fromBackingInt(self.padding())) catch unreachable;
             self.cdc_hdr = self.reader.takeStruct(CDC_Header, .little) catch unreachable;
             break :blk self.cdc_hdr.?;
         };
@@ -181,7 +181,7 @@ pub const Response = struct {
         return if (self.bdc_hdr) |bdc_hdr|
             bdc_hdr
         else blk: {
-            _ = self.reader.discard(@fromBackingInt(@intCast(self.padding()))) catch unreachable;
+            _ = self.reader.discard(@fromBackingInt(self.padding())) catch unreachable;
             self.bdc_hdr = self.reader.takeStruct(BDC_Header, .little) catch unreachable;
             break :blk self.bdc_hdr.?;
         };

@@ -9,7 +9,7 @@ const mdf = @import("../root.zig");
 
 pub const AS5600 = struct {
     const Self = @This();
-    const address: mdf.base.I2C_Device.Address = @fromBackingInt(@intCast(0x36));
+    const address: mdf.base.I2C_Device.Address = @fromBackingInt(0x36);
     dev: mdf.base.I2C_Device,
 
     const register = enum(u8) {

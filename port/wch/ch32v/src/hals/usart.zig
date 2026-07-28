@@ -95,7 +95,7 @@ pub const instance = struct {
     pub const USART2: USART = .USART2;
     pub const USART3: USART = .USART3;
     pub fn num(n: u2) USART {
-        return @fromBackingInt(@intCast(n));
+        return @fromBackingInt(n);
     }
 };
 

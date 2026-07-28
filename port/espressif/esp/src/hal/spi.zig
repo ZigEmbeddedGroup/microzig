@@ -22,7 +22,7 @@ pub const instance = struct {
     pub const SPI2 = num(2);
     pub fn num(n: u2) SPI {
         std.debug.assert(n == 2);
-        return @fromBackingInt(@intCast(n));
+        return @fromBackingInt(n);
     }
 };
 

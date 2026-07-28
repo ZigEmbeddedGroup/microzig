@@ -54,7 +54,7 @@ pub fn main() !void {
 
     i2c.apply(config);
 
-    var expander = PCF8574(.{}).init(i2c_device.i2c_device(), @fromBackingInt(@intCast(0x27)));
+    var expander = PCF8574(.{}).init(i2c_device.i2c_device(), @fromBackingInt(0x27));
     const pins_config = lcd(.{}).pins_struct{
         .high_pins = .{
             expander.digital_IO(4),

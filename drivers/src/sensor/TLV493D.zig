@@ -11,8 +11,8 @@ const I2C_Device = mdf.base.I2C_Device;
 const ClockDevice = mdf.base.ClockDevice;
 
 /// TLV493D I2C addresses
-pub const ADDRESS0: I2C_Device.Address = @fromBackingInt(@intCast(0x1F));
-pub const ADDRESS1: I2C_Device.Address = @fromBackingInt(@intCast(0x5E)); // Default
+pub const ADDRESS0: I2C_Device.Address = @fromBackingInt(0x1F);
+pub const ADDRESS1: I2C_Device.Address = @fromBackingInt(0x5E); // Default
 
 /// Startup delay in milliseconds
 pub const STARTUPDELAY_MS: u32 = 40;

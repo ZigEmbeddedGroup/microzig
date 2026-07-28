@@ -906,7 +906,7 @@ pub const GlobalConfiguration = struct {
                     gpio_pin.set_function(.hstx);
                 } else if (comptime func.is_adc()) {
                     const adc_num = @backingInt(func) - @backingInt(Function.ADC0);
-                    adc.Input.configure_gpio_pin(@as(adc.Input, @fromBackingInt(@intCast(adc_num))));
+                    adc.Input.configure_gpio_pin(@as(adc.Input, @fromBackingInt(adc_num)));
                 } else if (comptime func == .QMI_CS1) {
                     gpio_pin.set_function(.gpck); // Shares function number with clock
                     XIP_CTRL.CTRL.modify(.{

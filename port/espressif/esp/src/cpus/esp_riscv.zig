@@ -131,7 +131,7 @@ pub const interrupt = struct {
     }
 
     pub fn get_priority(int: Interrupt) Priority {
-        return @fromBackingInt(@intCast(get_priority_register_for(int).*));
+        return @fromBackingInt(get_priority_register_for(int).*);
     }
 
     fn get_priority_register_for(int: Interrupt) *volatile u32 {
@@ -151,7 +151,7 @@ pub const interrupt = struct {
     }
 
     pub fn get_priority_threshold() Priority {
-        return @fromBackingInt(@intCast(INTERRUPT_CORE0.CPU_INT_THRESH.read().CPU_INT_THRESH));
+        return @fromBackingInt(INTERRUPT_CORE0.CPU_INT_THRESH.read().CPU_INT_THRESH);
     }
 
     pub const Type = enum(u1) {
@@ -169,7 +169,7 @@ pub const interrupt = struct {
 
     pub fn get_type(int: Interrupt) Type {
         const num = @backingInt(int);
-        return @fromBackingInt(@intCast(INTERRUPT_CORE0.CPU_INT_TYPE.raw & (@as(u32, 1) << num) >> num));
+        return @fromBackingInt(INTERRUPT_CORE0.CPU_INT_TYPE.raw & (@as(u32, 1) << num) >> num);
     }
 
     pub const Source = enum(u6) {
@@ -244,7 +244,7 @@ pub const interrupt = struct {
     pub fn get_mapped_interrupt(source: Source) ?Interrupt {
         const source_raw: u4 = @truncate(get_source_map_register_for(source).*);
         if (source_raw != 0) {
-            return @fromBackingInt(@intCast(source_raw));
+            return @fromBackingInt(source_raw);
         } else {
             return null;
         }
@@ -519,7 +519,7 @@ fn unhandled(_: *TrapFrame) linksection(".ram_text") callconv(.c) void {
     if (mcause.is_interrupt != 0) {
         std.log.err("unhandled interrupt {} occurred!", .{mcause.code});
     } else {
-        const exception: Exception = @fromBackingInt(@intCast(mcause.code));
+        const exception: Exception = @fromBackingInt(mcause.code);
         std.log.err("unhandled exception {s} occurred at {x}!", .{ @tagName(exception), csr.mepc.read_raw() });
 
         switch (exception) {
@@ -541,7 +541,7 @@ fn _handle_interrupt(
     if (mcause.is_interrupt != 0) {
         // interrupt
 
-        const int: Interrupt = @fromBackingInt(@intCast(mcause.code));
+        const int: Interrupt = @fromBackingInt(mcause.code);
         const priority = interrupt.get_priority(int);
 
         // low priority interrupts can be preempted by higher priority interrupts
@@ -551,7 +551,7 @@ fn _handle_interrupt(
             const mtval = csr.mtval.read_raw();
 
             const prev_thresh = interrupt.get_priority_threshold();
-            interrupt.set_priority_threshold(@fromBackingInt(@intCast(@backingInt(priority) + 1)));
+            interrupt.set_priority_threshold(@fromBackingInt(@backingInt(priority) + 1));
 
             interrupt.enable_interrupts();
 

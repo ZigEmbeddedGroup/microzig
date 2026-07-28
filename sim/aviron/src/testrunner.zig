@@ -393,7 +393,7 @@ const IO = struct {
 
     fn dev_read(ctx: *anyopaque, addr: aviron.IO.Address) u8 {
         const io: *IO = @ptrCast(@alignCast(ctx));
-        const reg: Register = @fromBackingInt(@intCast(addr));
+        const reg: Register = @fromBackingInt(addr);
         return switch (reg) {
             .exit => 0,
             .stdio => if (io.stdin.len > 0) blk: {
@@ -446,7 +446,7 @@ const IO = struct {
     /// `mask` determines which bits of `value` are written. To write everything, use `0xFF` for `mask`.
     fn dev_write_masked(ctx: *anyopaque, addr: aviron.IO.Address, mask: u8, value: u8) void {
         const io: *IO = @ptrCast(@alignCast(ctx));
-        const reg: Register = @fromBackingInt(@intCast(addr));
+        const reg: Register = @fromBackingInt(addr);
         switch (reg) {
             .exit => {
                 io.exit_code = value & mask;
