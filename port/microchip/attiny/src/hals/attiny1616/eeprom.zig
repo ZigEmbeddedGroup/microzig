@@ -10,17 +10,17 @@ pub const Address = enum(u8) {
     _,
 
     pub fn from_int(value: u8) Address {
-        return @enumFromInt(value);
+        return @fromBackingInt(@intCast(value));
     }
 };
 
 pub fn read_byte(address: Address) u8 {
-    return regs.mem8(data_start + @as(u16, @intFromEnum(address))).*;
+    return regs.mem8(data_start + @as(u16, @backingInt(address))).*;
 }
 
 pub fn write_byte(address: Address, value: u8) void {
     busy_wait();
-    regs.mem8(data_start + @as(u16, @intFromEnum(address))).* = value;
+    regs.mem8(data_start + @as(u16, @backingInt(address))).* = value;
     execute_command(command_page_erase_write);
 }
 
@@ -31,7 +31,7 @@ pub fn update_byte(address: Address, value: u8) void {
 pub fn read_slice(comptime len: usize, start: Address) [len]u8 {
     var out: [len]u8 = undefined;
     for (&out, 0..) |*byte, offset| {
-        byte.* = read_byte(@enumFromInt(@intFromEnum(start) + offset));
+        byte.* = read_byte(@fromBackingInt(@intCast(@backingInt(start) + offset)));
     }
     return out;
 }

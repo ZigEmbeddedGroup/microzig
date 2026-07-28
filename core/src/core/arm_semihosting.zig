@@ -183,7 +183,7 @@ pub const Debug = struct {
     /// NOTE: It is possible for the debugger to request that the application continues by performing an RDI_Execute request or equivalent.
     pub fn panic(reason: PanicCodes, subcode: usize) void {
         const data = PanicData{
-            .reason = @intFromEnum(reason) + 0x20000,
+            .reason = @backingInt(reason) + 0x20000,
             .subcode = subcode,
         };
 
@@ -417,7 +417,7 @@ pub const fs = struct {
             .path_len = path.len,
         };
         const ret = sys_open(&file);
-        return if (ret < 0) FileError.OpenFail else @enumFromInt(@as(usize, @bitCast(ret)));
+        return if (ret < 0) FileError.OpenFail else @fromBackingInt(@intCast(@as(usize, @bitCast(ret))));
     }
 
     pub fn remove(path: [:0]const u8) FileError!void {

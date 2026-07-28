@@ -150,22 +150,22 @@ pub const Register3 = enum(u3) {
 
     pub fn format(r: Register3, writer: *std.Io.Writer) !void {
         try writer.print("r{}", .{
-            16 + @as(u32, @intFromEnum(r)),
+            16 + @as(u32, @backingInt(r)),
         });
     }
 
     /// Returns the numeric value of this value.
     pub fn int(r: Register3) u4 {
-        return @intFromEnum(r);
+        return @backingInt(r);
     }
 
     /// Returns the register number.
     pub fn num(r: Register3) u5 {
-        return 16 + @as(u5, @intFromEnum(r));
+        return 16 + @as(u5, @backingInt(r));
     }
 
     pub fn reg(r: Register3) Register {
-        return @enumFromInt(r.num());
+        return @fromBackingInt(@intCast(r.num()));
     }
 };
 
@@ -189,22 +189,22 @@ pub const Register4 = enum(u4) {
 
     pub fn format(reg4: Register4, writer: *std.Io.Writer) !void {
         try writer.print("r{}", .{
-            16 + @as(u32, @intFromEnum(reg4)),
+            16 + @as(u32, @backingInt(reg4)),
         });
     }
 
     /// Returns the numeric value of this value.
     pub fn int(r4: Register4) u4 {
-        return @intFromEnum(r4);
+        return @backingInt(r4);
     }
 
     /// Returns the register number.
     pub fn num(r4: Register4) u5 {
-        return 16 + @as(u5, @intFromEnum(r4));
+        return 16 + @as(u5, @backingInt(r4));
     }
 
     pub fn reg(r4: Register4) Register {
-        return @enumFromInt(r4.num());
+        return @fromBackingInt(@intCast(r4.num()));
     }
 };
 
@@ -228,23 +228,23 @@ pub const Register4_pair = enum(u4) {
 
     pub fn format(reg4: Register4_pair, writer: *std.Io.Writer) !void {
         try writer.print("r{}:r{}", .{
-            @as(u32, @intFromEnum(reg4)) * 2 + 1,
-            @as(u32, @intFromEnum(reg4)) * 2,
+            @as(u32, @backingInt(reg4)) * 2 + 1,
+            @as(u32, @backingInt(reg4)) * 2,
         });
     }
 
     /// Returns the numeric value of this value.
     pub fn int(r4: Register4_pair) u4 {
-        return @intFromEnum(r4);
+        return @backingInt(r4);
     }
 
     /// Returns the lower register number of the pair
     pub fn num(r4: Register4_pair) u5 {
-        return @as(u5, @intFromEnum(r4)) * 2;
+        return @as(u5, @backingInt(r4)) * 2;
     }
 
     pub fn reg(r4: Register4_pair) Register {
-        return @enumFromInt(r4.num());
+        return @fromBackingInt(@intCast(r4.num()));
     }
 };
 
@@ -283,17 +283,17 @@ pub const Register = enum(u5) {
     r31 = 31,
 
     pub fn format(reg5: Register, writer: *std.Io.Writer) !void {
-        try writer.print("r{}", .{@intFromEnum(reg5)});
+        try writer.print("r{}", .{@backingInt(reg5)});
     }
 
     /// Returns the numeric value of this value.
     pub fn int(r5: Register) u5 {
-        return @intFromEnum(r5);
+        return @backingInt(r5);
     }
 
     /// Returns the register number.
     pub fn num(r5: Register) u5 {
-        return @intFromEnum(r5);
+        return @backingInt(r5);
     }
     pub fn reg(r: Register) Register {
         return r;
@@ -316,12 +316,12 @@ pub const StatusRegisterBit = enum(u3) {
 
     /// Returns the bit index.
     pub fn num(bit: StatusRegisterBit) u3 {
-        return @intFromEnum(bit);
+        return @backingInt(bit);
     }
 
     /// Returns the bit mask.
     pub fn mask(bit: StatusRegisterBit) u8 {
-        return @as(u8, 1) << @intFromEnum(bit);
+        return @as(u8, 1) << @backingInt(bit);
     }
 };
 
@@ -329,16 +329,16 @@ pub const DataBit = enum(u3) {
     _,
 
     pub fn format(bit: DataBit, writer: anytype) !void {
-        try writer.print("{}", .{@intFromEnum(bit)});
+        try writer.print("{}", .{@backingInt(bit)});
     }
 
     /// Returns the bit index.
     pub fn num(bit: DataBit) u3 {
-        return @intFromEnum(bit);
+        return @backingInt(bit);
     }
 
     /// Returns the bit mask.
     pub fn mask(bit: DataBit) u8 {
-        return @as(u8, 1) << @intFromEnum(bit);
+        return @as(u8, 1) << @backingInt(bit);
     }
 };

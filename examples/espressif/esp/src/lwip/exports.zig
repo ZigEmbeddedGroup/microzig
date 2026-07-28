@@ -195,6 +195,6 @@ export fn sys_thread_new(name: [*:0]u8, thread: c.lwip_thread_fn, arg: ?*anyopaq
     return rtos.spawn(gpa, task_wrapper, .{ thread, arg }, .{
         .name = std.mem.span(name),
         .stack_size = 4096,
-        .priority = @enumFromInt(2),
+        .priority = @fromBackingInt(@intCast(2)),
     }) catch @panic("failed to allocate lwip task");
 }

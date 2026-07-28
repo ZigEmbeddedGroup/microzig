@@ -71,7 +71,7 @@ pub const Pin = enum(usize) {
 
     inline fn write_pin_config(gpio: Pin, config: u32) void {
         const port = gpio.get_port();
-        const pin: u4 = @intCast(@intFromEnum(gpio) % 16);
+        const pin: u4 = @intCast(@backingInt(gpio) % 16);
         if (pin <= 7) {
             const offset = @as(u5, pin) << 2;
             port.CR[0].raw &= ~(@as(u32, 0b1111) << offset);
@@ -84,7 +84,7 @@ pub const Pin = enum(usize) {
     }
 
     fn mask(gpio: Pin) u32 {
-        const pin: u4 = @intCast(@intFromEnum(gpio) % 16);
+        const pin: u4 = @intCast(@backingInt(gpio) % 16);
         return @as(u32, 1) << pin;
     }
 
@@ -96,7 +96,7 @@ pub const Pin = enum(usize) {
 
     //NOTE: should invalid pins panic or just be ignored?
     pub fn get_port(gpio: Pin) *volatile GPIO {
-        const pin: usize = @divFloor(@intFromEnum(gpio), 16);
+        const pin: usize = @divFloor(@backingInt(gpio), 16);
         switch (pin) {
             0 => return if (@hasDecl(peripherals, "GPIOA")) peripherals.GPIOA else @panic("Invalid Pin"),
             1 => return if (@hasDecl(peripherals, "GPIOB")) peripherals.GPIOB else @panic("Invalid Pin"),
@@ -117,14 +117,14 @@ pub const Pin = enum(usize) {
     }
 
     pub inline fn set_input_mode(gpio: Pin, mode: InputMode) void {
-        const m_mode = @as(u32, @intFromEnum(mode));
+        const m_mode = @as(u32, @backingInt(mode));
         const config: u32 = m_mode << 2;
         gpio.write_pin_config(config);
     }
 
     pub inline fn set_output_mode(gpio: Pin, mode: OutputMode, speed: Speed) void {
-        const s_speed = @as(u32, @intFromEnum(speed));
-        const m_mode = @as(u32, @intFromEnum(mode));
+        const s_speed = @as(u32, @backingInt(speed));
+        const m_mode = @as(u32, @backingInt(mode));
         const config: u32 = s_speed + (m_mode << 2);
         gpio.write_pin_config(config);
     }
@@ -159,20 +159,20 @@ pub const Pin = enum(usize) {
     }
 
     pub fn num(pin: usize) Pin {
-        return @enumFromInt(pin);
+        return @fromBackingInt(@intCast(pin));
     }
 
     pub fn from_port(port: Port, pin: u4) Pin {
-        const value: usize = pin + (@as(usize, 16) * @intFromEnum(port));
-        return @enumFromInt(value);
+        const value: usize = pin + (@as(usize, 16) * @backingInt(port));
+        return @fromBackingInt(@intCast(value));
     }
 };
 
 /// Enables the EVENTOUT Cortex® output on the selected pin.
 /// NOTE: not available for GPIO F and G
 pub fn enable_cortex_EVENTOUT(pin: Pin) void {
-    const port: u3 = @intCast(@divFloor(@intFromEnum(pin), 16));
-    const ev_pin: u4 = @intCast(@intFromEnum(pin) % 16);
+    const port: u3 = @intCast(@divFloor(@backingInt(pin), 16));
+    const ev_pin: u4 = @intCast(@backingInt(pin) % 16);
 
     AFIO.EVCR.modify(.{
         .PIN = ev_pin,
@@ -234,19 +234,19 @@ pub fn apply_remap(map: Remap) void {
         .I2C1 => |val| AFIO.MAPR.modify_one("I2C1_REMAP", @intFromBool(val)),
         .USART1 => |val| AFIO.MAPR.modify_one("USART1_REMAP", @intFromBool(val)),
         .USART2 => |val| AFIO.MAPR.modify_one("USART2_REMAP", @intFromBool(val)),
-        .USART3 => |val| AFIO.MAPR.modify_one("USART3_REMAP", @intFromEnum(val)),
-        .TIM1 => |val| AFIO.MAPR.modify_one("TIM1_REMAP", @intFromEnum(val)),
-        .TIM2 => |val| AFIO.MAPR.modify_one("TIM2_REMAP", @intFromEnum(val)),
-        .TIM3 => |val| AFIO.MAPR.modify_one("TIM3_REMAP", @intFromEnum(val)),
+        .USART3 => |val| AFIO.MAPR.modify_one("USART3_REMAP", @backingInt(val)),
+        .TIM1 => |val| AFIO.MAPR.modify_one("TIM1_REMAP", @backingInt(val)),
+        .TIM2 => |val| AFIO.MAPR.modify_one("TIM2_REMAP", @backingInt(val)),
+        .TIM3 => |val| AFIO.MAPR.modify_one("TIM3_REMAP", @backingInt(val)),
         .TIM4 => |val| AFIO.MAPR.modify_one("TIM4_REMAP", @intFromBool(val)),
-        .CAN => |val| AFIO.MAPR.modify_one("CAN1_REMAP", @intFromEnum(val)),
+        .CAN => |val| AFIO.MAPR.modify_one("CAN1_REMAP", @backingInt(val)),
         .PD01 => |val| AFIO.MAPR.modify_one("PD01_REMAP", @intFromBool(val)),
         .TIM5CH4 => |val| AFIO.MAPR.modify_one("TIM5CH4_IREMAP", @intFromBool(val)),
         .ADC1_ETRGINJ => |val| AFIO.MAPR.modify_one("ADC1_ETRGINJ_REMAP", @intFromBool(val)),
         .ADC1_ETRGREG => |val| AFIO.MAPR.modify_one("ADC1_ETRGREG_REMAP", @intFromBool(val)),
         .ADC2_ETRGINJ => |val| AFIO.MAPR.modify_one("ADC2_ETRGINJ_REMAP", @intFromBool(val)),
         .ADC2_ETRGREG => |val| AFIO.MAPR.modify_one("ADC2_ETRGREG_REMAP", @intFromBool(val)),
-        .SWJ => |val| AFIO.MAPR.modify_one("SWJ_CFG", @intFromEnum(val)),
+        .SWJ => |val| AFIO.MAPR.modify_one("SWJ_CFG", @backingInt(val)),
         .TIM9_CH1 => |val| AFIO.MAPR2.modify_one("TIM9_REMAP", @intFromBool(val)),
         .TIM10_CH1 => |val| AFIO.MAPR2.modify_one("TIM10_REMAP", @intFromBool(val)),
         .TIM11_CH1 => |val| AFIO.MAPR2.modify_one("TIM11_REMAP", @intFromBool(val)),

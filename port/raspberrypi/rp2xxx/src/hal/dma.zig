@@ -20,7 +20,7 @@ const MaskType = @Int(.unsigned, num_channels);
 pub fn channel(n: u4) Channel {
     assert(n < num_channels);
 
-    return @enumFromInt(n);
+    return @fromBackingInt(@intCast(n));
 }
 
 pub fn claim_unused_channel() ?Channel {
@@ -58,21 +58,21 @@ pub const Channel = enum(u4) {
     _,
 
     pub fn claim(chan: Channel) ChannelError!void {
-        if (!claimed_channels.set(@intFromEnum(chan)))
+        if (!claimed_channels.set(@backingInt(chan)))
             return ChannelError.AlreadyClaimed;
     }
 
     pub fn unclaim(chan: Channel) void {
-        const result = claimed_channels.reset(@intFromEnum(chan));
+        const result = claimed_channels.reset(@backingInt(chan));
         std.debug.assert(result);
     }
 
     pub fn is_claimed(chan: Channel) bool {
-        return claimed_channels.test_bit(@intFromEnum(chan)) == 1;
+        return claimed_channels.test_bit(@backingInt(chan)) == 1;
     }
 
     pub fn mask(chan: Channel) MaskType {
-        return @as(MaskType, 1) << @intFromEnum(chan);
+        return @as(MaskType, 1) << @backingInt(chan);
     }
 
     pub const Regs = extern struct {
@@ -102,7 +102,7 @@ pub const Channel = enum(u4) {
 
     pub inline fn get_regs(chan: Channel) *volatile Regs {
         const regs = @as(*volatile [num_channels]Regs, @ptrCast(&DMA.CH0_READ_ADDR));
-        return &regs[@intFromEnum(chan)];
+        return &regs[@backingInt(chan)];
     }
 
     pub const TransferConfig = struct {
@@ -142,7 +142,7 @@ pub const Channel = enum(u4) {
                 .INCR_READ = @intFromBool(config.read_increment),
                 .INCR_WRITE = @intFromBool(config.write_increment),
                 .TREQ_SEL = config.dreq,
-                .CHAIN_TO = @intFromEnum(chain_to),
+                .CHAIN_TO = @backingInt(chain_to),
                 .HIGH_PRIORITY = @intFromBool(config.high_priority),
             });
         } else {
@@ -152,7 +152,7 @@ pub const Channel = enum(u4) {
                 .INCR_READ = @intFromBool(config.read_increment),
                 .INCR_WRITE = @intFromBool(config.write_increment),
                 .TREQ_SEL = config.dreq,
-                .CHAIN_TO = @intFromEnum(chain_to),
+                .CHAIN_TO = @backingInt(chain_to),
                 .HIGH_PRIORITY = @intFromBool(config.high_priority),
             });
         }
@@ -343,31 +343,31 @@ pub const Channel = enum(u4) {
     pub fn set_irq0_enabled(chan: Channel, enabled: bool) void {
         if (enabled) {
             const inte0_set = hw.set_alias_raw(&DMA.INTE0);
-            inte0_set.* = @as(u32, 1) << @intFromEnum(chan);
+            inte0_set.* = @as(u32, 1) << @backingInt(chan);
         } else {
             const inte0_clear = hw.clear_alias_raw(&DMA.INTE0);
-            inte0_clear.* = @as(u32, 1) << @intFromEnum(chan);
+            inte0_clear.* = @as(u32, 1) << @backingInt(chan);
         }
     }
 
     pub fn set_irq1_enabled(chan: Channel, enabled: bool) void {
         if (enabled) {
             const inte1_set = hw.set_alias_raw(&DMA.INTE1);
-            inte1_set.* = @as(u32, 1) << @intFromEnum(chan);
+            inte1_set.* = @as(u32, 1) << @backingInt(chan);
         } else {
             const inte1_clear = hw.clear_alias_raw(&DMA.INTE1);
-            inte1_clear.* = @as(u32, 1) << @intFromEnum(chan);
+            inte1_clear.* = @as(u32, 1) << @backingInt(chan);
         }
     }
 
     pub fn acknowledge_irq0(chan: Channel) void {
         const ints0_set = hw.set_alias_raw(&DMA.INTS0);
-        ints0_set.* = @as(u32, 1) << @intFromEnum(chan);
+        ints0_set.* = @as(u32, 1) << @backingInt(chan);
     }
 
     pub fn acknowledge_irq1(chan: Channel) void {
         const ints1_set = hw.set_alias_raw(&DMA.INTS1);
-        ints1_set.* = @as(u32, 1) << @intFromEnum(chan);
+        ints1_set.* = @as(u32, 1) << @backingInt(chan);
     }
 
     pub fn is_busy(chan: Channel) bool {

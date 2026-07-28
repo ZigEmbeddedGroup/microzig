@@ -56,7 +56,7 @@ pub const Pin = enum {
 pub fn GPIO(comptime port: u3, comptime num: u4, comptime mode: gpio.Mode) type {
     return switch (mode) {
         .input => struct {
-            const pin = gpio.Pin.from_port(@enumFromInt(port), num);
+            const pin = gpio.Pin.from_port(@fromBackingInt(@intCast(port)), num);
 
             pub inline fn read(self: @This()) u1 {
                 _ = self;
@@ -64,7 +64,7 @@ pub fn GPIO(comptime port: u3, comptime num: u4, comptime mode: gpio.Mode) type 
             }
         },
         .output => struct {
-            const pin = gpio.Pin.from_port(@enumFromInt(port), num);
+            const pin = gpio.Pin.from_port(@fromBackingInt(@intCast(port)), num);
 
             pub inline fn put(self: @This(), value: u1) void {
                 _ = self;
@@ -89,7 +89,7 @@ pub fn Pins(comptime config: GlobalConfiguration) type {
             for (@typeInfo(Port.Configuration).@"struct".field_names) |field_name| {
                 if (@field(port_config, field_name)) |pin_config| {
                     const name: []const u8 = pin_config.name orelse field_name;
-                    const typ: type = GPIO(@intFromEnum(@field(Port, port_field_name)), @intFromEnum(@field(Pin, field_name)), pin_config.mode orelse .{ .input = .{.floating} });
+                    const typ: type = GPIO(@backingInt(@field(Port, port_field_name)), @backingInt(@field(Pin, field_name)), pin_config.mode orelse .{ .input = .{.floating} });
                     field_names = field_names ++ .{name};
                     field_types = field_types ++ .{typ};
                     field_attrs = field_attrs ++ .{Attributes{}};
@@ -160,7 +160,7 @@ pub const GlobalConfiguration = struct {
                 comptime {
                     for (@typeInfo(Port.Configuration).@"struct".field_names) |field_name|
                         if (@field(port_config, field_name)) |pin_config| {
-                            const gpio_num = @intFromEnum(@field(Pin, field_name));
+                            const gpio_num = @backingInt(@field(Pin, field_name));
 
                             switch (pin_config.get_mode()) {
                                 .input => input_gpios |= 1 << gpio_num,
@@ -173,7 +173,7 @@ pub const GlobalConfiguration = struct {
                 const used_gpios = comptime input_gpios | output_gpios;
 
                 if (used_gpios != 0) {
-                    const offset = @intFromEnum(@field(Port, port_field_name)) + 2;
+                    const offset = @backingInt(@field(Port, port_field_name)) + 2;
                     const bit = @as(u32, 1 << offset);
                     RCC.APB2ENR.raw |= bit;
                     // Delay after setting
@@ -182,8 +182,8 @@ pub const GlobalConfiguration = struct {
 
                 inline for (@typeInfo(Port.Configuration).@"struct".field_names) |field_name| {
                     if (@field(port_config, field_name)) |pin_config| {
-                        const port = @intFromEnum(@field(Port, port_field_name));
-                        var pin = gpio.Pin.from_port(@enumFromInt(port), @intFromEnum(@field(Pin, field_name)));
+                        const port = @backingInt(@field(Port, port_field_name));
+                        var pin = gpio.Pin.from_port(@fromBackingInt(@intCast(port)), @backingInt(@field(Pin, field_name)));
                         pin.set_mode(pin_config.mode.?);
                     }
                 }
@@ -191,8 +191,8 @@ pub const GlobalConfiguration = struct {
                 if (input_gpios != 0) {
                     inline for (@typeInfo(Port.Configuration).@"struct".field_names) |field_name|
                         if (@field(port_config, field_name)) |pin_config| {
-                            const port = @intFromEnum(@field(Port, port_field_name));
-                            var pin = gpio.Pin.from_port(@enumFromInt(port), @intFromEnum(@field(Pin, field_name)));
+                            const port = @backingInt(@field(Port, port_field_name));
+                            var pin = gpio.Pin.from_port(@fromBackingInt(@intCast(port)), @backingInt(@field(Pin, field_name)));
                             const pull = pin_config.pull orelse continue;
                             if (comptime pin_config.get_mode() != .input)
                                 @compileError("Only input pins can have pull up/down enabled");

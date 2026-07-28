@@ -38,14 +38,14 @@ pub const AddressError = drivers.I2C_Device.Address.Error;
 pub const Error = drivers.I2C_Device.Error || error{Overrun};
 
 pub fn num(n: u1) I2C {
-    return @as(I2C, @enumFromInt(n));
+    return @as(I2C, @fromBackingInt(@intCast(n)));
 }
 
 pub const I2C = enum(u1) {
     _,
 
     fn get_regs(i2c: I2C) *volatile I2cRegs {
-        return switch (@intFromEnum(i2c)) {
+        return switch (@backingInt(i2c)) {
             0 => I2C0,
             1 => I2C1,
         };
@@ -73,7 +73,7 @@ pub const I2C = enum(u1) {
         config.scl_pin.set_direction(.in);
         config.scl_pin.set_drive_strength(.SOD1);
         switch (version) {
-            .nrf5283x => regs.PSELSCL.raw = @intFromEnum(config.scl_pin),
+            .nrf5283x => regs.PSELSCL.raw = @backingInt(config.scl_pin),
             .nrf52840 => regs.PSEL.SCL.write(.{
                 .PIN = config.scl_pin.index(),
                 .PORT = config.scl_pin.port(),
@@ -84,7 +84,7 @@ pub const I2C = enum(u1) {
         config.sda_pin.set_direction(.in);
         config.sda_pin.set_drive_strength(.SOD1);
         switch (version) {
-            .nrf5283x => regs.PSELSDA.raw = @intFromEnum(config.sda_pin),
+            .nrf5283x => regs.PSELSDA.raw = @backingInt(config.sda_pin),
             .nrf52840 => regs.PSEL.SDA.write(.{
                 .PIN = config.sda_pin.index(),
                 .PORT = config.sda_pin.port(),
@@ -194,7 +194,7 @@ pub const I2C = enum(u1) {
         i2c.disable();
         defer i2c.enable();
         i2c.get_regs().ADDRESS.write(.{
-            .ADDRESS = @intFromEnum(addr),
+            .ADDRESS = @backingInt(addr),
         });
     }
 

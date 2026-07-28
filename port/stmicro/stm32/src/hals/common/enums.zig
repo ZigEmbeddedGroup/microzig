@@ -42,7 +42,7 @@ pub fn to_peripheral(comptime val: anytype) Peripherals {
         DMA_Type,
         TIMGP16_Type,
         ADC_Type,
-        => @as(Peripherals, @enumFromInt(@intFromEnum(val))),
+        => @as(Peripherals, @fromBackingInt(@intCast(@backingInt(val)))),
         else => @panic("Value must be one of the sur peripheral enum define below"),
     };
 }
@@ -54,10 +54,10 @@ pub fn get_regs(comptime T: type, comptime val: anytype) *volatile T {
 
 pub fn base_perihperal_index(comptime val: anytype) u32 {
     return switch (@TypeOf(val)) {
-        UART_Type => @intFromEnum(val) - @intFromEnum(Peripherals.USART1),
-        I2C_Type => @intFromEnum(val) - @intFromEnum(Peripherals.I2C1),
-        SPI_Type => @intFromEnum(val) - @intFromEnum(Peripherals.SPI1),
-        DMA_Type => @intFromEnum(val) - @intFromEnum(Peripherals.DMA1),
+        UART_Type => @backingInt(val) - @backingInt(Peripherals.USART1),
+        I2C_Type => @backingInt(val) - @backingInt(Peripherals.I2C1),
+        SPI_Type => @backingInt(val) - @backingInt(Peripherals.SPI1),
+        DMA_Type => @backingInt(val) - @backingInt(Peripherals.DMA1),
         else => @panic("Index peripheral is only for multiple index peripherals"),
     };
 }

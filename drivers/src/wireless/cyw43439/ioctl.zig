@@ -170,7 +170,7 @@ pub const Response = struct {
         return if (self.cdc_hdr) |cdc_hdr|
             cdc_hdr
         else blk: {
-            _ = self.reader.discard(@enumFromInt(self.padding())) catch unreachable;
+            _ = self.reader.discard(@fromBackingInt(@intCast(self.padding()))) catch unreachable;
             self.cdc_hdr = self.reader.takeStruct(CDC_Header, .little) catch unreachable;
             break :blk self.cdc_hdr.?;
         };
@@ -181,7 +181,7 @@ pub const Response = struct {
         return if (self.bdc_hdr) |bdc_hdr|
             bdc_hdr
         else blk: {
-            _ = self.reader.discard(@enumFromInt(self.padding())) catch unreachable;
+            _ = self.reader.discard(@fromBackingInt(@intCast(self.padding()))) catch unreachable;
             self.bdc_hdr = self.reader.takeStruct(BDC_Header, .little) catch unreachable;
             break :blk self.bdc_hdr.?;
         };
@@ -658,7 +658,7 @@ pub const EventType = enum(u32) {
     pub fn mask(events: []const EventType) [26]u8 {
         var m: [26]u8 = @splat(0);
         for (events) |event| {
-            const e: u32 = @intFromEnum(event);
+            const e: u32 = @backingInt(event);
             m[4 + e / 8] |= @as(u8, 1) << @as(u3, @truncate(e & 7));
         }
         return m;

@@ -53,7 +53,7 @@ pub fn main() !void {
     // Pass i2c and clock_device to driver to create sensor instance
     var dev = try TLV493D.init(
         i2c_device.i2c_device(),
-        @enumFromInt(0x5E),
+        @fromBackingInt(@intCast(0x5E)),
         rp2xxx.drivers.clock_device(),
         .{},
     );

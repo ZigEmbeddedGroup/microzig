@@ -66,7 +66,7 @@ pub const DS18B20 = struct {
         }
 
         fn from_int(value: u2) Resolution {
-            return @enumFromInt(value);
+            return @fromBackingInt(@intCast(value));
         }
     };
 
@@ -172,7 +172,7 @@ pub const DS18B20 = struct {
         };
         const th, const tl, const config = result;
 
-        const new_config: u8 = if (args.resolution) |res| (@as(u8, @intFromEnum(res)) << 5) else config;
+        const new_config: u8 = if (args.resolution) |res| (@as(u8, @backingInt(res)) << 5) else config;
 
         if (!(try self.reset())) return error.DeviceNotFound;
         try self.select_target(args.target);
@@ -273,7 +273,7 @@ pub const DS18B20 = struct {
 
     fn convert_temperature_to_celsius(lsb: u8, msb: u8, resolution: Resolution) f32 {
         var raw_temp: i16 = @bitCast(@as(u16, msb) << 8 | lsb);
-        raw_temp = raw_temp >> (3 - @intFromEnum(resolution));
+        raw_temp = raw_temp >> (3 - @backingInt(resolution));
 
         return @as(f32, @floatFromInt(raw_temp)) * resolution.factor();
     }
@@ -326,7 +326,7 @@ pub const DS18B20 = struct {
     }
 
     pub fn write_command(self: *const DS18B20, command: Command) !void {
-        try self.write_byte(@intFromEnum(command));
+        try self.write_byte(@backingInt(command));
     }
 
     pub fn write_byte(self: *const DS18B20, data: u8) !void {

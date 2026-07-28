@@ -60,7 +60,7 @@ pub fn main(init: std.process.Init) !void {
 
     const family_id: ?uf2.FamilyId = if (try find_arg(args, "--family-id")) |family_id_str|
         if (std.mem.startsWith(u8, family_id_str, "0x"))
-            @as(uf2.FamilyId, @enumFromInt(try std.fmt.parseInt(u32, family_id_str, 0)))
+            @as(uf2.FamilyId, @fromBackingInt(@intCast(try std.fmt.parseInt(u32, family_id_str, 0))))
         else
             std.meta.stringToEnum(uf2.FamilyId, family_id_str) orelse {
                 std.log.err("invalid family id: {s}, valid family names are:", .{family_id_str});

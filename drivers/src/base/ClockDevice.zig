@@ -104,7 +104,7 @@ pub const TestDevice = struct {
 
     pub fn get_time_since_boot_fn(ctx: *anyopaque) mdf.time.Absolute {
         const dev: *TestDevice = @ptrCast(@alignCast(ctx));
-        return @enumFromInt(dev.time);
+        return @fromBackingInt(@intCast(dev.time));
     }
 
     pub fn sleep_fn(ctx: *anyopaque, time_us: u64) void {

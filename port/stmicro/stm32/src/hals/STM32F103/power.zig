@@ -39,9 +39,9 @@ pub const PowerConfig = struct {
 
 pub inline fn apply(config: PowerConfig) void {
     pwd.CR.modify(.{
-        .PLS = @intFromEnum(config.pvd_threshold),
-        .PDDS = @as(PDDS, @enumFromInt(@intFromEnum(config.deepsleep_mode))),
-        .LPDS = @intFromEnum(config.volt_regulator_mode),
+        .PLS = @backingInt(config.pvd_threshold),
+        .PDDS = @as(PDDS, @fromBackingInt(@intCast(@backingInt(config.deepsleep_mode)))),
+        .LPDS = @backingInt(config.volt_regulator_mode),
     });
     pwd.CSR.modify(.{ .EWUP = @intFromBool(config.wakeup_pin) });
 }

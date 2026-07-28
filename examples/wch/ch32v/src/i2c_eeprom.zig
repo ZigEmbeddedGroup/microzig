@@ -53,7 +53,7 @@ pub fn main() !void {
     const instance = i2c.instance.I2C1;
     instance.apply(.{});
 
-    const eeprom_address: i2c.Address = @enumFromInt(0x50);
+    const eeprom_address: i2c.Address = @fromBackingInt(@intCast(0x50));
 
     // AT24C256 has 32KB (256Kbit), requiring 2-byte addresses
     // Read first 256 bytes as a test

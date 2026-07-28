@@ -79,7 +79,7 @@ pub const lfclk = struct {
         switch (version) {
             .nrf51 => {
                 CLOCK.LFCLKSRC.write(.{
-                    .SRC = @enumFromInt(@intFromEnum(source)),
+                    .SRC = @fromBackingInt(@intCast(@backingInt(source))),
                 });
             },
             .nrf52 => {
@@ -93,8 +93,8 @@ pub const lfclk = struct {
                     .Xtal => |x| {
                         CLOCK.LFCLKSRC.write(.{
                             .SRC = .Xtal,
-                            .BYPASS = @enumFromInt(@intFromBool(x.bypass)),
-                            .EXTERNAL = @enumFromInt(@intFromBool(x.external)),
+                            .BYPASS = @fromBackingInt(@intCast(@intFromBool(x.bypass))),
+                            .EXTERNAL = @fromBackingInt(@intCast(@intFromBool(x.external))),
                         });
                     },
                     .Synth => CLOCK.LFCLKSRC.write(

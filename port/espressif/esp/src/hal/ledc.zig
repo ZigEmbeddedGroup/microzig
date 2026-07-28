@@ -22,20 +22,20 @@ pub fn apply(clock_source: ClockSource) void {
 /// timers must be reconfigured.
 pub fn set_clock_source(clock_source: ClockSource) void {
     LEDC.CONF.modify(.{
-        .APB_CLK_SEL = @intFromEnum(clock_source),
+        .APB_CLK_SEL = @backingInt(clock_source),
     });
 }
 
 pub fn get_clock_source() ClockSource {
-    return @enumFromInt(LEDC.CONF.read().APB_CLK_SEL);
+    return @fromBackingInt(@intCast(LEDC.CONF.read().APB_CLK_SEL));
 }
 
 pub fn timer(num: u4) Timer {
-    return @enumFromInt(num);
+    return @fromBackingInt(@intCast(num));
 }
 
 pub fn channel(num: u4) Channel {
-    return @enumFromInt(num);
+    return @fromBackingInt(@intCast(num));
 }
 
 inline fn comptime_fail_or_error(msg: []const u8, fmt_args: anytype, err: anytype) !void {
@@ -148,7 +148,7 @@ pub const Channel = enum(u2) {
 
         regs.hpoint.write(.{ .HPOINT_LSCH0 = 0 });
         regs.conf0.modify(.{
-            .TIMER_SEL_LSCH0 = @intFromEnum(config.timer),
+            .TIMER_SEL_LSCH0 = @backingInt(config.timer),
             .SIG_OUT_EN_LSCH0 = 1,
         });
 

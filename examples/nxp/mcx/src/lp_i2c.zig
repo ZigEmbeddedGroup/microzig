@@ -49,12 +49,12 @@ pub fn main() !void {
     // Recommended:
     // Using microzig's I2C_Device interface to write
     const i2c_device = i2c.i2c_device();
-    try i2c_device.write(@enumFromInt(0x10), data);
+    try i2c_device.write(@fromBackingInt(@intCast(0x10)), data);
 
     // and read
     var buffer: [4]u8 = undefined;
-    _ = try i2c_device.read(@enumFromInt(0x10), &buffer);
+    _ = try i2c_device.read(@fromBackingInt(@intCast(0x10)), &buffer);
 
     // or do both
-    try i2c_device.write_then_read(@enumFromInt(0x10), data, &buffer);
+    try i2c_device.write_then_read(@fromBackingInt(@intCast(0x10)), data, &buffer);
 }

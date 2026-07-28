@@ -63,7 +63,7 @@ pub const ReportItem = union(enum) {
 
         pub fn local(self: @This()) i32 {
             return switch (self) {
-                inline else => |x| @intFromEnum(x),
+                inline else => |x| @backingInt(x),
                 .vendor => |x| x,
             };
         }
@@ -275,7 +275,7 @@ pub const ReportItem = union(enum) {
                 inline else => |payload| blk: {
                     const data: []const u8 = switch (@TypeOf(payload)) {
                         void => "",
-                        Collection, UsagePage => encode_int(@intFromEnum(payload)),
+                        Collection, UsagePage => encode_int(@backingInt(payload)),
                         u31, i32, ?i32 => encode_int(payload),
                         InputOutput => &.{@bitCast(payload)},
                         else => |T| @compileError(@typeName(T) ++ " cannot be turned into a HID report"),
@@ -397,8 +397,8 @@ pub fn InterruptDriver(options: InterruptDriverOptions) type {
             log.debug("class_request {any}", .{setup});
             switch (setup.request_type.type) {
                 .Standard => {
-                    const hid_desc_type: usb.descriptor.HID.CsType = @enumFromInt(setup.value.into() >> 8);
-                    const request_code: usb.types.SetupRequest = @enumFromInt(setup.request);
+                    const hid_desc_type: usb.descriptor.HID.CsType = @fromBackingInt(@intCast(setup.value.into() >> 8));
+                    const request_code: usb.types.SetupRequest = @fromBackingInt(@intCast(setup.request));
 
                     if (request_code == .GetDescriptor and hid_desc_type == .HID)
                         return std.mem.asBytes(&self.descriptor.hid)
@@ -406,7 +406,7 @@ pub fn InterruptDriver(options: InterruptDriverOptions) type {
                         return report_descriptor;
                 },
                 .Class => {
-                    const hid_request_type: RequestType = @enumFromInt(setup.request);
+                    const hid_request_type: RequestType = @fromBackingInt(@intCast(setup.request));
                     switch (hid_request_type) {
                         .SetIdle => {
                             // TODO: https://github.com/ZigEmbeddedGroup/microzig/issues/454

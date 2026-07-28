@@ -54,7 +54,7 @@ pub const interrupt = struct {
     }
 
     pub inline fn is_enabled(irq: Interrupt) bool {
-        const irq_num = @intFromEnum(irq);
+        const irq_num = @backingInt(irq);
         const num = irq_num >> 5;
         const pos = irq_num & 0x1F;
         const v = switch (num) {
@@ -88,7 +88,7 @@ pub const interrupt = struct {
             }
         }
 
-        const irq_num = @intFromEnum(irq);
+        const irq_num = @backingInt(irq);
         const num = irq_num >> 5;
         const pos = irq_num & 0x1F;
         switch (num) {
@@ -101,7 +101,7 @@ pub const interrupt = struct {
     }
 
     pub inline fn disable(irq: Interrupt) void {
-        const irq_num = @intFromEnum(irq);
+        const irq_num = @backingInt(irq);
         const num = irq_num >> 5;
         const pos = irq_num & 0x1F;
         switch (num) {
@@ -114,7 +114,7 @@ pub const interrupt = struct {
     }
 
     pub inline fn is_pending(irq: Interrupt) bool {
-        const irq_num = @intFromEnum(irq);
+        const irq_num = @backingInt(irq);
         const num = irq_num >> 5;
         const pos = irq_num & 0x1F;
         const v = switch (num) {
@@ -128,7 +128,7 @@ pub const interrupt = struct {
     }
 
     pub inline fn set_pending(irq: Interrupt) void {
-        const irq_num = @intFromEnum(irq);
+        const irq_num = @backingInt(irq);
         const num = irq_num >> 5;
         const pos = irq_num & 0x1F;
         switch (num) {
@@ -141,7 +141,7 @@ pub const interrupt = struct {
     }
 
     pub inline fn clear_pending(irq: Interrupt) void {
-        const irq_num = @intFromEnum(irq);
+        const irq_num = @backingInt(irq);
         const num = irq_num >> 5;
         const pos = irq_num & 0x1F;
         switch (num) {
@@ -154,7 +154,7 @@ pub const interrupt = struct {
     }
 
     pub inline fn is_active(irq: Interrupt) void {
-        const irq_num = @intFromEnum(irq);
+        const irq_num = @backingInt(irq);
         const num = irq_num >> 5;
         const pos = irq_num & 0x1F;
         const v = switch (num) {
@@ -173,13 +173,13 @@ pub const interrupt = struct {
     /// bit6~bit4 - subpriority
     /// bit3~bit0 - reserved (must be 0)
     pub inline fn set_priority(comptime irq: Interrupt, priority: u8) void {
-        const irq_num = @intFromEnum(irq);
+        const irq_num = @backingInt(irq);
         const irq_num_str = std.fmt.comptimePrint("{}", .{irq_num});
-        @field(PFIC, "IPRIOR" ++ irq_num_str) = @intFromEnum(priority) & 0b1111_0000;
+        @field(PFIC, "IPRIOR" ++ irq_num_str) = @backingInt(priority) & 0b1111_0000;
     }
 
     pub inline fn get_priority(comptime irq: Interrupt) u8 {
-        const irq_num = @intFromEnum(irq);
+        const irq_num = @backingInt(irq);
         const irq_num_str = std.fmt.comptimePrint("{}", .{irq_num});
         return @field(PFIC, "IPRIOR" ++ irq_num_str);
     }

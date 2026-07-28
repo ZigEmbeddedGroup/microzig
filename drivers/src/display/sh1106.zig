@@ -205,15 +205,15 @@ pub fn SH1106(comptime options: Options) type {
         }
 
         pub fn entire_display_on(self: Self, mode: DisplayOnMode) !void {
-            try self.execute_command(@intFromEnum(mode), &.{});
+            try self.execute_command(@backingInt(mode), &.{});
         }
 
         pub fn set_normal_or_inverse_color(self: Self, mode: NormalOrInverseDisplay) !void {
-            try self.execute_command(@intFromEnum(mode), &.{});
+            try self.execute_command(@backingInt(mode), &.{});
         }
 
         pub fn set_display(self: Self, mode: DisplayMode) !void {
-            try self.execute_command(@intFromEnum(mode), &.{});
+            try self.execute_command(@backingInt(mode), &.{});
         }
 
         pub fn set_lower_column_address(self: Self, addr: u2) !void {
@@ -301,7 +301,7 @@ pub fn SH1106(comptime options: Options) type {
             @"8.0",
             @"9.0",
         }) !void {
-            const cmd: u8 = 0x30 | @as(u8, @intFromEnum(voltage));
+            const cmd: u8 = 0x30 | @as(u8, @backingInt(voltage));
             try self.execute_command(cmd, &.{});
         }
 

@@ -71,7 +71,7 @@ pub const ADC = struct {
         if (channel > 18) return; //invalid channel, do nothing
         const regs = self.regs;
         const smpr_index = if (channel < 10) channel else channel - 10;
-        const rate: u32 = @intFromEnum(sample_rate);
+        const rate: u32 = @backingInt(sample_rate);
         const smpr_val = rate << (smpr_index * 3);
         if (channel < 10) {
             regs.SMPR2.raw |= smpr_val;
@@ -450,7 +450,7 @@ pub const AdvancedADC = struct {
 
     pub fn set_data_alignment(self: *const AdvancedADC, aling: Alignment) void {
         const regs = self.regs;
-        regs.CR2.modify(.{ .ALIGN = @intFromEnum(aling) }); //set data alignment
+        regs.CR2.modify(.{ .ALIGN = @backingInt(aling) }); //set data alignment
     }
 
     pub fn read_flags(self: *const AdvancedADC) Flags {
@@ -488,7 +488,7 @@ pub const AdvancedADC = struct {
         regs.CR1.modify(.{ .EOCIE = @as(u1, if (config.interrupt) 1 else 0) });
 
         const cr2_read = regs.CR2.read();
-        const trig_sel: u3 = @intFromEnum(config.trigger);
+        const trig_sel: u3 = @backingInt(config.trigger);
         const dma: u1 = @intFromBool(config.dma);
         if ((cr2_read.DMA != dma) or (cr2_read.EXTTRIG != trig_sel))
             regs.CR2.modify(.{
@@ -565,7 +565,7 @@ pub const AdvancedADC = struct {
         if (channel > 18) return; //invalid channel, do nothing
         const regs = self.regs;
         const smpr_index = if (channel < 10) channel else channel - 10;
-        const rate: u32 = @intFromEnum(sample_rate);
+        const rate: u32 = @backingInt(sample_rate);
         const smpr_val = rate << (smpr_index * 3);
         if (channel < 10) {
             regs.SMPR2.raw |= smpr_val;
@@ -634,7 +634,7 @@ pub const AdvancedADC = struct {
 
     pub fn set_trigger(self: *const AdvancedADC, trigger: RegularTrigger) void {
         const regs = self.regs;
-        const trig_sel: u3 = @intFromEnum(trigger);
+        const trig_sel: u3 = @backingInt(trigger);
         const cr2 = regs.CR2.read();
         if (cr2.EXTSEL != trig_sel) {
             regs.CR2.modify(.{
@@ -701,7 +701,7 @@ pub const AdvancedADC = struct {
 
         self.set_injected_offsets(config.offsets);
         regs.CR2.modify(.{
-            .JEXTSEL = @as(u3, @intFromEnum(config.trigger)),
+            .JEXTSEL = @as(u3, @backingInt(config.trigger)),
             .JEXTTRIG = trig,
         });
         regs.CR1.modify(.{ .JEOCIE = @as(u1, if (config.interrupt) 1 else 0) });
@@ -805,7 +805,7 @@ pub const AdvancedADC = struct {
     /// auto injected mode uses internal trigger, so this function will block the auto injected mode.
     pub fn set_injected_trigger(self: *const AdvancedADC, trigger: InjectedTrigger) void {
         const regs = self.regs;
-        const trig_sel: u3 = @intFromEnum(trigger);
+        const trig_sel: u3 = @backingInt(trigger);
         if (regs.CR2.read().JEXTSEL != trig_sel) {
             regs.CR2.modify(.{
                 .JEXTSEL = trig_sel,
@@ -1058,7 +1058,7 @@ pub const AdvancedADC = struct {
         const max_sample: usize = if (fast) 0 else 2; // 0 == 1.5, 2 == 13.5
 
         //max for fast is 7, max for slow is 14
-        const rate: usize = @intFromEnum(config.channel.sample_rate);
+        const rate: usize = @backingInt(config.channel.sample_rate);
         if (rate > max_sample) return DualConfigError.InvalidSampleRate;
     }
 
@@ -1115,7 +1115,7 @@ pub const AdvancedADC = struct {
     pub fn init(comptime adc: Instance) AdvancedADC {
         return .{
             .regs = enums.get_regs(ADC_Perihperal, adc),
-            .adc_num = @intFromEnum(adc),
+            .adc_num = @backingInt(adc),
         };
     }
 };

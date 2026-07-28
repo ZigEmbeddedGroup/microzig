@@ -32,7 +32,7 @@ const cyw43spi_program = blk: {
 };
 
 fn pin_num(pin: hal.gpio.Pin) u5 {
-    return @truncate(@intFromEnum(pin));
+    return @truncate(@backingInt(pin));
 }
 
 const Self = @This();
@@ -163,7 +163,7 @@ fn dma_read(self: *Self, data: []u32) void {
         .enable = true,
         .read_increment = false,
         .write_increment = true,
-        .dreq = @enumFromInt(@intFromEnum(self.pio) * @as(u6, 8) + @intFromEnum(self.sm) + 4),
+        .dreq = @fromBackingInt(@intCast(@backingInt(self.pio) * @as(u6, 8) + @backingInt(self.sm) + 4)),
     });
     ch.wait_for_finish_blocking();
 }
@@ -177,7 +177,7 @@ fn dma_write(self: *Self, data: []const u32) void {
         .enable = true,
         .read_increment = true,
         .write_increment = false,
-        .dreq = @enumFromInt(@intFromEnum(self.pio) * @as(u6, 8) + @intFromEnum(self.sm)),
+        .dreq = @fromBackingInt(@intCast(@backingInt(self.pio) * @as(u6, 8) + @backingInt(self.sm))),
     });
     ch.wait_for_finish_blocking();
 }

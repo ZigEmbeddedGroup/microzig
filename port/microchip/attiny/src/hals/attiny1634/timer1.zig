@@ -20,7 +20,7 @@ pub fn configure_phase_correct_dynamic(config: DynamicPwmConfig) void {
     // https://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-8303-8-bit-AVR-Microcontroller-tinyAVR-ATtiny1634_Datasheet.pdf
 
     regs.write(regs.TCCR1A, (1 << 7) | (1 << 5) | (1 << 1));
-    regs.write(regs.TCCR1B, (1 << 4) | @as(u8, @intFromEnum(config.prescaler)));
+    regs.write(regs.TCCR1B, (1 << 4) | @as(u8, @backingInt(config.prescaler)));
     set_top(config.top);
 }
 

@@ -179,14 +179,14 @@ pub const USBD = struct {
                     var status_in = status >> 1;
                     inline for (1..8) |i| {
                         if (status_in == 0) break;
-                        if (status_in & 1 == 1) controller.on_buffer(&self.interface, .in(@enumFromInt(i)));
+                        if (status_in & 1 == 1) controller.on_buffer(&self.interface, .in(@fromBackingInt(@intCast(i))));
                         status_in >>= 1;
                     }
                     // OUT endpoints (bits 17-23)
                     var status_out = status >> 17;
                     inline for (1..8) |i| {
                         if (status_out == 0) break;
-                        if (status_out & 1 == 1) controller.on_buffer(&self.interface, .out(@enumFromInt(i)));
+                        if (status_out & 1 == 1) controller.on_buffer(&self.interface, .out(@fromBackingInt(@intCast(i))));
                         status_out >>= 1;
                     }
                 }
@@ -272,7 +272,7 @@ pub const USBD = struct {
             return 0;
         }
 
-        const i = @intFromEnum(ep_num);
+        const i = @backingInt(ep_num);
         const scratch = &self.bufs_in[i];
         const scratch_cap = @min(self.eps_in[i].max_packet_size, scratch.len);
         var scratch_slice: []align(1) u8 = scratch[0..scratch_cap];
@@ -329,7 +329,7 @@ pub const USBD = struct {
         log.debug("ep_readv {t}: ({} bytes)", .{ ep_num, total_len });
 
         const self: *Self = @fieldParentPtr("interface", itf);
-        const i = @intFromEnum(ep_num);
+        const i = @backingInt(ep_num);
         const size = peripherals.USBD.SIZE.EPOUT[i].raw;
 
         const scratch_buf = &self.bufs_out[i];
@@ -374,7 +374,7 @@ pub const USBD = struct {
     fn ep_open(itf: *usb.DeviceInterface, desc: *const usb.descriptor.Endpoint) void {
         const self: *Self = @fieldParentPtr("interface", itf);
         const ep = desc.endpoint;
-        const i = @intFromEnum(ep.num);
+        const i = @backingInt(ep.num);
         const mask: u32 = @as(u32, 1) << i;
         switch (ep.dir) {
             .In => {

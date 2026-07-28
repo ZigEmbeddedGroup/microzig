@@ -312,8 +312,8 @@ const FileHeader = struct {
         try writer.writeAll(&.{
             0xE9,
             self.number_of_segments,
-            @intFromEnum(self.flash_mode),
-            (@as(u8, @intFromEnum(self.flash_size)) << 4) | @intFromEnum(self.flash_freq),
+            @backingInt(self.flash_mode),
+            (@as(u8, @backingInt(self.flash_size)) << 4) | @backingInt(self.flash_freq),
         });
         try writer.writeInt(u32, self.entry_point, .little);
     }
@@ -332,9 +332,9 @@ const ExtendedFileHeader = struct {
     hash: bool,
 
     pub fn write_to(self: ExtendedFileHeader, writer: *std.Io.Writer) !void {
-        try writer.writeByte(@intFromEnum(self.wp));
+        try writer.writeByte(@backingInt(self.wp));
         try writer.writeInt(u24, self.flash_pins_drive_settings, .little);
-        try writer.writeInt(u16, @intFromEnum(self.chip_id), .little);
+        try writer.writeInt(u16, @backingInt(self.chip_id), .little);
         try writer.writeByte(0);
         try writer.writeInt(u16, self.min_rev, .little);
         try writer.writeInt(u16, self.max_rev, .little);

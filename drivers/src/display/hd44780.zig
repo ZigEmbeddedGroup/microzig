@@ -91,7 +91,7 @@ pub fn HD44780(comptime config: HD44780_Config) type {
 
         //LCD functions
         fn set_rs_pin(lcd: *Self, value: u1) !void {
-            try lcd.io_interface.RS.write(@enumFromInt(value));
+            try lcd.io_interface.RS.write(@fromBackingInt(@intCast(value)));
         }
 
         fn pulse_en_pin(lcd: *Self) !void {
@@ -125,7 +125,7 @@ pub fn HD44780(comptime config: HD44780_Config) type {
             for (0..4) |index| {
                 const pin_bit: u3 = @as(u3, @intCast(index)) + 4;
                 const value: u1 = if (data & (@as(u8, 1) << pin_bit) != 0) 1 else 0;
-                try lcd.io_interface.high_pins[index].write(@enumFromInt(value));
+                try lcd.io_interface.high_pins[index].write(@fromBackingInt(@intCast(value)));
             }
 
             if (lcd.full_bus) {
@@ -133,7 +133,7 @@ pub fn HD44780(comptime config: HD44780_Config) type {
                     //load lower-bits
                     for (0..4) |index| {
                         const value: u1 = if (data & (@as(u8, 1) << @intCast(index)) != 0) 1 else 0;
-                        try pins[index].write(@enumFromInt(value));
+                        try pins[index].write(@fromBackingInt(@intCast(value)));
                     }
                 } else {
                     return error.UnsupportedBus;
@@ -174,7 +174,7 @@ pub fn HD44780(comptime config: HD44780_Config) type {
 
         //low level command function
         pub inline fn command(lcd: *Self, cmd: LCD_Commands) !void {
-            try lcd.send(@intFromEnum(cmd), 0);
+            try lcd.send(@backingInt(cmd), 0);
         }
 
         pub fn screen_clear(lcd: *Self) !void {
@@ -266,7 +266,7 @@ pub fn HD44780(comptime config: HD44780_Config) type {
 
         pub fn set_backlight(lcd: *Self, value: u1) !void {
             if (lcd.io_interface.BK) |bk| {
-                try bk.write(@enumFromInt(value));
+                try bk.write(@fromBackingInt(@intCast(value)));
                 return;
             }
             return error.NoBacklight;
@@ -287,9 +287,9 @@ pub fn HD44780(comptime config: HD44780_Config) type {
         }
 
         pub fn init_device(lcd: *Self, device_config: DeviceConfig) !void {
-            lcd.function_set = (1 << 5) + (@as(u6, @intFromEnum(device_config.bus)) << 4) + (@as(u6, @intFromEnum(device_config.lines)) << 3) + (@as(u6, @intFromEnum(device_config.char_size)) << 2);
-            lcd.entry_mode = (1 << 2) + (@as(u3, @intFromEnum(device_config.shift_direction)) << 1) + @intFromEnum(device_config.display_shift);
-            lcd.display_control = (1 << 3) + (@as(u4, @intFromEnum(device_config.display)) << 2) + (@as(u4, @intFromEnum(device_config.cursor)) << 1) + @intFromEnum(device_config.cursor_blink);
+            lcd.function_set = (1 << 5) + (@as(u6, @backingInt(device_config.bus)) << 4) + (@as(u6, @backingInt(device_config.lines)) << 3) + (@as(u6, @backingInt(device_config.char_size)) << 2);
+            lcd.entry_mode = (1 << 2) + (@as(u3, @backingInt(device_config.shift_direction)) << 1) + @backingInt(device_config.display_shift);
+            lcd.display_control = (1 << 3) + (@as(u4, @backingInt(device_config.display)) << 2) + (@as(u4, @backingInt(device_config.cursor)) << 1) + @backingInt(device_config.cursor_blink);
             lcd.full_bus = !(device_config.bus == .four);
             if (!device_config.skip_begin_delay) {
                 lcd.internal_delay(55000); //wait time = power on time + init time (datasheet: power up time = >40ms | begin time = >15ms)

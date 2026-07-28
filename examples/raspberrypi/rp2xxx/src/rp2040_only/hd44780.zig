@@ -39,7 +39,7 @@ pub fn main() !void {
     i2c0.apply(.{
         .clock_config = rp2040.clock_config,
     });
-    var expander = PCF8574(.{ .I2C_Device = I2C_Device }).init(i2c_device, @enumFromInt(0x27));
+    var expander = PCF8574(.{ .I2C_Device = I2C_Device }).init(i2c_device, @fromBackingInt(@intCast(0x27)));
     const pins_config = lcd(.{}).pins_struct{
         .high_pins = .{
             expander.digital_IO(4),

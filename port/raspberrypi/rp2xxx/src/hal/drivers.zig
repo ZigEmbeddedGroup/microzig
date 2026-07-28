@@ -412,7 +412,7 @@ pub const GPIO_Device = struct {
     }
 
     pub fn read(dio: GPIO_Device) ReadError!State {
-        return @enumFromInt(dio.pin.read());
+        return @fromBackingInt(@intCast(dio.pin.read()));
     }
 
     const vtable = Digital_IO.VTable{
@@ -603,7 +603,7 @@ pub const WiFi = struct {
             0 => @ptrCast(&IO_BANK0.PROC0_INTE0),
             else => @ptrCast(&IO_BANK0.PROC1_INTE0),
         };
-        const pin_num = @intFromEnum(pin);
+        const pin_num = @backingInt(pin);
         const bits: u4 = @truncate(ints_base[pin_num >> 3] & 0xF);
         const events: hal.gpio.IrqEvents = @bitCast(bits);
         return events;

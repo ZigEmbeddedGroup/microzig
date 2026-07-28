@@ -22,7 +22,7 @@ pub const instance = struct {
     pub const SPI2 = num(2);
     pub fn num(n: u2) SPI {
         std.debug.assert(n == 2);
-        return @enumFromInt(n);
+        return @fromBackingInt(@intCast(n));
     }
 };
 
@@ -350,15 +350,15 @@ pub const SPI = enum(u2) {
     }
 
     inline fn get_regs(self: SPI) *volatile SPI_Regs {
-        std.debug.assert(@intFromEnum(self) == 2);
+        std.debug.assert(@backingInt(self) == 2);
         return microzig.chip.peripherals.SPI2;
     }
 
     fn set_bit_order(self: SPI, bit_order: BitOrder) void {
         const regs = self.get_regs();
         regs.CTRL.modify(.{
-            .RD_BIT_ORDER = @intFromEnum(bit_order),
-            .WR_BIT_ORDER = @intFromEnum(bit_order),
+            .RD_BIT_ORDER = @backingInt(bit_order),
+            .WR_BIT_ORDER = @backingInt(bit_order),
         });
     }
 

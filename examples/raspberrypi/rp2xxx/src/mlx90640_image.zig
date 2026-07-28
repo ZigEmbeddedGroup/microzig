@@ -37,13 +37,13 @@ pub fn main() !void {
 
     var camera = try MLX90640.init(.{
         .i2c = i2c_device.i2c_device(),
-        .address = @enumFromInt(0x33),
+        .address = @fromBackingInt(@intCast(0x33)),
         .clock = rp2xxx.drivers.clock_device(),
     });
 
     try camera.set_refresh_rate(0b101);
 
-    const i2c_dd = rp2xxx.drivers.I2C_DatagramDevice.init(i2c0, @enumFromInt(0x3C), null);
+    const i2c_dd = rp2xxx.drivers.I2C_DatagramDevice.init(i2c0, @fromBackingInt(@intCast(0x3C)), null);
     const lcd = try display.ssd1306.init(.i2c, i2c_dd, null);
     try lcd.clear_screen(false);
 

@@ -106,7 +106,7 @@ pub fn open(self: *Self, addr: i2c.Address, transfer_buffer: []u8, rxCallback: R
 
     self.disable();
 
-    self.regs.IC_SAR.write(.{ .IC_SAR = @intFromEnum(addr) });
+    self.regs.IC_SAR.write(.{ .IC_SAR = @backingInt(addr) });
 
     self.regs.IC_CON.write(.{
         .MASTER_MODE = .DISABLED,
@@ -191,7 +191,7 @@ inline fn enable(self: *Self) void {
 ///
 pub fn set_slave_address(self: *Self, addr: u7) void {
     self.disable();
-    self.regs.IC_SAR.write(.{ .IC_SAR = @enumFromInt(addr) });
+    self.regs.IC_SAR.write(.{ .IC_SAR = @fromBackingInt(@intCast(addr)) });
     self.enable();
 }
 

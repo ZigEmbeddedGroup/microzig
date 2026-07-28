@@ -149,8 +149,8 @@ pub const Register = struct {
         const description: ?[]const u8 = if (row.nullableText(3)) |text| try allocator.dupe(u8, text) else null;
         const ref_type: ?[]const u8 = if (row.nullableText(4)) |text| try allocator.dupe(u8, text) else null;
         return Register{
-            .id = @enumFromInt(row.int(0)),
-            .struct_id = if (row.nullableInt(1)) |value| @enumFromInt(value) else null,
+            .id = @fromBackingInt(@intCast(row.int(0))),
+            .struct_id = if (row.nullableInt(1)) |value| @fromBackingInt(@intCast(value)) else null,
             .name = name,
             .description = description,
             .ref_type = ref_type,
@@ -591,7 +591,7 @@ fn ID(comptime T: type, comptime table_name: []const u8) type {
             writer: *std.Io.Writer,
         ) !void {
             const ID_Type = @TypeOf(id);
-            try writer.print("{s}({})", .{ ID_Type.table, @intFromEnum(id) });
+            try writer.print("{s}({})", .{ ID_Type.table, @backingInt(id) });
         }
     };
 }
@@ -719,7 +719,7 @@ pub fn create_device(db: *Database, opts: CreateDeviceOptions) !DeviceID {
     }) orelse unreachable;
     defer row.deinit();
 
-    return @enumFromInt(row.int(0));
+    return @fromBackingInt(@intCast(row.int(0)));
 }
 
 pub fn get_peripheral_by_name(db: *Database, name: []const u8) !?PeripheralID {
@@ -728,18 +728,18 @@ pub fn get_peripheral_by_name(db: *Database, name: []const u8) !?PeripheralID {
     }) orelse return null;
     defer row.deinit();
 
-    return @enumFromInt(row.int(0));
+    return @fromBackingInt(@intCast(row.int(0)));
 }
 
 /// Get the struct ID for a struct decl with `name` in parent struct
 pub fn get_struct_decl_id_by_name(db: *Database, parent: StructID, name: []const u8) !StructID {
     const row = try db.conn.row("SELECT struct_id FROM struct_decls WHERE parent_id = ? and name = ?", .{
-        @intFromEnum(parent),
+        @backingInt(parent),
         name,
     }) orelse return error.MissingEntity;
     defer row.deinit();
 
-    return @enumFromInt(row.int(0));
+    return @fromBackingInt(@intCast(row.int(0)));
 }
 
 pub fn get_struct_decl_by_name(db: *Database, allocator: Allocator, parent: StructID, name: []const u8) !StructDecl {
@@ -752,7 +752,7 @@ pub fn get_struct_decl_by_name(db: *Database, allocator: Allocator, parent: Stru
     });
 
     return db.one_alloc(StructDecl, allocator, query, .{
-        @intFromEnum(parent),
+        @backingInt(parent),
         name,
     });
 }
@@ -767,7 +767,7 @@ pub fn get_peripheral_by_struct_id(db: *Database, allocator: Allocator, struct_i
     });
 
     return try db.get_one_alloc(Peripheral, allocator, query, .{
-        @intFromEnum(struct_id),
+        @backingInt(struct_id),
     });
 }
 
@@ -781,26 +781,26 @@ pub fn get_struct_decl_by_struct_id(db: *Database, allocator: Allocator, struct_
     });
 
     return try db.get_one_alloc(StructDecl, allocator, query, .{
-        @intFromEnum(struct_id),
+        @backingInt(struct_id),
     });
 }
 
 pub fn get_peripheral_struct(db: *Database, peripheral: PeripheralID) !StructID {
     const row = try db.conn.row("SELECT struct_id FROM peripherals WHERE id = ? LIMIT 1", .{
-        @intFromEnum(peripheral),
+        @backingInt(peripheral),
     }) orelse return error.MissingEntity;
     defer row.deinit();
 
-    return @enumFromInt(row.int(0));
+    return @fromBackingInt(@intCast(row.int(0)));
 }
 
 pub fn get_register_struct(db: *Database, register: RegisterID) !?StructID {
     const row = try db.conn.row("SELECT struct_id FROM registers WHERE id = ?", .{
-        @intFromEnum(register),
+        @backingInt(register),
     }) orelse return null;
     defer row.deinit();
 
-    return if (row.nullableInt(0)) |int| @enumFromInt(int) else null;
+    return if (row.nullableInt(0)) |int| @fromBackingInt(@intCast(int)) else null;
 }
 
 pub fn get_device_id_by_name(db: *Database, name: []const u8) !?DeviceID {
@@ -809,7 +809,7 @@ pub fn get_device_id_by_name(db: *Database, name: []const u8) !?DeviceID {
     }) orelse return null;
     defer row.deinit();
 
-    return @enumFromInt(row.int(0));
+    return @fromBackingInt(@intCast(row.int(0)));
 }
 
 fn scan_row(comptime T: type, allocator: Allocator, row: zqlite.Row) !T {
@@ -820,7 +820,7 @@ fn scan_row(comptime T: type, allocator: Allocator, row: zqlite.Row) !T {
             if (@hasDecl(field_type, "to_string"))
                 @field(entry, field_name) = std.meta.stringToEnum(field_type, row.text(i)) orelse return error.Unknown
             else
-                @field(entry, field_name) = @enumFromInt(row.int(i));
+                @field(entry, field_name) = @fromBackingInt(@intCast(row.int(i)));
         } else if (@typeInfo(field_type) == .int) {
             @field(entry, field_name) = @intCast(row.int(i));
         } else switch (field_type) {
@@ -834,7 +834,7 @@ fn scan_row(comptime T: type, allocator: Allocator, row: zqlite.Row) !T {
                 @field(entry, field_name) = if (row.nullableInt(i)) |value| @intCast(value) else null;
             },
             ?StructID, ?EnumID => {
-                @field(entry, field_name) = if (row.nullableInt(i)) |value| @enumFromInt(value) else null;
+                @field(entry, field_name) = if (row.nullableInt(i)) |value| @fromBackingInt(@intCast(value)) else null;
             },
             ?Access => {
                 @field(entry, field_name) = if (row.nullableText(i)) |text| (std.meta.stringToEnum(Access, text) orelse return error.Unknown) else null;
@@ -880,7 +880,7 @@ pub fn get_struct_decls(db: *Database, allocator: Allocator, parent: StructID) !
     });
 
     return db.all(StructDecl, query, allocator, .{
-        @intFromEnum(parent),
+        @backingInt(parent),
     });
 }
 
@@ -906,8 +906,8 @@ pub fn get_registers_with_mode(
     });
 
     return db.all(Register, query, allocator, .{
-        @intFromEnum(struct_id),
-        @intFromEnum(mode_id),
+        @backingInt(struct_id),
+        @backingInt(mode_id),
     });
 }
 
@@ -928,7 +928,7 @@ pub fn get_struct_registers(
     });
 
     return db.all(Register, query, allocator, .{
-        @intFromEnum(struct_id),
+        @backingInt(struct_id),
     });
 }
 
@@ -951,7 +951,7 @@ fn get_nested_struct_fields(
     });
 
     return db.all(NestedStructField, query, allocator, .{
-        @intFromEnum(struct_id),
+        @backingInt(struct_id),
     });
 }
 
@@ -1046,7 +1046,7 @@ pub fn get_struct_modes(
     });
 
     return db.all(Mode, query, allocator, .{
-        @intFromEnum(struct_id),
+        @backingInt(struct_id),
     });
 }
 
@@ -1087,7 +1087,7 @@ pub fn get_enums(
         });
 
     return db.all(Enum, query, allocator, .{
-        @intFromEnum(struct_id),
+        @backingInt(struct_id),
     });
 }
 
@@ -1100,7 +1100,7 @@ pub fn enum_has_name_collision(db: *Database, enum_id: EnumID) !bool {
         \\  AND e1.name = e2.name
         \\  AND e1.id != e2.id
         \\WHERE e1.id = ?;
-    , .{@intFromEnum(enum_id)}) orelse return false;
+    , .{@backingInt(enum_id)}) orelse return false;
     defer row.deinit();
 
     return true;
@@ -1117,7 +1117,7 @@ pub fn get_enum(
     });
 
     return db.one_alloc(Enum, allocator, query, .{
-        @intFromEnum(id),
+        @backingInt(id),
     });
 }
 
@@ -1173,7 +1173,7 @@ pub fn get_enum_fields(
         });
 
     return db.all(EnumField, query, allocator, .{
-        @intFromEnum(enum_id),
+        @backingInt(enum_id),
     });
 }
 
@@ -1192,7 +1192,7 @@ pub fn get_enum_field_by_name(
     });
 
     return db.one_alloc(EnumField, allocator, query, .{
-        @intFromEnum(enum_id),
+        @backingInt(enum_id),
         name,
     });
 }
@@ -1202,7 +1202,7 @@ pub fn get_interrupts(db: *Database, allocator: Allocator, device_id: DeviceID) 
         comptime gen_field_list(Interrupt, .{}),
     });
 
-    const interrupts = try db.all(Interrupt, query, allocator, .{@intFromEnum(device_id)});
+    const interrupts = try db.all(Interrupt, query, allocator, .{@backingInt(device_id)});
     return interrupts;
 }
 
@@ -1283,7 +1283,7 @@ pub fn get_register_fields(
             comptime gen_field_list(StructField, .{ .prefix = "sf" }),
         });
     return db.all(StructField, query, allocator, .{
-        @intFromEnum(register_id),
+        @backingInt(register_id),
     });
 }
 
@@ -1303,7 +1303,7 @@ pub fn get_register_field_by_name(
             comptime gen_field_list(StructField, .{ .prefix = "sf" }),
         });
     return db.one_alloc(StructField, allocator, query, .{
-        @intFromEnum(register_id),
+        @backingInt(register_id),
         name,
     });
 }
@@ -1311,7 +1311,7 @@ pub fn get_register_field_by_name(
 pub fn get_interrupt_name(db: *Database, allocator: Allocator, interrupt_id: InterruptID) ![]const u8 {
     const query = "SELECT name FROM interrupts WHERE id = ?";
     return db.one_alloc([]const u8, allocator, query, .{
-        @intFromEnum(interrupt_id),
+        @backingInt(interrupt_id),
     });
 }
 
@@ -1325,7 +1325,7 @@ pub fn get_struct_decl(db: *Database, allocator: Allocator, struct_id: StructID)
     });
 
     return try db.get_one_alloc(StructDecl, allocator, query, .{
-        @intFromEnum(struct_id),
+        @backingInt(struct_id),
     });
 }
 
@@ -1345,7 +1345,7 @@ pub fn get_peripheral(db: *Database, allocator: Allocator, peripheral_id: Periph
         comptime gen_field_list(Peripheral, .{}),
     });
     return db.one_alloc(Peripheral, allocator, query, .{
-        @intFromEnum(peripheral_id),
+        @backingInt(peripheral_id),
     });
 }
 
@@ -1354,7 +1354,7 @@ pub fn get_device_properties(db: *Database, allocator: Allocator, device_id: Dev
         comptime gen_field_list(DeviceProperty, .{}),
     });
 
-    return db.all(DeviceProperty, query, allocator, .{@intFromEnum(device_id)});
+    return db.all(DeviceProperty, query, allocator, .{@backingInt(device_id)});
 }
 
 pub fn get_device_peripherals(db: *Database, allocator: Allocator, device_id: DeviceID) ![]DevicePeripheral {
@@ -1368,7 +1368,7 @@ pub fn get_device_peripherals(db: *Database, allocator: Allocator, device_id: De
     });
 
     return db.all(DevicePeripheral, query, allocator, .{
-        @intFromEnum(device_id),
+        @backingInt(device_id),
     });
 }
 
@@ -1382,7 +1382,7 @@ pub fn get_device_peripheral_by_name(db: *Database, allocator: Allocator, device
     });
 
     return db.one_alloc(DevicePeripheral, allocator, query, .{
-        @intFromEnum(device_id),
+        @backingInt(device_id),
         name,
     });
 }
@@ -1393,12 +1393,12 @@ pub fn get_interrupt_by_name(
     name: []const u8,
 ) !?InterruptID {
     const row = try db.conn.row("SELECT id FROM interrupts WHERE device_id = ? AND name = ?", .{
-        @intFromEnum(device_id),
+        @backingInt(device_id),
         name,
     }) orelse return null;
     defer row.deinit();
 
-    return @enumFromInt(row.int(0));
+    return @fromBackingInt(@intCast(row.int(0)));
 }
 
 pub fn get_enum_by_name(
@@ -1417,7 +1417,7 @@ pub fn get_enum_by_name(
     });
 
     return db.one_alloc(Enum, allocator, query, .{
-        @intFromEnum(struct_id),
+        @backingInt(struct_id),
         name,
     }) catch |err| switch (err) {
         error.MissingEntity => {
@@ -1432,7 +1432,7 @@ pub fn get_enum_by_name(
 
                 log.debug("get_enum_by_name: parent_id={f} name='{s}'", .{ parent_id, name });
                 return db.one_alloc(Enum, allocator, query, .{
-                    @intFromEnum(parent_id),
+                    @backingInt(parent_id),
                     name,
                 }) catch {
                     continue;
@@ -1448,11 +1448,11 @@ pub fn get_enum_by_name(
 
 fn get_parent_struct_id(db: *Database, struct_id: StructID) !StructID {
     const row = try db.conn.row("SELECT parent_id FROM struct_decls WHERE struct_id = ?", .{
-        @intFromEnum(struct_id),
+        @backingInt(struct_id),
     }) orelse return error.MissingEntity;
     defer row.deinit();
 
-    return @enumFromInt(row.int(0));
+    return @fromBackingInt(@intCast(row.int(0)));
 }
 
 fn one_alloc(
@@ -1480,7 +1480,7 @@ fn get_one_alloc(
 
 pub fn get_interrupt_idx(db: *Database, interrupt_id: InterruptID) !i32 {
     const row = try db.conn.row("SELECT idx FROM interrupts WHERE id = ?", .{
-        @intFromEnum(interrupt_id),
+        @backingInt(interrupt_id),
     }) orelse return error.MissingEntity;
     defer row.deinit();
 
@@ -1507,8 +1507,8 @@ pub fn add_nested_struct_field(
         \\VALUES
         \\  (?, ?, ?, ?, ?, ?, ?)
     , .{
-        @intFromEnum(parent),
-        @intFromEnum(opts.struct_id),
+        @backingInt(parent),
+        @backingInt(opts.struct_id),
         opts.name,
         opts.description,
         opts.offset_bytes,
@@ -1544,8 +1544,8 @@ pub fn create_nested_struct(
         \\VALUES
         \\  (?, ?, ?, ?, ?)
     , .{
-        @intFromEnum(parent),
-        @intFromEnum(struct_id),
+        @backingInt(parent),
+        @backingInt(struct_id),
         opts.name,
         opts.description,
         opts.size_bytes,
@@ -1574,7 +1574,7 @@ pub fn add_device_property(db: *Database, device_id: DeviceID, opts: AddDevicePr
         \\VALUES
         \\  (?, ?, ?, ?)
     , .{
-        @intFromEnum(device_id),
+        @backingInt(device_id),
         opts.key,
         opts.value,
         opts.description,
@@ -1588,7 +1588,7 @@ pub fn get_device_property(
     key: []const u8,
 ) !?[]const u8 {
     const row = try db.conn.row("SELECT value FROM device_properties WHERE device_id = ? AND key = ?", .{
-        @intFromEnum(device_id),
+        @backingInt(device_id),
         key,
     }) orelse return null;
     defer row.deinit();
@@ -1617,14 +1617,14 @@ pub fn create_interrupt(db: *Database, device_id: DeviceID, opts: CreateInterrup
         \\  (?, ?, ?, ?)
         \\RETURNING id
     , .{
-        @intFromEnum(device_id),
+        @backingInt(device_id),
         opts.name,
         opts.description,
         opts.idx,
     }) orelse unreachable;
     defer row.deinit();
 
-    return @enumFromInt(row.int(0));
+    return @fromBackingInt(@intCast(row.int(0)));
 }
 
 pub const CreatePeripheralOptions = struct {
@@ -1648,14 +1648,14 @@ pub fn create_peripheral(db: *Database, opts: CreatePeripheralOptions) !Peripher
 
     const peripheral_id: PeripheralID = blk: {
         const row = try db.conn.row("INSERT INTO peripherals (struct_id, name, description, size_bytes) VALUES (?, ?, ?, ?) RETURNING id", .{
-            @intFromEnum(struct_id),
+            @backingInt(struct_id),
             opts.name,
             opts.description,
             opts.size_bytes,
         }) orelse unreachable;
         defer row.deinit();
 
-        break :blk @enumFromInt(row.int(0));
+        break :blk @fromBackingInt(@intCast(row.int(0)));
     };
 
     try db.conn.commit();
@@ -1698,8 +1698,8 @@ pub fn create_device_peripheral(
         \\  (?, ?, ?, ?, ?, ?)
         \\RETURNING id
     , .{
-        @intFromEnum(device_id),
-        @intFromEnum(opts.struct_id),
+        @backingInt(device_id),
+        @backingInt(opts.struct_id),
         opts.name,
         opts.description,
         opts.offset_bytes,
@@ -1707,7 +1707,7 @@ pub fn create_device_peripheral(
     }) orelse unreachable;
     defer row.deinit();
 
-    return @enumFromInt(row.int(0));
+    return @fromBackingInt(@intCast(row.int(0)));
 }
 
 pub const CreateModeOptions = struct {
@@ -1727,14 +1727,14 @@ pub fn create_mode(db: *Database, parent: StructID, opts: CreateModeOptions) !Mo
         \\RETURNING id
     , .{
         opts.name,
-        @intFromEnum(parent),
+        @backingInt(parent),
         opts.description,
         opts.value,
         opts.qualifier,
     }) orelse unreachable;
     defer row.deinit();
 
-    const mode_id: ModeID = @enumFromInt(row.int(0));
+    const mode_id: ModeID = @fromBackingInt(@intCast(row.int(0)));
     log.debug(
         "created {f}: struct_id={f} name='{s}' value='{s}' qualifier='{s}'",
         .{ mode_id, parent, opts.name, opts.value, opts.qualifier },
@@ -1767,8 +1767,8 @@ pub fn add_register_mode(db: *Database, register_id: RegisterID, mode_id: ModeID
         \\VALUES
         \\  (?, ?)
     , .{
-        @intFromEnum(register_id),
-        @intFromEnum(mode_id),
+        @backingInt(register_id),
+        @backingInt(mode_id),
     });
 }
 
@@ -1795,12 +1795,12 @@ pub fn create_register(db: *Database, parent: StructID, opts: CreateRegisterOpti
             opts.reset_value,
         }) orelse unreachable;
         defer row.deinit();
-        break :blk @enumFromInt(row.int(0));
+        break :blk @fromBackingInt(@intCast(row.int(0)));
     };
 
     try db.conn.exec("INSERT INTO struct_registers (struct_id, register_id) VALUES (?, ?)", .{
-        @intFromEnum(parent),
-        @intFromEnum(register_id),
+        @backingInt(parent),
+        @backingInt(register_id),
     });
 
     try db.conn.commit();
@@ -1831,7 +1831,7 @@ pub fn get_register_by_name(
     });
 
     const row = try db.conn.row(query, .{
-        @intFromEnum(struct_id),
+        @backingInt(struct_id),
         name,
     }) orelse return error.MissingEntity;
     defer row.deinit();
@@ -1859,8 +1859,8 @@ pub fn add_register_field(db: *Database, parent: RegisterID, opts: AddStructFiel
         const struct_id = try db.create_struct(.{});
 
         try db.conn.exec("UPDATE registers SET struct_id = ? WHERE id = ?", .{
-            @intFromEnum(struct_id),
-            @intFromEnum(parent),
+            @backingInt(struct_id),
+            @backingInt(parent),
         });
 
         log.debug("{f} now has {f}", .{ parent, struct_id });
@@ -1878,12 +1878,12 @@ fn add_struct_field(db: *Database, parent: StructID, opts: AddStructFieldOptions
         \\VALUES
         \\  (?, ?, ?, ?, ?, ?, ?, ?, ?)
     , .{
-        @intFromEnum(parent),
+        @backingInt(parent),
         opts.name,
         opts.description,
         opts.size_bits,
         opts.offset_bits,
-        if (opts.enum_id) |enum_id| @intFromEnum(enum_id) else null,
+        if (opts.enum_id) |enum_id| @backingInt(enum_id) else null,
         opts.count,
         opts.stride,
         if (opts.access) |access| access.to_string() else null,
@@ -1915,14 +1915,14 @@ pub fn create_enum(db: *Database, struct_id: ?StructID, opts: CreateEnumOptions)
         \\  (?, ?, ?, ?)
         \\RETURNING id
     , .{
-        if (struct_id) |si| @intFromEnum(si) else null,
+        if (struct_id) |si| @backingInt(si) else null,
         opts.name,
         opts.description,
         opts.size_bits,
     }) orelse unreachable;
     defer row.deinit();
 
-    const enum_id: EnumID = @enumFromInt(row.int(0));
+    const enum_id: EnumID = @fromBackingInt(@intCast(row.int(0)));
     log.debug("created {f}: struct_id={?f} name='{?s}' description='{?s}' size_bits={}", .{
         enum_id,
         struct_id,
@@ -1947,7 +1947,7 @@ pub fn add_enum_field(db: *Database, enum_id: EnumID, opts: CreateEnumFieldOptio
         \\VALUES
         \\  (?, ?, ?, ?)
     , .{
-        @intFromEnum(enum_id),
+        @backingInt(enum_id),
         opts.name,
         opts.description,
         opts.value,
@@ -1962,7 +1962,7 @@ pub fn create_struct(db: *Database, opts: CreateStructOptions) !StructID {
     const row = try db.conn.row("INSERT INTO structs DEFAULT VALUES RETURNING id", .{}) orelse unreachable;
     defer row.deinit();
 
-    const struct_id: StructID = @enumFromInt(row.int(0));
+    const struct_id: StructID = @fromBackingInt(@intCast(row.int(0)));
     log.debug("created {f}", .{struct_id});
     return struct_id;
 }
@@ -2075,8 +2075,8 @@ fn set_register_field_enum_id(db: *Database, register_id: RegisterID, field_name
         \\)
         \\AND name = ?;
     , .{
-        if (enum_id) |eid| @intFromEnum(eid) else null,
-        @intFromEnum(register_id),
+        if (enum_id) |eid| @backingInt(eid) else null,
+        @backingInt(register_id),
         field_name,
     });
 
@@ -2115,7 +2115,7 @@ pub fn apply_patch(db: *Database, zon_text: [:0]const u8, diags: *std.zon.parse.
                     \\WHERE id = ?;
                 , .{
                     override_arch.arch.to_string(),
-                    @intFromEnum(device_id),
+                    @backingInt(device_id),
                 });
             },
             .set_device_property => |set_prop| {
@@ -2133,7 +2133,7 @@ pub fn apply_patch(db: *Database, zon_text: [:0]const u8, diags: *std.zon.parse.
                     \\  value = excluded.value,
                     \\  description = excluded.description;
                 , .{
-                    @intFromEnum(device_id),
+                    @backingInt(device_id),
                     set_prop.key,
                     set_prop.value,
                     set_prop.description,

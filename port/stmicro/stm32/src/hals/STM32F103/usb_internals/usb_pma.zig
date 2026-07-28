@@ -31,12 +31,12 @@ pub const RX_size = struct {
     block_qtd: usize,
 
     pub fn calc_rx_size(size: *const RX_size) usize {
-        const mul: usize = if (@intFromEnum(size.block_size) == 0) 2 else 32;
+        const mul: usize = if (@backingInt(size.block_size) == 0) 2 else 32;
         return size.block_qtd * mul;
     }
 
     pub fn to_RXcount(size: *const RX_size) u16 {
-        const SL_bit: u16 = @as(u16, @intFromEnum(size.block_size)) << 15;
+        const SL_bit: u16 = @as(u16, @backingInt(size.block_size)) << 15;
         const pkg_qtd: u16 = @as(u16, @intCast(size.block_qtd)) << 10;
         return SL_bit | pkg_qtd;
     }

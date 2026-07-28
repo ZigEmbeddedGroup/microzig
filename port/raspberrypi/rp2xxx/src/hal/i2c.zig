@@ -158,10 +158,10 @@ test "i2c.translate_baudrate" {
 }
 
 pub const instance = struct {
-    pub const I2C0: I2C = @as(I2C, @enumFromInt(0));
-    pub const I2C1: I2C = @as(I2C, @enumFromInt(1));
+    pub const I2C0: I2C = @as(I2C, @fromBackingInt(@intCast(0)));
+    pub const I2C1: I2C = @as(I2C, @fromBackingInt(@intCast(1)));
     pub fn num(instance_number: u1) I2C {
-        return @as(I2C, @enumFromInt(instance_number));
+        return @as(I2C, @fromBackingInt(@intCast(instance_number)));
     }
 };
 
@@ -179,7 +179,7 @@ pub const I2C = enum(u1) {
     _,
 
     pub inline fn get_regs(i2c: I2C) *volatile I2cRegs {
-        return switch (@intFromEnum(i2c)) {
+        return switch (@backingInt(i2c)) {
             0 => I2C0,
             1 => I2C1,
         };
@@ -217,10 +217,10 @@ pub const I2C = enum(u1) {
             .IC_RESTART_EN = if (config.repeated_start) .ENABLED else .DISABLED,
             .IC_SLAVE_DISABLE = .SLAVE_DISABLED,
             .TX_EMPTY_CTRL = .ENABLED,
-            .IC_10BITADDR_SLAVE = @enumFromInt(0),
-            .IC_10BITADDR_MASTER = @enumFromInt(0),
-            .STOP_DET_IFADDRESSED = @enumFromInt(0),
-            .RX_FIFO_FULL_HLD_CTRL = @enumFromInt(0),
+            .IC_10BITADDR_SLAVE = @fromBackingInt(@intCast(0)),
+            .IC_10BITADDR_MASTER = @fromBackingInt(@intCast(0)),
+            .STOP_DET_IFADDRESSED = @fromBackingInt(@intCast(0)),
+            .RX_FIFO_FULL_HLD_CTRL = @fromBackingInt(@intCast(0)),
             .STOP_DET_IF_MASTER_ACTIVE = 0,
         });
 
@@ -294,7 +294,7 @@ pub const I2C = enum(u1) {
 
         i2c.disable();
         i2c.get_regs().IC_TAR.write(.{
-            .IC_TAR = @intFromEnum(addr),
+            .IC_TAR = @backingInt(addr),
             .GC_OR_START = .GENERAL_CALL,
             .SPECIAL = .DISABLED,
         });
@@ -350,14 +350,14 @@ pub const I2C = enum(u1) {
 
     pub fn tx(i2c: I2C) dma.DMA_WriteTarget {
         return .{
-            .dreq = if (@intFromEnum(i2c) == 0) .i2c0_tx else .i2c1_tx,
+            .dreq = if (@backingInt(i2c) == 0) .i2c0_tx else .i2c1_tx,
             .addr = @intFromPtr(&i2c.get_regs().IC_DATA_CMD),
         };
     }
 
     pub fn rx(i2c: I2C) dma.DMA_ReadTarget {
         return .{
-            .dreq = if (@intFromEnum(i2c) == 0) .i2c0_rx else .i2c1_rx,
+            .dreq = if (@backingInt(i2c) == 0) .i2c0_rx else .i2c1_rx,
             .addr = @intFromPtr(&i2c.get_regs().IC_DATA_CMD),
         };
     }
@@ -399,8 +399,8 @@ pub const I2C = enum(u1) {
         var iter = write_vec.iterator();
         while (iter.next_element()) |element| {
             regs.IC_DATA_CMD.write(.{
-                .RESTART = @enumFromInt(0),
-                .STOP = @enumFromInt(@intFromBool(element.last)),
+                .RESTART = @fromBackingInt(@intCast(0)),
+                .STOP = @fromBackingInt(@intCast(@intFromBool(element.last))),
                 .CMD = .WRITE,
                 .DAT = element.value,
 
@@ -475,8 +475,8 @@ pub const I2C = enum(u1) {
         var iter = read_vec.iterator();
         while (iter.next_element_ptr()) |element| {
             regs.IC_DATA_CMD.write(.{
-                .RESTART = @enumFromInt(0),
-                .STOP = @enumFromInt(@intFromBool(element.last)),
+                .RESTART = @fromBackingInt(@intCast(0)),
+                .STOP = @fromBackingInt(@intCast(@intFromBool(element.last))),
                 .CMD = .READ,
                 .DAT = 0,
 
@@ -545,8 +545,8 @@ pub const I2C = enum(u1) {
         var write_iter = write_vec.iterator();
         while (write_iter.next_element()) |element| {
             regs.IC_DATA_CMD.write(.{
-                .RESTART = @enumFromInt(0),
-                .STOP = @enumFromInt(0),
+                .RESTART = @fromBackingInt(@intCast(0)),
+                .STOP = @fromBackingInt(@intCast(0)),
                 .CMD = .WRITE,
                 .DAT = element.value,
 
@@ -576,8 +576,8 @@ pub const I2C = enum(u1) {
         var read_iter = read_vec.iterator();
         recv_loop: while (read_iter.next_element_ptr()) |element| {
             regs.IC_DATA_CMD.write(.{
-                .RESTART = @enumFromInt(@intFromBool(element.first)),
-                .STOP = @enumFromInt(@intFromBool(element.last)),
+                .RESTART = @fromBackingInt(@intCast(@intFromBool(element.first))),
+                .STOP = @fromBackingInt(@intCast(@intFromBool(element.last))),
                 .CMD = .READ,
                 .DAT = 0,
 

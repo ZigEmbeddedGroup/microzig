@@ -16,16 +16,16 @@ pub const Port = enum(u3) {
     /// `n` must be at most 5 (inclusive).
     pub fn num(n: u3) Port {
         assert(n <= 5);
-        return @enumFromInt(n);
+        return @fromBackingInt(@intCast(n));
     }
 
     /// Returns the port's index.
     pub fn get_n(port: Port) u3 {
-        return @intFromEnum(port);
+        return @backingInt(port);
     }
 
     fn get_module(port: Port) syscon.Module {
-        return @enumFromInt(@intFromEnum(syscon.Module.PORT0) + port.get_n());
+        return @fromBackingInt(@intCast(@backingInt(syscon.Module.PORT0) + port.get_n()));
     }
 
     /// Init the port by releasing an eventual reset and enabling its clock.

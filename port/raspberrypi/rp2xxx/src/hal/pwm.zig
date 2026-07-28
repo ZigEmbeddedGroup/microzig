@@ -24,7 +24,7 @@ pub const Slice = enum(u32) {
 
     /// Access slice specific registers directly.
     pub fn get_registers(self: Slice) *volatile Regs {
-        return get_regs(@intFromEnum(self));
+        return get_regs(@backingInt(self));
     }
 
     /// Set the wrap value for the slice.  This is the number of pwm clock
@@ -33,17 +33,17 @@ pub const Slice = enum(u32) {
     /// Parameters:
     ///   wrap - the wrap value
     pub fn set_wrap(self: Slice, wrap: u16) void {
-        set_slice_wrap(@intFromEnum(self), wrap);
+        set_slice_wrap(@backingInt(self), wrap);
     }
 
     /// Enable the slice.
     pub fn enable(self: Slice) void {
-        get_regs(@intFromEnum(self)).csr.modify(.{ .EN = 1 });
+        get_regs(@backingInt(self)).csr.modify(.{ .EN = 1 });
     }
 
     /// Disable the slice
     pub fn disable(self: Slice) void {
-        get_regs(@intFromEnum(self)).csr.modify(.{ .EN = 0 });
+        get_regs(@backingInt(self)).csr.modify(.{ .EN = 0 });
     }
 
     /// Set the slice to phase correct mode.
@@ -51,7 +51,7 @@ pub const Slice = enum(u32) {
     /// Parameters:
     ///   phase_correct - true to enable phase correct mode, false to disable it
     pub fn set_phase_correct(self: Slice, phase_correct: bool) void {
-        set_slice_phase_correct(@intFromEnum(self), phase_correct);
+        set_slice_phase_correct(@backingInt(self), phase_correct);
     }
 
     /// Set the slice to a clock divider mode.
@@ -59,7 +59,7 @@ pub const Slice = enum(u32) {
     /// Parameters:
     ///   div - configuration of the clock divider
     pub fn set_clk_div(self: Slice, div: FractionalDivider) void {
-        set_slice_clk_div(@intFromEnum(self), div);
+        set_slice_clk_div(@backingInt(self), div);
     }
 };
 
@@ -69,7 +69,7 @@ pub const Slice = enum(u32) {
 pub fn get_pwm(pinnum: u9) Pwm {
     const tmp_num: u32 = if (pinnum > 15) pinnum - 16 else pinnum;
     const slice_num: u32 = tmp_num >> 1;
-    const chan: Channel = @enumFromInt(tmp_num & 1);
+    const chan: Channel = @fromBackingInt(@intCast(tmp_num & 1));
     return .{ .channel = chan, .slice_number = slice_num };
 }
 
@@ -104,7 +104,7 @@ pub const Pwm = struct {
 
     /// Get the slice that this pwm instance is on.
     pub fn slice(self: Pwm) Slice {
-        return @enumFromInt(self.slice_number);
+        return @fromBackingInt(@intCast(self.slice_number));
     }
 };
 
@@ -165,7 +165,7 @@ pub fn set_slice_clk_div(slice: u32, div: FractionalDivider) void {
 ///   mode - the clock divider mode
 pub fn set_slice_clk_div_mode(slice: u32, mode: ClkDivMode) void {
     get_regs(slice).csr.modify(.{
-        .DIVMODE = @intFromEnum(mode),
+        .DIVMODE = @backingInt(mode),
     });
 }
 

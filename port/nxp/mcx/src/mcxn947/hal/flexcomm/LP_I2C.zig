@@ -60,7 +60,7 @@ pub const LP_I2C = enum(u4) {
     pub fn init(interface: u4, config: Config) ConfigError!LP_I2C {
         FlexComm.num(interface).init(.I2C);
 
-        const i2c: LP_I2C = @enumFromInt(interface);
+        const i2c: LP_I2C = @fromBackingInt(@intCast(interface));
         const regs = i2c.get_regs();
         i2c.reset();
 
@@ -72,13 +72,13 @@ pub const LP_I2C = enum(u4) {
 
             .CIRFIFO = .DISABLED,
             .RDMO = .DISABLED, // TODO: address match
-            .RELAX = @enumFromInt(@intFromBool(config.relaxed)),
+            .RELAX = @fromBackingInt(@intCast(@intFromBool(config.relaxed))),
             .ABORT = .DISABLED,
         });
         regs.MCFGR1.write(.{
             .PRESCALE = .DIVIDE_BY_1,
             .AUTOSTOP = .DISABLED,
-            .IGNACK = @enumFromInt(@intFromBool(config.ignore_nack)),
+            .IGNACK = @fromBackingInt(@intCast(@intFromBool(config.ignore_nack))),
             .TIMECFG = .IF_SCL_LOW,
             .STARTCFG = .BOTH_I2C_AND_LPI2C_IDLE,
             .STOPCFG = .ANY_STOP,
@@ -99,7 +99,7 @@ pub const LP_I2C = enum(u4) {
 
         try i2c.set_baudrate(config.mode, config.baudrate);
         if (config.bus_idle_timeout) |t| {
-            const prescaler: u8 = @as(u8, 1) << @intFromEnum(regs.MCFGR1.read().PRESCALE);
+            const prescaler: u8 = @as(u8, 1) << @backingInt(regs.MCFGR1.read().PRESCALE);
             regs.MCFGR2.modify_one("BUSIDLE", @intCast(t / ns_per_cycle / prescaler));
         }
 
@@ -155,7 +155,7 @@ pub const LP_I2C = enum(u4) {
     }
 
     fn get_n(i2c: LP_I2C) u4 {
-        return @intFromEnum(i2c);
+        return @backingInt(i2c);
     }
 
     pub fn get_regs(i2c: LP_I2C) RegTy {
@@ -284,7 +284,7 @@ pub const LP_I2C = enum(u4) {
         defer i2c.set_enabled(enabled);
         regs.MCCR0.write(.{ .CLKLO = clk_lo, .CLKHI = clk_hi, .SETHOLD = @intCast(sethold), .DATAVD = @intCast(datavd) });
 
-        regs.MCFGR1.modify_one("PRESCALE", @enumFromInt(prescale));
+        regs.MCFGR1.modify_one("PRESCALE", @fromBackingInt(@intCast(prescale)));
     }
 
     /// Computes the current baudrate.
@@ -294,7 +294,7 @@ pub const LP_I2C = enum(u4) {
         const regs = i2c.get_regs();
         const MCCR0 = regs.MCCR0.read();
         const MCFGR1 = regs.MCFGR1.read();
-        const prescale = @intFromEnum(MCFGR1.PRESCALE);
+        const prescale = @backingInt(MCFGR1.PRESCALE);
         const clk = i2c.get_flexcomm().get_clock();
 
         const filt_scl: u8 = regs.MCFGR2.read().FILTSCL;
@@ -353,7 +353,7 @@ pub const LP_I2C = enum(u4) {
     pub fn send_start_blocking(i2c: LP_I2C, address: u7, mode: enum(u2) { write = 0, read = 1 }) Error!void {
         try i2c.wait_for_tx_space();
 
-        i2c.get_regs().MTDR.write(.{ .DATA = (@as(u8, address) << 1) | @intFromEnum(mode), .CMD = .GENERATE_START_AND_TRANSMIT_ADDRESS_IN_DATA_7_THROUGH_0 });
+        i2c.get_regs().MTDR.write(.{ .DATA = (@as(u8, address) << 1) | @backingInt(mode), .CMD = .GENERATE_START_AND_TRANSMIT_ADDRESS_IN_DATA_7_THROUGH_0 });
     }
 
     /// Sends a I2C stop. Blocks until the stop command has been sent.
@@ -481,14 +481,14 @@ pub const LP_I2C = enum(u4) {
     }
 
     pub fn i2c_device(i2c: LP_I2C) I2C_Device {
-        return .{ .ptr = @ptrFromInt(@intFromEnum(i2c)), .vtable = &.{ .readv_fn = readv, .writev_fn = writev, .writev_then_readv_fn = writev_then_readv } };
+        return .{ .ptr = @ptrFromInt(@backingInt(i2c)), .vtable = &.{ .readv_fn = readv, .writev_fn = writev, .writev_then_readv_fn = writev_then_readv } };
     }
 };
 
 // TODO: check for reserved addresses
 fn writev(d: *anyopaque, addr: I2C_Device.Address, datagrams: []const []const u8) I2C_Device.Error!void {
-    const dev: LP_I2C = @enumFromInt(@intFromPtr(d));
-    const message: LP_I2C.I2C_Msg = .{ .address = @intFromEnum(addr), .flags = .{ .direction = .write }, .chunks = .{ .write = datagrams } };
+    const dev: LP_I2C = @fromBackingInt(@intCast(@intFromPtr(d)));
+    const message: LP_I2C.I2C_Msg = .{ .address = @backingInt(addr), .flags = .{ .direction = .write }, .chunks = .{ .write = datagrams } };
     dev.transfer_blocking(&.{message}) catch |err| switch (err) {
         LP_I2C.Error.UnexpectedNack, LP_I2C.Error.FifoError, LP_I2C.Error.BusBusy, LP_I2C.Error.ArbitrationLost => {
             std.log.debug("ew: {}\n", .{err});
@@ -498,8 +498,8 @@ fn writev(d: *anyopaque, addr: I2C_Device.Address, datagrams: []const []const u8
     };
 }
 fn readv(d: *anyopaque, addr: I2C_Device.Address, datagrams: []const []u8) I2C_Device.Error!usize {
-    const dev: LP_I2C = @enumFromInt(@intFromPtr(d));
-    const message: LP_I2C.I2C_Msg = .{ .address = @intFromEnum(addr), .flags = .{ .direction = .write }, .chunks = .{ .write = datagrams } };
+    const dev: LP_I2C = @fromBackingInt(@intCast(@intFromPtr(d)));
+    const message: LP_I2C.I2C_Msg = .{ .address = @backingInt(addr), .flags = .{ .direction = .write }, .chunks = .{ .write = datagrams } };
     dev.transfer_blocking(&.{message}) catch |err| switch (err) {
         LP_I2C.Error.UnexpectedNack, LP_I2C.Error.FifoError, LP_I2C.Error.BusBusy, LP_I2C.Error.ArbitrationLost => {
             std.log.debug("er: {}\n", .{err});
@@ -517,8 +517,8 @@ fn writev_then_readv(
     write_chunks: []const []const u8,
     read_chunks: []const []u8,
 ) I2C_Device.Error!void {
-    const dev: LP_I2C = @enumFromInt(@intFromPtr(d));
-    const messages: []const LP_I2C.I2C_Msg = &.{ .{ .address = @intFromEnum(addr), .flags = .{ .direction = .write }, .chunks = .{ .write = write_chunks } }, .{ .address = @intFromEnum(addr), .flags = .{ .direction = .read }, .chunks = .{ .read = read_chunks } } };
+    const dev: LP_I2C = @fromBackingInt(@intCast(@intFromPtr(d)));
+    const messages: []const LP_I2C.I2C_Msg = &.{ .{ .address = @backingInt(addr), .flags = .{ .direction = .write }, .chunks = .{ .write = write_chunks } }, .{ .address = @backingInt(addr), .flags = .{ .direction = .read }, .chunks = .{ .read = read_chunks } } };
     dev.transfer_blocking(messages) catch |err| switch (err) {
         LP_I2C.Error.UnexpectedNack, LP_I2C.Error.FifoError, LP_I2C.Error.BusBusy, LP_I2C.Error.ArbitrationLost => {
             std.log.debug("erw: {}\n", .{err});

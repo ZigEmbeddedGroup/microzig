@@ -46,7 +46,7 @@ pub fn main() !void {
     try i2c0.apply(400_000);
 
     // Create i2c datagram device
-    const i2c_device = I2C_DatagramDevice.init(i2c0, @enumFromInt(0x3C), null);
+    const i2c_device = I2C_DatagramDevice.init(i2c0, @fromBackingInt(@intCast(0x3C)), null);
     // Pass i2c device to driver to create display instance
     const display_driver = SH1106(.{
         .mode = .i2c,

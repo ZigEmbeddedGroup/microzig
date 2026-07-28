@@ -90,7 +90,7 @@ pub fn init(allocator: std.mem.Allocator, file_reader: *std.Io.File.Reader) !Elf
                 const section_data = try file_reader.interface.readAlloc(allocator, shdr.sh_size);
                 errdefer allocator.free(section_data);
 
-                sections.put(@enumFromInt(section_field_value), section_data);
+                sections.put(@fromBackingInt(@intCast(section_field_value)), section_data);
             }
         }
     }

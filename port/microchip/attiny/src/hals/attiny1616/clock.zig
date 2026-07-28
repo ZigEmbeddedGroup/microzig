@@ -25,7 +25,7 @@ pub fn protected_write(comptime address: u16, value: u8) void {
 }
 
 pub fn set_prescaler(prescaler: Prescaler) void {
-    protected_write(regs.clkctrl_mclkctrlb, @intFromEnum(prescaler));
+    protected_write(regs.clkctrl_mclkctrlb, @backingInt(prescaler));
 }
 
 pub fn use_default20_m_hz_div2() void {

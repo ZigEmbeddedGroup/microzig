@@ -145,13 +145,13 @@ pub const Key = enum(u16) {
         row: u8,
 
         pub fn from_key(key: Key) Encoding {
-            const int: u16 = @intFromEnum(key);
+            const int: u16 = @backingInt(key);
             return @bitCast(int);
         }
 
         pub fn to_key(enc: Encoding) Key {
             const int: u16 = @bitCast(enc);
-            return @enumFromInt(int);
+            return @fromBackingInt(@intCast(int));
         }
     };
 };

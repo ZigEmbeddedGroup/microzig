@@ -47,7 +47,7 @@ pub fn main() !void {
     // Pass devices to driver to create sensor instance
     var dev = try ICM_20948.init(
         i2c_device.i2c_device(),
-        @enumFromInt(0x69),
+        @fromBackingInt(@intCast(0x69)),
         nrf.drivers.clock_device(),
         .{
             .accel_dlp = .@"6Hz",

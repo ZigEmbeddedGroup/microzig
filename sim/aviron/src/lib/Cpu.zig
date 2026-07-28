@@ -230,7 +230,7 @@ fn shift_program_counter(cpu: *Cpu, by: i12) void {
 fn fetch_code(cpu: *Cpu) !u16 {
     const value = try cpu.flash.read(cpu.pc);
     cpu.pc +%= 1; // increment with wraparound
-    cpu.pc &= @intFromEnum(cpu.code_model); // then wrap to lower bit size
+    cpu.pc &= @backingInt(cpu.code_model); // then wrap to lower bit size
     return value;
 }
 
@@ -251,7 +251,7 @@ fn pop(cpu: *Cpu) !u8 {
 
 fn push_code_loc(cpu: *Cpu, val: u24) !void {
     const pc: u24 = val;
-    const mask: u24 = @intFromEnum(cpu.code_model);
+    const mask: u24 = @backingInt(cpu.code_model);
 
     // AVR pushes return address bytes so that RET pops low byte first.
     // With write-then-decrement PUSH, we push least significant byte first.
@@ -267,7 +267,7 @@ fn push_code_loc(cpu: *Cpu, val: u24) !void {
 }
 
 fn pop_code_loc(cpu: *Cpu) !u24 {
-    const mask = @intFromEnum(cpu.code_model);
+    const mask = @backingInt(cpu.code_model);
 
     var pc: u24 = 0;
     if ((mask & 0xFF0000) != 0) {
@@ -287,7 +287,7 @@ const WideReg = enum(u8) {
     y = 1,
     z = 2,
     fn base(wr: WideReg) usize {
-        return 26 + 2 * @intFromEnum(wr);
+        return 26 + 2 * @backingInt(wr);
     }
 };
 

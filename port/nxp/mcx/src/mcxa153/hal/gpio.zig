@@ -4,7 +4,7 @@ const syscon = @import("./syscon.zig");
 const chip = microzig.chip;
 
 pub fn num(comptime n: u2, comptime pin: u5) GPIO {
-    return @enumFromInt(@as(u7, n) << 5 | pin);
+    return @fromBackingInt(@intCast(@as(u7, n) << 5 | pin));
 }
 
 pub const GPIO = enum(u7) {
@@ -46,14 +46,14 @@ pub const GPIO = enum(u7) {
     pub fn set_direction(gpio: GPIO, direction: Direction) void {
         const regs = gpio.get_regs();
         const old: u32 = regs.PDDR.raw;
-        const new = @as(u32, @intFromEnum(direction)) << gpio.get_pin();
+        const new = @as(u32, @backingInt(direction)) << gpio.get_pin();
 
         regs.PDDR.write_raw(old & ~gpio.get_mask() | new);
     }
 
     pub fn set_interrupt_config(gpio: GPIO, trigger: InterruptConfig) void {
         const regs = gpio.get_regs();
-        const irqc = @as(u32, @intFromEnum(trigger)) << 16;
+        const irqc = @as(u32, @backingInt(trigger)) << 16;
         const isf = @as(u32, 1) << 24;
 
         regs.ICR[gpio.get_pin()].write_raw(irqc | isf);
@@ -82,11 +82,11 @@ pub const GPIO = enum(u7) {
     }
 
     inline fn get_n(gpio: GPIO) u2 {
-        return @intCast(@intFromEnum(gpio) >> 5);
+        return @intCast(@backingInt(gpio) >> 5);
     }
 
     inline fn get_pin(gpio: GPIO) u5 {
-        return @intCast(@intFromEnum(gpio) & 0x1f);
+        return @intCast(@backingInt(gpio) & 0x1f);
     }
 
     inline fn get_mask(gpio: GPIO) u32 {

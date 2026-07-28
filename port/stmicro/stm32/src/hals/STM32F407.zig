@@ -111,16 +111,16 @@ pub const gpio = struct {
         set_reg_field(RCC.AHB1ENR, "GPIO" ++ pin.gpio_port_name ++ "EN", 1);
         set_reg_field(@field(pin.gpio_port, "MODER"), "MODER" ++ pin.suffix, 0b10);
         if (pin.pin_number < 8) {
-            set_reg_field(@field(pin.gpio_port, "AFRL"), "AFRL" ++ pin.suffix, @intFromEnum(af));
+            set_reg_field(@field(pin.gpio_port, "AFRL"), "AFRL" ++ pin.suffix, @backingInt(af));
         } else {
-            set_reg_field(@field(pin.gpio_port, "AFRH"), "AFRH" ++ pin.suffix, @intFromEnum(af));
+            set_reg_field(@field(pin.gpio_port, "AFRH"), "AFRH" ++ pin.suffix, @backingInt(af));
         }
     }
 
     pub fn read(comptime pin: type) microzig.gpio.State {
         const idr_reg = pin.gpio_port.IDR;
         const reg_value = @field(idr_reg.read(), "IDR" ++ pin.suffix); // TODO extract to getRegField()?
-        return @as(microzig.gpio.State, @enumFromInt(reg_value));
+        return @as(microzig.gpio.State, @fromBackingInt(@intCast(reg_value)));
     }
 
     pub fn write(comptime pin: type, state: microzig.gpio.State) void {
@@ -278,11 +278,11 @@ pub fn Uart(comptime index: usize, comptime pins: microzig.uart.Pins) type {
 
             // set parity
             if (config.parity) |parity| {
-                @field(peripherals, usart_name).CR1.modify(.{ .PCE = 1, .PS = @intFromEnum(parity) });
+                @field(peripherals, usart_name).CR1.modify(.{ .PCE = 1, .PS = @backingInt(parity) });
             } // otherwise, no need to set no parity since we reset Control Registers above, and it's the default
 
             // set number of stop bits
-            @field(peripherals, usart_name).CR2.modify(.{ .STOP = @intFromEnum(config.stop_bits) });
+            @field(peripherals, usart_name).CR2.modify(.{ .STOP = @backingInt(config.stop_bits) });
 
             // set the baud rate
             // Despite the reference manual talking about fractional calculation and other buzzwords,

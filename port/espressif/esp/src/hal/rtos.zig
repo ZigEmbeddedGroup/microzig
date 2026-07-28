@@ -39,7 +39,7 @@ pub const TickFrequency = enum(u32) {
 
     pub fn from_hz(v: u32) TickFrequency {
         assert(v < 100_000); // frequency too high
-        return @enumFromInt(v);
+        return @fromBackingInt(@intCast(v));
     }
 
     pub fn from_khz(v: u32) TickFrequency {
@@ -47,7 +47,7 @@ pub const TickFrequency = enum(u32) {
     }
 
     fn to_us(comptime freq: TickFrequency) u24 {
-        return @intFromFloat(1_000_000.0 / @as(f32, @floatFromInt(@intFromEnum(freq))));
+        return @intFromFloat(1_000_000.0 / @as(f32, @floatFromInt(@backingInt(freq))));
     }
 };
 
@@ -81,7 +81,7 @@ pub const Priority = enum(@Int(.unsigned, rtos_options.priority_bits)) {
     lowest = 1,
     _,
 
-    pub const highest: @This() = @enumFromInt(std.math.maxInt(@typeInfo(@This()).@"enum".tag_type));
+    pub const highest: @This() = @fromBackingInt(@intCast(std.math.maxInt(@typeInfo(@This()).@"enum".tag_type)));
 };
 
 const ready_queue_use_buckets = !rtos_options.ready_queue_force_no_buckets and @bitSizeOf(@typeInfo(Priority).@"enum".tag_type) <= 5;
@@ -290,7 +290,7 @@ pub fn make_ready(task: *Task, hptw: *bool) linksection(".ram_text") void {
 
     task.state = .ready;
     rtos_state.ready_queue.put(task);
-    hptw.* |= @intFromEnum(task.priority) > @intFromEnum(rtos_state.current_task.priority);
+    hptw.* |= @backingInt(task.priority) > @backingInt(rtos_state.current_task.priority);
 }
 
 pub fn change_priority(task: *Task, new_priority: Priority) void {
@@ -661,7 +661,7 @@ pub fn log_task_info(task: *Task) void {
 
         log.debug("task {?s} with prio {} in state {t} uses {} bytes out of {} for stack", .{
             task.name,
-            @intFromEnum(task.priority),
+            @backingInt(task.priority),
             task.state,
             stack_usage,
             task.stack.len,
@@ -669,7 +669,7 @@ pub fn log_task_info(task: *Task) void {
     } else {
         log.debug("task {?s} with prio {} in state {t}", .{
             task.name,
-            @intFromEnum(task.priority),
+            @backingInt(task.priority),
             task.state,
         });
     }
@@ -738,8 +738,8 @@ pub const ReadyTaskConstraint = union(enum) {
         switch (constraint) {
             .none => {},
             inline else => |constraint_priority, tag| {
-                if ((tag == .at_least_prio and @intFromEnum(prio) < @intFromEnum(constraint_priority)) or
-                    (tag == .more_than_prio and @intFromEnum(prio) <= @intFromEnum(constraint_priority)))
+                if ((tag == .at_least_prio and @backingInt(prio) < @backingInt(constraint_priority)) or
+                    (tag == .more_than_prio and @backingInt(prio) <= @backingInt(constraint_priority)))
                 {
                     return false;
                 }
@@ -823,7 +823,7 @@ pub const ReadyPriorityQueue = if (ready_queue_use_buckets) struct {
         var maybe_node = pq.inner.first;
         while (maybe_node) |node| : (maybe_node = node.next) {
             const task: *Task = @alignCast(@fieldParentPtr("node", node));
-            if (@intFromEnum(new_task.priority) > @intFromEnum(task.priority)) {
+            if (@backingInt(new_task.priority) > @backingInt(task.priority)) {
                 pq.inner.insert_before(node, &new_task.node);
                 break;
             }
@@ -844,19 +844,19 @@ pub const Duration = enum(u32) {
     pub const ms_per_tick = @max(1, us_per_tick / 1_000);
 
     pub fn from_us(v: u32) Duration {
-        return @enumFromInt(v / us_per_tick);
+        return @fromBackingInt(@intCast(v / us_per_tick));
     }
 
     pub fn from_ms(v: u32) Duration {
-        return @enumFromInt(v / ms_per_tick);
+        return @fromBackingInt(@intCast(v / ms_per_tick));
     }
 
     pub fn from_ticks(v: u32) Duration {
-        return @enumFromInt(v);
+        return @fromBackingInt(@intCast(v));
     }
 
     pub fn to_ticks(duration: Duration) u32 {
-        return @intFromEnum(duration);
+        return @backingInt(duration);
     }
 };
 
@@ -898,7 +898,7 @@ pub const PriorityWaitQueue = struct {
         var it = q.list.first;
         while (it) |current_node| : (it = current_node.next) {
             const current_waiter: *Waiter = @alignCast(@fieldParentPtr("node", current_node));
-            if (@intFromEnum(waiter.priority) > @intFromEnum(current_waiter.priority)) {
+            if (@backingInt(waiter.priority) > @backingInt(current_waiter.priority)) {
                 q.list.insert_before(&current_waiter.node, &waiter.node);
                 break;
             }
@@ -936,7 +936,7 @@ pub const ResolvedTimeout = enum(u64) {
             .never => .never,
             .after => |duration| blk: {
                 const current_ticks = (@as(u64, rtos_state.overflow_count) << 32) | rtos_state.current_ticks;
-                break :blk @enumFromInt(current_ticks + duration.to_ticks());
+                break :blk @fromBackingInt(@intCast(current_ticks + duration.to_ticks()));
             },
         };
     }
@@ -947,7 +947,7 @@ pub const ResolvedTimeout = enum(u64) {
             .never => null,
             else => {
                 const current_ticks = (@as(u64, rtos_state.overflow_count) << 32) | rtos_state.current_ticks;
-                const remaining = @intFromEnum(resolved_timeout) -| current_ticks;
+                const remaining = @backingInt(resolved_timeout) -| current_ticks;
                 if (remaining == 0) return error.Timeout;
                 return .from_ticks(@truncate(remaining));
             },
@@ -977,7 +977,7 @@ pub const Mutex = struct {
 
             // Owning task inherits the priority of the current task if it the
             // current task has a bigger priority.
-            if (@intFromEnum(current_task.priority) > @intFromEnum(owning_task.priority)) {
+            if (@backingInt(current_task.priority) > @backingInt(owning_task.priority)) {
                 if (mutex.prev_priority == null)
                     mutex.prev_priority = owning_task.priority;
                 change_priority(owning_task, current_task.priority);

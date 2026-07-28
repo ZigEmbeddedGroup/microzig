@@ -4,9 +4,9 @@ const mdf = @import("../root.zig");
 /// Calculate the duration of a step pulse for a stepper with `steps` steps, `microsteps`
 /// microsteps, at `rpm` rpm.
 pub inline fn get_step_pulse(steps: i32, microsteps: u8, rpm: f64) mdf.time.Duration {
-    return @enumFromInt(@as(u64, @intFromFloat(60.0 * 1000000 /
+    return @fromBackingInt(@intCast(@as(u64, @intFromFloat(60.0 * 1000000 /
         @as(f64, @floatFromInt(steps)) /
-        @as(f64, @floatFromInt(microsteps)) / rpm)));
+        @as(f64, @floatFromInt(microsteps)) / rpm))));
 }
 
 pub inline fn calc_steps_for_rotation(steps: i32, microsteps: u8, deg: i32) i32 {

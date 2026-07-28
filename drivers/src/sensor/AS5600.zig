@@ -9,7 +9,7 @@ const mdf = @import("../root.zig");
 
 pub const AS5600 = struct {
     const Self = @This();
-    const address: mdf.base.I2C_Device.Address = @enumFromInt(0x36);
+    const address: mdf.base.I2C_Device.Address = @fromBackingInt(@intCast(0x36));
     dev: mdf.base.I2C_Device,
 
     const register = enum(u8) {
@@ -85,7 +85,7 @@ pub const AS5600 = struct {
     }
 
     pub fn read1_raw(self: *const Self, reg: Self.register) !u8 {
-        try self.dev.write(Self.address, &[_]u8{@intFromEnum(reg)});
+        try self.dev.write(Self.address, &[_]u8{@backingInt(reg)});
         var buf: [1]u8 = undefined;
         const size = try self.dev.read(Self.address, &buf);
         if (size != 1) return error.ReadError;
@@ -93,7 +93,7 @@ pub const AS5600 = struct {
     }
 
     pub fn read2_raw(self: *const Self, reg: Self.register) !u16 {
-        try self.dev.write(Self.address, &[_]u8{@intFromEnum(reg)});
+        try self.dev.write(Self.address, &[_]u8{@backingInt(reg)});
         var buf: [2]u8 = undefined;
         const size = try self.dev.read(Self.address, &buf);
         if (size != 2) return error.ReadError;
@@ -103,7 +103,7 @@ pub const AS5600 = struct {
     pub fn write_raw(self: *const Self, reg: Self.register, v: u16) !void {
         return self.dev.write(
             Self.address,
-            &([1]u8{@intFromEnum(reg)} ++ @as([2]u8, @bitCast(std.mem.nativeToBig(u16, v)))),
+            &([1]u8{@backingInt(reg)} ++ @as([2]u8, @bitCast(std.mem.nativeToBig(u16, v)))),
         );
     }
 

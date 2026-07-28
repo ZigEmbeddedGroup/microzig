@@ -8,7 +8,7 @@ pub const GPIO = enum(u8) {
     /// Get a GPIO pin. Does not check whether the pin is available.
     // TODO: check unavailable pins
     pub fn num(comptime n: u3, comptime pin: u5) GPIO {
-        return @enumFromInt(@as(u8, n) << 5 | pin);
+        return @fromBackingInt(@intCast(@as(u8, n) << 5 | pin));
     }
 
     /// Init the GPIO by releasing an eventual reset and enabling its clock.
@@ -55,7 +55,7 @@ pub const GPIO = enum(u8) {
     pub fn set_direction(gpio: GPIO, direction: Direction) void {
         const regs = gpio.get_regs();
         const old: u32 = regs.PDDR.raw;
-        const new = @as(u32, @intFromEnum(direction)) << gpio.get_pin();
+        const new = @as(u32, @backingInt(direction)) << gpio.get_pin();
 
         regs.PDDR.write_raw((old & ~gpio.get_mask()) | new);
     }
@@ -72,11 +72,11 @@ pub const GPIO = enum(u8) {
     }
 
     fn get_n(gpio: GPIO) u3 {
-        return @intCast(@intFromEnum(gpio) >> 5);
+        return @intCast(@backingInt(gpio) >> 5);
     }
 
     fn get_pin(gpio: GPIO) u5 {
-        return @intCast(@intFromEnum(gpio) & 0x1f);
+        return @intCast(@backingInt(gpio) & 0x1f);
     }
 
     fn get_mask(gpio: GPIO) u32 {
@@ -84,7 +84,7 @@ pub const GPIO = enum(u8) {
     }
 
     fn get_module(gpio: GPIO) syscon.Module {
-        return @enumFromInt(@intFromEnum(syscon.Module.GPIO0) + gpio.get_n());
+        return @fromBackingInt(@intCast(@backingInt(syscon.Module.GPIO0) + gpio.get_n()));
     }
 };
 

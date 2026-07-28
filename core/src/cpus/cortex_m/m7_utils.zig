@@ -31,7 +31,7 @@ pub fn init_swo(config: struct {
     peripherals.itm.TER[config.stim_port].modify(.{ .STIMENA = 1 });
 
     // Configure Serial Wire Output (SWO):
-    peripherals.tpiu.SPPR.modify(.{ .TXMODE = @intFromEnum(config.tx_mode) });
+    peripherals.tpiu.SPPR.modify(.{ .TXMODE = @backingInt(config.tx_mode) });
 
     // SWO output clock = Asynchronous_Reference_Clock/(SWOSCALAR +1)\
     // SWOSCALAR = (Asynchronous_Reference_Clock)/(SWO output clock) - 1

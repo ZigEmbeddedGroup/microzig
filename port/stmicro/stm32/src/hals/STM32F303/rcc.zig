@@ -51,7 +51,7 @@ pub fn apply() void {
 }
 
 fn apply_flash_flash() void {
-    const latency: LATENCY = @enumFromInt(@intFromEnum(current_clocks.config.FLatency));
+    const latency: LATENCY = @fromBackingInt(@intCast(@backingInt(current_clocks.config.FLatency)));
     const prefetch: u1 = if (current_clocks.config.flags.PREFETCH_ENABLE) 1 else 0;
 
     FLASH.ACR.modify(.{ .LATENCY = latency, .PRFTBE = prefetch });
@@ -61,12 +61,12 @@ fn apply_pll() void {
     if (!current_clocks.config.flags.PLLUsed) {
         return;
     }
-    const source: PLLSRC = @enumFromInt(@intFromEnum(current_clocks.config.PLLSourceVirtual));
-    const mul: PLLMUL = @enumFromInt(@intFromEnum(current_clocks.config.PLLMUL));
+    const source: PLLSRC = @fromBackingInt(@intCast(@backingInt(current_clocks.config.PLLSourceVirtual)));
+    const mul: PLLMUL = @fromBackingInt(@intCast(@backingInt(current_clocks.config.PLLMUL)));
 
     //only on STM32F303E clocktree for DIE446
     comptime if (Tree.check_MCU("DIE446")) {
-        const divider: PREDIV = @enumFromInt(@intFromEnum(current_clocks.config.PLLDivider));
+        const divider: PREDIV = @fromBackingInt(@intCast(@backingInt(current_clocks.config.PLLDivider)));
         RCC.CFGR2.modify(.{ .PREDIV = divider });
     };
 
@@ -111,12 +111,12 @@ fn apply_hse() void {
 }
 
 fn apply_prescaler() void {
-    const apb1: PPRE = @enumFromInt(@intFromEnum(current_clocks.config.APB1CLKDivider));
-    const apb2: PPRE = @enumFromInt(@intFromEnum(current_clocks.config.APB2CLKDivider));
-    const ahb: HPRE = @enumFromInt(@intFromEnum(current_clocks.config.AHBCLKDivider));
-    const adc12: ADCPRES = @enumFromInt(@intFromEnum(current_clocks.config.ADC12PRES));
-    const adc34: ADCPRES = @enumFromInt(@intFromEnum(current_clocks.config.ADC34PRES));
-    const usbprescal: USBPRE = @enumFromInt(@intFromEnum(current_clocks.config.PRESCALERUSB));
+    const apb1: PPRE = @fromBackingInt(@intCast(@backingInt(current_clocks.config.APB1CLKDivider)));
+    const apb2: PPRE = @fromBackingInt(@intCast(@backingInt(current_clocks.config.APB2CLKDivider)));
+    const ahb: HPRE = @fromBackingInt(@intCast(@backingInt(current_clocks.config.AHBCLKDivider)));
+    const adc12: ADCPRES = @fromBackingInt(@intCast(@backingInt(current_clocks.config.ADC12PRES)));
+    const adc34: ADCPRES = @fromBackingInt(@intCast(@backingInt(current_clocks.config.ADC34PRES)));
+    const usbprescal: USBPRE = @fromBackingInt(@intCast(@backingInt(current_clocks.config.PRESCALERUSB)));
 
     RCC.CFGR.modify(.{
         .HPRE = ahb,
@@ -148,16 +148,16 @@ fn clean_clock() void {
 }
 
 pub fn select_clock() void {
-    const sys_clk: SW = @enumFromInt(@intFromEnum(current_clocks.config.SYSCLKSourceVirtual));
-    const i2s_clk: ISSRC = @enumFromInt(@intFromEnum(current_clocks.config.I2SClockSource));
-    const i2c1_clk: ICSW = @enumFromInt(@intFromEnum(current_clocks.config.I2c1ClockSelection));
-    const i2c2_clk: ICSW = @enumFromInt(@intFromEnum(current_clocks.config.I2c2ClockSelection));
+    const sys_clk: SW = @fromBackingInt(@intCast(@backingInt(current_clocks.config.SYSCLKSourceVirtual)));
+    const i2s_clk: ISSRC = @fromBackingInt(@intCast(@backingInt(current_clocks.config.I2SClockSource)));
+    const i2c1_clk: ICSW = @fromBackingInt(@intCast(@backingInt(current_clocks.config.I2c1ClockSelection)));
+    const i2c2_clk: ICSW = @fromBackingInt(@intCast(@backingInt(current_clocks.config.I2c2ClockSelection)));
 
-    const usart1_clk: USART1SW = @enumFromInt(@intFromEnum(current_clocks.config.Usart1ClockSelection));
-    const usart2_clk: USARTSW = @enumFromInt(@intFromEnum(current_clocks.config.Usart2ClockSelection));
-    const usart3_clk: USARTSW = @enumFromInt(@intFromEnum(current_clocks.config.Usart3ClockSelection));
-    const uart4_clk: USARTSW = @enumFromInt(@intFromEnum(current_clocks.config.Uart4ClockSelection));
-    const uart5_clk: USARTSW = @enumFromInt(@intFromEnum(current_clocks.config.Uart5ClockSelection));
+    const usart1_clk: USART1SW = @fromBackingInt(@intCast(@backingInt(current_clocks.config.Usart1ClockSelection)));
+    const usart2_clk: USARTSW = @fromBackingInt(@intCast(@backingInt(current_clocks.config.Usart2ClockSelection)));
+    const usart3_clk: USARTSW = @fromBackingInt(@intCast(@backingInt(current_clocks.config.Usart3ClockSelection)));
+    const uart4_clk: USARTSW = @fromBackingInt(@intCast(@backingInt(current_clocks.config.Uart4ClockSelection)));
+    const uart5_clk: USARTSW = @fromBackingInt(@intCast(@backingInt(current_clocks.config.Uart5ClockSelection)));
 
     RCC.CFGR.modify(.{
         .SW = sys_clk,

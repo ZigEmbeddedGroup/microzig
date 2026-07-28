@@ -164,10 +164,10 @@ pub const csr = struct {
         ube: u1 = 0,
         mpie: u1 = 0,
         spp: u1 = 0,
-        vs: VS = @enumFromInt(0),
-        mpp: MPP = @enumFromInt(0),
-        fs: FS = @enumFromInt(0),
-        xs: XS = @enumFromInt(0),
+        vs: VS = @fromBackingInt(@intCast(0)),
+        mpp: MPP = @fromBackingInt(@intCast(0)),
+        fs: FS = @fromBackingInt(@intCast(0)),
+        xs: XS = @fromBackingInt(@intCast(0)),
         mprv: u1 = 0,
         reserved18: u13 = 0,
         sd: u1 = 0,
@@ -560,27 +560,27 @@ pub const utilities = struct {
 
             return struct {
                 pub fn is_enabled(int: CoreInterruptEnum) bool {
-                    return csr.mie.read() & (@as(u32, 1) << @intFromEnum(int)) != 0;
+                    return csr.mie.read() & (@as(u32, 1) << @backingInt(int)) != 0;
                 }
 
                 pub fn enable(int: CoreInterruptEnum) void {
-                    csr.mie.set(@as(u32, 1) << @intFromEnum(int));
+                    csr.mie.set(@as(u32, 1) << @backingInt(int));
                 }
 
                 pub fn disable(int: CoreInterruptEnum) void {
-                    csr.mie.clear(@as(u32, 1) << @intFromEnum(int));
+                    csr.mie.clear(@as(u32, 1) << @backingInt(int));
                 }
 
                 pub fn is_pending(int: CoreInterruptEnum) bool {
-                    return csr.mip.read() & (@as(u32, 1) << @intFromEnum(int)) != 0;
+                    return csr.mip.read() & (@as(u32, 1) << @backingInt(int)) != 0;
                 }
 
                 pub fn set_pending(int: CoreInterruptEnum) void {
-                    csr.mip.set(@as(u32, 1) << @intFromEnum(int));
+                    csr.mip.set(@as(u32, 1) << @backingInt(int));
                 }
 
                 pub fn clear_pending(int: CoreInterruptEnum) void {
-                    csr.mip.clear(@as(u32, 1) << @intFromEnum(int));
+                    csr.mip.clear(@as(u32, 1) << @backingInt(int));
                 }
             };
         }

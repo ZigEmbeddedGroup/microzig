@@ -226,11 +226,11 @@ pub const CYW43_PIO_SPI = struct {
     }
 
     inline fn get_pio_tx_dreq(self: *Self) hal.dma.Dreq {
-        return @enumFromInt(@intFromEnum(self.pio) * @as(u6, 8) + @intFromEnum(self.sm));
+        return @fromBackingInt(@intCast(@backingInt(self.pio) * @as(u6, 8) + @backingInt(self.sm)));
     }
 
     inline fn get_pio_rx_dreq(self: *Self) hal.dma.Dreq {
-        return @enumFromInt(@intFromEnum(self.pio) * @as(u6, 8) + @intFromEnum(self.sm) + 4);
+        return @fromBackingInt(@intCast(@backingInt(self.pio) * @as(u6, 8) + @backingInt(self.sm) + 4));
     }
 
     /// CYW43_SPI interface implementation

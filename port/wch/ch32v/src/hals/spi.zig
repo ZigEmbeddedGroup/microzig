@@ -118,10 +118,10 @@ pub const Config = struct {
 };
 
 pub const instance = struct {
-    pub const SPI1: SPI = @enumFromInt(0);
-    pub const SPI2: SPI = @enumFromInt(1);
+    pub const SPI1: SPI = @fromBackingInt(@intCast(0));
+    pub const SPI2: SPI = @fromBackingInt(@intCast(1));
     pub fn num(instance_number: u2) SPI {
-        return @enumFromInt(instance_number - 1);
+        return @fromBackingInt(@intCast(instance_number - 1));
     }
 };
 
@@ -129,7 +129,7 @@ pub const SPI = enum(u1) {
     _,
 
     pub inline fn get_regs(spi: SPI) *volatile SPI_Regs {
-        return switch (@intFromEnum(spi)) {
+        return switch (@backingInt(spi)) {
             0 => @ptrCast(SPI1),
             1 => @ptrCast(SPI2),
         };
@@ -172,11 +172,11 @@ pub const SPI = enum(u1) {
 
         // Compile-time DMA validation
         if (comptime config.dma) |dma_cfg| {
-            const tx_peripheral = comptime if (@intFromEnum(spi) == 0)
+            const tx_peripheral = comptime if (@backingInt(spi) == 0)
                 dma.Peripheral.SPI1_TX
             else
                 dma.Peripheral.SPI2_TX;
-            const rx_peripheral = comptime if (@intFromEnum(spi) == 0)
+            const rx_peripheral = comptime if (@backingInt(spi) == 0)
                 dma.Peripheral.SPI1_RX
             else
                 dma.Peripheral.SPI2_RX;
@@ -187,7 +187,7 @@ pub const SPI = enum(u1) {
         }
 
         // Enable peripheral clock
-        hal.clocks.enable_peripheral_clock(switch (@intFromEnum(spi)) {
+        hal.clocks.enable_peripheral_clock(switch (@backingInt(spi)) {
             0 => .SPI1,
             1 => .SPI2,
         });
@@ -195,15 +195,15 @@ pub const SPI = enum(u1) {
         // Configure AFIO remap (SPI1 only)
         hal.clocks.enable_afio_clock();
         const AFIO = microzig.chip.peripherals.AFIO;
-        switch (@intFromEnum(spi)) {
-            0 => AFIO.PCFR1.modify(.{ .SPI1_RM = @intFromEnum(config.remap) }),
+        switch (@backingInt(spi)) {
+            0 => AFIO.PCFR1.modify(.{ .SPI1_RM = @backingInt(config.remap) }),
             // SPI2 does not have remap support on CH32V20x
             1 => {},
         }
 
         // Get peripheral clock frequency
         const rcc_clocks = hal.clocks.get_freqs();
-        const pclk = if (@intFromEnum(spi) == 0) rcc_clocks.pclk2 else rcc_clocks.pclk1;
+        const pclk = if (@backingInt(spi) == 0) rcc_clocks.pclk2 else rcc_clocks.pclk1;
 
         // Calculate baud rate prescaler
         // SPI baud rate = PCLK / (2^(BR+1))
@@ -220,16 +220,16 @@ pub const SPI = enum(u1) {
 
         // Configure CTLR1
         regs.CTLR1.write(.{
-            .CPHA = @intFromEnum(config.phase),
-            .CPOL = @intFromEnum(config.polarity),
+            .CPHA = @backingInt(config.phase),
+            .CPOL = @backingInt(config.polarity),
             .MSTR = 1, // Master mode
             .BR = br,
             .SPE = 0, // Keep disabled for now
-            .LSBFIRST = @intFromEnum(config.bit_order),
+            .LSBFIRST = @backingInt(config.bit_order),
             .SSI = 1, // Internal slave select
             .SSM = 1, // Software slave management
             .RXONLY = 0, // Full duplex
-            .DFF = @intFromEnum(config.data_size),
+            .DFF = @backingInt(config.data_size),
             .CRCNEXT = 0,
             .CRCEN = 0,
             .BIDIOE = 0,

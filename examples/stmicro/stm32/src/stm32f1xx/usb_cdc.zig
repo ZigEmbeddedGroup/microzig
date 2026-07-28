@@ -172,8 +172,8 @@ const Encoding = struct {
         const parity = pkg[5];
         const db = pkg[6];
         enc.baudrate = (baudbyte_1) | (baudbyte_2 << 8) | (baudbyte_3 << 16) | (baudbyte_4 << 24);
-        enc.stopbits = @enumFromInt(stp);
-        enc.parity = @enumFromInt(parity);
+        enc.stopbits = @fromBackingInt(@intCast(stp));
+        enc.parity = @fromBackingInt(@intCast(parity));
         enc.data = db;
         return enc;
     }

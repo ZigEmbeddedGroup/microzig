@@ -35,12 +35,12 @@ pub const Config = struct {
 };
 
 pub fn apply(config: Config) void {
-    const wgm: u3 = @intFromEnum(config.waveform);
-    regs.write(regs.TCCR0A, (@as(u8, @intFromEnum(config.compare_a)) << 6) |
-        (@as(u8, @intFromEnum(config.compare_b)) << 4) |
+    const wgm: u3 = @backingInt(config.waveform);
+    regs.write(regs.TCCR0A, (@as(u8, @backingInt(config.compare_a)) << 6) |
+        (@as(u8, @backingInt(config.compare_b)) << 4) |
         (@as(u8, wgm) & 0b011));
     regs.write(regs.TCCR0B, ((@as(u8, wgm) & 0b100) << 1) |
-        @as(u8, @intFromEnum(config.prescaler)));
+        @as(u8, @backingInt(config.prescaler)));
 }
 
 pub inline fn set_compare_a(value: u8) void {

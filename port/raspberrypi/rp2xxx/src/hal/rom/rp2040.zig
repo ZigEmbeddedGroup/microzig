@@ -4,13 +4,13 @@ const rom = @import("../rom.zig");
 pub inline fn lookup_data(code: Data) ?*const anyopaque {
     const rom_table_lookup: *const LookupFn = @ptrFromInt(ROM_TABLE_LOOKUP.*);
     const data_table: *const anyopaque = @ptrFromInt(DATA_TABLE.*);
-    return rom_table_lookup(data_table, @intFromEnum(code));
+    return rom_table_lookup(data_table, @backingInt(code));
 }
 
 pub inline fn lookup_function(code: Function) ?*const anyopaque {
     const rom_table_lookup: *const LookupFn = @ptrFromInt(ROM_TABLE_LOOKUP.*);
     const func_table: *const anyopaque = @ptrFromInt(FUNC_TABLE.*);
-    return rom_table_lookup(func_table, @intFromEnum(code));
+    return rom_table_lookup(func_table, @backingInt(code));
 }
 
 // TODO: maybe support copying the table to ram as well?
@@ -21,7 +21,7 @@ pub inline fn lookup_float_function(f: SoftFloatFunction) *const anyopaque {
     }
 
     const table: [*]const usize = @ptrCast(@alignCast(rom.lookup_and_cache_data(.soft_float_table)));
-    return @ptrFromInt(table[@intFromEnum(f) / 4]);
+    return @ptrFromInt(table[@backingInt(f) / 4]);
 }
 
 pub inline fn lookup_double_function(f: SoftDoubleFunction) *const anyopaque {
@@ -29,7 +29,7 @@ pub inline fn lookup_double_function(f: SoftDoubleFunction) *const anyopaque {
         @panic("function not available in this bootrom version");
 
     const table: [*]const usize = @ptrCast(@alignCast(rom.lookup_and_cache_data(.soft_double_table)));
-    return @ptrFromInt(table[@intFromEnum(f) / 4]);
+    return @ptrFromInt(table[@backingInt(f) / 4]);
 }
 
 pub const Data = enum(u16) {

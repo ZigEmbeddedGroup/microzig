@@ -247,7 +247,7 @@ pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterfac
 /// Handle class-specific SETUP requests where recipient=Interface
 /// Called by DeviceController when the interface number matches this driver.
 pub fn class_request(self: *@This(), setup: *const usb.types.SetupPacket) ?[]const u8 {
-    const mgmt_request: ManagementRequestType = @enumFromInt(setup.request);
+    const mgmt_request: ManagementRequestType = @fromBackingInt(@intCast(setup.request));
     log.debug("cdc setup: {any} {} {}", .{ mgmt_request, setup.length.into(), setup.value.into() });
 
     return switch (mgmt_request) {

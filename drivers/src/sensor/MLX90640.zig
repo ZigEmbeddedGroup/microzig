@@ -109,7 +109,7 @@ pub const MLX90640 = struct {
     }
 
     fn write(self: *Self, reg: Self.registers, val: u16) !void {
-        const addr: u16 = @intFromEnum(reg);
+        const addr: u16 = @backingInt(reg);
         const req = struct { addr_be: u16, val_be: u16 }{
             .addr_be = std.mem.nativeToBig(u16, addr),
             .val_be = std.mem.nativeToBig(u16, val),
@@ -120,7 +120,7 @@ pub const MLX90640 = struct {
     }
 
     fn write_then_read(self: *Self, reg: Self.registers, buf: []u16) !void {
-        const addr: u16 = std.mem.nativeToBig(u16, @intFromEnum(reg));
+        const addr: u16 = std.mem.nativeToBig(u16, @backingInt(reg));
         const req = std.mem.asBytes(&addr);
         try self.i2c.write_then_read(self.address, req, self.frame_data[0 .. buf.len * 2]);
         for (0.., buf) |i, _| {
@@ -974,7 +974,7 @@ test "control_register_values" {
 
     var tc = TestClock.init();
 
-    var camera = try MLX90640.init(.{ .i2c = td.i2c_device(), .address = @enumFromInt(0x7f), .clock = tc.clock_device() });
+    var camera = try MLX90640.init(.{ .i2c = td.i2c_device(), .address = @fromBackingInt(@intCast(0x7f)), .clock = tc.clock_device() });
 
     const rr = try camera.refresh_rate();
     try std.testing.expectEqual(5, rr);
@@ -1016,7 +1016,7 @@ test "temperature" {
 
     var tc = TestClock.init();
 
-    var camera = try MLX90640.init(.{ .i2c = td.i2c_device(), .address = @enumFromInt(0x7f), .clock = tc.clock_device() });
+    var camera = try MLX90640.init(.{ .i2c = td.i2c_device(), .address = @fromBackingInt(@intCast(0x7f)), .clock = tc.clock_device() });
 
     var temp: [834]f32 = undefined;
     try camera.temperature(&temp);

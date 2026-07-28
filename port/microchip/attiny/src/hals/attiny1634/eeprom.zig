@@ -5,7 +5,7 @@ pub const size = 256;
 pub const Address = enum(u8) { _ };
 
 pub inline fn address(value: u8) Address {
-    return @enumFromInt(value);
+    return @fromBackingInt(@intCast(value));
 }
 
 pub inline fn busy_wait() void {
@@ -14,7 +14,7 @@ pub inline fn busy_wait() void {
 
 pub fn read_byte(addr: Address) u8 {
     busy_wait();
-    regs.write(regs.EEARL, @intFromEnum(addr));
+    regs.write(regs.EEARL, @backingInt(addr));
     regs.write(regs.EEARH, 0);
     regs.set_bits(regs.EECR, regs.bit(regs.eeprom_bits.eere));
     return regs.read(regs.EEDR);
