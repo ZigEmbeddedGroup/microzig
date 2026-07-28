@@ -2470,7 +2470,7 @@ test "gen.field with named enum and unnamed default" {
             \\
             \\    /// offset: 0x00
             \\    TEST_REGISTER: mmio.Mmio(packed struct(u8) {
-            \\        TEST_FIELD: TEST_ENUM = @enumFromInt(0xA),
+            \\        TEST_FIELD: TEST_ENUM = @fromBackingInt(@intCast(0xA)),
             \\        padding: u4 = 0,
             \\    }),
             \\};
