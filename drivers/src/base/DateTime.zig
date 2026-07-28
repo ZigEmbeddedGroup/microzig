@@ -575,7 +575,7 @@ pub fn day_of_week(self: DateTime) DayOfWeek {
     var dow: i32 = (13 * (m + 1) / 5) + y + (y / 4) + (c / 4) + self.day;
     dow -= 2 * c;
 
-    return @fromBackingInt(@mod(dow, 7) - 1);
+    return @fromBackingInt(@intCast(@mod(dow, 7) - 1));
 }
 
 /// Convert the DateTime to an ISO 8601 string.

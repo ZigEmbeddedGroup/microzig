@@ -182,7 +182,7 @@ pub fn main(init: std.process.Init) !void {
     const txt = try buf.toOwnedSliceSentinel(0);
     defer gpa.free(txt);
 
-    var tree = try std.zig.Ast.parse(gpa, txt, .zig);
+    var tree = try std.zig.Ast.parse(gpa, txt, .{});
     defer tree.deinit(gpa);
 
     var stdout_buf: [4096]u8 = undefined;

@@ -94,8 +94,8 @@ pub fn get_anonymous_enums_in_peripheral(
     var result: std.ArrayList(AnonymousEnumInfo) = .empty;
 
     while (rows.next()) |row| {
-        const enum_id: Database.EnumID = @fromBackingInt(row.int(0));
-        const struct_id: ?Database.StructID = if (row.nullableInt(1)) |sid| @fromBackingInt(sid) else null;
+        const enum_id: Database.EnumID = @fromBackingInt(@intCast(row.int(0)));
+        const struct_id: ?Database.StructID = if (row.nullableInt(1)) |sid| @fromBackingInt(@intCast(sid)) else null;
         const size_bits: u8 = @intCast(row.int(2));
         const description: ?[]const u8 = if (row.nullableText(3)) |text| try arena.dupe(u8, text) else null;
 
