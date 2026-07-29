@@ -21,7 +21,7 @@ pub fn main(init: std.process.Init) !void {
             return err;
         };
 
-        var ast = try std.zig.Ast.parse(allocator, source, .zig);
+        var ast = try std.zig.Ast.parse(allocator, source, .{});
         for (ast.nodes.items(.tag), ast.nodes.items(.main_token)) |node_tag, main_tok_idx| {
             switch (node_tag) {
                 .fn_proto_simple,
