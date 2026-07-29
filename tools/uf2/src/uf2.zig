@@ -141,7 +141,7 @@ pub const Archive = struct {
                             .family_id = if (opts.family_id) |family_id|
                                 family_id
                             else
-                                @as(FamilyId, @fromBackingInt(@intCast(@as(u32, 0)))),
+                                @as(FamilyId, @enumFromInt(0)),
                         },
                         .data = @splat(0),
                     });
