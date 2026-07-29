@@ -141,7 +141,7 @@ pub const Archive = struct {
                             .family_id = if (opts.family_id) |family_id|
                                 family_id
                             else
-                                @as(FamilyId, @enumFromInt(@as(u32, 0))),
+                                @as(FamilyId, @fromBackingInt(@intCast(@as(u32, 0)))),
                         },
                         .data = @splat(0),
                     });
@@ -402,7 +402,7 @@ test "Archive read and write" {
     var data_2_reader: std.Io.Reader = .fixed(data_2.written());
     try std.testing.expectError(error.FamilyIdCollision, archive.read_from(&data_2_reader, .{}));
 }
-test "File tracking" {
+test "File tracking - basic" {
     const allocator = std.testing.allocator;
     const io = std.testing.io;
     var archive = Archive.init(allocator, io);
@@ -452,7 +452,7 @@ test "File tracking" {
     try std.testing.expect(archive.has_file("test1.uf2"));
     try std.testing.expect(!archive.has_file("test3.uf2"));
 }
-test "File tracking comprehensive" {
+test "File tracking - comprehensive" {
     const allocator = std.testing.allocator;
     const io = std.testing.io;
     var archive = Archive.init(allocator, io);
@@ -547,13 +547,21 @@ test "File tracking - long path" {
     var archive = Archive.init(allocator, io);
     defer archive.deinit();
 
-    // Create a long filename that exceeds block capacity
-    const long_name = "very_long_filename_that_should_exceed_block_capacity.uf2";
+    // Create a file that's almost a full block (476 bytes), so that
+    // even a short path requires crossing into a new block.
+    // remaining space = 476 - file_size, path must exceed this.
+    const file_size = 400;
+    const path_len = 77; // 77 > 476 - 400 = 76, crosses block boundary
+
+    var long_name_buf: [path_len]u8 = undefined;
+    @memset(long_name_buf[0 .. path_len - 4], 'x');
+    @memcpy(long_name_buf[path_len - 4 ..], ".uf2");
+    const long_name = long_name_buf[0..path_len];
     {
         var file = try std.Io.Dir.cwd().createFile(io, long_name, .{});
         defer file.close(io);
-        var buf: [256]u8 = @splat(0);
-        var writer_buf: [256]u8 = undefined;
+        var buf: [file_size]u8 = @splat(0);
+        var writer_buf: [512]u8 = undefined;
         var writer = file.writer(io, &writer_buf);
         try writer.interface.writeAll(&buf);
         try writer.flush();
@@ -563,4 +571,8 @@ test "File tracking - long path" {
     try archive.add_file(long_name);
     try std.testing.expectEqual(@as(usize, 1), archive.files.items.len);
     try std.testing.expectEqualStrings(long_name, archive.files.items[0].name);
+
+    // Verify path spans multiple blocks
+    const file_blocks = archive.get_file_blocks(0).?;
+    try std.testing.expect(file_blocks.end > file_blocks.start);
 }
