@@ -127,11 +127,11 @@ pub const interrupt = struct {
     }
 
     pub fn enable_interrupts() void {
-        asm volatile ("cpsie i");
+        asm volatile ("cpsie i" ::: "memory");
     }
 
     pub fn disable_interrupts() void {
-        asm volatile ("cpsid i");
+        asm volatile ("cpsid i" ::: "memory");
     }
 
     fn assert_not_exception(comptime int: Interrupt) void {
