@@ -46,7 +46,7 @@ pub const DfuWriter = struct {
 
     // The CRC algorithm used in DFU.
     // Like "standard" Crc32 but without the final xor with 0xffffffff.
-    const Hasher = std.hash.crc.Crc32Jamcrc;
+    const Hasher = std.hash.crc.@"CRC-32/JAMCRC";
 
     out: *std.Io.Writer,
     hashed: std.Io.Writer.Hashed(Hasher),
