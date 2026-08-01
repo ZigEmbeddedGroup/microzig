@@ -693,7 +693,7 @@ pub inline fn enable_fpu() void {
 
 /// The RAM vector table used. You can swap interrupt handlers at runtime here.
 /// Available when using a RAM vector table or a RAM image.
-pub var ram_vector_table: VectorTable align(256) = if (using_ram_vector_table or is_ram_image)
+pub var ram_vector_table: VectorTable align(128) = if (using_ram_vector_table or is_ram_image)
     startup_logic.generate_vector_table()
 else
     @compileError("`ram_vector_table` is not available. Consider adding .cpu = .{ .ram_vector_table = true }" ++
@@ -834,7 +834,7 @@ pub const startup_logic = struct {
     fn default_exception_handler(comptime name: []const u8) microzig.interrupt.Handler {
         return switch (builtin.mode) {
             .Debug => .{ .c = DebugExceptionHandler(name).handle },
-            else => .{ .c = ReleaseExceptionHandler.handle },
+            else => .{ .c = DebugExceptionHandler(name).handle },
         };
     }
 

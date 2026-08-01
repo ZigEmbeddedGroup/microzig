@@ -52,6 +52,69 @@ pub const DMA_WriteTarget = struct {
     addr: u32,
 };
 
+pub const RingConfig = union(enum) {
+    disabled,
+    read: RingSize,
+    write: RingSize,
+};
+
+pub const TransferMode = enum(u4) {
+    /// When MODE is 0x0, the transfer count decrements with each transfer,
+    /// until 0, and then the channel triggers the next channel indicated by
+    /// CTRL_CHAIN_TO.
+    default = 0x0,
+
+    /// When MODE is 0x1, the transfer count decrements with each transfer until 0,
+    /// and then the channel re-triggers itself, in addition to the trigger indicated by
+    /// CTRL_CHAIN_TO. This is useful for e.g. an endless ring-buffer DMA with
+    /// periodic interrupts.
+    trigger_self = 0x1,
+
+    /// When MODE is 0xf, the transfer count does not decrement. The DMA channel
+    /// performs an endless sequence of transfers, never triggering other channels or
+    /// raising interrupts, until an ABORT is raised.
+    endless = 0xF,
+};
+
+pub const RingSize = enum(u4) {
+    // disabled = 0,
+    @"2" = 1,
+    @"4" = 2,
+    @"8" = 3,
+    @"16" = 4,
+    @"32" = 5,
+    @"64" = 6,
+    @"128" = 7,
+    @"256" = 8,
+    @"512" = 9,
+    @"1024" = 10,
+    @"2048" = 11,
+    @"4096" = 12,
+    @"8192" = 13,
+    @"16384" = 14,
+    @"32768" = 15,
+};
+
+pub const IncrementMode = enum {
+    none,
+    increment,
+    decrement,
+    increment_x2,
+
+    inline fn get_read_value(mode: IncrementMode) u1 {
+        return switch (mode) {
+            .none, .increment_x2 => 0,
+            .increment, .decrement => 1,
+        };
+    }
+    inline fn get_read_rev_value(mode: IncrementMode) u1 {
+        return switch (mode) {
+            .none, .increment => 0,
+            .decrement, .increment_x2 => 1,
+        };
+    }
+};
+
 pub const ChannelError = error{AlreadyClaimed};
 
 pub const Channel = enum(u4) {
@@ -109,18 +172,22 @@ pub const Channel = enum(u4) {
         trigger: bool = true,
         data_size: DataSize,
         enable: bool,
-        read_increment: bool,
-        write_increment: bool,
+        read_increment: IncrementMode,
+        write_increment: IncrementMode,
         dreq: Dreq,
 
         chain_to: ?Channel = null,
 
         high_priority: bool = false,
 
-        // TODO:
-        // chain to
-        // ring
-        // byte swapping
+        ring: RingConfig = .disabled,
+        swap_bytes: bool = false,
+
+        sniffer_enabled: bool = false,
+
+        irq_quiet: bool = false,
+
+        mode: TransferMode = .default,
     };
 
     pub fn setup_transfer_raw(
@@ -130,31 +197,54 @@ pub const Channel = enum(u4) {
         count: u32,
         config: TransferConfig,
     ) void {
+        std.debug.assert(config.chain_to != chan); // A channel can never link to itself, use "ENDLESS" count instead.
+        std.debug.assert(count <= std.math.maxInt(u28)); // Must fit into 28 bits
+
+        const CountField = packed struct(u32) {
+            count: u28,
+            mode: TransferMode,
+        };
+        const count_field: CountField = .{
+            .count = @intCast(count),
+            .mode = config.mode,
+        };
+        const count_val: u32 = @bitCast(count_field);
+
         const regs = chan.get_regs();
         regs.read_addr = read_addr;
         regs.write_addr = write_addr;
-        regs.trans_count = count;
+        regs.trans_count = count_val;
         const chain_to = config.chain_to orelse chan;
+
+        const TrigType = @TypeOf(microzig.chip.peripherals.DMA.CH0_CTRL_TRIG).underlying_type;
+
+        const new_cfg: TrigType = .{
+            .EN = @intFromBool(config.enable),
+            .DATA_SIZE = config.data_size,
+            .INCR_READ = config.read_increment.get_read_value(),
+            .INCR_READ_REV = config.read_increment.get_read_rev_value(),
+            .INCR_WRITE = config.write_increment.get_read_value(),
+            .INCR_WRITE_REV = config.write_increment.get_read_rev_value(),
+            .TREQ_SEL = config.dreq,
+            .CHAIN_TO = @intFromEnum(chain_to),
+            .HIGH_PRIORITY = @intFromBool(config.high_priority),
+            .RING_SEL = switch (config.ring) {
+                .disabled, .read => 0,
+                .write => 1,
+            },
+            .RING_SIZE = switch (config.ring) {
+                .disabled => .RING_NONE,
+                .read, .write => |size| @enumFromInt(@intFromEnum(size)),
+            },
+            .BSWAP = @intFromBool(config.swap_bytes),
+            .SNIFF_EN = @intFromBool(config.sniffer_enabled),
+            .IRQ_QUIET = @intFromBool(config.irq_quiet),
+        };
+
         if (config.trigger) {
-            regs.ctrl_trig.modify(.{
-                .EN = @intFromBool(config.enable),
-                .DATA_SIZE = config.data_size,
-                .INCR_READ = @intFromBool(config.read_increment),
-                .INCR_WRITE = @intFromBool(config.write_increment),
-                .TREQ_SEL = config.dreq,
-                .CHAIN_TO = @intFromEnum(chain_to),
-                .HIGH_PRIORITY = @intFromBool(config.high_priority),
-            });
+            regs.ctrl_trig.write(new_cfg);
         } else {
-            regs.al1_ctrl.modify(.{
-                .EN = @intFromBool(config.enable),
-                .DATA_SIZE = config.data_size,
-                .INCR_READ = @intFromBool(config.read_increment),
-                .INCR_WRITE = @intFromBool(config.write_increment),
-                .TREQ_SEL = config.dreq,
-                .CHAIN_TO = @intFromEnum(chain_to),
-                .HIGH_PRIORITY = @intFromBool(config.high_priority),
-            });
+            regs.al1_ctrl.write(new_cfg);
         }
     }
 

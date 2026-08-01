@@ -31,6 +31,8 @@ pub const Program = struct {
     wrap: ?u5,
 
     pub fn get_mask(program: Program) u32 {
+        if (program.instructions.len == 32)
+            return 0xFFFF_FFFF;
         return (@as(u32, 1) << @as(u5, @intCast(program.instructions.len))) - 1;
     }
 };

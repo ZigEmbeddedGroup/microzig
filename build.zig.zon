@@ -46,6 +46,10 @@
             .url = "git+https://codeberg.org/mattnite/boxzer.git#4021540de4b07c11102dd4d46383ce0066f838bb",
             .hash = "boxzer-0.1.0--ed-MPrnAAAQAwXnfMJuSkgAsw4FseHEHKcn7OMKXGZS",
         },
+        .serial = .{
+            .url = "git+https://github.com/ZigEmbeddedGroup/serial.git?ref=master#fbd7389ff8bbc9fa362aa74081588755b5d028a0",
+            .hash = "serial-0.0.1-PoeRzF60AAAN8Iu0yXTIX-t3DVzsnmN7vWHKM2HA2Zbq",
+        },
     },
     .paths = .{
         "README.md",

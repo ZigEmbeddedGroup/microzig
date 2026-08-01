@@ -156,12 +156,22 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
         }
 
         pub fn find_offset_for_program(self: EnumType, program: Program) !u5 {
-            return if (program.origin) |origin|
-                if (self.can_add_program_at_offset(program, origin))
-                    origin
-                else
-                    error.NoSpace
-            else for (0..(32 - program.instructions.len)) |i| {
+            std.log.info("<find_offset_for_program origin=\"{?}\" instr=\"{}\">", .{ program.origin, program.instructions.len });
+            defer std.log.info("</find_offset_for_program>", .{});
+
+            if (program.origin) |origin| {
+                if (!self.can_add_program_at_offset(program, origin))
+                    return error.NoSpace;
+                return origin;
+            }
+
+            if (program.instructions.len == 32) {
+                if (!self.can_add_program_at_offset(program, 0))
+                    return error.NoSpace;
+                return 0;
+            }
+
+            return for (0..(32 - program.instructions.len)) |i| {
                 const offset = @as(u5, @intCast(i));
                 if (self.can_add_program_at_offset(program, offset))
                     break offset;
@@ -194,6 +204,7 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
             //defer lock.unlock();
 
             const offset = try self.find_offset_for_program(program);
+            std.log.info("add_program offset =  {}", .{offset});
             try self.add_program_at_offset_unlocked(program, offset);
             return offset;
         }
@@ -526,8 +537,12 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
             const config_count = if (options.pin_mappings.side_set) |side_set| side_set.count() else 0;
             assert(expected_side_set_pins == config_count);
 
+            std.log.info("<add_program>", .{});
+
             // TODO: check program settings vs pin mapping
             const offset = try self.add_program(program);
+
+            std.log.info("</add_program>", .{});
 
             try self.sm_init(sm, offset, .{
                 .clkdiv = options.clkdiv,

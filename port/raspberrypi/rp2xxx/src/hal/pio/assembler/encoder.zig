@@ -501,12 +501,23 @@ pub fn Encoder(comptime chip: Chip, comptime options: Options) type {
             var instr_index: ?u5 = program.origin orelse 0;
             for (self.tokens[self.index..]) |token| {
                 switch (token.data) {
-                    .label => |label| try program.labels.append(.{
-                        .name = label.name,
-                        .public = label.public,
-                        .index = instr_index.?,
-                    }),
+                    .label => |label| {
+                        if (instr_index == null) {
+                            diags.* = Diagnostics.init(token.index, "label not addressable (out of instructions)", .{});
+                            return error.Overflow;
+                        }
+                        try program.labels.append(.{
+                            .name = label.name,
+                            .public = label.public,
+                            .index = instr_index.?,
+                        });
+                    },
                     .instruction, .word => {
+                        if (instr_index == null) {
+                            diags.* = Diagnostics.init(token.index, "out of instructions", .{});
+                            return error.Overflow;
+                        }
+
                         const result, const ov = @addWithOverflow(instr_index.?, 1);
                         instr_index = if (ov != 0) null else result;
                     },
