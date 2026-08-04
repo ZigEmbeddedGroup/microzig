@@ -298,7 +298,7 @@ pub const CYW43_Wifi = struct {
         };
 
         const max_payload = 1280 - ("escan".len + 1);
-        var payload_buf: [max_payload]u8 = undefined;
+        var payload_buf: [max_payload]u8 align(@alignOf(ScanParamsWire)) = undefined;
 
         const payload = try pack_scan_params(&payload_buf, params, channels);
         try self.transport.set_iovar("escan", payload);
