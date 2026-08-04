@@ -154,6 +154,7 @@ pub fn Polled(comptime cfg: Config) type {
         interface: usb.DeviceInterface,
 
         pub fn init(self: *Self) void {
+            log.warn("USBHS init starting", .{});
             self.interface = .{ .vtable = &vtable };
             self.endpoints = @splat(@splat(.{}));
             @memset(self.pool[0..64], 0x7e);
@@ -259,6 +260,7 @@ pub fn Polled(comptime cfg: Config) type {
 
         pub fn poll(self: *Self, in_isr: bool, controller: anytype) void {
             _ = in_isr;
+
             while (true) {
                 const flags = Regs.USB_INT_FG.read();
                 if (flags.RB_UIF_HST_SOF == 0 and flags.RB_UIF_SUSPEND == 0 and
@@ -619,6 +621,8 @@ pub fn Polled(comptime cfg: Config) type {
         // ---- HW init ---------------------------------------------------------
 
         fn usbhs_hw_init() void {
+            log.warn("USBHS hw_init starting", .{});
+
             // Reset SIE and clear FIFO
             Regs.UHOST_CTRL.raw = 0;
             Regs.UHOST_CTRL.modify(.{ .RB_UH_PHY_SUSPENDM = 1 });

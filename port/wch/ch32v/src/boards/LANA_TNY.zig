@@ -5,6 +5,11 @@ pub const microzig = @import("microzig");
 pub const chip = @import("chip");
 const ch32v = microzig.hal;
 
+pub const product_string = "LANA TNY";
+
+/// CH32V203G6U6 has USBD (PMA-based), not USBFS/OTG
+pub const usb_driver: ch32v.UsbDriver = .usbd;
+
 /// Clock configuration for this board
 pub const clock_config: ch32v.clocks.Config = .{
     .source = .hsi,
@@ -18,6 +23,7 @@ pub const cpu_frequency = clock_config.target_frequency;
 pub fn init() void {
     ch32v.clocks.init(clock_config);
     ch32v.time.init();
+    ch32v.clocks.enable_usbd_clock();
 }
 
 pub const pin_config = ch32v.pins.GlobalConfiguration{
