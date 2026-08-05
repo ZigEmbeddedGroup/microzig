@@ -90,6 +90,26 @@ pub const ReceiveError = error{
     Timeout,
 };
 
+const gpio = hal.gpio;
+
+/// Configuration for board-level UART defaults.
+/// Boards export a `uart_config` const of this type with their preferred
+/// USART instance, TX pin, and serial settings. Examples can use these
+/// defaults directly or construct their own `UartConfig`.
+pub const UartConfig = struct {
+    instance: USART = .USART1,
+    tx_pin: gpio.Pin = gpio.Pin.init(0, 9), // PA9 (USART1 default TX)
+    config: Config = .{ .baud_rate = 115200 },
+};
+
+/// Configure a UART from a `UartConfig`: sets up the TX pin as alternate
+/// function push-pull, then applies the USART peripheral configuration
+/// (clock enable, AFIO remap, baud rate, etc.).
+pub fn setup_uart(comptime cfg: UartConfig) void {
+    cfg.tx_pin.configure_alternate_function(.push_pull, .max_50MHz);
+    cfg.instance.apply(cfg.config);
+}
+
 pub const instance = struct {
     pub const USART1: USART = .USART1;
     pub const USART2: USART = .USART2;
