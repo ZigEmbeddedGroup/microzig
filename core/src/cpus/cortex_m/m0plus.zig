@@ -174,11 +174,11 @@ pub const NestedVectorInterruptController = extern struct {
     }
 
     pub fn enable(nvic: *volatile NestedVectorInterruptController, num: comptime_int) void {
-        nvic.ISER |= 1 << num;
+        nvic.ISER = 1 << num;
     }
 
     pub fn disable(nvic: *volatile NestedVectorInterruptController, num: comptime_int) void {
-        nvic.ICER |= 1 << num;
+        nvic.ICER = 1 << num;
     }
 
     pub fn is_pending(nvic: *volatile NestedVectorInterruptController, num: comptime_int) void {
@@ -186,11 +186,11 @@ pub const NestedVectorInterruptController = extern struct {
     }
 
     pub fn set_pending(nvic: *volatile NestedVectorInterruptController, num: comptime_int) void {
-        nvic.ISPR |= 1 << num;
+        nvic.ISPR = 1 << num;
     }
 
     pub fn clear_pending(nvic: *volatile NestedVectorInterruptController, num: comptime_int) void {
-        nvic.ICPR |= 1 << num;
+        nvic.ICPR = 1 << num;
     }
 };
 
