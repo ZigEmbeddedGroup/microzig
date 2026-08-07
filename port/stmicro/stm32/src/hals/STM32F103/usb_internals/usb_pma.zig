@@ -3,12 +3,6 @@ const microzig = @import("microzig");
 const USB = microzig.chip.peripherals.USB;
 const PMA_BASE: u32 = 0x40006000;
 
-const pma_data = packed struct(u32) {
-    low_byte: u8,
-    high_byte: u8,
-    _res: u16 = 0,
-};
-
 //PMA(u16) <==> CPU(u32)
 const PMA_value = packed struct(u32) {
     value: u16,
@@ -92,13 +86,13 @@ pub const BTABLEError = error{
 const BTABLE: *volatile [8]BTABLEDescriptor = @ptrFromInt(PMA_BASE);
 
 var metadata: [8]?EntryMetadata = undefined;
-var init = false;
+
 pub fn btable_init(config: Config) BTABLEError!void {
     try load_and_check(config);
 
     var offset: usize = 32;
 
-    USB.BTABLE.raw = 0;
+    USB.BTABLE.raw.write(0);
 
     //init BTABLE;
     for (0..8) |i| {

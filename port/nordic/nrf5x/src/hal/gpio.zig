@@ -88,8 +88,8 @@ pub const Pin = enum(u6) {
     pub fn set_direction(pin: Pin, direction: Direction) void {
         const regs = pin.get_regs();
         switch (direction) {
-            .in => regs.DIRCLR.raw = pin.mask(),
-            .out => regs.DIRSET.raw = pin.mask(),
+            .in => regs.DIRCLR.raw.write(pin.mask()),
+            .out => regs.DIRSET.raw.write(pin.mask()),
         }
     }
 
@@ -117,19 +117,19 @@ pub const Pin = enum(u6) {
     pub inline fn put(pin: Pin, value: u1) void {
         const regs = pin.get_regs();
         switch (value) {
-            0 => regs.OUTCLR.raw = pin.mask(),
-            1 => regs.OUTSET.raw = pin.mask(),
+            0 => regs.OUTCLR.raw.write(pin.mask()),
+            1 => regs.OUTSET.raw.write(pin.mask()),
         }
     }
 
     pub inline fn toggle(pin: Pin) void {
         const regs = pin.get_regs();
-        regs.OUT.raw ^= pin.mask();
+        regs.OUT.raw.toggle(pin.mask());
     }
 
     pub inline fn read(pin: Pin) u1 {
         const regs = pin.get_regs();
-        return @truncate(regs.IN.raw >> pin.index());
+        return @truncate(regs.IN.raw.read() >> pin.index());
     }
 
     pub fn set_drive_strength(pin: Pin, drive_strength: DriveStrength) void {

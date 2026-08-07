@@ -1,4 +1,3 @@
-const std = @import("std");
 const microzig = @import("microzig");
 
 const crc = microzig.chip.peripherals.CRC;
@@ -15,7 +14,7 @@ pub inline fn read() u32 {
 
 ///reset the CRC calculation unit
 pub inline fn reset() void {
-    crc.CR.raw = 0x1; // reset bit
+    crc.CR.raw.write(0x1); // reset bit
 }
 
 ///load a value into the CRC independent data register (just a single byte)

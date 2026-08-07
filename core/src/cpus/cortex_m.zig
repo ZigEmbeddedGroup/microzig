@@ -107,6 +107,46 @@ pub const Exception = blk: {
     break :blk @Enum(u4, .exhaustive, &field_names, &field_values);
 };
 
+// Maybe consolidate this and `exception_ppb_pending_field`?
+// Also, could be better to check for field presence in ppb
+// instead of hard-coding which processors have which faults.
+pub fn exception_ppb_enable_field(comptime excpt: Exception) []const u8 {
+    return sw: switch (cortex_m) {
+        .cortex_m3, .cortex_m4, .cortex_m7 => switch (excpt) {
+            .UsageFault => "USGFAULTENA",
+            .BusFault => "BUSFAULTENA",
+            .MemManageFault => "MEMFAULTENA",
+            else => @compileError("not supported on this platform"),
+        },
+        .cortex_m33, .cortex_m55 => switch (excpt) {
+            .SecureFault => "SECUREFAULTENA",
+            else => continue :sw .cortex_m3,
+        },
+        else => @compileError("not supported on this platform"),
+    };
+}
+
+pub fn exception_ppb_pending_field(comptime excpt: Exception) []const u8 {
+    return sw: switch (cortex_m) {
+        .cortex_m0plus => switch (excpt) {
+            .SVCALL => "SVCALLPENDED",
+            else => @compileError("not supported on this platform"),
+        },
+        .cortex_m3, .cortex_m4, .cortex_m7 => switch (excpt) {
+            .UsageFault => "USGFAULTPENDED",
+            .BusFault => "BUSFAULTPENDED",
+            .MemManageFault => "MEMFAULTPENDED",
+            else => continue :sw .cortex_m0plus,
+        },
+        .cortex_m33, .cortex_m55 => switch (excpt) {
+            .SecureFault => "SECUREFAULTPENDED",
+            .HardFault => "HARDFAULTPENDED",
+            else => continue :sw .cortex_m3,
+        },
+        else => @compileError("not supported on this platform"),
+    };
+}
+
 pub const interrupt = struct {
     /// The priority of an interrupt.
     /// Cortex-M uses a reversed priority scheme so the lowest priority is 15 and the highest is 0.
@@ -147,181 +187,27 @@ pub const interrupt = struct {
         };
 
         pub fn is_enabled(comptime excpt: Exception) bool {
-            switch (cortex_m) {
-                .cortex_m3, .cortex_m4, .cortex_m7 => {
-                    const raw = ppb.SHCSR.raw;
-                    switch (excpt) {
-                        .UsageFault => return (raw & 0x0004_0000) != 0,
-                        .BusFault => return (raw & 0x0002_0000) != 0,
-                        .MemManageFault => return (raw & 0x0001_0000) != 0,
-                        else => @compileError("not supported on this platform"),
-                    }
-                },
-                .cortex_m33,
-                .cortex_m55,
-                => {
-                    const raw = ppb.SHCSR.raw;
-                    switch (excpt) {
-                        .SecureFault => return (raw & 0x0008_0000) != 0,
-                        .UsageFault => return (raw & 0x0004_0000) != 0,
-                        .BusFault => return (raw & 0x0002_0000) != 0,
-                        .MemManageFault => return (raw & 0x0001_0000) != 0,
-                        else => @compileError("not supported on this platform"),
-                    }
-                },
-                else => @compileError("not supported on this platform"),
-            }
+            return @field(ppb.SHCSR.read(), exception_ppb_enable_field(excpt)) != 0;
         }
 
         pub fn enable(comptime excpt: Exception) void {
-            switch (cortex_m) {
-                .cortex_m3, .cortex_m4, .cortex_m7 => {
-                    switch (excpt) {
-                        .UsageFault => ppb.SHCSR.raw |= 0x0004_0000,
-                        .BusFault => ppb.SHCSR.raw |= 0x0002_0000,
-                        .MemManageFault => ppb.SHCSR.raw |= 0x0001_0000,
-                        else => @compileError("not supported on this platform"),
-                    }
-                },
-                .cortex_m33,
-                .cortex_m55,
-                => {
-                    switch (excpt) {
-                        .SecureFault => ppb.SHCSR.raw |= 0x0008_0000,
-                        .UsageFault => ppb.SHCSR.raw |= 0x0004_0000,
-                        .BusFault => ppb.SHCSR.raw |= 0x0002_0000,
-                        .MemManageFault => ppb.SHCSR.raw |= 0x0001_0000,
-                        else => @compileError("not supported on this platform"),
-                    }
-                },
-                else => @compileError("not supported on this platform"),
-            }
+            return ppb.SHCSR.modify_one(exception_ppb_enable_field(excpt), 1);
         }
 
         pub fn disable(comptime excpt: Exception) void {
-            switch (cortex_m) {
-                .cortex_m3, .cortex_m4, .cortex_m7 => {
-                    switch (excpt) {
-                        .UsageFault => ppb.SHCSR.raw &= ~@as(u32, 0x0004_0000),
-                        .BusFault => ppb.SHCSR.raw &= ~@as(u32, 0x0002_0000),
-                        .MemManageFault => ppb.SHCSR.raw &= ~@as(u32, 0x0001_0000),
-                        else => @compileError("not supported on this platform"),
-                    }
-                },
-                .cortex_m33,
-                .cortex_m55,
-                => {
-                    switch (excpt) {
-                        .SecureFault => ppb.SHCSR.raw &= ~@as(u32, 0x0008_0000),
-                        .UsageFault => ppb.SHCSR.raw &= ~@as(u32, 0x0004_0000),
-                        .BusFault => ppb.SHCSR.raw &= ~@as(u32, 0x0002_0000),
-                        .MemManageFault => ppb.SHCSR.raw &= ~@as(u32, 0x0001_0000),
-                        else => @compileError("not supported on this platform"),
-                    }
-                },
-                else => @compileError("not supported on this platform"),
-            }
+            return ppb.SHCSR.modify_one(exception_ppb_enable_field(excpt), 0);
         }
 
         pub fn is_pending(comptime excpt: Exception) bool {
-            switch (cortex_m) {
-                .cortex_m0plus,
-                => {
-                    if (excpt == .SVCALL) return (ppb.SHCSR.raw & 0x0000_8000) != 0;
-                    @compileError("not supported on this platform");
-                },
-                .cortex_m3, .cortex_m4, .cortex_m7 => {
-                    const raw = ppb.SHCSR.raw;
-                    switch (excpt) {
-                        .SVCall => return (raw & 0x0000_8000) != 0,
-                        .BusFault => return (raw & 0x0000_4000) != 0,
-                        .MemManageFault => return (raw & 0x0000_2000) != 0,
-                        .UsageFault => return (raw & 0x0000_1000) != 0,
-                        else => @compileError("not supported on this platform"),
-                    }
-                },
-                .cortex_m33,
-                .cortex_m55,
-                => {
-                    const raw = ppb.SHCSR.raw;
-                    switch (excpt) {
-                        .HardFault => return (raw & 0x0020_0000) != 0,
-                        .SecureFault => return (raw & 0x0010_0000) != 0,
-                        .SVCall => return (raw & 0x0000_8000) != 0,
-                        .BusFault => return (raw & 0x0000_4000) != 0,
-                        .MemManageFault => return (raw & 0x0000_2000) != 0,
-                        .UsageFault => return (raw & 0x0000_1000) != 0,
-                        else => @compileError("not supported on this platform"),
-                    }
-                },
-                else => @compileError("not supported on this platform"),
-            }
+            return @field(ppb.SHCSR.read(), exception_ppb_pending_field(excpt)) != 0;
         }
 
         pub fn set_pending(comptime excpt: Exception) void {
-            switch (cortex_m) {
-                .cortex_m0plus,
-                => {
-                    if (excpt == .SVCALL) ppb.SHCSR.raw |= 0x0000_8000;
-                    @compileError("not supported on this platform");
-                },
-                .cortex_m3, .cortex_m4, .cortex_m7 => {
-                    switch (excpt) {
-                        .SVCall => ppb.SHCSR.raw |= 0x0000_8000,
-                        .BusFault => ppb.SHCSR.raw |= 0x0000_4000,
-                        .MemManageFault => ppb.SHCSR.raw |= 0x0000_2000,
-                        .UsageFault => ppb.SHCSR.raw |= 0x0000_1000,
-                        else => @compileError("not supported on this platform"),
-                    }
-                },
-                .cortex_m33,
-                .cortex_m55,
-                => {
-                    switch (excpt) {
-                        .HardFault => ppb.SHCSR.raw |= 0x0020_0000,
-                        .SecureFault => ppb.SHCSR.raw |= 0x0010_0000,
-                        .SVCall => ppb.SHCSR.raw |= 0x0000_8000,
-                        .BusFault => ppb.SHCSR.raw |= 0x0000_4000,
-                        .MemManageFault => ppb.SHCSR.raw |= 0x0000_2000,
-                        .UsageFault => ppb.SHCSR.raw |= 0x0000_1000,
-                        else => @compileError("not supported on this platform"),
-                    }
-                },
-                else => @compileError("not supported on this platform"),
-            }
+            return ppb.SHCSR.modify_one(exception_ppb_pending_field(excpt), 1);
         }
 
         pub fn clear_pending(comptime excpt: Exception) void {
-            switch (cortex_m) {
-                .cortex_m0plus,
-                => {
-                    if (excpt == .SVCALL) ppb.SHCSR.raw &= ~@as(u32, 0x0000_8000);
-                    @compileError("not supported on this platform");
-                },
-                .cortex_m3, .cortex_m4, .cortex_m7 => {
-                    switch (excpt) {
-                        .SVCall => ppb.SHCSR.raw &= ~@as(u32, 0x0000_8000),
-                        .BusFault => ppb.SHCSR.raw &= ~@as(u32, 0x0000_4000),
-                        .MemManageFault => ppb.SHCSR.raw &= ~@as(u32, 0x0000_2000),
-                        .UsageFault => ppb.SHCSR.raw &= ~@as(u32, 0x0000_1000),
-                        else => @compileError("not supported on this platform"),
-                    }
-                },
-                .cortex_m33,
-                .cortex_m55,
-                => {
-                    switch (excpt) {
-                        .HardFault => ppb.SHCSR.raw &= ~@as(u32, 0x0020_0000),
-                        .SecureFault => ppb.SHCSR.raw &= ~@as(u32, 0x0010_0000),
-                        .SVCall => ppb.SHCSR.raw &= ~@as(u32, 0x0000_8000),
-                        .BusFault => ppb.SHCSR.raw &= ~@as(u32, 0x0000_4000),
-                        .MemManageFault => ppb.SHCSR.raw &= ~@as(u32, 0x0000_2000),
-                        .UsageFault => ppb.SHCSR.raw &= ~@as(u32, 0x0000_1000),
-                        else => @compileError("not supported on this platform"),
-                    }
-                },
-                else => @compileError("not supported on this platform"),
-            }
+            return ppb.SHCSR.modify_one(exception_ppb_pending_field(excpt), 0);
         }
 
         /// Note: Although the Priority values are 0 - 15, some platforms may
@@ -334,37 +220,28 @@ pub const interrupt = struct {
             // The any SHPRn register which is unavailable on a platform will
             // not be accessed as no matching `Exception` will be exist.
 
-            switch (num) {
-                0 => {
-                    @compileError("Cannot set the priority for the exception");
-                },
-                1 => {
-                    ppb.SHPR1.raw &= ~(@as(u32, 0xFF) << shift);
-                    ppb.SHPR1.raw |= @as(u32, @intFromEnum(priority)) << shift;
-                },
-                2 => {
-                    ppb.SHPR2.raw &= ~(@as(u32, 0xFF) << shift);
-                    ppb.SHPR2.raw |= @as(u32, @intFromEnum(priority)) << shift;
-                },
-                3 => {
-                    ppb.SHPR3.raw &= ~(@as(u32, 0xFF) << shift);
-                    ppb.SHPR3.raw |= @as(u32, @intFromEnum(priority)) << shift;
-                },
-            }
+            const reg = switch (num) {
+                0 => @compileError("Cannot set the priority for the exception"),
+                1 => &ppb.SHPR1,
+                2 => &ppb.SHPR2,
+                3 => &ppb.SHPR3,
+            };
+
+            reg.raw.modify(@as(u32, 0xFF) << shift, @as(u32, @intFromEnum(priority)) << shift);
         }
 
         pub fn get_priority(comptime excpt: Exception) Priority {
             const num: u2 = @intCast(@intFromEnum(excpt) / 4);
             const shift: u5 = @as(u5, @intCast(@intFromEnum(excpt))) % 4 * 8;
 
-            const raw: u8 = (switch (num) {
+            const reg: u8 = (switch (num) {
                 0 => @compileError("Cannot get the priority for the exception"),
-                1 => ppb.SHPR1.raw,
-                2 => ppb.SHPR2.raw,
-                3 => ppb.SHPR3.raw,
+                1 => &ppb.SHPR1,
+                2 => &ppb.SHPR2,
+                3 => &ppb.SHPR3,
             } >> shift) & 0xFF;
 
-            return @enumFromInt(raw);
+            return @enumFromInt(reg.raw.read());
         }
     };
 

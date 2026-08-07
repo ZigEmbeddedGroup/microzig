@@ -4,7 +4,6 @@ const enums = @import("enums.zig");
 
 const I2C_Type = enums.I2C_Type;
 const I2C_Peripherals = microzig.chip.types.peripherals.i2c_v2.I2C;
-const peripherals = microzig.chip.peripherals;
 const hal = microzig.hal;
 const drivers = microzig.drivers.base;
 
@@ -41,7 +40,7 @@ const TIMINGR = blk: {
 
 const I2C = struct {
     regs: *volatile I2C_Peripherals,
-    timingr: TIMINGR.underlying_type,
+    timingr: TIMINGR.Fields,
 
     fn compute_presc(comptime instance: I2C_Type) ConfigError!struct { f32, u4 } {
         // Let first see if we need to prescale.
@@ -126,7 +125,7 @@ const I2C = struct {
 
         regs.CR1.modify(.{ .PE = 0 });
 
-        regs.TIMINGR.modify(i2c.timingr);
+        regs.TIMINGR.write(i2c.timingr);
 
         regs.CR1.modify(.{ .PE = 1 });
     }
@@ -205,15 +204,16 @@ const I2C = struct {
         const scll = try compute_low_time(t_presc);
         const sclh = try compute_high_time(t_presc);
 
-        const timingr: TIMINGR.underlying_type = .{
-            .PRESC = presc,
-            .SCLDEL = scdel,
-            .SDADEL = sdadel,
-            .SCLL = scll,
-            .SCLH = sclh,
+        return .{
+            .regs = enums.get_regs(I2C_Peripherals, instance),
+            .timingr = .{
+                .PRESC = presc,
+                .SCLDEL = scdel,
+                .SDADEL = sdadel,
+                .SCLL = scll,
+                .SCLH = sclh,
+            },
         };
-
-        return .{ .regs = enums.get_regs(I2C_Peripherals, instance), .timingr = timingr };
     }
 };
 

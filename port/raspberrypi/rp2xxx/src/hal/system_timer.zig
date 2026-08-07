@@ -54,7 +54,7 @@ pub const Timer = enum(u1) {
     /// Clears the interrupt flag for the given alarm.
     pub fn clear_interrupt(timer: Timer, alarm: Alarm) void {
         const regs = timer.get_regs();
-        regs.INTR.write_raw(@as(u4, 1) << @intFromEnum(alarm));
+        regs.INTR.raw.write(@as(u4, 1) << @intFromEnum(alarm));
     }
 
     /// Schedules an alarm to be triggered when the low word of the timer

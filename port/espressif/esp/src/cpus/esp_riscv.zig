@@ -60,6 +60,10 @@ pub const Interrupt = enum(u5) {
     interrupt29 = 29,
     interrupt30 = 30,
     interrupt31 = 31,
+
+    pub fn mask(int: Interrupt) u32 {
+        return int.mask();
+    }
 };
 
 pub const InterruptHandler = union(enum) {
@@ -92,27 +96,27 @@ pub const interrupt = struct {
     const INTERRUPT_CORE0 = microzig.chip.peripherals.INTERRUPT_CORE0;
 
     pub fn is_enabled(int: Interrupt) bool {
-        return INTERRUPT_CORE0.CPU_INT_ENABLE.raw & (@as(u32, 1) << @intFromEnum(int)) != 0;
+        return INTERRUPT_CORE0.CPU_INT_ENABLE.raw.read() & int.mask() != 0;
     }
 
     pub fn enable(int: Interrupt) void {
-        INTERRUPT_CORE0.CPU_INT_ENABLE.raw |= @as(u32, 1) << @intFromEnum(int);
+        INTERRUPT_CORE0.CPU_INT_ENABLE.raw.set(int.mask());
     }
 
     pub fn disable(int: Interrupt) void {
-        INTERRUPT_CORE0.CPU_INT_ENABLE.raw &= ~(@as(u32, 1) << @intFromEnum(int));
+        INTERRUPT_CORE0.CPU_INT_ENABLE.raw.clear(int.mask());
     }
 
     /// Checks if a given interrupt is pending.
     pub fn is_pending(int: Interrupt) bool {
-        return INTERRUPT_CORE0.CPU_INT_EIP_STATUS.raw & (@as(u32, 1) << @intFromEnum(int)) != 0;
+        return INTERRUPT_CORE0.CPU_INT_EIP_STATUS.raw.read() & int.mask() != 0;
     }
 
     /// Clears the pending state of claimed (executing) edge-type interrupt only.
     /// NOTE: Pending state of an unclaimed (not executing) edge type interrupt can be flushed,
     /// if required, by first disabling it and only then call clearing it.
     pub fn clear_pending(int: Interrupt) void {
-        INTERRUPT_CORE0.CPU_INT_CLEAR.raw |= @as(u32, 1) << @intFromEnum(int);
+        INTERRUPT_CORE0.CPU_INT_CLEAR.raw.set(int.mask());
     }
 
     pub const Priority = enum(u4) {
@@ -160,16 +164,15 @@ pub const interrupt = struct {
     };
 
     pub fn set_type(int: Interrupt, typ: Type) void {
-        const num = @intFromEnum(int);
         switch (typ) {
-            .level => INTERRUPT_CORE0.CPU_INT_TYPE.raw &= ~(@as(u32, 1) << num),
-            .edge => INTERRUPT_CORE0.CPU_INT_TYPE.raw |= @as(u32, 1) << num,
+            .level => INTERRUPT_CORE0.CPU_INT_TYPE.raw.clear(int.mask()),
+            .edge => INTERRUPT_CORE0.CPU_INT_TYPE.raw.set(int.mask()),
         }
     }
 
     pub fn get_type(int: Interrupt) Type {
         const num = @intFromEnum(int);
-        return @enumFromInt(INTERRUPT_CORE0.CPU_INT_TYPE.raw & (@as(u32, 1) << num) >> num);
+        return @enumFromInt((INTERRUPT_CORE0.CPU_INT_TYPE.raw.read() >> num) & 1);
     }
 
     pub const Source = enum(u6) {
@@ -261,8 +264,8 @@ pub const interrupt = struct {
 
         pub fn init() Status {
             return .{
-                .reg = INTERRUPT_CORE0.INTR_STATUS_REG_0.raw |
-                    (@as(u61, INTERRUPT_CORE0.INTR_STATUS_REG_1.raw) << 32),
+                .reg = INTERRUPT_CORE0.INTR_STATUS_REG_0.raw.read() |
+                    (@as(u61, INTERRUPT_CORE0.INTR_STATUS_REG_1.raw.read()) << 32),
             };
         }
 

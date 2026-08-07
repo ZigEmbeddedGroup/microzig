@@ -1,13 +1,7 @@
-const std = @import("std");
-const assert = std.debug.assert;
-
 const microzig = @import("microzig");
 
 const common = @import("common.zig");
-
 const gpio = @import("../gpio.zig");
-const resets = @import("../resets.zig");
-const hw = @import("../hw.zig");
 
 const PIO2 = microzig.chip.peripherals.PIO2;
 
@@ -47,7 +41,7 @@ pub const Pio = enum(u2) {
     pub const sm_set_clkdiv = PioImpl.sm_set_clkdiv;
     pub fn get_gpio_base(self: Pio) u32 {
         // Base is either 0 or 16
-        return 0x10 & self.get_regs().GPIOBASE.raw;
+        return 0x10 & self.get_regs().GPIOBASE.raw.read();
     }
     pub const sm_set_exec_options = PioImpl.sm_set_exec_options;
 
@@ -86,30 +80,7 @@ pub const Pio = enum(u2) {
     pub const sm_set_enabled = PioImpl.sm_set_enabled;
     pub const sm_clear_debug = PioImpl.sm_clear_debug;
 
-    /// changing the state of fifos will clear them
-    pub fn sm_clear_fifos(self: Pio, sm: common.StateMachine) void {
-        const sm_regs = self.get_sm_regs(sm);
-        const xor_shiftctrl = hw.xor_alias(&sm_regs.shiftctrl);
-        const mask = @TypeOf(common.PIO0.SM0_SHIFTCTRL).underlying_type{
-            .FJOIN_TX = 1,
-            .FJOIN_RX = 1,
-
-            .AUTOPUSH = 0,
-            .AUTOPULL = 0,
-            .IN_SHIFTDIR = 0,
-            .OUT_SHIFTDIR = 0,
-            .PUSH_THRESH = 0,
-            .PULL_THRESH = 0,
-
-            .FJOIN_RX_GET = 0,
-            .FJOIN_RX_PUT = 0,
-            .IN_COUNT = 0,
-        };
-
-        xor_shiftctrl.write(mask);
-        xor_shiftctrl.write(mask);
-    }
-
+    pub const sm_clear_fifos = PioImpl.sm_clear_fifos;
     pub const sm_fifo_level = PioImpl.sm_fifo_level;
     pub const sm_clear_interrupt = PioImpl.sm_clear_interrupt;
     pub const sm_enable_interrupt = PioImpl.sm_enable_interrupt;

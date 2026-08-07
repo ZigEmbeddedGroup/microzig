@@ -73,7 +73,7 @@ pub const I2C = enum(u1) {
         config.scl_pin.set_direction(.in);
         config.scl_pin.set_drive_strength(.SOD1);
         switch (version) {
-            .nrf5283x => regs.PSELSCL.raw = @intFromEnum(config.scl_pin),
+            .nrf5283x => regs.PSELSCL.raw.write(@intFromEnum(config.scl_pin)),
             .nrf52840 => regs.PSEL.SCL.write(.{
                 .PIN = config.scl_pin.index(),
                 .PORT = config.scl_pin.port(),
@@ -84,7 +84,7 @@ pub const I2C = enum(u1) {
         config.sda_pin.set_direction(.in);
         config.sda_pin.set_drive_strength(.SOD1);
         switch (version) {
-            .nrf5283x => regs.PSELSDA.raw = @intFromEnum(config.sda_pin),
+            .nrf5283x => regs.PSELSDA.raw.write(@intFromEnum(config.sda_pin)),
             .nrf52840 => regs.PSEL.SDA.write(.{
                 .PIN = config.sda_pin.index(),
                 .PORT = config.sda_pin.port(),
@@ -105,21 +105,21 @@ pub const I2C = enum(u1) {
     pub fn reset(i2c: I2C) void {
         i2c.disable();
         const regs = i2c.get_regs();
-        regs.SHORTS.raw = 0x00000000;
-        regs.INTENSET.raw = 0x00000000;
-        regs.ERRORSRC.raw = 0xFFFFFFFF;
+        regs.SHORTS.raw.write(0x00000000);
+        regs.INTENSET.raw.write(0x00000000);
+        regs.ERRORSRC.raw.write(0xFFFFFFFF);
         switch (version) {
             .nrf5283x => {
-                regs.PSELSCL.raw = 0xFFFFFFFF;
-                regs.PSELSDA.raw = 0xFFFFFFFF;
+                regs.PSELSCL.raw.write(0xFFFFFFFF);
+                regs.PSELSDA.raw.write(0xFFFFFFFF);
             },
             .nrf52840 => {
-                regs.PSEL.SCL.raw = 0xFFFFFFFF;
-                regs.PSEL.SDA.raw = 0xFFFFFFFF;
+                regs.PSEL.SCL.raw.write(0xFFFFFFFF);
+                regs.PSEL.SDA.raw.write(0xFFFFFFFF);
             },
         }
-        regs.FREQUENCY.raw = 0x04000000;
-        regs.ADDRESS.raw = 0x00000000;
+        regs.FREQUENCY.raw.write(0x04000000);
+        regs.ADDRESS.raw.write(0x00000000);
     }
 
     fn tx_sent(i2c: I2C) bool {
@@ -139,7 +139,7 @@ pub const I2C = enum(u1) {
             try i2c.check_and_clear_error();
             std.mem.doNotOptimizeAway(0);
         }
-        regs.EVENTS_TXDSENT.raw = 0;
+        regs.EVENTS_TXDSENT.raw.write(0);
     }
 
     fn read_byte(i2c: I2C, deadline: mdf.time.Deadline) Error!u8 {
@@ -151,25 +151,25 @@ pub const I2C = enum(u1) {
             std.mem.doNotOptimizeAway(0);
         }
         const v = regs.RXD.read().RXD;
-        regs.EVENTS_RXDREADY.raw = 0;
+        regs.EVENTS_RXDREADY.raw.write(0);
         return v;
     }
 
     fn clear_shorts(i2c: I2C) void {
         const regs = i2c.get_regs();
-        regs.SHORTS.raw = 0x00000000;
+        regs.SHORTS.raw.write(0x00000000);
     }
 
     fn clear_events(i2c: I2C) void {
         const regs = i2c.get_regs();
-        regs.EVENTS_SUSPENDED.raw = 0;
-        regs.EVENTS_STOPPED.raw = 0;
-        regs.EVENTS_ERROR.raw = 0;
+        regs.EVENTS_SUSPENDED.raw.write(0);
+        regs.EVENTS_STOPPED.raw.write(0);
+        regs.EVENTS_ERROR.raw.write(0);
     }
 
     fn clear_errors(i2c: I2C) void {
         const regs = i2c.get_regs();
-        regs.ERRORSRC.raw = 0xFFFFFFFF;
+        regs.ERRORSRC.raw.write(0xFFFFFFFF);
     }
 
     fn disable_interrupts(i2c: I2C) void {
@@ -203,7 +203,7 @@ pub const I2C = enum(u1) {
         const error_generated = regs.EVENTS_ERROR.read().EVENTS_ERROR == .Generated;
         if (error_generated) {
             // Clear error
-            regs.EVENTS_ERROR.raw = 0x0000000;
+            regs.EVENTS_ERROR.raw.write(0x0000000);
             // We expect this to return an error, if it doesn't then we don't understand the error
             const error_src = try i2c.check_error();
             if (error_src != 0) {

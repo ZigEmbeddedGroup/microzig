@@ -48,7 +48,7 @@ pub fn write_byte_itm(ch: u8, stim_port: u5) void {
     while (peripherals.itm.STIM[stim_port].read().READ.FIFOREADY == 0) {}
 
     // Write character
-    const stim: *volatile u8 = @ptrCast(&peripherals.itm.STIM[stim_port].raw);
+    const stim: *volatile u8 = @ptrCast(&peripherals.itm.STIM[stim_port]);
     stim.* = ch;
 }
 

@@ -1,11 +1,12 @@
 const std = @import("std");
-
 const microzig = @import("microzig");
-const mdf = microzig.drivers;
-const drivers = mdf.base;
-const peripherals = microzig.chip.peripherals;
-const compatibility = @import("compatibility.zig");
 
+const drivers = mdf.base;
+const mdf = microzig.drivers;
+const peripherals = microzig.chip.peripherals;
+const utils = microzig.utilities;
+
+const compatibility = @import("compatibility.zig");
 const gpio = @import("gpio.zig");
 const time = @import("time.zig");
 
@@ -17,10 +18,6 @@ const version: enum {
     .nrf52840 => .nrf52840,
     else => compatibility.unsupported_chip("DMA I2C"),
 };
-
-// "Two Wire Interface Master"
-const I2C0 = peripherals.TWIM0;
-const I2C1 = peripherals.TWIM1;
 
 const I2cRegs = microzig.chip.types.peripherals.TWIM0;
 
@@ -54,8 +51,8 @@ pub const I2C = enum(u1) {
 
     fn get_regs(i2c: I2C) *volatile I2cRegs {
         return switch (@intFromEnum(i2c)) {
-            0 => I2C0,
-            1 => I2C1,
+            0 => peripherals.TWIM0,
+            1 => peripherals.TWIM1,
         };
     }
 
@@ -121,13 +118,13 @@ pub const I2C = enum(u1) {
     pub fn reset(i2c: I2C) void {
         i2c.disable();
         const regs = i2c.get_regs();
-        regs.SHORTS.raw = 0x00000000;
-        regs.INTENSET.raw = 0x00000000;
-        regs.ERRORSRC.raw = 0xFFFFFFFF;
-        regs.PSEL.SCL.raw = 0xFFFFFFFF;
-        regs.PSEL.SDA.raw = 0xFFFFFFFF;
-        regs.FREQUENCY.raw = 0x04000000;
-        regs.ADDRESS.raw = 0x00000000;
+        regs.SHORTS.raw.write(0x00000000);
+        regs.INTENSET.raw.write(0x00000000);
+        regs.ERRORSRC.raw.write(0xFFFFFFFF);
+        regs.PSEL.SCL.raw.write(0xFFFFFFFF);
+        regs.PSEL.SDA.raw.write(0xFFFFFFFF);
+        regs.FREQUENCY.raw.write(0x04000000);
+        regs.ADDRESS.raw.write(0x00000000);
     }
 
     /// Check if a TX byte has been sent by reading the TXDSENT event.
@@ -143,9 +140,8 @@ pub const I2C = enum(u1) {
     /// Configure the TX DMA buffer for transmission.
     /// Returns error if buffer is too large for the hardware's MAXCNT register.
     fn set_tx_buffer(i2c: I2C, buf: []const u8) !void {
-        // TODO: There has got to be a nicer way to do this. MAXCNT is u16 on nRF52840, and u8 on
-        // nRF52831
-        const tx_cnt_type = @FieldType(@FieldType(@FieldType(I2cRegs, "TXD"), "MAXCNT").underlying_type, "MAXCNT");
+        // MAXCNT is u16 on nRF52840, and u8 on nRF52831
+        const tx_cnt_type = utils.RegFieldType(@FieldType(I2cRegs, "TXD"), "MAXCNT", "MAXCNT");
         if (std.math.cast(tx_cnt_type, buf.len) == null)
             return Error.TooMuchData;
 
@@ -158,9 +154,8 @@ pub const I2C = enum(u1) {
     /// Returns error if buffer is too large for the hardware's MAXCNT register.
     fn set_rx_buffer(i2c: I2C, buf: []u8) !void {
         const regs = i2c.get_regs();
-        // TODO: There has got to be a nicer way to do this. MAXCNT is u16 on nRF52840, and u8 on
-        // nRF52831
-        const rx_cnt_type = @FieldType(@FieldType(@FieldType(I2cRegs, "RXD"), "MAXCNT").underlying_type, "MAXCNT");
+        // MAXCNT is u16 on nRF52840, and u8 on nRF52831
+        const rx_cnt_type = utils.RegFieldType(@FieldType(I2cRegs, "RXD"), "MAXCNT", "MAXCNT");
         if (std.math.cast(rx_cnt_type, buf.len) == null)
             return Error.TooMuchData;
         regs.RXD.PTR.write(.{ .PTR = @intFromPtr(buf.ptr) });
@@ -180,21 +175,21 @@ pub const I2C = enum(u1) {
     /// Clear all hardware shortcuts by resetting the SHORTS register.
     fn clear_shorts(i2c: I2C) void {
         const regs = i2c.get_regs();
-        regs.SHORTS.raw = 0x00000000;
+        regs.SHORTS.raw.write(0x00000000);
     }
 
     /// Clear pending I2C event flags (SUSPENDED, STOPPED, ERROR).
     fn clear_events(i2c: I2C) void {
         const regs = i2c.get_regs();
-        regs.EVENTS_SUSPENDED.raw = 0;
-        regs.EVENTS_STOPPED.raw = 0;
-        regs.EVENTS_ERROR.raw = 0;
+        regs.EVENTS_SUSPENDED.raw.write(0);
+        regs.EVENTS_STOPPED.raw.write(0);
+        regs.EVENTS_ERROR.raw.write(0);
     }
 
     /// Clear all error flags in the ERRORSRC register.
     fn clear_errors(i2c: I2C) void {
         const regs = i2c.get_regs();
-        regs.ERRORSRC.raw = 0xFFFFFFFF;
+        regs.ERRORSRC.raw.write(0xFFFFFFFF);
     }
 
     // NOTE: Probably not needed, we never set them
@@ -254,12 +249,12 @@ pub const I2C = enum(u1) {
             if (regs.EVENTS_SUSPENDED.read().EVENTS_SUSPENDED == .Generated or
                 regs.EVENTS_STOPPED.read().EVENTS_STOPPED == .Generated)
             {
-                regs.EVENTS_STOPPED.raw = 0;
+                regs.EVENTS_STOPPED.raw.write(0);
                 break;
             }
             // Stop the task on error, but we need to keep waiting until the stop event
             if (regs.EVENTS_ERROR.read().EVENTS_ERROR == .Generated) {
-                regs.EVENTS_ERROR.raw = 0;
+                regs.EVENTS_ERROR.raw.write(0);
                 regs.TASKS_STOP.write(.{ .TASKS_STOP = .Trigger });
             }
             if (deadline.is_reached_by(time.get_time_since_boot())) {

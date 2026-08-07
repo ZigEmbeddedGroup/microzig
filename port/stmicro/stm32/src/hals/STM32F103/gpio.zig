@@ -1,6 +1,3 @@
-const std = @import("std");
-const assert = std.debug.assert;
-
 const microzig = @import("microzig");
 pub const peripherals = microzig.chip.peripherals;
 
@@ -72,15 +69,11 @@ pub const Pin = enum(usize) {
     inline fn write_pin_config(gpio: Pin, config: u32) void {
         const port = gpio.get_port();
         const pin: u4 = @intCast(@intFromEnum(gpio) % 16);
-        if (pin <= 7) {
-            const offset = @as(u5, pin) << 2;
-            port.CR[0].raw &= ~(@as(u32, 0b1111) << offset);
-            port.CR[0].raw |= config << offset;
-        } else {
-            const offset = (@as(u5, pin) - 8) << 2;
-            port.CR[1].raw &= ~(@as(u32, 0b1111) << offset);
-            port.CR[1].raw |= config << offset;
-        }
+        const offset = @as(u5, @as(u3, @truncate(pin))) << 2;
+        port.CR[pin >> 3].raw.modify(
+            @as(u32, 0b1111) << offset,
+            config << offset,
+        );
     }
 
     fn mask(gpio: Pin) u32 {
@@ -132,30 +125,27 @@ pub const Pin = enum(usize) {
     pub inline fn set_pull(gpio: Pin, pull: Pull) void {
         var port = gpio.get_port();
         switch (pull) {
-            .up => port.BSRR.raw = gpio.mask(),
-            .down => port.BRR.raw = gpio.mask(),
+            .up => port.BSRR.raw.write(gpio.mask()),
+            .down => port.BRR.raw.write(gpio.mask()),
         }
     }
 
     pub inline fn read(gpio: Pin) u1 {
         const port = gpio.get_port();
-        return if (port.IDR.raw & gpio.mask() != 0)
-            1
-        else
-            0;
+        @intFromBool(port.IDR.raw.read() & gpio.mask() != 0);
     }
 
     pub inline fn put(gpio: Pin, value: u1) void {
         var port = gpio.get_port();
         switch (value) {
-            0 => port.BSRR.raw = @intCast(gpio.mask() << 16),
-            1 => port.BSRR.raw = gpio.mask(),
+            0 => port.BSRR.raw.write(@intCast(gpio.mask() << 16)),
+            1 => port.BSRR.raw.write(gpio.mask()),
         }
     }
 
     pub inline fn toggle(gpio: Pin) void {
         var port = gpio.get_port();
-        port.ODR.raw ^= gpio.mask();
+        port.ODR.raw.toggle(gpio.mask());
     }
 
     pub fn num(pin: usize) Pin {

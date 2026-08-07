@@ -69,14 +69,14 @@ pub fn route_pin(comptime pin: type, function: PinTarget) void {
 
 pub const gpio = struct {
     pub fn set_output(comptime pin: type) void {
-        pin.regs.dir.raw |= pin.gpio_mask;
+        pin.regs.dir.raw.set(pin.gpio_mask);
     }
     pub fn set_input(comptime pin: type) void {
-        pin.regs.dir.raw &= ~pin.gpio_mask;
+        pin.regs.dir.raw.clear(pin.gpio_mask);
     }
 
     pub fn read(comptime pin: type) microzig.gpio.State {
-        return if ((pin.regs.pin.raw & pin.gpio_mask) != 0)
+        return if ((pin.regs.pin.raw.read() & pin.gpio_mask) != 0)
             microzig.gpio.State.high
         else
             microzig.gpio.State.low;
@@ -84,9 +84,9 @@ pub const gpio = struct {
 
     pub fn write(comptime pin: type, state: microzig.gpio.State) void {
         if (state == .high) {
-            pin.regs.set.raw = pin.gpio_mask;
+            pin.regs.set.raw.write(pin.gpio_mask);
         } else {
-            pin.regs.clr.raw = pin.gpio_mask;
+            pin.regs.clr.raw.write(pin.gpio_mask);
         }
     }
 };
@@ -194,7 +194,7 @@ pub fn Uart(comptime index: usize, comptime pins: microzig.uart.Pins) type {
         }
         pub fn tx(self: Self, ch: u8) void {
             while (!self.can_write()) {} // Wait for Previous transmission
-            UARTn.THR.raw = ch; // Load the data to be transmitted
+            UARTn.THR.raw.write(ch); // Load the data to be transmitted
         }
 
         pub fn can_read(self: Self) bool {

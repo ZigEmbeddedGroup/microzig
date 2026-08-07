@@ -1,7 +1,5 @@
-const std = @import("std");
 const microzig = @import("microzig");
 const PWM = microzig.chip.peripherals.PWM;
-const pins = microzig.hal.pins;
 
 const compatibility = @import("compatibility.zig");
 const has_rp2350b = compatibility.has_rp2350b;
@@ -197,7 +195,7 @@ pub fn set_channel_inversion(
 ///   slice - the slice to set
 ///   wrap - the wrap value
 pub fn set_slice_wrap(slice: u32, wrap: u16) void {
-    get_regs(slice).top.raw = wrap;
+    get_regs(slice).top.raw.write(wrap);
 }
 
 /// Set the level of the channel.  This is the number of pwm clock

@@ -1,6 +1,4 @@
-const builtin = @import("builtin");
 const std = @import("std");
-const assert = std.debug.assert;
 
 const microzig = @import("microzig");
 const interrupt = microzig.interrupt;
@@ -9,7 +7,6 @@ const peripherals = microzig.chip.peripherals;
 const CriticalSection = interrupt.CriticalSection;
 const SIO = peripherals.SIO;
 const PSM = peripherals.PSM;
-const PPB = peripherals.PPB;
 
 pub const fifo = struct {
     /// Check if the FIFO has valid data for reading.
@@ -121,7 +118,7 @@ pub fn launch_core1_with_stack(entrypoint: *const fn () void, stack: []u32) void
         0,
         1,
         if (microzig.hal.compatibility.arch == .riscv)
-            microzig.cpu.csr.mtvec.read_raw()
+            microzig.cpu.csr.mtvec.raw.read()
         else
             microzig.cpu.peripherals.scb.VTOR,
         stack_ptr,
@@ -160,7 +157,7 @@ pub const Spinlock = struct {
 
     lock_reg: *volatile u32,
 
-    const spinlock_base: usize = @intFromPtr(&SIO.SPINLOCK0.raw);
+    const spinlock_base: usize = @intFromPtr(&SIO.SPINLOCK0);
 
     /// Returns an initialized Spinlock struct.
     /// Parameters:

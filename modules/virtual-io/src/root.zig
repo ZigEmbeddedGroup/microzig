@@ -3,7 +3,6 @@ const std = @import("std");
 const builtin = @import("builtin");
 
 const Allocator = std.mem.Allocator;
-const assert = std.debug.assert;
 const Io = std.Io;
 const log = std.log.scoped(.vio);
 
@@ -19,7 +18,7 @@ pub const Dir = struct {
     pub const kind: Node.Kind = empty;
 
     pub const ID = enum(Node.ID) {
-        // Reserve first 256 file handles for os-specific values, such as sitdin/out/err
+        // Reserve first 256 file handles for os-specific values, such as stdin/out/err
         // on posix, cwd on wasm and the reserved NULL value on windows.
         root = 0x100,
         _,
@@ -283,7 +282,6 @@ pub fn from_handle(T: type, handle: std.posix.fd_t) !T {
 }
 
 pub fn to_handle(id: anytype) std.posix.fd_t {
-    // const ID = @TypeOf(id);
     return switch (builtin.os.tag) {
         .windows => @ptrFromInt(@intFromEnum(id)),
         else => @intFromEnum(id),

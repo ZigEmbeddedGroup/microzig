@@ -10,25 +10,6 @@ const Deadline = microzig.drivers.time.Deadline;
 const USB = microzig.chip.peripherals.USB;
 const USBTypes = microzig.chip.types.peripherals.usb_v1;
 
-const ep_test = packed struct(u16) {
-    ep0: u1,
-    ep1: u1,
-    ep2: u1,
-    ep3: u1,
-    ep4: u1,
-    ep5: u1,
-    ep6: u1,
-    ep7: u1,
-    ep8: u1,
-    ep9: u1,
-    ep10: u1,
-    ep11: u1,
-    ep12: u1,
-    ep13: u1,
-    ep14: u1,
-    ep15: u1,
-};
-
 const InitError = error{
     UsbAlreadyEnabled,
     InvalidEPC,
@@ -303,8 +284,8 @@ fn inner_init(config: Config, PMA_conf: PMA.Config, startup: Duration) InitError
     while (USB.ISTR.read().RESET == 0) {
         asm volatile ("nop");
     }
-    USB.CNTR.raw = 0;
-    USB.ISTR.raw = 0;
+    USB.CNTR.raw.write(0);
+    USB.ISTR.raw.write(0);
 
     for (config.endpoints) |ep_conf| {
         const epc_num: usize = @intFromEnum(ep_conf.ep_control);
@@ -416,7 +397,7 @@ pub fn default_reset_handler() void {
         });
     }
 
-    USB.ISTR.raw = 0;
+    USB.ISTR.raw.write(0);
 
     //re-configure endpoints
     for (0..8) |i| {

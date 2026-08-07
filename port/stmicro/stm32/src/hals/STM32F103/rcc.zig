@@ -138,8 +138,8 @@ pub inline fn set_flash(latency: flash_v1.LATENCY, prefetch: bool) void {
 pub fn secure_enable() void {
     set_hsi(true);
 
-    rcc.BDCR.raw = 0;
-    rcc.CFGR.raw = 0;
+    rcc.BDCR.raw.write(0);
+    rcc.CFGR.raw.write(0);
     while (rcc.CFGR.read().SWS != .HSI) {
         asm volatile ("");
     }
@@ -388,7 +388,7 @@ pub fn reset_clock(comptime peri: Peripherals) void {
     @field(rcc, rcc_register_name).modify_one(field, 1);
     //release the reset, this is necessary because the reset bits are not self-clearing
     //write 0 to all bits is safe becuse 0 does nothing (other than releasing the reset)
-    @field(rcc, rcc_register_name).raw = 0;
+    @field(rcc, rcc_register_name).raw.write(0);
 }
 
 pub fn set_clock(comptime peri: Peripherals, state: u1) void {
@@ -426,16 +426,16 @@ pub fn disable_clock(comptime peri: Peripherals) void {
 
 pub fn enable_all_clocks() void {
     //enable all clocks
-    rcc.AHBENR.raw = std.math.maxInt(u32);
-    rcc.APB1ENR.raw = std.math.maxInt(u32);
-    rcc.APB2ENR.raw = std.math.maxInt(u32);
+    rcc.AHBENR.raw.write(std.math.maxInt(u32));
+    rcc.APB1ENR.raw.write(std.math.maxInt(u32));
+    rcc.APB2ENR.raw.write(std.math.maxInt(u32));
 }
 
 pub fn disable_all_clocks() void {
     //disable all clocks
-    rcc.AHBENR.raw = 0;
-    rcc.APB1ENR.raw = 0;
-    rcc.APB2ENR.raw = 0;
+    rcc.AHBENR.raw.write(0);
+    rcc.APB1ENR.raw.write(0);
+    rcc.APB2ENR.raw.write(0);
 }
 
 ///Reset all periferals of the specified bus to they default state.
@@ -446,12 +446,12 @@ pub fn reset_bus(bus: Bus) void {
     //this is necessary because the reset bits are not self-clearing
     switch (bus) {
         .APB1 => {
-            rcc.APB1RSTR.raw = std.math.maxInt(u32);
-            rcc.APB1RSTR.raw = 0;
+            rcc.APB1RSTR.raw.write(std.math.maxInt(u32));
+            rcc.APB1RSTR.raw.write(0);
         },
         .APB2 => {
-            rcc.APB2RSTR.raw = std.math.maxInt(u32);
-            rcc.APB2RSTR.raw = 0;
+            rcc.APB2RSTR.raw.write(std.math.maxInt(u32));
+            rcc.APB2RSTR.raw.write(0);
         },
     }
 }
