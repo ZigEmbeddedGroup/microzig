@@ -123,20 +123,20 @@ _riscv32-common/_.
 ### _examples/_
 
 One directory per platform, mirroring the _port/_ structure: _examples/raspberrypi/rp2xxx/_, _examples/nordic/nrf5x/_,
-etc. Each has its own _build.zig_ that uses `MicroBuild` to define firmware targets. Examples range from _blinky.zig_ to
-WiFi stacks and FreeRTOS integration.
+etc. Each has its own _build.zig_ that uses `MicroBuild` to define firmware targets. Examples often show off different
+parts of the HAL.
 
 ### _sim/_
 
 _sim/aviron/_ is an AVR instruction-level simulator for testing AVR firmware without hardware.
 
-## Data Flow: SVD to `blink`
+## Build Flow: SVD to `blink`
 
 The path from a vendor hardware description to running firmware:
 
 1. **Vendor provides SVD/ATDF** describing chip registers and memory layout.
 2. **Port's _build.zig_** references the SVD and defines `Chip` (memory regions, patches) and `Target` values.
-3. **At build time**, `regz` processes the SVD (applying patches) and generates a Zig module with type-safe MMIO
+3. `regz` (at build time) processes the SVD (applying patches) and generates a Zig module with type-safe MMIO
    register definitions.
 4. **_generate_linker_script.zig_** emits a linker script from the `Target`'s memory regions.
 5. **MicroBuild's `add_firmware()`** wires everything: it creates Zig modules for `microzig` (core), `chip` (generated
@@ -179,15 +179,14 @@ copies the result to _zig-out/firmware/_.
 - **No global mutable state in libraries.** Embedded code uses explicit initialization and passed handles.
 - **Memory regions are the port's responsibility.** Core and drivers don't assume any particular memory layout.
 
-## Cross-Cutting Concerns
+## Other Concerns/Conventions
 
 **Comptime configuration**: The build system injects `microzig.config` as a comptime-known struct. User code queries it
 to branch on chip features, CPU type, or board identity. HALs use it to select peripheral implementations, setup clocks,
 etc.
 
-**Startup sequence**: Each CPU architecture in _core/src/cpus/_ provides a `_start` entry point. The sequence is: set
-stack pointer → zero BSS → copy `.data` from flash to RAM → call `microzig_main`. Cortex-M uses the vector table for the
-initial stack pointer; RISC-V and AVR set it in code.
+**Startup sequence**: Each CPU architecture in _core/src/cpus/_ provides a `_start` entry point. The typical sequence
+is: set stack pointer → zero BSS → copy `.data` from flash to RAM → call `microzig_main`.
 
 **Naming conventions**: The codebase uses _snake_case_ (C-style), not the typical Zig camelCase. Run `zig fmt` for
 formatting.
