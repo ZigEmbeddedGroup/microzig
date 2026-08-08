@@ -29,12 +29,10 @@
 //! User must configure all pins before calling apply()
 //!
 
-const std = @import("std");
 const microzig = @import("microzig");
 const mdf = microzig.drivers;
 const hal = microzig.hal;
 const dma = hal.dma;
-const gpio = hal.gpio;
 
 const SPI1 = microzig.chip.peripherals.SPI1;
 const SPI2 = microzig.chip.peripherals.SPI2;

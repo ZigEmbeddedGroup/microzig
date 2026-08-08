@@ -1,4 +1,3 @@
-const std = @import("std");
 const microzig = @import("microzig");
 
 const pwd = microzig.chip.peripherals.PWR;

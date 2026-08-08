@@ -46,7 +46,7 @@ pub fn main() !void {
     instance.apply(.{});
 
     for (0..std.math.maxInt(u7)) |addr| {
-        const a: i2c.Address = @fromBackingInt(addr);
+        const a: i2c.Address = @fromBackingInt(@intCast(addr));
 
         var rx_data: [1]u8 = undefined;
         _ = instance.read_blocking(a, &rx_data, null) catch |e| {

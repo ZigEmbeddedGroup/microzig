@@ -4,7 +4,6 @@ const assert = std.debug.assert;
 const assembler = @import("../assembler.zig");
 const Diagnostics = assembler.Diagnostics;
 
-const Expression = @import("Expression.zig");
 const Chip = @import("../../chip.zig").Chip;
 
 const BoundedArray = @import("bounded-array").BoundedArray;
@@ -1356,7 +1355,6 @@ pub fn Token(comptime chip: Chip) type {
 // Tokenization Tests
 //==============================================================================
 
-const expect = std.testing.expect;
 const expectEqual = std.testing.expectEqual;
 const expectEqualStrings = std.testing.expectEqualStrings;
 

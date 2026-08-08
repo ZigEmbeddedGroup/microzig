@@ -2,7 +2,6 @@
 //! This file implements driver abstractions based on HAL devices.
 //!
 
-const std = @import("std");
 const microzig = @import("microzig");
 const hal = @import("../hal.zig");
 const mdf = microzig.drivers;
@@ -11,7 +10,6 @@ const drivers = microzig.drivers.base;
 const time = microzig.drivers.time;
 
 const DatagramDevice = drivers.DatagramDevice;
-const Stream_Device = drivers.Stream_Device;
 const Digital_IO = drivers.Digital_IO;
 const I2CError = drivers.I2C_Device.Error;
 const I2CAddress = drivers.I2C_Device.Address;

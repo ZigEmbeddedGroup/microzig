@@ -19,7 +19,6 @@ const IOCTL_SET_WSEC: u32 = 134;
 const IOCTL_SET_BAND: u32 = 142;
 const IOCTL_SET_WPA_AUTH: u32 = 165;
 const IOCTL_GET_VAR: u32 = 262;
-const IOCTL_SET_VAR: u32 = 263;
 const IOCTL_SET_WSEC_PMK: u32 = 268;
 
 // Security constants

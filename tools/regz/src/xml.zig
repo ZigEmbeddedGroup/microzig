@@ -1,8 +1,6 @@
 const std = @import("std");
 pub const c = @import("xml").c;
 
-const Allocator = std.mem.Allocator;
-
 pub const Attr = c.xmlAttr;
 pub const readIo = c.xmlReadIO;
 pub const cleanupParser = c.xmlCleanupParser;

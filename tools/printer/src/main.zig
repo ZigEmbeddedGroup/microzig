@@ -1,5 +1,4 @@
 const std = @import("std");
-const builtin = @import("builtin");
 const printer = @import("printer");
 
 var elf_file_reader_buf: [1024]u8 = undefined;

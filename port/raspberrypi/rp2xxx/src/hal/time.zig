@@ -1,4 +1,3 @@
-const std = @import("std");
 const microzig = @import("microzig");
 const time = microzig.drivers.time;
 const system_timer = @import("system_timer.zig");

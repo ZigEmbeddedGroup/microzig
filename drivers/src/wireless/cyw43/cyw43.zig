@@ -1,7 +1,6 @@
 // CYW43 WiFi Driver
 // Top-level entry point for the CYW43439 WiFi chip
 
-const std = @import("std");
 const bus = @import("bus.zig");
 const runner_mod = @import("runner.zig");
 const wifi_mod = @import("wifi.zig");

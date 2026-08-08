@@ -1,6 +1,5 @@
 const std = @import("std");
 const mdf = @import("../root.zig");
-const Digital_IO = mdf.base.Digital_IO;
 
 const default_oscillator_frequency = 25_000_000;
 

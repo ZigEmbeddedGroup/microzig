@@ -10,7 +10,6 @@
 /// Note: We generally cannot use the Mmio function to write to the timer
 /// since all timer write operations require the "magic" value 0x5afe
 /// to be written to the top 16 bits of the register.
-const std = @import("std");
 const microzig = @import("microzig");
 
 const peripherals = microzig.chip.peripherals;

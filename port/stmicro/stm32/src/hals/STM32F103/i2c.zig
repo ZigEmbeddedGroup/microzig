@@ -6,7 +6,6 @@ const enums = @import("../common/enums.zig");
 const I2C_Peripheral = microzig.chip.types.peripherals.i2c_v1.I2C;
 const DUTY = microzig.chip.types.peripherals.i2c_v1.DUTY;
 const F_S = microzig.chip.types.peripherals.i2c_v1.F_S;
-const peripherals = microzig.chip.peripherals;
 const mdf = microzig.drivers;
 const drivers = mdf.base;
 const Duration = mdf.time.Duration;
@@ -220,7 +219,7 @@ pub const I2C = struct {
 
         regs.CCR.modify(.{
             .CCR = @as(u12, @intCast(CCR)),
-            .DUTY = @as(DUTY, @fromBackingInt(duty)),
+            .DUTY = @as(DUTY, @fromBackingInt(@intCast(duty))),
             .F_S = mode,
         });
 

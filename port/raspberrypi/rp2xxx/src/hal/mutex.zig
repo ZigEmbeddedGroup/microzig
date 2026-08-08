@@ -1,6 +1,3 @@
-const std = @import("std");
-const assert = std.debug.assert;
-
 const microzig = @import("microzig");
 
 const Spinlock = microzig.hal.multicore.Spinlock;

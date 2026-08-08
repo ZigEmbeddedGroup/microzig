@@ -12,11 +12,6 @@ pub const LCD_Commands = enum(u8) {
 };
 
 //lcd "function set" enums
-const FunctionSet = enum(u8) {
-    line = 0x8,
-    bus = 0x10,
-    char = 0x4,
-};
 
 pub const Lines = enum { one, two };
 pub const BusSize = enum { four, eight };

@@ -6,7 +6,6 @@ const bkp = @import("backup.zig");
 const rtc = @import("rtc.zig");
 const timer = @import("../common/timer_v1.zig");
 const time = microzig.drivers.time;
-const std = @import("std");
 
 //timer ctx
 var tim_ctx: ?timer.GPTimer = null;

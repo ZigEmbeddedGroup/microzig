@@ -1,7 +1,5 @@
-const std = @import("std");
 const microzig = @import("microzig");
 const PWM = microzig.chip.peripherals.PWM;
-const pins = microzig.hal.pins;
 
 const compatibility = @import("compatibility.zig");
 const has_rp2350b = compatibility.has_rp2350b;

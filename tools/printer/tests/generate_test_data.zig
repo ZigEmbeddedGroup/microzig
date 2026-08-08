@@ -4,7 +4,6 @@ const printer = @import("printer");
 
 const common = @import("common");
 
-var test_data_writer_buf: [1024]u8 = undefined;
 var elf_file_reader_buf: [1024]u8 = undefined;
 
 pub fn main(init: std.process.Init) !void {

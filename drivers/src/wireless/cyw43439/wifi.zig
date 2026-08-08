@@ -2,7 +2,6 @@ const std = @import("std");
 const NVRAM = @import("nvram.zig").NVRAM;
 const Bus = @import("bus.zig");
 const ioctl = @import("ioctl.zig");
-const assert = std.debug.assert;
 const mem = std.mem;
 
 const log = std.log.scoped(.cyw43_wifi);

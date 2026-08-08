@@ -1,6 +1,3 @@
-const std = @import("std");
-const assert = std.debug.assert;
-
 pub const Lock = struct {
     impl: u32,
 
@@ -14,7 +11,6 @@ pub const Lock = struct {
     }
 };
 
-const rw_bits = @as(u32, 0x0) << 12;
 const xor_bits = @as(u32, 0x1) << 12;
 const set_bits = @as(u32, 0x2) << 12;
 const clear_bits = @as(u32, 0x3) << 12;

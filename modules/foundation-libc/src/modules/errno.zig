@@ -1,6 +1,5 @@
 //! implementation of `errno.h`
 
-const std = @import("std");
 const builtin = @import("builtin");
 
 const storage = if (builtin.single_threaded)

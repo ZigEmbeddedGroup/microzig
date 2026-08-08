@@ -3,7 +3,6 @@ chips: []const Chip,
 boards: []const Board,
 location: Location,
 
-const std = @import("std");
 pub const Format = enum {
     svd,
     atdf,

@@ -4,7 +4,6 @@ const enums = @import("enums.zig");
 
 const I2C_Type = enums.I2C_Type;
 const I2C_Peripherals = microzig.chip.types.peripherals.i2c_v2.I2C;
-const peripherals = microzig.chip.peripherals;
 const hal = microzig.hal;
 const drivers = microzig.drivers.base;
 

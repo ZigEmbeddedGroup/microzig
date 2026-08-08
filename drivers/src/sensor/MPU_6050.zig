@@ -21,7 +21,6 @@
 //! * Add missing functionality (maybe also getters for some registers)
 //! * DMP support
 
-const std = @import("std");
 const mdf = @import("../root.zig");
 const DatagramDevice = mdf.base.DatagramDevice;
 const ClockDevice = mdf.base.ClockDevice;

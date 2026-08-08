@@ -1,8 +1,6 @@
 //! A PIO instance can load a single `Bytecode`, it has to be loaded into memory
 const std = @import("std");
-const assert = std.debug.assert;
 
-const microzig = @import("microzig");
 const chip = @import("compatibility.zig").chip;
 
 // Re-export of platform rectified pio implementation
@@ -21,7 +19,6 @@ pub const ClkDivOptions = common.ClkDivOptions;
 pub const ShiftOptions = common.ShiftOptions(chip);
 
 pub const assembler = @import("pio/assembler.zig");
-const encoder = @import("pio/assembler/encoder.zig");
 
 pub const Program = assembler.Program;
 pub inline fn assemble(comptime source: []const u8, comptime options: assembler.AssembleOptions) assembler.Output {
