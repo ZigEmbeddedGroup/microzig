@@ -23,11 +23,8 @@ jobs:
 
       - name: Build zigimports
         run: |
-          git init /tmp/zigimports
+          git clone --depth 1 --branch "$(zig version)" https://github.com/mattnite/zigimports.git /tmp/zigimports
           cd /tmp/zigimports
-          git remote add origin https://github.com/mattnite/zigimports.git
-          git fetch --depth 1 origin $(zig version)
-          git checkout FETCH_HEAD
           zig build --release=safe
           # Binary is named zigimports-<arch>-<os>, find and symlink it
           ln -s /tmp/zigimports/zig-out/bin/zigimports-* /tmp/zigimports/zig-out/bin/zigimports
