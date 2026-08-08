@@ -131,15 +131,14 @@ pub const interrupt = struct {
     }
 
     pub fn get_priority(int: Interrupt) Priority {
-        return @fromBackingInt(get_priority_register_for(int).*);
+        return @fromBackingInt(@truncate(get_priority_register_for(int).*));
     }
 
     fn get_priority_register_for(int: Interrupt) *volatile u32 {
-        // using CPU_INT_PRI_0 (which should be reserved because interrupts start from one) here so
-        // that when I offset the register I don't have to subtract one from the interrupt number.
-        const base: usize = @intFromPtr(&INTERRUPT_CORE0.CPU_INT_PRI_0);
-        const reg: *volatile u32 = @ptrFromInt(base + @sizeOf(u32) * @as(usize, @backingInt(int)));
-        return reg;
+        std.debug.assert(@backingInt(int) != 0);
+        const bits = comptime @typeInfo(@typeInfo(Interrupt).@"enum".tag_type).int.bits;
+        const base: *volatile [bits]u32 = @ptrCast(&INTERRUPT_CORE0.CPU_INT_PRI_0);
+        return &base[@backingInt(int)];
     }
 
     /// Set threshold for interrupt assertion. Only when the interrupt priority is equal to or
@@ -169,7 +168,7 @@ pub const interrupt = struct {
 
     pub fn get_type(int: Interrupt) Type {
         const num = @backingInt(int);
-        return @fromBackingInt(INTERRUPT_CORE0.CPU_INT_TYPE.raw & (@as(u32, 1) << num) >> num);
+        return @fromBackingInt(@truncate(INTERRUPT_CORE0.CPU_INT_TYPE.raw & (@as(u32, 1) << num) >> num));
     }
 
     pub const Source = enum(u6) {
@@ -519,7 +518,7 @@ fn unhandled(_: *TrapFrame) linksection(".ram_text") callconv(.c) void {
     if (mcause.is_interrupt != 0) {
         std.log.err("unhandled interrupt {} occurred!", .{mcause.code});
     } else {
-        const exception: Exception = @fromBackingInt(mcause.code);
+        const exception: Exception = @fromBackingInt(@truncate(mcause.code));
         std.log.err("unhandled exception {s} occurred at {x}!", .{ @tagName(exception), csr.mepc.read_raw() });
 
         switch (exception) {
@@ -541,7 +540,7 @@ fn _handle_interrupt(
     if (mcause.is_interrupt != 0) {
         // interrupt
 
-        const int: Interrupt = @fromBackingInt(mcause.code);
+        const int: Interrupt = @fromBackingInt(@truncate(mcause.code));
         const priority = interrupt.get_priority(int);
 
         // low priority interrupts can be preempted by higher priority interrupts
