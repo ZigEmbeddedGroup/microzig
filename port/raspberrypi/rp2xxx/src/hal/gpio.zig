@@ -321,7 +321,7 @@ pub const Pin = enum(u6) {
         const bitshift_val: u5 = switch (chip) {
             .RP2040 => @intCast(@backingInt(gpio)),
             .RP2350 =>
-            // There are seperate copies of registers for GPIO32->47 on RP2350,
+            // There are separate copies of registers for GPIO32->47 on RP2350,
             // so upper GPIOs should present as bits 0 -> 15
             if (gpio.is_upper()) @intCast(@backingInt(gpio) - 32) else @intCast(@backingInt(gpio)),
         };
