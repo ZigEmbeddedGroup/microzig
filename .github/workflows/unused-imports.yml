@@ -14,7 +14,7 @@ jobs:
 
     steps:
       - name: Checkout PR code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -23,8 +23,11 @@ jobs:
 
       - name: Build zigimports
         run: |
-          git clone --depth 1 https://github.com/mattnite/zigimports.git /tmp/zigimports
+          git init /tmp/zigimports
           cd /tmp/zigimports
+          git remote add origin https://github.com/mattnite/zigimports.git
+          git fetch --depth 1 origin e39c6edec1c56c5e3b070c9a238d9d1e4183324b
+          git checkout FETCH_HEAD
           zig build --release=safe
           # Binary is named zigimports-<arch>-<os>, find and symlink it
           ln -s /tmp/zigimports/zig-out/bin/zigimports-* /tmp/zigimports/zig-out/bin/zigimports
