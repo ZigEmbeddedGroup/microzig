@@ -26,7 +26,7 @@ jobs:
           git init /tmp/zigimports
           cd /tmp/zigimports
           git remote add origin https://github.com/mattnite/zigimports.git
-          git fetch --depth 1 origin 2fcea024ff380a2b3a0d18ecc22f1068ef2056be
+          git fetch --depth 1 origin $(zig version)
           git checkout FETCH_HEAD
           zig build --release=safe
           # Binary is named zigimports-<arch>-<os>, find and symlink it
