@@ -135,7 +135,7 @@ pub const interrupt = struct {
     }
 
     fn assert_not_exception(comptime int: Interrupt) void {
-        if (@intFromEnum(int) < 0) {
+        if (@backingInt(int) < 0) {
             @compileError("expected interrupt, got exception: " ++ @tagName(int));
         }
     }
@@ -327,8 +327,8 @@ pub const interrupt = struct {
         /// Note: Although the Priority values are 0 - 15, some platforms may
         ///       only use the most significant bits.
         pub fn set_priority(comptime excpt: Exception, priority: Priority) void {
-            const num: u2 = @intCast(@intFromEnum(excpt) / 4);
-            const shift: u5 = @as(u5, @intCast(@intFromEnum(excpt))) % 4 * 8;
+            const num: u2 = @intCast(@backingInt(excpt) / 4);
+            const shift: u5 = @as(u5, @intCast(@backingInt(excpt))) % 4 * 8;
 
             // The code below is safe since the switch is compile-time resolved.
             // The any SHPRn register which is unavailable on a platform will
@@ -340,22 +340,22 @@ pub const interrupt = struct {
                 },
                 1 => {
                     ppb.SHPR1.raw &= ~(@as(u32, 0xFF) << shift);
-                    ppb.SHPR1.raw |= @as(u32, @intFromEnum(priority)) << shift;
+                    ppb.SHPR1.raw |= @as(u32, @backingInt(priority)) << shift;
                 },
                 2 => {
                     ppb.SHPR2.raw &= ~(@as(u32, 0xFF) << shift);
-                    ppb.SHPR2.raw |= @as(u32, @intFromEnum(priority)) << shift;
+                    ppb.SHPR2.raw |= @as(u32, @backingInt(priority)) << shift;
                 },
                 3 => {
                     ppb.SHPR3.raw &= ~(@as(u32, 0xFF) << shift);
-                    ppb.SHPR3.raw |= @as(u32, @intFromEnum(priority)) << shift;
+                    ppb.SHPR3.raw |= @as(u32, @backingInt(priority)) << shift;
                 },
             }
         }
 
         pub fn get_priority(comptime excpt: Exception) Priority {
-            const num: u2 = @intCast(@intFromEnum(excpt) / 4);
-            const shift: u5 = @as(u5, @intCast(@intFromEnum(excpt))) % 4 * 8;
+            const num: u2 = @intCast(@backingInt(excpt) / 4);
+            const shift: u5 = @as(u5, @intCast(@backingInt(excpt))) % 4 * 8;
 
             const raw: u8 = (switch (num) {
                 0 => @compileError("Cannot get the priority for the exception"),
@@ -364,14 +364,14 @@ pub const interrupt = struct {
                 3 => ppb.SHPR3.raw,
             } >> shift) & 0xFF;
 
-            return @enumFromInt(raw);
+            return @fromBackingInt(raw);
         }
     };
 
     const nvic = peripherals.nvic;
 
     pub fn is_enabled(comptime int: ExternalInterrupt) bool {
-        const num: comptime_int = @intFromEnum(int);
+        const num: comptime_int = @backingInt(int);
         switch (cortex_m) {
             .cortex_m0,
             .cortex_m0plus,
@@ -392,7 +392,7 @@ pub const interrupt = struct {
     }
 
     pub fn enable(comptime int: ExternalInterrupt) void {
-        const num: comptime_int = @intFromEnum(int);
+        const num: comptime_int = @backingInt(int);
         switch (cortex_m) {
             .cortex_m0,
             .cortex_m0plus,
@@ -413,7 +413,7 @@ pub const interrupt = struct {
     }
 
     pub fn disable(comptime int: ExternalInterrupt) void {
-        const num: comptime_int = @intFromEnum(int);
+        const num: comptime_int = @backingInt(int);
         switch (cortex_m) {
             .cortex_m0,
             .cortex_m0plus,
@@ -434,7 +434,7 @@ pub const interrupt = struct {
     }
 
     pub fn is_pending(comptime int: ExternalInterrupt) bool {
-        const num: comptime_int = @intFromEnum(int);
+        const num: comptime_int = @backingInt(int);
         switch (cortex_m) {
             .cortex_m0,
             .cortex_m0plus,
@@ -455,7 +455,7 @@ pub const interrupt = struct {
     }
 
     pub fn set_pending(comptime int: ExternalInterrupt) void {
-        const num: comptime_int = @intFromEnum(int);
+        const num: comptime_int = @backingInt(int);
         switch (cortex_m) {
             .cortex_m0,
             .cortex_m0plus,
@@ -476,7 +476,7 @@ pub const interrupt = struct {
     }
 
     pub fn clear_pending(comptime int: ExternalInterrupt) void {
-        const num: comptime_int = @intFromEnum(int);
+        const num: comptime_int = @backingInt(int);
         switch (cortex_m) {
             .cortex_m0,
             .cortex_m0plus,
@@ -497,11 +497,11 @@ pub const interrupt = struct {
     }
 
     pub fn set_priority(comptime int: ExternalInterrupt, priority: Priority) void {
-        nvic.IPR[@intFromEnum(int)] = @intFromEnum(priority);
+        nvic.IPR[@backingInt(int)] = @backingInt(priority);
     }
 
     pub fn get_priority(comptime int: ExternalInterrupt) Priority {
-        return @enumFromInt(peripherals.nvic.IPR[@intFromEnum(int)]);
+        return @fromBackingInt(peripherals.nvic.IPR[@backingInt(int)]);
     }
 };
 

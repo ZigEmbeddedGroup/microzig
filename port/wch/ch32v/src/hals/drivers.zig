@@ -172,7 +172,7 @@ pub const GPIO_Device = struct {
     }
 
     pub fn read(dio: GPIO_Device) ReadError!State {
-        return @enumFromInt(dio.pin.read());
+        return @fromBackingInt(dio.pin.read());
     }
 
     const vtable = Digital_IO.VTable{
@@ -353,7 +353,7 @@ pub const ClockDevice = struct {
     fn get_time_since_boot_fn(td: *anyopaque) time.Absolute {
         _ = td;
         const t = time.get_time_since_boot().to_us();
-        return @enumFromInt(t);
+        return @fromBackingInt(t);
     }
 };
 

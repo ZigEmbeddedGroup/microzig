@@ -84,18 +84,18 @@ pub fn num(n: u9) Pin {
         },
     }
 
-    return @enumFromInt(n);
+    return @fromBackingInt(n);
 }
 
 pub const mask = switch (chip) {
     .RP2040 => struct {
         pub fn mask(m: u30) Mask {
-            return @enumFromInt(m);
+            return @fromBackingInt(m);
         }
     }.mask,
     .RP2350 => struct {
         pub fn mask(m: u48) Mask {
-            return @enumFromInt(m);
+            return @fromBackingInt(m);
         }
     }.mask,
 };
@@ -106,7 +106,7 @@ pub const Mask =
             _,
 
             pub fn set_function(self: Mask, function: Function) void {
-                const raw_mask = @intFromEnum(self);
+                const raw_mask = @backingInt(self);
                 for (0..@bitSizeOf(Mask)) |i| {
                     const bit = @as(u5, @intCast(i));
                     if (0 != raw_mask & (@as(u32, 1) << bit))
@@ -115,7 +115,7 @@ pub const Mask =
             }
 
             pub fn set_direction(self: Mask, direction: Direction) void {
-                const raw_mask = @intFromEnum(self);
+                const raw_mask = @backingInt(self);
                 switch (direction) {
                     .out => SIO.GPIO_OE_SET.raw = raw_mask,
                     .in => SIO.GPIO_OE_CLR.raw = raw_mask,
@@ -123,7 +123,7 @@ pub const Mask =
             }
 
             pub fn set_pull(self: Mask, pull: Pull) void {
-                const raw_mask = @intFromEnum(self);
+                const raw_mask = @backingInt(self);
                 for (0..@bitSizeOf(Mask)) |i| {
                     const bit = @as(u5, @intCast(i));
                     if (0 != raw_mask & (@as(u32, 1) << bit))
@@ -132,7 +132,7 @@ pub const Mask =
             }
 
             pub fn set_slew_rate(self: Mask, slew_rate: SlewRate) void {
-                const raw_mask = @intFromEnum(self);
+                const raw_mask = @backingInt(self);
                 for (0..@bitSizeOf(Mask)) |i| {
                     const bit = @as(u5, @intCast(i));
                     if (0 != raw_mask & (@as(u32, 1) << bit))
@@ -141,7 +141,7 @@ pub const Mask =
             }
 
             pub fn set_schmitt_trigger_enabled(self: Mask, enabled: bool) void {
-                const raw_mask = @intFromEnum(self);
+                const raw_mask = @backingInt(self);
                 for (0..@bitSizeOf(Mask)) |i| {
                     const bit = @as(u5, @intCast(i));
                     if (0 != raw_mask & (@as(u32, 1) << bit))
@@ -150,7 +150,7 @@ pub const Mask =
             }
 
             pub fn set_drive_strength(self: Mask, drive_strength: DriveStrength) void {
-                const raw_mask = @intFromEnum(self);
+                const raw_mask = @backingInt(self);
                 for (0..@bitSizeOf(Mask)) |i| {
                     const bit = @as(u5, @intCast(i));
                     if (0 != raw_mask & (@as(u32, 1) << bit))
@@ -159,26 +159,26 @@ pub const Mask =
             }
 
             pub fn put(self: Mask, value: u32) void {
-                SIO.GPIO_OUT_XOR.raw = (SIO.GPIO_OUT.raw ^ value) & @intFromEnum(self);
+                SIO.GPIO_OUT_XOR.raw = (SIO.GPIO_OUT.raw ^ value) & @backingInt(self);
             }
 
             pub fn read(self: Mask) u32 {
-                return SIO.GPIO_IN.raw & @intFromEnum(self);
+                return SIO.GPIO_IN.raw & @backingInt(self);
             }
         },
         .RP2350 => enum(u48) {
             _,
 
             fn lower_32_mask(self: Mask) u32 {
-                return @truncate(@intFromEnum(self));
+                return @truncate(@backingInt(self));
             }
 
             fn upper_16_mask(self: Mask) u16 {
-                return @truncate(@intFromEnum(self) >> 32);
+                return @truncate(@backingInt(self) >> 32);
             }
 
             pub fn set_function(self: Mask, function: Function) void {
-                const raw_mask = @intFromEnum(self);
+                const raw_mask = @backingInt(self);
                 for (0..@bitSizeOf(Mask)) |i| {
                     const bit = @as(u6, @intCast(i));
                     if (0 != raw_mask & (@as(u48, 1) << bit))
@@ -202,7 +202,7 @@ pub const Mask =
             }
 
             pub fn set_pull(self: Mask, pull: Pull) void {
-                const raw_mask = @intFromEnum(self);
+                const raw_mask = @backingInt(self);
                 for (0..@bitSizeOf(Mask)) |i| {
                     const bit = @as(u6, @intCast(i));
                     if (0 != raw_mask & (@as(u48, 1) << bit))
@@ -211,7 +211,7 @@ pub const Mask =
             }
 
             pub fn set_slew_rate(self: Mask, slew_rate: SlewRate) void {
-                const raw_mask = @intFromEnum(self);
+                const raw_mask = @backingInt(self);
                 for (0..@bitSizeOf(Mask)) |i| {
                     const bit = @as(u6, @intCast(i));
                     if (0 != raw_mask & (@as(u48, 1) << bit))
@@ -220,7 +220,7 @@ pub const Mask =
             }
 
             pub fn set_schmitt_trigger_enabled(self: Mask, enabled: bool) void {
-                const raw_mask = @intFromEnum(self);
+                const raw_mask = @backingInt(self);
                 for (0..@bitSizeOf(Mask)) |i| {
                     const bit = @as(u6, @intCast(i));
                     if (0 != raw_mask & (@as(u48, 1) << bit))
@@ -229,7 +229,7 @@ pub const Mask =
             }
 
             pub fn set_drive_strength(self: Mask, drive_strength: DriveStrength) void {
-                const raw_mask = @intFromEnum(self);
+                const raw_mask = @backingInt(self);
                 for (0..@bitSizeOf(Mask)) |i| {
                     const bit = @as(u6, @intCast(i));
                     if (0 != raw_mask & (@as(u48, 1) << bit))
@@ -304,26 +304,26 @@ pub const Pin = enum(u6) {
 
     pub inline fn get_regs(gpio: Pin) *volatile Regs {
         const regs = @as(RegsArray, @ptrCast(&IO_BANK0.GPIO0_STATUS));
-        return &regs[@intFromEnum(gpio)];
+        return &regs[@backingInt(gpio)];
     }
 
     pub inline fn get_pads_reg(gpio: Pin) *volatile PadsReg {
         const regs = @as(PadsRegArray, @ptrCast(&PADS_BANK0.GPIO0));
-        return &regs[@intFromEnum(gpio)];
+        return &regs[@backingInt(gpio)];
     }
 
     /// Only relevant for RP2350 which has 48 GPIOs
     pub inline fn is_upper(gpio: Pin) bool {
-        return @intFromEnum(gpio) > 31;
+        return @backingInt(gpio) > 31;
     }
 
     pub inline fn mask(gpio: Pin) u32 {
         const bitshift_val: u5 = switch (chip) {
-            .RP2040 => @intCast(@intFromEnum(gpio)),
+            .RP2040 => @intCast(@backingInt(gpio)),
             .RP2350 =>
             // There are seperate copies of registers for GPIO32->47 on RP2350,
             // so upper GPIOs should present as bits 0 -> 15
-            if (gpio.is_upper()) @intCast(@intFromEnum(gpio) - 32) else @intCast(@intFromEnum(gpio)),
+            if (gpio.is_upper()) @intCast(@backingInt(gpio) - 32) else @intCast(@backingInt(gpio)),
         };
 
         return @as(u32, 1) << bitshift_val;
@@ -502,7 +502,7 @@ pub const Pin = enum(u6) {
         acknowledge_irq(gpio, events);
 
         // Enable or disable interrupts for events on this pin
-        const pin_num = @intFromEnum(gpio);
+        const pin_num = @backingInt(gpio);
         // Divide pin_num by 8 - 8 GPIOs per register.
         const en_reg: *volatile u32 = &irq_inte_base[pin_num >> 3];
         if (enable) {
@@ -516,7 +516,7 @@ pub const Pin = enum(u6) {
     /// Acknowledge rise/fall IRQ events - should be called during IRQ callback to avoid re-entry
     pub fn acknowledge_irq(gpio: Pin, events: IrqEvents) void {
         const base_intr: [*]volatile u32 = @ptrCast(&IO_BANK0.INTR0);
-        const pin_num = @intFromEnum(gpio);
+        const pin_num = @backingInt(gpio);
         base_intr[pin_num >> 3] = events.get_mask(gpio);
     }
 };
@@ -576,7 +576,7 @@ pub const IrqEvents = packed struct(u4) {
     /// Returns an appropriately shifted mask of the events represented
     /// This is generally only needed for low level - direct register - access
     pub fn get_mask(events: IrqEvents, pin: Pin) u32 {
-        const pin_num = @intFromEnum(pin);
+        const pin_num = @backingInt(pin);
         const shift: u5 = @intCast(4 * (pin_num % 8)); // cannot overflow - max of 7
         const events_b: u4 = @bitCast(events);
         return @as(u32, @intCast(events_b)) << shift;

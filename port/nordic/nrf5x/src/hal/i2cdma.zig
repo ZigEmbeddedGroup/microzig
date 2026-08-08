@@ -46,14 +46,14 @@ pub const Error = drivers.I2C_Device.Error || error{
 
 /// Create an I2C instance from a peripheral number (0 or 1).
 pub fn num(n: u1) I2C {
-    return @as(I2C, @enumFromInt(n));
+    return @as(I2C, @fromBackingInt(n));
 }
 
 pub const I2C = enum(u1) {
     _,
 
     fn get_regs(i2c: I2C) *volatile I2cRegs {
-        return switch (@intFromEnum(i2c)) {
+        return switch (@backingInt(i2c)) {
             0 => I2C0,
             1 => I2C1,
         };
@@ -173,7 +173,7 @@ pub const I2C = enum(u1) {
         i2c.disable();
         defer i2c.enable();
         i2c.get_regs().ADDRESS.write(.{
-            .ADDRESS = @intFromEnum(addr),
+            .ADDRESS = @backingInt(addr),
         });
     }
 

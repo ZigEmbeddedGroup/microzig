@@ -51,7 +51,7 @@ pub const TMP117 = struct {
     }
 
     pub inline fn read_raw(self: *const Self, reg: Self.register) !u16 {
-        try self.dev.write(self.address, &[_]u8{@intFromEnum(reg)});
+        try self.dev.write(self.address, &[_]u8{@backingInt(reg)});
         var buf: [2]u8 = undefined;
         const size = try self.dev.read(self.address, &buf);
         if (size != 2) return error.ReadError;
@@ -61,7 +61,7 @@ pub const TMP117 = struct {
     pub inline fn write_raw(self: *const Self, reg: Self.register, v: u16) !void {
         return self.dev.write(
             self.address,
-            &([1]u8{@intFromEnum(reg)} ++ @as([2]u8, @bitCast(std.mem.nativeToBig(u16, v)))),
+            &([1]u8{@backingInt(reg)} ++ @as([2]u8, @bitCast(std.mem.nativeToBig(u16, v)))),
         );
     }
 

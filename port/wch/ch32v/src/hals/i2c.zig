@@ -75,10 +75,10 @@ pub const ConfigError = error{
 };
 
 pub const instance = struct {
-    pub const I2C1: I2C = @enumFromInt(0);
-    pub const I2C2: I2C = @enumFromInt(1);
+    pub const I2C1: I2C = @fromBackingInt(0);
+    pub const I2C2: I2C = @fromBackingInt(1);
     pub fn num(instance_number: u2) I2C {
-        return @enumFromInt(instance_number - 1);
+        return @fromBackingInt(instance_number - 1);
     }
 };
 
@@ -86,7 +86,7 @@ pub const I2C = enum(u1) {
     _,
 
     pub inline fn get_regs(i2c: I2C) *volatile I2cRegs {
-        return switch (@intFromEnum(i2c)) {
+        return switch (@backingInt(i2c)) {
             0 => I2C1,
             1 => I2C2,
         };
@@ -106,11 +106,11 @@ pub const I2C = enum(u1) {
 
         // Compile-time DMA validation
         if (comptime config.dma) |dma_cfg| {
-            const tx_peripheral = comptime if (@intFromEnum(i2c) == 0)
+            const tx_peripheral = comptime if (@backingInt(i2c) == 0)
                 dma.Peripheral.I2C1_TX
             else
                 dma.Peripheral.I2C2_TX;
-            const rx_peripheral = comptime if (@intFromEnum(i2c) == 0)
+            const rx_peripheral = comptime if (@backingInt(i2c) == 0)
                 dma.Peripheral.I2C1_RX
             else
                 dma.Peripheral.I2C2_RX;
@@ -121,7 +121,7 @@ pub const I2C = enum(u1) {
         }
 
         // Enable peripheral clock
-        hal.clocks.enable_peripheral_clock(switch (@intFromEnum(i2c)) {
+        hal.clocks.enable_peripheral_clock(switch (@backingInt(i2c)) {
             0 => .I2C1,
             1 => .I2C2,
         });
@@ -129,8 +129,8 @@ pub const I2C = enum(u1) {
         // Configure AFIO remap
         hal.clocks.enable_afio_clock();
         const AFIO = microzig.chip.peripherals.AFIO;
-        switch (@intFromEnum(i2c)) {
-            0 => AFIO.PCFR1.modify(.{ .I2C1_RM = @intFromEnum(config.remap) }),
+        switch (@backingInt(i2c)) {
+            0 => AFIO.PCFR1.modify(.{ .I2C1_RM = @backingInt(config.remap) }),
             // I2C2 does not have remap support on CH32V20x
             1 => {},
         }
@@ -230,7 +230,7 @@ pub const I2C = enum(u1) {
 
     /// Send 7-bit address with direction bit
     inline fn send_address(i2c: I2C, addr: Address, direction: enum { write, read }) void {
-        const addr_byte = @as(u8, @intFromEnum(addr)) << 1 | @intFromBool(direction == .read);
+        const addr_byte = @as(u8, @backingInt(addr)) << 1 | @intFromBool(direction == .read);
         i2c.get_regs().DATAR.write_raw(addr_byte);
     }
 

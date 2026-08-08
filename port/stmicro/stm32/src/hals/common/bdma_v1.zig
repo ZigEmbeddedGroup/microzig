@@ -37,7 +37,7 @@ var dma_buffer: [countDmaChannel * 100]u8 linksection(".dma_buffer") = undefined
 pub fn DMA(comptime dma_ctrl: Instances, comptime ch: ChannelNumber) type {
     const reg_dma = enums.get_regs(DMA_Peripheral, dma_ctrl);
 
-    const buffer_idx = enums.base_perihperal_index(dma_ctrl) * 7 + @intFromEnum(ch);
+    const buffer_idx = enums.base_perihperal_index(dma_ctrl) * 7 + @backingInt(ch);
     const start = buffer_idx * 100;
 
     // Here we are not able to use comptimeFmt since it will introduce dependency loop
@@ -61,13 +61,13 @@ pub fn DMA(comptime dma_ctrl: Instances, comptime ch: ChannelNumber) type {
         }
 
         pub fn clear_events(events: ChannelEvent) void {
-            const ch_evt_idx: u5 = 4 * @as(u5, @intCast(@intFromEnum(ch)));
+            const ch_evt_idx: u5 = 4 * @as(u5, @intCast(@backingInt(ch)));
             const bits: u32 = @as(u4, @bitCast(events));
             reg_dma.IFCR.raw |= (bits & 0xF) << ch_evt_idx;
         }
 
         pub fn read_events() ChannelEvent {
-            const ch_evt_idx: u5 = 4 * @as(u5, @intCast(@intFromEnum(ch)));
+            const ch_evt_idx: u5 = 4 * @as(u5, @intCast(@backingInt(ch)));
             return @bitCast(@as(u4, @truncate(reg_dma.ISR.raw >> ch_evt_idx)));
         }
 
@@ -78,7 +78,7 @@ pub fn DMA(comptime dma_ctrl: Instances, comptime ch: ChannelNumber) type {
                 const vector_table: *microzig.cpu.VectorTable = @ptrFromInt(0x0);
                 std.debug.assert(@field(vector_table, interrupt_name).* == @intFromPtr(&DMA_Handler));
             }
-            microzig.interrupt.enable(@as(microzig.cpu.ExternalInterrupt, @enumFromInt(interrupt_index)));
+            microzig.interrupt.enable(@as(microzig.cpu.ExternalInterrupt, @fromBackingInt(interrupt_index)));
         }
 
         pub fn get_channel() *Channel {
@@ -86,7 +86,7 @@ pub fn DMA(comptime dma_ctrl: Instances, comptime ch: ChannelNumber) type {
                 return init_ch;
             }
             hal.rcc.enable_clock(enums.to_peripheral(dma_ctrl));
-            const channel_base: usize = @intFromPtr(reg_dma) + 0x8 + (20 * @as(usize, @intFromEnum(ch)));
+            const channel_base: usize = @intFromPtr(reg_dma) + 0x8 + (20 * @as(usize, @backingInt(ch)));
 
             channel = Channel{
                 .reg_channel = @ptrFromInt(channel_base),

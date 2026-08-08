@@ -95,7 +95,7 @@ pub const instance = struct {
     pub const USART2: USART = .USART2;
     pub const USART3: USART = .USART3;
     pub fn num(n: u2) USART {
-        return @enumFromInt(n);
+        return @fromBackingInt(n);
     }
 };
 
@@ -189,7 +189,7 @@ pub const USART = enum(u2) {
     }
 
     pub inline fn get_regs(usart: USART) *volatile UsartRegs {
-        return switch (@intFromEnum(usart)) {
+        return switch (@backingInt(usart)) {
             0 => USART1,
             1 => USART2,
             2 => USART3,
@@ -200,7 +200,7 @@ pub const USART = enum(u2) {
     /// Get the peripheral clock frequency for this USART instance
     inline fn get_pclk(usart: USART) u32 {
         const rcc_clocks = hal.clocks.get_freqs();
-        return switch (@intFromEnum(usart)) {
+        return switch (@backingInt(usart)) {
             0 => rcc_clocks.pclk2, // USART1 is on APB2
             1, 2 => rcc_clocks.pclk1, // USART2/3 are on APB1
             else => unreachable,
@@ -223,7 +223,7 @@ pub const USART = enum(u2) {
         // Configure AFIO remap
         hal.clocks.enable_afio_clock();
         const AFIO = microzig.chip.peripherals.AFIO;
-        const remap_bits = @intFromEnum(config.remap);
+        const remap_bits = @backingInt(config.remap);
 
         switch (usart) {
             .USART1 => {

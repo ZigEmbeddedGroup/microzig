@@ -38,14 +38,14 @@ pub const Config = struct {
 pub fn apply(config: Config) void {
     // ATtiny25/45/85 datasheet, section 17.13.1: ADMUX packs reference,
     // left-adjust, and channel selection in one register.
-    regs.write(regs.ADMUX, (@as(u8, @intFromEnum(config.reference)) << 4) |
+    regs.write(regs.ADMUX, (@as(u8, @backingInt(config.reference)) << 4) |
         (@as(u8, @intFromBool(config.left_adjust)) << 5) |
-        @as(u8, @intFromEnum(config.channel)));
+        @as(u8, @backingInt(config.channel)));
 
     regs.write(regs.ADCSRA, regs.bit(regs.adc_bits.aden) |
         (@as(u8, @intFromBool(config.auto_trigger)) << regs.adc_bits.adate) |
         (@as(u8, @intFromBool(config.interrupt)) << regs.adc_bits.adie) |
-        @as(u8, @intFromEnum(config.prescaler)));
+        @as(u8, @backingInt(config.prescaler)));
 }
 
 pub inline fn use_adc_noise_reduction_sleep() void {

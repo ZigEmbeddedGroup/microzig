@@ -75,7 +75,7 @@ pub fn PCA9685(comptime config: PCA9685_Config) type {
             std.mem.writeInt(u16, &buff_off, off, .little);
 
             try self.dd.writev(&.{
-                &.{@intFromEnum(Register.Led0OnL) + 4 * channel},
+                &.{@backingInt(Register.Led0OnL) + 4 * channel},
                 &buffer_on,
                 &buff_off,
             });
@@ -99,7 +99,7 @@ pub fn PCA9685(comptime config: PCA9685_Config) type {
             std.mem.writeInt(u16, &buff_off, off, .little);
 
             try self.dd.writev(&.{
-                &.{@intFromEnum(Register.AllLedOnL)},
+                &.{@backingInt(Register.AllLedOnL)},
                 &buffer_on,
                 &buff_off,
             });
@@ -127,11 +127,11 @@ pub fn PCA9685(comptime config: PCA9685_Config) type {
         }
 
         pub fn write_register(self: Self, register: Register, value: u8) !void {
-            try self.dd.write(&.{ @intFromEnum(register), value });
+            try self.dd.write(&.{ @backingInt(register), value });
         }
 
         pub fn read_register(self: Self, register: Register) !u8 {
-            try self.dd.write(&.{@intFromEnum(register)});
+            try self.dd.write(&.{@backingInt(register)});
             var value: [1]u8 = undefined;
             _ = try self.dd.read(&value);
             return value[0];

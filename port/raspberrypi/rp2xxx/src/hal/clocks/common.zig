@@ -111,7 +111,7 @@ pub fn GeneratorImpl(Generator: type, Source: type, IntegerDivisorType: type) ty
         const CTRL_AUX_SRC_MASK = @as(u32, 0x1e0);
 
         pub fn get_regs(generator: Generator) *volatile Regs {
-            return &generators[@intFromEnum(generator)];
+            return &generators[@backingInt(generator)];
         }
 
         pub fn has_glitchless_mux(generator: Generator) bool {

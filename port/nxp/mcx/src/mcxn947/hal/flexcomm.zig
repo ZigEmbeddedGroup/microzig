@@ -37,7 +37,7 @@ pub const FlexComm = enum(u4) {
     /// `n` can be at most 9 (inclusive).
     pub fn num(n: u4) FlexComm {
         assert(n <= 9);
-        return @enumFromInt(n);
+        return @fromBackingInt(n);
     }
 
     /// Initialize a Uart / SPI / I2C interface on a given flexcomm interface.
@@ -48,7 +48,7 @@ pub const FlexComm = enum(u4) {
 
         syscon.module_reset_release(module);
         syscon.module_enable_clock(module);
-        flexcomm.get_regs().PSELID.modify_one("PERSEL", @enumFromInt(@intFromEnum(ty)));
+        flexcomm.get_regs().PSELID.modify_one("PERSEL", @fromBackingInt(@backingInt(ty)));
     }
 
     /// Deinit the interface by disabling the clock and asserting the module's reset.
@@ -72,11 +72,11 @@ pub const FlexComm = enum(u4) {
         const ClockTy = @FieldType(@TypeOf(chip.peripherals.SYSCON0.FCCLKSEL[0]).underlying_type, "SEL");
 
         pub fn from(clk: ClockTy) Clock {
-            return @enumFromInt(@intFromEnum(clk));
+            return @fromBackingInt(@backingInt(clk));
         }
 
         pub fn to(clk: Clock) ClockTy {
-            return @enumFromInt(@intFromEnum(clk));
+            return @fromBackingInt(@backingInt(clk));
         }
     };
 
@@ -130,7 +130,7 @@ pub const FlexComm = enum(u4) {
     }
 
     fn get_n(flexcomm: FlexComm) u4 {
-        return @intFromEnum(flexcomm);
+        return @backingInt(flexcomm);
     }
 
     fn get_regs(flexcomm: FlexComm) RegTy {
@@ -140,6 +140,6 @@ pub const FlexComm = enum(u4) {
     }
 
     fn get_module(flexcomm: FlexComm) syscon.Module {
-        return @enumFromInt(@intFromEnum(syscon.Module.FC0) + flexcomm.get_n());
+        return @fromBackingInt(@backingInt(syscon.Module.FC0) + flexcomm.get_n());
     }
 };

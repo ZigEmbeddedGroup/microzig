@@ -63,14 +63,14 @@ pub fn apply(comptime config: Tree.Config) ClockInitError!Tree.ClockOutput {
 }
 
 fn apply_internal(config: Tree.OutputConfig) ClockInitError!void {
-    const latency: flash_v1.LATENCY = @enumFromInt(@intFromEnum(config.FLatency));
+    const latency: flash_v1.LATENCY = @fromBackingInt(@backingInt(config.FLatency));
     const prefetch = config.flags.PREFETCH_ENABLE;
-    const apb1: PPRE = @enumFromInt(@intFromEnum(config.APB1CLKDivider));
-    const apb2: PPRE = @enumFromInt(@intFromEnum(config.APB2CLKDivider));
-    const ahb: HPRE = @enumFromInt(@intFromEnum(config.AHBCLKDivider));
-    const adc: ADCPRE = @enumFromInt(@intFromEnum(config.ADCPresc));
-    const sys_clk: SW = @enumFromInt(@intFromEnum(config.SYSCLKSource));
-    const usb: USBPRE = @enumFromInt(@intFromEnum(config.USBPrescaler));
+    const apb1: PPRE = @fromBackingInt(@backingInt(config.APB1CLKDivider));
+    const apb2: PPRE = @fromBackingInt(@backingInt(config.APB2CLKDivider));
+    const ahb: HPRE = @fromBackingInt(@backingInt(config.AHBCLKDivider));
+    const adc: ADCPRE = @fromBackingInt(@backingInt(config.ADCPresc));
+    const sys_clk: SW = @fromBackingInt(@backingInt(config.SYSCLKSource));
+    const usb: USBPRE = @fromBackingInt(@backingInt(config.USBPrescaler));
 
     secure_enable();
     set_flash(latency, prefetch);
@@ -83,9 +83,9 @@ fn apply_internal(config: Tree.OutputConfig) ClockInitError!void {
     }
 
     if (config.flags.PLLUsed) {
-        const source: PLLSRC = @enumFromInt(@intFromEnum(config.PLLSourceVirtual));
-        const mul: PLLMUL = @enumFromInt(@intFromEnum(config.PLLMUL));
-        const pre_div: PLLXTPRE = @enumFromInt(@intFromEnum(config.HSEDivPLL));
+        const source: PLLSRC = @fromBackingInt(@backingInt(config.PLLSourceVirtual));
+        const mul: PLLMUL = @fromBackingInt(@backingInt(config.PLLMUL));
+        const pre_div: PLLXTPRE = @fromBackingInt(@backingInt(config.HSEDivPLL));
         config_pll(source, mul, pre_div);
         enable_pll();
     } else {
@@ -107,14 +107,14 @@ fn apply_internal(config: Tree.OutputConfig) ClockInitError!void {
     set_lsi(config.flags.LSIUsed);
 
     if (config.flags.RTCEnable) {
-        const source: RTCSEL = @enumFromInt(@intFromEnum(config.RTCClockSelection));
+        const source: RTCSEL = @fromBackingInt(@backingInt(config.RTCClockSelection));
         config_rtc(source);
     } else {
         config_rtc(.DISABLE);
     }
 
     if (config.flags.MCOEnable) {
-        const source: MCOSEL = @enumFromInt(@intFromEnum(config.RCC_MCOSource));
+        const source: MCOSEL = @fromBackingInt(@backingInt(config.RCC_MCOSource));
         config_mco(source);
     } else {
         config_mco(.DISABLE);

@@ -59,10 +59,10 @@ pub fn main(init: std.process.Init) !void {
             } else {
                 region_name.* = try std.fmt.allocPrint(allocator, "{s}{}", .{
                     @tagName(region.tag),
-                    counters[@intFromEnum(region.tag)],
+                    counters[@backingInt(region.tag)],
                 });
             }
-            counters[@intFromEnum(region.tag)] += 1;
+            counters[@backingInt(region.tag)] += 1;
         }
     }
 

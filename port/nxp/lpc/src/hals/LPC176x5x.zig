@@ -63,7 +63,7 @@ pub fn parse_pin(comptime spec: []const u8) type {
 
 pub fn route_pin(comptime pin: type, function: PinTarget) void {
     var val = pin.regs.pinsel_reg.read();
-    @field(val, pin.regs.pinsel_field) = @intFromEnum(function);
+    @field(val, pin.regs.pinsel_field) = @backingInt(function);
     pin.regs.pinsel_reg.write(val);
 }
 
@@ -138,19 +138,19 @@ pub fn Uart(comptime index: usize, comptime pins: microzig.uart.Pins) type {
             switch (index) {
                 0 => {
                     SYSCON.PCONP.modify(.{ .PCUART0 = 1 });
-                    SYSCON.PCLKSEL0.modify(.{ .PCLK_UART0 = @intFromEnum(uart.CClkDiv.four) });
+                    SYSCON.PCLKSEL0.modify(.{ .PCLK_UART0 = @backingInt(uart.CClkDiv.four) });
                 },
                 1 => {
                     SYSCON.PCONP.modify(.{ .PCUART1 = 1 });
-                    SYSCON.PCLKSEL0.modify(.{ .PCLK_UART1 = @intFromEnum(uart.CClkDiv.four) });
+                    SYSCON.PCLKSEL0.modify(.{ .PCLK_UART1 = @backingInt(uart.CClkDiv.four) });
                 },
                 2 => {
                     SYSCON.PCONP.modify(.{ .PCUART2 = 1 });
-                    SYSCON.PCLKSEL1.modify(.{ .PCLK_UART2 = @intFromEnum(uart.CClkDiv.four) });
+                    SYSCON.PCLKSEL1.modify(.{ .PCLK_UART2 = @backingInt(uart.CClkDiv.four) });
                 },
                 3 => {
                     SYSCON.PCONP.modify(.{ .PCUART3 = 1 });
-                    SYSCON.PCLKSEL1.modify(.{ .PCLK_UART3 = @intFromEnum(uart.CClkDiv.four) });
+                    SYSCON.PCLKSEL1.modify(.{ .PCLK_UART3 = @backingInt(uart.CClkDiv.four) });
                 },
                 else => unreachable,
             }
@@ -158,10 +158,10 @@ pub fn Uart(comptime index: usize, comptime pins: microzig.uart.Pins) type {
 
             UARTn.LCR.modify(.{
                 // 8N1
-                .WLS = @intFromEnum(config.data_bits),
-                .SBS = @intFromEnum(config.stop_bits),
+                .WLS = @backingInt(config.data_bits),
+                .SBS = @backingInt(config.stop_bits),
                 .PE = if (config.parity != null) @as(u1, 1) else @as(u1, 0),
-                .PS = if (config.parity) |p| @intFromEnum(p) else @intFromEnum(uart.Parity.odd),
+                .PS = if (config.parity) |p| @backingInt(p) else @backingInt(uart.Parity.odd),
                 .BC = 0,
                 .DLAB = 1,
             });

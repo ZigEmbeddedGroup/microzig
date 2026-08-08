@@ -40,12 +40,12 @@ pub fn configure_pwm(config: PwmConfig) void {
     set_compare0(config.compare0);
     set_compare1(config.compare1);
 
-    var ctrlb: u8 = @intFromEnum(config.waveform);
+    var ctrlb: u8 = @backingInt(config.waveform);
     if (config.enable_compare0) ctrlb |= regs.bit(regs.tca_bits.cmp0en);
     if (config.enable_compare1) ctrlb |= regs.bit(regs.tca_bits.cmp1en);
 
     regs.write(regs.tca0_single_ctrlb, ctrlb);
-    regs.write(regs.tca0_single_ctrla, @intFromEnum(config.clock) | regs.bit(regs.tca_bits.enable));
+    regs.write(regs.tca0_single_ctrla, @backingInt(config.clock) | regs.bit(regs.tca_bits.enable));
 }
 
 pub fn stop() void {

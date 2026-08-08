@@ -9,7 +9,7 @@ pub const Mode = enum(u2) {
 pub inline fn set_mode(mode: Mode) void {
     const mask = regs.bit(regs.sleep_bits.sm1) | regs.bit(regs.sleep_bits.sm0);
     regs.write(regs.MCUCR, (regs.read(regs.MCUCR) & ~mask) |
-        (@as(u8, @intFromEnum(mode)) << regs.sleep_bits.sm0));
+        (@as(u8, @backingInt(mode)) << regs.sleep_bits.sm0));
 }
 
 pub inline fn enable() void {

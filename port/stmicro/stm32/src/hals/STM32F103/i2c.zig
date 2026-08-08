@@ -31,7 +31,7 @@ pub const Address = struct {
     }
 
     pub fn from_generic(addr: mdf.base.I2C_Device.Address) Address {
-        return .{ .addr = @intFromEnum(addr) };
+        return .{ .addr = @backingInt(addr) };
     }
 
     pub fn new_10bits(addr: u10) Address {
@@ -209,7 +209,7 @@ pub const I2C = struct {
         const regs = i2c.regs;
         const val: u6 = @intCast(config.pclk / 1_000_000);
         const duty: usize = if (config.enable_duty) 1 else 0;
-        const mode: F_S = @enumFromInt(@intFromEnum(config.mode));
+        const mode: F_S = @fromBackingInt(@backingInt(config.mode));
 
         regs.CR1.modify(.{ .PE = 0 });
         i2c.reset();
@@ -220,7 +220,7 @@ pub const I2C = struct {
 
         regs.CCR.modify(.{
             .CCR = @as(u12, @intCast(CCR)),
-            .DUTY = @as(DUTY, @enumFromInt(duty)),
+            .DUTY = @as(DUTY, @fromBackingInt(duty)),
             .F_S = mode,
         });
 

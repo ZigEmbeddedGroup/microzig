@@ -110,7 +110,7 @@ pub fn get_time_since_boot() time.Absolute {
     const counter = rtc.COUNTER.read().COUNTER;
     const ticks = calc_ticks(p, counter);
     // RTC updates at 32768 hertz, so we can just multiply by 1M, then shift 15
-    return @enumFromInt((ticks * 1_000_000) >> 15);
+    return @fromBackingInt((ticks * 1_000_000) >> 15);
 }
 
 pub fn sleep_ms(time_ms: u32) void {

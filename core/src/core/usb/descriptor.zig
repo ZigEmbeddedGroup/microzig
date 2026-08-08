@@ -155,14 +155,14 @@ pub const String = struct {
             length: u8 = @sizeOf(@This()),
             descriptor_type: Type = .String,
             lang: types.U16_Le align(1),
-        } = comptime &.{ .lang = .from(@intFromEnum(lang)) };
+        } = comptime &.{ .lang = .from(@backingInt(lang)) };
         return .{ .data = std.mem.asBytes(ret) };
     }
 
     pub fn from_str(comptime string: []const u8) @This() {
         @setEvalBranchQuota(10000);
         const encoded: []const u8 = std.mem.sliceAsBytes(std.unicode.utf8ToUtf16LeStringLiteral(string));
-        return .{ .data = &[2]u8{ encoded.len + 2, @intFromEnum(Type.String) } ++ encoded };
+        return .{ .data = &[2]u8{ encoded.len + 2, @backingInt(Type.String) } ++ encoded };
     }
 };
 

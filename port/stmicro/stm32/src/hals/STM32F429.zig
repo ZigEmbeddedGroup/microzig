@@ -80,7 +80,7 @@ pub const gpio = struct {
     pub fn read(comptime pin: type) microzig.gpio.State {
         const idr_reg = pin.gpio_port.IDR;
         const reg_value = @field(idr_reg.read(), "IDR" ++ pin.suffix); // TODO extract to getRegField()?
-        return @as(microzig.gpio.State, @enumFromInt(reg_value));
+        return @as(microzig.gpio.State, @fromBackingInt(reg_value));
     }
 
     pub fn write(comptime pin: type, state: microzig.gpio.State) void {

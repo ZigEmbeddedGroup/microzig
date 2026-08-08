@@ -57,8 +57,8 @@ pub const Pio = enum(u2) {
             .AUTOPUSH = @intFromBool(options.autopush),
             .AUTOPULL = @intFromBool(options.autopull),
 
-            .IN_SHIFTDIR = @intFromEnum(options.in_shiftdir),
-            .OUT_SHIFTDIR = @intFromEnum(options.out_shiftdir),
+            .IN_SHIFTDIR = @backingInt(options.in_shiftdir),
+            .OUT_SHIFTDIR = @backingInt(options.out_shiftdir),
 
             .PUSH_THRESH = options.push_threshold,
             .PULL_THRESH = options.pull_threshold,

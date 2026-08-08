@@ -10,11 +10,11 @@ pub const PinChange = enum(u3) {
 };
 
 pub inline fn enable_pin(pin: PinChange) void {
-    regs.set_bits(regs.PCMSK, regs.bit(@intFromEnum(pin)));
+    regs.set_bits(regs.PCMSK, regs.bit(@backingInt(pin)));
 }
 
 pub inline fn disable_pin(pin: PinChange) void {
-    regs.clear_bits(regs.PCMSK, regs.bit(@intFromEnum(pin)));
+    regs.clear_bits(regs.PCMSK, regs.bit(@backingInt(pin)));
 }
 
 pub inline fn enable() void {

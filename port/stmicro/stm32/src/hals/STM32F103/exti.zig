@@ -60,7 +60,7 @@ pub fn apply_line(config: Config) void {
 pub fn set_line(line: u4, port: gpio.Port) void {
     const reg_idx: usize = line / 4;
     const shift = (@as(u5, line) % 4) * 4;
-    const port_sel: u32 = @intFromEnum(port);
+    const port_sel: u32 = @backingInt(port);
 
     AFIO.EXTICR[reg_idx].raw &= ~(@as(u32, 0xF) << shift); //clear the current value
     AFIO.EXTICR[reg_idx].raw |= (port_sel << shift); //set the port value

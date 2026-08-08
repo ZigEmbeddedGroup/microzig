@@ -803,14 +803,14 @@ pub const GlobalConfiguration = struct {
                 const cname = pin_config.name orelse field_name;
                 if (@hasField(T, cname)) {
                     if (pin_config.function == .SIO) {
-                        @field(ret, cname) = gpio.num(@intFromEnum(@field(Pin, field_name)));
+                        @field(ret, cname) = gpio.num(@backingInt(@field(Pin, field_name)));
                     } else if (pin_config.function.is_pwm()) {
                         @field(ret, cname) = pwm.Pwm{
                             .slice_number = pin_config.function.pwm_slice(),
                             .channel = pin_config.function.pwm_channel(),
                         };
                     } else if (pin_config.function.is_adc()) {
-                        @field(ret, cname) = @as(adc.Input, @enumFromInt(switch (pin_config.function) {
+                        @field(ret, cname) = @as(adc.Input, @fromBackingInt(@intCast(switch (pin_config.function) {
                             .ADC0 => 0,
                             .ADC1 => 1,
                             .ADC2 => 2,
@@ -820,7 +820,7 @@ pub const GlobalConfiguration = struct {
                             .ADC6 => 6,
                             .ADC7 => 7,
                             else => unreachable,
-                        }));
+                        })));
                     }
                 }
             }
@@ -839,8 +839,8 @@ pub const GlobalConfiguration = struct {
         comptime {
             for (@typeInfo(GlobalConfiguration).@"struct".field_names) |field_name|
                 if (@field(config, field_name)) |pin_config| {
-                    const gpio_num = @intFromEnum(@field(Pin, field_name));
-                    if (0 == function_table[@intFromEnum(pin_config.function)][gpio_num])
+                    const gpio_num = @backingInt(@field(Pin, field_name));
+                    if (0 == function_table[@backingInt(pin_config.function)][gpio_num])
                         @compileError(comptimePrint("{s} cannot be configured for {}", .{ field_name, pin_config.function }));
 
                     if (pin_config.function == .SIO) {
@@ -877,7 +877,7 @@ pub const GlobalConfiguration = struct {
 
         inline for (@typeInfo(GlobalConfiguration).@"struct".field_names) |field_name| {
             if (@field(config, field_name)) |pin_config| {
-                const gpio_pin = gpio.num(@intFromEnum(@field(Pin, field_name)));
+                const gpio_pin = gpio.num(@backingInt(@field(Pin, field_name)));
                 const func = pin_config.function;
 
                 if (func == .SIO) {
@@ -905,8 +905,8 @@ pub const GlobalConfiguration = struct {
                 } else if (comptime func == .HSTX) {
                     gpio_pin.set_function(.hstx);
                 } else if (comptime func.is_adc()) {
-                    const adc_num = @intFromEnum(func) - @intFromEnum(Function.ADC0);
-                    adc.Input.configure_gpio_pin(@as(adc.Input, @enumFromInt(adc_num)));
+                    const adc_num = @backingInt(func) - @backingInt(Function.ADC0);
+                    adc.Input.configure_gpio_pin(@as(adc.Input, @fromBackingInt(adc_num)));
                 } else if (comptime func == .QMI_CS1) {
                     gpio_pin.set_function(.gpck); // Shares function number with clock
                     XIP_CTRL.CTRL.modify(.{
@@ -915,7 +915,7 @@ pub const GlobalConfiguration = struct {
                 } else {
                     @compileError(std.fmt.comptimePrint("Unimplemented pin function. Please implement setting pin function {s} for GPIO {}", .{
                         @tagName(func),
-                        @intFromEnum(gpio_pin),
+                        @backingInt(gpio_pin),
                     }));
                 }
             }
@@ -929,7 +929,7 @@ pub const GlobalConfiguration = struct {
 
         inline for (@typeInfo(GlobalConfiguration).@"struct".field_names) |field_name|
             if (@field(config, field_name)) |pin_config| {
-                const gpio_num = @intFromEnum(@field(Pin, field_name));
+                const gpio_num = @backingInt(@field(Pin, field_name));
                 if (pin_config.pull) |pull| {
                     gpio.num(gpio_num).set_pull(pull);
                 }

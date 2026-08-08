@@ -23,7 +23,7 @@ pub fn configure(period: Period, interrupt: bool) void {
     // check PIT synchronization, set PI if needed, select PERIOD, then set PITEN.
     // https://ww1.microchip.com/downloads/en/DeviceDoc/ATtiny1614-16-17-DataSheet-DS40002204A.pdf
     while (busy()) {}
-    regs.write(regs.rtc_pitctrla, @intFromEnum(period) | regs.bit(regs.rtc_bits.piten));
+    regs.write(regs.rtc_pitctrla, @backingInt(period) | regs.bit(regs.rtc_bits.piten));
     regs.write(regs.rtc_pitintctrl, if (interrupt) regs.bit(regs.rtc_bits.pi) else 0);
 }
 

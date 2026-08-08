@@ -94,6 +94,6 @@ pub const gpio = struct {
     /// Set a GPIO pin high or low
     pub fn put(pin: Pin, value: bool) void {
         if (!state.initialized) return;
-        state.runner.wifi().gpio_set(@intFromEnum(pin), value) catch {};
+        state.runner.wifi().gpio_set(@backingInt(pin), value) catch {};
     }
 };

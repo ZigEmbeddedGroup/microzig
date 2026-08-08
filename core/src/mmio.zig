@@ -67,8 +67,8 @@ pub fn Mmio(comptime Packed: type) type {
                     // same as for the .Int case, but casting to and from the u... tag type U of the enum FieldType
                     const U = enum_info.tag_type;
                     @field(val, field_name) =
-                        @as(FieldType, @enumFromInt(@as(U, @intFromEnum(@field(val, field_name))) ^
-                            @as(U, @intFromEnum(@as(FieldType, value)))));
+                        @as(FieldType, @fromBackingInt(@as(U, @backingInt(@field(val, field_name)) ^
+                            @as(U, @backingInt(@as(FieldType, value))))));
                 },
                 else => |T| {
                     @compileError("unsupported register field type '" ++ @typeName(T) ++ "'");

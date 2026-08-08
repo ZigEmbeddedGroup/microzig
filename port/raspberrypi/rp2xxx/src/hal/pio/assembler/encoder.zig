@@ -401,7 +401,7 @@ pub fn Encoder(comptime chip: Chip, comptime options: Options) type {
                                     .clear = @intFromBool(irq.clear),
                                     .wait = @intFromBool(irq.wait),
                                     .index = @as(u3, irq_num),
-                                    .idxmode = @intFromEnum(irq.idxmode),
+                                    .idxmode = @backingInt(irq.idxmode),
                                 },
                             };
                         },

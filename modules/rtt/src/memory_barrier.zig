@@ -22,13 +22,13 @@ pub fn resolve_memory_barrier() struct { memory_barrier_fn: MemoryBarrierFn } {
     }
 
     // All currently supported ARM chips
-    if (builtin.cpu.features.isEnabled(@intFromEnum(std.Target.arm.Feature.v6m)) or
-        builtin.cpu.features.isEnabled(@intFromEnum(std.Target.arm.Feature.v8m)) or
-        builtin.cpu.features.isEnabled(@intFromEnum(std.Target.arm.Feature.v7m)) or
-        builtin.cpu.features.isEnabled(@intFromEnum(std.Target.arm.Feature.v7em)) or
-        builtin.cpu.features.isEnabled(@intFromEnum(std.Target.arm.Feature.v8m_main)) or
-        builtin.cpu.features.isEnabled(@intFromEnum(std.Target.arm.Feature.v7a)) or
-        builtin.cpu.features.isEnabled(@intFromEnum(std.Target.arm.Feature.v7r)))
+    if (builtin.cpu.features.isEnabled(@backingInt(std.Target.arm.Feature.v6m)) or
+        builtin.cpu.features.isEnabled(@backingInt(std.Target.arm.Feature.v8m)) or
+        builtin.cpu.features.isEnabled(@backingInt(std.Target.arm.Feature.v7m)) or
+        builtin.cpu.features.isEnabled(@backingInt(std.Target.arm.Feature.v7em)) or
+        builtin.cpu.features.isEnabled(@backingInt(std.Target.arm.Feature.v8m_main)) or
+        builtin.cpu.features.isEnabled(@backingInt(std.Target.arm.Feature.v7a)) or
+        builtin.cpu.features.isEnabled(@backingInt(std.Target.arm.Feature.v7r)))
     {
         // Something to note here is not all Cortex-M chips need a DMB instruction since some
         // don't support CPU reordering of instructions. However, these end up getting ignored

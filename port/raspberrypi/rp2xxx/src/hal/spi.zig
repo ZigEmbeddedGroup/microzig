@@ -60,10 +60,10 @@ pub const Config = struct {
 };
 
 pub const instance = struct {
-    pub const SPI0: SPI = @as(SPI, @enumFromInt(0));
-    pub const SPI1: SPI = @as(SPI, @enumFromInt(1));
+    pub const SPI0: SPI = @as(SPI, @fromBackingInt(0));
+    pub const SPI1: SPI = @as(SPI, @fromBackingInt(1));
     pub fn num(instance_number: u1) SPI {
-        return @as(SPI, @enumFromInt(instance_number));
+        return @as(SPI, @fromBackingInt(instance_number));
     }
 };
 
@@ -86,7 +86,7 @@ pub const SPI = enum(u1) {
     _,
 
     pub inline fn get_regs(spi: SPI) *volatile SpiRegs {
-        return switch (@intFromEnum(spi)) {
+        return switch (@backingInt(spi)) {
             0 => SPI0_reg,
             1 => SPI1_reg,
         };
@@ -106,16 +106,16 @@ pub const SPI = enum(u1) {
             .motorola => |ff| {
                 spi_regs.SSPCR0.modify(.{
                     .FRF = 0b00,
-                    .DSS = @intFromEnum(config.data_width),
-                    .SPO = @intFromEnum(ff.clock_polarity),
-                    .SPH = @intFromEnum(ff.clock_phase),
+                    .DSS = @backingInt(config.data_width),
+                    .SPO = @backingInt(ff.clock_polarity),
+                    .SPH = @backingInt(ff.clock_phase),
                 });
             },
 
             .texas_instruments => {
                 spi_regs.SSPCR0.modify(.{
                     .FRF = 0b01,
-                    .DSS = @intFromEnum(config.data_width),
+                    .DSS = @backingInt(config.data_width),
                     .SPO = 0,
                     .SPH = 0,
                 });
@@ -124,7 +124,7 @@ pub const SPI = enum(u1) {
             .ns_microwire => {
                 spi_regs.SSPCR0.modify(.{
                     .FRF = 0b10,
-                    .DSS = @intFromEnum(config.data_width),
+                    .DSS = @backingInt(config.data_width),
                     .SPO = 0,
                     .SPH = 0,
                 });
@@ -188,14 +188,14 @@ pub const SPI = enum(u1) {
 
     pub fn tx(spi: SPI) dma.DMA_WriteTarget {
         return .{
-            .dreq = if (@intFromEnum(spi) == 0) .spi0_tx else .spi1_tx,
+            .dreq = if (@backingInt(spi) == 0) .spi0_tx else .spi1_tx,
             .addr = @intFromPtr(&spi.get_regs().SSPDR),
         };
     }
 
     pub fn rx(spi: SPI) dma.DMA_ReadTarget {
         return .{
-            .dreq = if (@intFromEnum(spi) == 0) .spi0_rx else .spi1_rx,
+            .dreq = if (@backingInt(spi) == 0) .spi0_rx else .spi1_rx,
             .addr = @intFromPtr(&spi.get_regs().SSPDR),
         };
     }

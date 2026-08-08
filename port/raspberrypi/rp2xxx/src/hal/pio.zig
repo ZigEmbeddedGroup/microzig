@@ -40,7 +40,7 @@ pub fn num(n: u2) Pio {
         },
     }
 
-    return @as(Pio, @enumFromInt(n));
+    return @as(Pio, @fromBackingInt(n));
 }
 
 pub const Pio = chip_specific.Pio;

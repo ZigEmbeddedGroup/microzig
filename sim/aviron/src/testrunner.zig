@@ -268,19 +268,21 @@ pub fn main(init: std.process.Init) !u8 {
     const gpa = init.gpa;
     const args = try init.minimal.args.toSlice(arena.allocator());
     const cli_args, const positionals = try flags.parse(CLI_Args, arena.allocator(), args);
+    var write_buf: [64]u8 = undefined;
 
     if (cli_args.help) {
-        const stdout = std.Io.File.stdout().writer(&.{});
-        try stdout.interface.print("{s}", .{CLI_Args.usage});
+        const stdout = std.Io.File.stdout().writer(init.io, &write_buf);
+        var writer = stdout.interface;
+        try writer.print("{s}", .{CLI_Args.usage});
         return 0;
     }
 
     const config_path = cli_args.config orelse @panic("missing configuration path!");
     const config = blk: {
-        var file = try std.fs.cwd().openFile(config_path, .{});
-        defer file.close();
+        var file = try std.Io.Dir.cwd().openFile(init.io, config_path, .{});
+        defer file.close(init.io);
 
-        break :blk try testconfig.TestSuiteConfig.load(arena.allocator(), file);
+        break :blk try testconfig.TestSuiteConfig.load(arena.allocator(), init.io, file);
     };
 
     if (positionals.len == 0)
@@ -295,7 +297,7 @@ pub fn main(init: std.process.Init) !u8 {
         // Run test against multiple MCUs
         for (cpus) |mcu_name| {
             std.debug.print("Running test with MCU: {s}\n", .{mcu_name});
-            try run_test_with_mcu(gpa, mcu_name, config, positionals, options);
+            try run_test_with_mcu(gpa, mcu_name, config, options, positionals);
         }
     } else {
         // Run test against a single MCU (default to ATmega328P if not specified)
@@ -393,7 +395,7 @@ const IO = struct {
 
     fn dev_read(ctx: *anyopaque, addr: aviron.IO.Address) u8 {
         const io: *IO = @ptrCast(@alignCast(ctx));
-        const reg: Register = @enumFromInt(addr);
+        const reg: Register = @fromBackingInt(addr);
         return switch (reg) {
             .exit => 0,
             .stdio => if (io.stdin.len > 0) blk: {
@@ -446,7 +448,7 @@ const IO = struct {
     /// `mask` determines which bits of `value` are written. To write everything, use `0xFF` for `mask`.
     fn dev_write_masked(ctx: *anyopaque, addr: aviron.IO.Address, mask: u8, value: u8) void {
         const io: *IO = @ptrCast(@alignCast(ctx));
-        const reg: Register = @enumFromInt(addr);
+        const reg: Register = @fromBackingInt(addr);
         switch (reg) {
             .exit => {
                 io.exit_code = value & mask;

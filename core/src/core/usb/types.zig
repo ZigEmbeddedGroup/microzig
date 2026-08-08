@@ -277,8 +277,8 @@ pub const ClassSubclassProtocol = extern struct {
     ) @This() {
         return .{
             .class = class,
-            .subclass = @intFromEnum(subclass),
-            .protocol = @intFromEnum(protocol),
+            .subclass = @backingInt(subclass),
+            .protocol = @backingInt(protocol),
         };
     }
 };

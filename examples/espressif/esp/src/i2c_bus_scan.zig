@@ -44,7 +44,7 @@ pub fn main() !void {
     try i2c0.apply(100_000);
 
     for (0..std.math.maxInt(u7)) |addr| {
-        const a: i2c.Address = @enumFromInt(addr);
+        const a: i2c.Address = @fromBackingInt(addr);
 
         var rx_data: [1]u8 = undefined;
         _ = i2c0.read_blocking(a, &rx_data, time.Duration.from_ms(100)) catch continue;

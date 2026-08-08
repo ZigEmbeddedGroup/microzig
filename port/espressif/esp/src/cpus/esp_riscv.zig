@@ -92,27 +92,27 @@ pub const interrupt = struct {
     const INTERRUPT_CORE0 = microzig.chip.peripherals.INTERRUPT_CORE0;
 
     pub fn is_enabled(int: Interrupt) bool {
-        return INTERRUPT_CORE0.CPU_INT_ENABLE.raw & (@as(u32, 1) << @intFromEnum(int)) != 0;
+        return INTERRUPT_CORE0.CPU_INT_ENABLE.raw & (@as(u32, 1) << @backingInt(int)) != 0;
     }
 
     pub fn enable(int: Interrupt) void {
-        INTERRUPT_CORE0.CPU_INT_ENABLE.raw |= @as(u32, 1) << @intFromEnum(int);
+        INTERRUPT_CORE0.CPU_INT_ENABLE.raw |= @as(u32, 1) << @backingInt(int);
     }
 
     pub fn disable(int: Interrupt) void {
-        INTERRUPT_CORE0.CPU_INT_ENABLE.raw &= ~(@as(u32, 1) << @intFromEnum(int));
+        INTERRUPT_CORE0.CPU_INT_ENABLE.raw &= ~(@as(u32, 1) << @backingInt(int));
     }
 
     /// Checks if a given interrupt is pending.
     pub fn is_pending(int: Interrupt) bool {
-        return INTERRUPT_CORE0.CPU_INT_EIP_STATUS.raw & (@as(u32, 1) << @intFromEnum(int)) != 0;
+        return INTERRUPT_CORE0.CPU_INT_EIP_STATUS.raw & (@as(u32, 1) << @backingInt(int)) != 0;
     }
 
     /// Clears the pending state of claimed (executing) edge-type interrupt only.
     /// NOTE: Pending state of an unclaimed (not executing) edge type interrupt can be flushed,
     /// if required, by first disabling it and only then call clearing it.
     pub fn clear_pending(int: Interrupt) void {
-        INTERRUPT_CORE0.CPU_INT_CLEAR.raw |= @as(u32, 1) << @intFromEnum(int);
+        INTERRUPT_CORE0.CPU_INT_CLEAR.raw |= @as(u32, 1) << @backingInt(int);
     }
 
     pub const Priority = enum(u4) {
@@ -127,18 +127,18 @@ pub const interrupt = struct {
     /// Sets the priority of an interrupt. Interrupts with priorities zero or less than the priority
     /// threshold value in are masked.
     pub fn set_priority(int: Interrupt, priority: Priority) void {
-        get_priority_register_for(int).* = @intFromEnum(priority);
+        get_priority_register_for(int).* = @backingInt(priority);
     }
 
     pub fn get_priority(int: Interrupt) Priority {
-        return @enumFromInt(get_priority_register_for(int).*);
+        return @fromBackingInt(get_priority_register_for(int).*);
     }
 
     fn get_priority_register_for(int: Interrupt) *volatile u32 {
         // using CPU_INT_PRI_0 (which should be reserved because interrupts start from one) here so
         // that when I offset the register I don't have to subtract one from the interrupt number.
         const base: usize = @intFromPtr(&INTERRUPT_CORE0.CPU_INT_PRI_0);
-        const reg: *volatile u32 = @ptrFromInt(base + @sizeOf(u32) * @as(usize, @intFromEnum(int)));
+        const reg: *volatile u32 = @ptrFromInt(base + @sizeOf(u32) * @as(usize, @backingInt(int)));
         return reg;
     }
 
@@ -146,12 +146,12 @@ pub const interrupt = struct {
     /// higher than this threshold, the cpu will respond to this interrupt.
     pub fn set_priority_threshold(priority: Priority) void {
         INTERRUPT_CORE0.CPU_INT_THRESH.write(.{
-            .CPU_INT_THRESH = @intFromEnum(priority),
+            .CPU_INT_THRESH = @backingInt(priority),
         });
     }
 
     pub fn get_priority_threshold() Priority {
-        return @enumFromInt(INTERRUPT_CORE0.CPU_INT_THRESH.read().CPU_INT_THRESH);
+        return @fromBackingInt(INTERRUPT_CORE0.CPU_INT_THRESH.read().CPU_INT_THRESH);
     }
 
     pub const Type = enum(u1) {
@@ -160,7 +160,7 @@ pub const interrupt = struct {
     };
 
     pub fn set_type(int: Interrupt, typ: Type) void {
-        const num = @intFromEnum(int);
+        const num = @backingInt(int);
         switch (typ) {
             .level => INTERRUPT_CORE0.CPU_INT_TYPE.raw &= ~(@as(u32, 1) << num),
             .edge => INTERRUPT_CORE0.CPU_INT_TYPE.raw |= @as(u32, 1) << num,
@@ -168,8 +168,8 @@ pub const interrupt = struct {
     }
 
     pub fn get_type(int: Interrupt) Type {
-        const num = @intFromEnum(int);
-        return @enumFromInt(INTERRUPT_CORE0.CPU_INT_TYPE.raw & (@as(u32, 1) << num) >> num);
+        const num = @backingInt(int);
+        return @fromBackingInt(INTERRUPT_CORE0.CPU_INT_TYPE.raw & (@as(u32, 1) << num) >> num);
     }
 
     pub const Source = enum(u6) {
@@ -238,13 +238,13 @@ pub const interrupt = struct {
     };
 
     pub fn map(source: Source, maybe_int: ?Interrupt) void {
-        get_source_map_register_for(source).* = if (maybe_int) |int| @intFromEnum(int) else 0;
+        get_source_map_register_for(source).* = if (maybe_int) |int| @backingInt(int) else 0;
     }
 
     pub fn get_mapped_interrupt(source: Source) ?Interrupt {
         const source_raw: u4 = @truncate(get_source_map_register_for(source).*);
         if (source_raw != 0) {
-            return @enumFromInt(source_raw);
+            return @fromBackingInt(source_raw);
         } else {
             return null;
         }
@@ -253,7 +253,7 @@ pub const interrupt = struct {
     fn get_source_map_register_for(source: Source) *volatile u32 {
         // using MAC_INTR_MAP here as it's the first map register.
         const base: usize = @intFromPtr(&INTERRUPT_CORE0.MAC_INTR_MAP);
-        return @ptrFromInt(base + @sizeOf(u32) * @as(usize, @intFromEnum(source)));
+        return @ptrFromInt(base + @sizeOf(u32) * @as(usize, @backingInt(source)));
     }
 
     pub const Status = struct {
@@ -267,7 +267,7 @@ pub const interrupt = struct {
         }
 
         pub fn is_set(status: Status, source: Source) bool {
-            return status.reg & (@as(u61, 1) << @intFromEnum(source)) != 0;
+            return status.reg & (@as(u61, 1) << @backingInt(source)) != 0;
         }
     };
 
@@ -519,7 +519,7 @@ fn unhandled(_: *TrapFrame) linksection(".ram_text") callconv(.c) void {
     if (mcause.is_interrupt != 0) {
         std.log.err("unhandled interrupt {} occurred!", .{mcause.code});
     } else {
-        const exception: Exception = @enumFromInt(mcause.code);
+        const exception: Exception = @fromBackingInt(mcause.code);
         std.log.err("unhandled exception {s} occurred at {x}!", .{ @tagName(exception), csr.mepc.read_raw() });
 
         switch (exception) {
@@ -541,17 +541,17 @@ fn _handle_interrupt(
     if (mcause.is_interrupt != 0) {
         // interrupt
 
-        const int: Interrupt = @enumFromInt(mcause.code);
+        const int: Interrupt = @fromBackingInt(mcause.code);
         const priority = interrupt.get_priority(int);
 
         // low priority interrupts can be preempted by higher priority interrupts
-        if (@intFromEnum(priority) < 15) {
+        if (@backingInt(priority) < 15) {
             const mepc = csr.mepc.read_raw();
             const mstatus = csr.mstatus.read_raw();
             const mtval = csr.mtval.read_raw();
 
             const prev_thresh = interrupt.get_priority_threshold();
-            interrupt.set_priority_threshold(@enumFromInt(@intFromEnum(priority) + 1));
+            interrupt.set_priority_threshold(@fromBackingInt(@backingInt(priority) + 1));
 
             interrupt.enable_interrupts();
 

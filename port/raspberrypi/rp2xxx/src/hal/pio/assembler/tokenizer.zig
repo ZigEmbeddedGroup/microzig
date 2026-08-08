@@ -2146,7 +2146,7 @@ test "tokenize.instr.irq.relnext" {
         .clear = false,
         .wait = false,
         .num = 2,
-        .idxmode = @intFromEnum(Token(.RP2350).Instruction.Irq.IdxMode.next),
+        .idxmode = @backingInt(Token(.RP2350).Instruction.Irq.IdxMode.next),
     }, tokens.get(0));
 }
 

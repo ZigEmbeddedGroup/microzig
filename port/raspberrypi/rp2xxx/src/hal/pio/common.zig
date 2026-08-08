@@ -106,7 +106,7 @@ pub fn PinMapping(comptime Count: type) type {
         high: gpio.Pin,
 
         fn count(range: @This()) Count {
-            return @intCast(@intFromEnum(range.high) - @intFromEnum(range.low) + 1);
+            return @intCast(@backingInt(range.high) - @backingInt(range.low) + 1);
         }
     };
 }
@@ -134,7 +134,7 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
             if (offset + program.instructions.len > 32)
                 return false;
 
-            const used_mask = UsedInstructionSpace(chip).val[@intFromEnum(self)];
+            const used_mask = UsedInstructionSpace(chip).val[@backingInt(self)];
             const program_mask = (program.get_mask() << offset);
 
             // We can add the program if the masks don't overlap, if there is
@@ -172,7 +172,7 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
                 };
 
             const program_mask = program.get_mask();
-            UsedInstructionSpace(chip).val[@intFromEnum(self)] |= program_mask << offset;
+            UsedInstructionSpace(chip).val[@backingInt(self)] |= program_mask << offset;
         }
 
         /// Public functions will need to lock independently, so only exposing this function for now
@@ -189,12 +189,12 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
             // TODO: const lock = hw.Lock.claim()
             // defer lock.unlock();
 
-            const claimed_mask = ClaimedStateMachines(chip).val[@intFromEnum(self)];
+            const claimed_mask = ClaimedStateMachines(chip).val[@backingInt(self)];
             return for (0..4) |i| {
                 const sm_mask = (@as(u4, 1) << @as(u2, @intCast(i)));
                 if (0 == (claimed_mask & sm_mask)) {
-                    ClaimedStateMachines(chip).val[@intFromEnum(self)] |= sm_mask;
-                    break @as(StateMachine, @enumFromInt(i));
+                    ClaimedStateMachines(chip).val[@backingInt(self)] |= sm_mask;
+                    break @as(StateMachine, @fromBackingInt(i));
                 }
             } else error.NoSpace;
         }
@@ -211,13 +211,13 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
             const pio_regs = self.get_regs();
             // SM0_CLKDIV is the first one, which is why we are taking its address
             const sm_regs = @as(*volatile [4]StateMachine.Regs, @ptrCast(&pio_regs.SM0_CLKDIV));
-            return &sm_regs[@intFromEnum(sm)];
+            return &sm_regs[@backingInt(sm)];
         }
 
         pub fn get_irq_regs(self: EnumType, irq: Irq) *volatile Irq.Regs {
             const pio_regs = self.get_regs();
             const irq_regs = @as(*volatile [2]Irq.Regs, @ptrCast(&pio_regs.IRQ0_INTE));
-            return &irq_regs[@intFromEnum(irq)];
+            return &irq_regs[@backingInt(irq)];
         }
 
         pub fn sm_set_clkdiv(self: EnumType, sm: StateMachine, options: ClkDivOptions) void {
@@ -232,7 +232,7 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
         }
 
         fn pin_to_index(self: EnumType, pin: gpio.Pin) error{InvalidPin}!u5 {
-            const index = @intFromEnum(pin);
+            const index = @backingInt(pin);
             const base = self.get_gpio_base();
             if (index < base or index >= base + 32) {
                 return error.InvalidPin;
@@ -287,14 +287,14 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
 
             for (0..count) |counter| {
                 const pin_config: PinMappingOptions = .{
-                    .set = .single(@enumFromInt(@intFromEnum(base) + counter)),
+                    .set = .single(@fromBackingInt(@backingInt(base) + counter)),
                 };
                 try sm_set_pin_mappings(self, sm, pin_config, false);
 
                 self.sm_exec(sm, .{
                     .payload = .{
                         .set = .{
-                            .data = @intFromEnum(dir),
+                            .data = @backingInt(dir),
                             .destination = .pindirs,
                         },
                     },
@@ -313,7 +313,7 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
 
             for (0..count) |counter| {
                 const pin_config: PinMappingOptions = .{
-                    .set = .single(@enumFromInt(@intFromEnum(base) + counter)),
+                    .set = .single(@fromBackingInt(@backingInt(base) + counter)),
                 };
                 try sm_set_pin_mappings(self, sm, pin_config, false);
                 self.sm_exec(sm, .{
@@ -334,13 +334,13 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
         pub fn sm_get_rx_fifo(self: EnumType, sm: StateMachine) *volatile u32 {
             const regs = self.get_regs();
             const fifos = @as(*volatile [4]u32, @ptrCast(&regs.RXF0));
-            return &fifos[@intFromEnum(sm)];
+            return &fifos[@backingInt(sm)];
         }
 
         pub fn sm_is_rx_fifo_empty(self: EnumType, sm: StateMachine) bool {
             const regs = self.get_regs();
             const rxempty = regs.FSTAT.read().RXEMPTY;
-            return (rxempty & (@as(u4, 1) << @intFromEnum(sm))) != 0;
+            return (rxempty & (@as(u4, 1) << @backingInt(sm))) != 0;
         }
 
         pub fn sm_blocking_read(self: EnumType, sm: StateMachine) u32 {
@@ -356,13 +356,13 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
         pub fn sm_is_tx_fifo_full(self: EnumType, sm: StateMachine) bool {
             const regs = self.get_regs();
             const txfull = regs.FSTAT.read().TXFULL;
-            return (txfull & (@as(u4, 1) << @intFromEnum(sm))) != 0;
+            return (txfull & (@as(u4, 1) << @backingInt(sm))) != 0;
         }
 
         pub fn sm_get_tx_fifo(self: EnumType, sm: StateMachine) *volatile u32 {
             const regs = self.get_regs();
             const fifos = @as(*volatile [4]u32, @ptrCast(&regs.TXF0));
-            return &fifos[@intFromEnum(sm)];
+            return &fifos[@backingInt(sm)];
         }
 
         /// this function writes to the TX FIFO without checking that it's
@@ -383,16 +383,16 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
 
             var value = regs.CTRL.read();
             if (enabled)
-                value.SM_ENABLE |= @as(u4, 1) << @intFromEnum(sm)
+                value.SM_ENABLE |= @as(u4, 1) << @backingInt(sm)
             else
-                value.SM_ENABLE &= ~(@as(u4, 1) << @intFromEnum(sm));
+                value.SM_ENABLE &= ~(@as(u4, 1) << @backingInt(sm));
 
             regs.CTRL.write(value);
         }
 
         pub fn sm_clear_debug(self: EnumType, sm: StateMachine) void {
             const regs = self.get_regs();
-            const mask: u4 = (@as(u4, 1) << @intFromEnum(sm));
+            const mask: u4 = (@as(u4, 1) << @backingInt(sm));
 
             // write 1 to clear this register
             regs.FDEBUG.modify(.{
@@ -404,7 +404,7 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
         }
 
         pub fn sm_fifo_level(self: EnumType, sm: StateMachine, fifo: Fifo) u4 {
-            const snum = @intFromEnum(sm);
+            const snum = @backingInt(sm);
             const offset: u5 = switch (fifo) {
                 .tx => 0,
                 .rx => 4,
@@ -420,7 +420,7 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
             sm: StateMachine,
             source: Irq.Source,
         ) u5 {
-            return (@as(u5, 4) * @intFromEnum(source)) + @intFromEnum(sm);
+            return (@as(u5, 4) * @backingInt(source)) + @backingInt(sm);
         }
         pub fn sm_clear_interrupt(
             self: EnumType,
@@ -446,7 +446,7 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
         }
 
         pub fn sm_restart(self: EnumType, sm: StateMachine) void {
-            const mask: u4 = (@as(u4, 1) << @intFromEnum(sm));
+            const mask: u4 = (@as(u4, 1) << @backingInt(sm));
             const regs = self.get_regs();
             regs.CTRL.modify(.{
                 .SM_RESTART = mask,
@@ -454,7 +454,7 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
         }
 
         pub fn sm_clkdiv_restart(self: EnumType, sm: StateMachine) void {
-            const mask: u4 = (@as(u4, 1) << @intFromEnum(sm));
+            const mask: u4 = (@as(u4, 1) << @backingInt(sm));
             const regs = self.get_regs();
             regs.CTRL.modify(.{
                 .CLKDIV_RESTART = mask,

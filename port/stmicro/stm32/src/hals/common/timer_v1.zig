@@ -193,7 +193,7 @@ pub const GPTimer = struct {
         regs.CR1.modify(.{
             .CKD = config.clock_division,
             .OPM = @as(u1, @intFromBool(config.one_pulse_mode)),
-            .ARPE = @as(u1, @intFromEnum(config.auto_reload_mode)),
+            .ARPE = @as(u1, @backingInt(config.auto_reload_mode)),
             .URS = config.event_source,
         });
         regs.CR2.modify(.{
@@ -288,7 +288,7 @@ pub const GPTimer = struct {
     }
 
     pub inline fn set_auto_relaod_mode(self: *const GPTimer, mode: ARRModes) void {
-        self.regs.CR1.modify(.{ .ARPE = @intFromEnum(mode) });
+        self.regs.CR1.modify(.{ .ARPE = @backingInt(mode) });
     }
 
     pub fn set_counter_mode(self: *const GPTimer, mode: CounterMode) void {
@@ -392,8 +392,8 @@ pub const GPTimer = struct {
             .ETPS = config.ext_trig_prescaler,
             .ETF = config.ext_trig_filter,
             .MSM = config.sync,
-            .TS = @as(u3, @intFromEnum(config.trigger_source)),
-            .SMS = @as(u3, @intFromEnum(config.mode)),
+            .TS = @as(u3, @backingInt(config.trigger_source)),
+            .SMS = @as(u3, @backingInt(config.mode)),
         });
     }
 
@@ -463,7 +463,7 @@ pub const GPTimer = struct {
             CCMR.raw &= ~(@as(u32, 0b1) << (offset + 3)); //CCxS bits
         }
 
-        const mode: u32 = @intFromEnum(config.mode);
+        const mode: u32 = @backingInt(config.mode);
         CCMR.raw &= ~(@as(u32, 0b111) << offset + 4); //clear mode bits
         CCMR.raw |= mode << (offset + 4); //set mode bits
 
@@ -477,8 +477,8 @@ pub const GPTimer = struct {
     pub fn configure_input(self: *const GPTimer, channel: u2, config: Capture) void {
         const regs = self.regs;
         const CCMR = if (channel < 2) &regs.CCMR_Input[0] else &regs.CCMR_Input[1];
-        const ccs: CCMR_Input_CCS = @enumFromInt(@intFromEnum(config.mode));
-        const psc: u2 = @intFromEnum(config.prescaler);
+        const ccs: CCMR_Input_CCS = @fromBackingInt(@backingInt(config.mode));
+        const psc: u2 = @backingInt(config.prescaler);
         if (channel % 2 == 0) {
             CCMR.modify(.{
                 .@"CCS[0]" = ccs,

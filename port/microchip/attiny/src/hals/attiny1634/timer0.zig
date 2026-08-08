@@ -13,7 +13,7 @@ pub fn configure_phase_correct_pwm_a(prescaler: Prescaler) void {
     // ATtiny1634 datasheet section 11.7.3, page 83: phase-correct PWM on OC0A.
     // https://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-8303-8-bit-AVR-Microcontroller-tinyAVR-ATtiny1634_Datasheet.pdf
     regs.write(regs.TCCR0A, (1 << 7) | (1 << 0));
-    regs.write(regs.TCCR0B, @intFromEnum(prescaler));
+    regs.write(regs.TCCR0B, @backingInt(prescaler));
 }
 
 pub inline fn set_compare_a(value: u8) void {

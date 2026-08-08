@@ -53,7 +53,7 @@ pub fn notify(task_handle: TaskHandle, value: u32, action: Action) Error!void {
         task_handle,
         0, // index
         value,
-        @intFromEnum(action),
+        @backingInt(action),
         null, // don't care about previous value
     );
     if (rc != c.pdPASS) return error.Failure;
@@ -65,7 +65,7 @@ pub fn notify_indexed(task_handle: TaskHandle, index: u32, value: u32, action: A
         task_handle,
         @intCast(index),
         value,
-        @intFromEnum(action),
+        @backingInt(action),
         null,
     );
     if (rc != c.pdPASS) return error.Failure;
@@ -78,7 +78,7 @@ pub fn notify_and_query(task_handle: TaskHandle, value: u32, action: Action) Err
         task_handle,
         0,
         value,
-        @intFromEnum(action),
+        @backingInt(action),
         &previous,
     );
     if (rc != c.pdPASS) return error.Failure;
@@ -99,7 +99,7 @@ pub fn notify_from_isr(task_handle: TaskHandle, value: u32, action: Action) ISR_
         task_handle,
         0,
         value,
-        @intFromEnum(action),
+        @backingInt(action),
         null,
         &woken,
     );

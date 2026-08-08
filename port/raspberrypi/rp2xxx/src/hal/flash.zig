@@ -109,7 +109,7 @@ export fn _range_erase(offset: u32, count: u32) linksection(".ram_text") void {
 
     rom.connect_internal_flash();
     rom.flash_exit_xip();
-    rom.flash_range_erase(offset, count, BLOCK_SIZE, @intFromEnum(Command.block_erase));
+    rom.flash_range_erase(offset, count, BLOCK_SIZE, @backingInt(Command.block_erase));
     rom.flash_flush_cache();
 
     boot2.flash_enable_xip();
@@ -213,7 +213,7 @@ pub fn id() [id_data_len]u8 {
 
     var tx_buf: [id_total_len]u8 = undefined;
     var rx_buf: [id_total_len]u8 = undefined;
-    tx_buf[0] = @intFromEnum(Command.ruid_cmd);
+    tx_buf[0] = @backingInt(Command.ruid_cmd);
     cmd(&tx_buf, &rx_buf);
 
     id_buf = undefined;

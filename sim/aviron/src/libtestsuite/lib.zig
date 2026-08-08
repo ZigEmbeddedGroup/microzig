@@ -26,7 +26,7 @@ pub inline fn write(comptime chan: Channel, string: []const u8) void {
             \\out %[port], %[code]
             :
             : [code] "r" (c),
-              [port] "i" (@intFromEnum(chan)),
+              [port] "i" (@backingInt(chan)),
         );
     }
 }

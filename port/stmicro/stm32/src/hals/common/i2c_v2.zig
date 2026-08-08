@@ -136,7 +136,7 @@ const I2C = struct {
 
         regs.CR2.modify(.{
             .NBYTES = @as(u8, @intCast(chunks.len)),
-            .SADD = @as(u10, @intCast(@intFromEnum(addr))) << 1,
+            .SADD = @as(u10, @intCast(@backingInt(addr))) << 1,
             .DIR = .Read,
         });
         regs.CR2.modify(.{
@@ -159,7 +159,7 @@ const I2C = struct {
 
         regs.CR2.modify(.{
             .NBYTES = @as(u8, @intCast(chunks.len)),
-            .SADD = @as(u10, @intCast(@intFromEnum(addr))) << 1,
+            .SADD = @as(u10, @intCast(@backingInt(addr))) << 1,
             .AUTOEND = if (restart) .Software else .Automatic,
             .DIR = .Write,
         });

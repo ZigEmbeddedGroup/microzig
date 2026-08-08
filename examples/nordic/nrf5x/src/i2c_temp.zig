@@ -49,7 +49,7 @@ pub fn main() !void {
     // Create i2c device
     var i2c_device = I2C_Device.init(i2c0, null);
     // Pass i2c device to driver to create sensor instance
-    const temp_sensor = try TMP117.init(i2c_device.i2c_device(), @enumFromInt(0x48));
+    const temp_sensor = try TMP117.init(i2c_device.i2c_device(), @fromBackingInt(0x48));
 
     const temp_sensor_address = 0x48;
     var temp_buf: [2]u8 = undefined;
@@ -78,12 +78,12 @@ pub fn main() !void {
     });
 
     std.log.info("Writing config", .{});
-    try i2c0.writev_blocking(@enumFromInt(temp_sensor_address), &.{&cbuf}, null);
+    try i2c0.writev_blocking(@fromBackingInt(temp_sensor_address), &.{&cbuf}, null);
 
     std.log.info("Reading temp", .{});
     for (0..5) |_| {
         const write_buf = [_]u8{0}; // Read temperature register
-        try i2c0.writev_then_readv_blocking(@enumFromInt(temp_sensor_address), &.{&write_buf}, &.{&temp_buf}, null);
+        try i2c0.writev_then_readv_blocking(@fromBackingInt(temp_sensor_address), &.{&write_buf}, &.{&temp_buf}, null);
         const temp_u = std.mem.readInt(u16, &temp_buf, .big);
         const temp = @as(f32, @floatFromInt(temp_u)) * 7.8125E-3;
         std.log.info("Temp: {d:0.2}°C", .{temp});
@@ -100,12 +100,12 @@ pub fn main() !void {
     });
 
     std.log.info("Writing config", .{});
-    try i2c0dma.write_blocking(@enumFromInt(temp_sensor_address), &cbuf, null);
+    try i2c0dma.write_blocking(@fromBackingInt(temp_sensor_address), &cbuf, null);
 
     std.log.info("Reading temp", .{});
     for (0..5) |_| {
         const write_buf = [_]u8{0}; // Read temperature register
-        try i2c0dma.write_then_read_blocking(@enumFromInt(temp_sensor_address), &write_buf, &temp_buf, null);
+        try i2c0dma.write_then_read_blocking(@fromBackingInt(temp_sensor_address), &write_buf, &temp_buf, null);
         const temp_u = std.mem.readInt(u16, &temp_buf, .big);
         const temp = @as(f32, @floatFromInt(temp_u)) * 7.8125E-3;
         std.log.info("Temp: {d:0.2}°C", .{temp});

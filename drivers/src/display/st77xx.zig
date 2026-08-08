@@ -326,7 +326,7 @@ pub fn ST77xx_Generic(driver_cfg: DriverConfig, display_cfg: DisplayConfig) type
             try dri.dd.connect();
             defer dri.dd.disconnect();
 
-            try dri.dd.write(&[_]u8{@intFromEnum(cmd)});
+            try dri.dd.write(&[_]u8{@backingInt(cmd)});
 
             try dri.set_spi_mode(.data);
             try dri.dd.write(params);

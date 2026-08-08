@@ -52,13 +52,13 @@ pub fn configure_fast_pwm(config: FastPwmConfig) void {
     switch (config.output) {
         .a => {
             regs.write(regs.TCCR1, 0x40 |
-                (@as(u8, @intFromEnum(config.compare)) << 4) |
-                @as(u8, @intFromEnum(config.prescaler)));
+                (@as(u8, @backingInt(config.compare)) << 4) |
+                @as(u8, @backingInt(config.prescaler)));
             regs.clear_bits(regs.GTCCR, 0b0111_0000);
         },
         .b => {
-            regs.write(regs.TCCR1, @as(u8, @intFromEnum(config.prescaler)));
-            regs.write(regs.GTCCR, 0x40 | (@as(u8, @intFromEnum(config.compare)) << 4));
+            regs.write(regs.TCCR1, @as(u8, @backingInt(config.prescaler)));
+            regs.write(regs.GTCCR, 0x40 | (@as(u8, @backingInt(config.compare)) << 4));
         },
     }
 }
@@ -80,9 +80,9 @@ pub inline fn counter() u8 {
 }
 
 pub inline fn enable_interrupt(interrupt: Interrupt) void {
-    regs.set_bits(regs.TIMSK, @intFromEnum(interrupt));
+    regs.set_bits(regs.TIMSK, @backingInt(interrupt));
 }
 
 pub inline fn disable_interrupt(interrupt: Interrupt) void {
-    regs.clear_bits(regs.TIMSK, @intFromEnum(interrupt));
+    regs.clear_bits(regs.TIMSK, @backingInt(interrupt));
 }

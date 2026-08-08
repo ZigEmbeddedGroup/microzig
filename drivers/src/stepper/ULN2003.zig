@@ -180,7 +180,7 @@ pub const ULN2003 = struct {
         }
         // Update all pins based on the bit pattern
         for (0.., self.in) |i, pin| {
-            try pin.write(@enumFromInt(@intFromBool((pattern & (@as(u4, 1) << @intCast(i))) != 0)));
+            try pin.write(@fromBackingInt(@intFromBool((pattern & (@as(u4, 1) << @intCast(i))) != 0)));
         }
     }
 

@@ -91,18 +91,18 @@ pub const Endpoint = struct {
     pub fn get_pid(self: *const Endpoint, dir: StatusDir) PID {
         switch (dir) {
             .RX => {
-                return @enumFromInt(self.rx_pid);
+                return @fromBackingInt(self.rx_pid);
             },
             .TX => {
-                return @enumFromInt(self.tx_pid);
+                return @fromBackingInt(self.tx_pid);
             },
         }
     }
 
     pub fn force_change(self: *Endpoint, dir: StatusDir, val: PID) PID {
         switch (dir) {
-            .RX => self.rx_pid = @intCast(@intFromEnum(val)),
-            .TX => self.tx_pid = @intCast(@intFromEnum(val)),
+            .RX => self.rx_pid = @intCast(@backingInt(val)),
+            .TX => self.tx_pid = @intCast(@backingInt(val)),
         }
         return val;
     }
@@ -119,7 +119,7 @@ pub const EpControl = enum {
     EPC7,
 
     fn check_ep(ep: EpControl) EndpointError!usize {
-        const ep_num: usize = @intFromEnum(ep);
+        const ep_num: usize = @backingInt(ep);
         if (endpoints[ep_num] == null) {
             return error.UninitEndpoint;
         }
@@ -223,7 +223,7 @@ fn usb_check(config: Config) InitError!PMA.Config {
     for (config.endpoints) |epconf| {
         const ep_size = epconf.rx_buffer_size.calc_rx_size();
         const ep_bit: u16 = @as(u16, 1) << epconf.endpoint;
-        const epc_bit: u16 = @as(u16, 1) << @as(u4, @intFromEnum(epconf.ep_control));
+        const epc_bit: u16 = @as(u16, 1) << @as(u4, @backingInt(epconf.ep_control));
 
         if (epconf.endpoint == 0) {
             if (epconf.ep_type != .Control) comptime_or_runtime_err(
@@ -252,7 +252,7 @@ fn usb_check(config: Config) InitError!PMA.Config {
             comptime_or_runtime_err(
                 InitError.InvalidEndpoint,
                 "EPC{d} has already been taken\n",
-                .{@as(u4, @intFromEnum(epconf.ep_control))},
+                .{@as(u4, @backingInt(epconf.ep_control))},
             );
         }
 
@@ -307,7 +307,7 @@ fn inner_init(config: Config, PMA_conf: PMA.Config, startup: Duration) InitError
     USB.ISTR.raw = 0;
 
     for (config.endpoints) |ep_conf| {
-        const epc_num: usize = @intFromEnum(ep_conf.ep_control);
+        const epc_num: usize = @backingInt(ep_conf.ep_control);
         endpoints[epc_num] = ep_conf;
     }
     try PMA.btable_init(PMA_conf);
@@ -331,16 +331,16 @@ fn inner_init(config: Config, PMA_conf: PMA.Config, startup: Duration) InitError
 
 fn change_rx_status(status: USBTypes.STAT, pid: PID, EPC: usize) void {
     const corrent = USB.EPR[EPC].read();
-    const valid: u2 = @as(u2, @intFromEnum(corrent.STAT_RX)) ^ @as(u2, @intFromEnum(status));
+    const valid: u2 = @as(u2, @backingInt(corrent.STAT_RX)) ^ @as(u2, @backingInt(status));
     const DTOG_val = switch (pid) {
         .no_change, .endpoint_ctr => @as(u1, 0),
         .force_data0 => corrent.DTOG_RX,
         .force_data1 => corrent.DTOG_RX ^ @as(u1, 1),
     };
     USB.EPR[EPC].modify(.{
-        .STAT_RX = @as(USBTypes.STAT, @enumFromInt(valid)),
+        .STAT_RX = @as(USBTypes.STAT, @fromBackingInt(valid)),
         .DTOG_RX = DTOG_val,
-        .STAT_TX = @as(USBTypes.STAT, @enumFromInt(0)),
+        .STAT_TX = @as(USBTypes.STAT, @fromBackingInt(0)),
         .DTOG_TX = 0,
     });
 }
@@ -353,12 +353,12 @@ fn change_tx_status(status: USBTypes.STAT, pid: PID, EPC: usize) void {
         .force_data1 => corrent.DTOG_TX ^ @as(u1, 1),
     };
 
-    const valid: u2 = @as(u2, @intFromEnum(corrent.STAT_TX)) ^ @as(u2, @intFromEnum(status));
+    const valid: u2 = @as(u2, @backingInt(corrent.STAT_TX)) ^ @as(u2, @backingInt(status));
 
     USB.EPR[EPC].modify(.{
-        .STAT_TX = @as(USBTypes.STAT, @enumFromInt(valid)),
+        .STAT_TX = @as(USBTypes.STAT, @fromBackingInt(valid)),
         .DTOG_TX = DTOG_val,
-        .STAT_RX = @as(USBTypes.STAT, @enumFromInt(0)),
+        .STAT_RX = @as(USBTypes.STAT, @fromBackingInt(0)),
         .DTOG_RX = 0,
     });
 }
@@ -456,9 +456,9 @@ pub fn usb_handler() callconv(.c) void {
             if (EPR.CTR_RX == 1) {
                 USB.EPR[ep].modify(.{
                     .CTR_RX = 0,
-                    .STAT_RX = @as(USBTypes.STAT, @enumFromInt(0)),
+                    .STAT_RX = @as(USBTypes.STAT, @fromBackingInt(0)),
                     .DTOG_RX = 0,
-                    .STAT_TX = @as(USBTypes.STAT, @enumFromInt(0)),
+                    .STAT_TX = @as(USBTypes.STAT, @fromBackingInt(0)),
                     .DTOG_TX = 0,
                 });
                 epc.toggle_pid(.RX);
@@ -476,9 +476,9 @@ pub fn usb_handler() callconv(.c) void {
             if (EPR.CTR_TX == 1) {
                 USB.EPR[ep].modify(.{
                     .CTR_TX = 0,
-                    .STAT_RX = @as(USBTypes.STAT, @enumFromInt(0)),
+                    .STAT_RX = @as(USBTypes.STAT, @fromBackingInt(0)),
                     .DTOG_RX = 0,
-                    .STAT_TX = @as(USBTypes.STAT, @enumFromInt(0)),
+                    .STAT_TX = @as(USBTypes.STAT, @fromBackingInt(0)),
                     .DTOG_TX = 0,
                 });
                 epc.toggle_pid(.TX);

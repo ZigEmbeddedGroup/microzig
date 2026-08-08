@@ -43,7 +43,7 @@ pub fn main() void {
         clock,
         host_time,
         file_name,
-        @intFromEnum(file),
+        @backingInt(file),
     });
 
     const f_size = file.size() catch return;
