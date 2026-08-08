@@ -1,4 +1,3 @@
-
 const common = @import("common.zig");
 
 const gpio = @import("../gpio.zig");

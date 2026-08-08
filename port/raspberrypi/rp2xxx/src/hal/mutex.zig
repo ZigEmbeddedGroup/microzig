@@ -1,4 +1,3 @@
-
 const microzig = @import("microzig");
 
 const Spinlock = microzig.hal.multicore.Spinlock;

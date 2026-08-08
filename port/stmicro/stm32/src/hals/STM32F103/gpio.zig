@@ -1,4 +1,3 @@
-
 const microzig = @import("microzig");
 pub const peripherals = microzig.chip.peripherals;
 

@@ -1,4 +1,3 @@
-
 pub const microzig = @import("microzig");
 
 pub const hal = microzig.hal;

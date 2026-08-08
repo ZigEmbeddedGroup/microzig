@@ -1,4 +1,3 @@
-
 pub inline fn exit(code: u8) noreturn {
     asm volatile (
         \\out 0x00, %[code]

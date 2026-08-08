@@ -1,4 +1,3 @@
-
 pub const Test = struct {
     address: u64,
     expected: struct {
