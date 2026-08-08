@@ -487,7 +487,7 @@ pub const LP_I2C = enum(u4) {
 
 // TODO: check for reserved addresses
 fn writev(d: *anyopaque, addr: I2C_Device.Address, datagrams: []const []const u8) I2C_Device.Error!void {
-    const dev: LP_I2C = @fromBackingInt(@intFromPtr(d));
+    const dev: LP_I2C = @fromBackingInt(@intCast(@intFromPtr(d)));
     const message: LP_I2C.I2C_Msg = .{ .address = @backingInt(addr), .flags = .{ .direction = .write }, .chunks = .{ .write = datagrams } };
     dev.transfer_blocking(&.{message}) catch |err| switch (err) {
         LP_I2C.Error.UnexpectedNack, LP_I2C.Error.FifoError, LP_I2C.Error.BusBusy, LP_I2C.Error.ArbitrationLost => {
@@ -498,7 +498,7 @@ fn writev(d: *anyopaque, addr: I2C_Device.Address, datagrams: []const []const u8
     };
 }
 fn readv(d: *anyopaque, addr: I2C_Device.Address, datagrams: []const []u8) I2C_Device.Error!usize {
-    const dev: LP_I2C = @fromBackingInt(@intFromPtr(d));
+    const dev: LP_I2C = @fromBackingInt(@intCast(@intFromPtr(d)));
     const message: LP_I2C.I2C_Msg = .{ .address = @backingInt(addr), .flags = .{ .direction = .write }, .chunks = .{ .write = datagrams } };
     dev.transfer_blocking(&.{message}) catch |err| switch (err) {
         LP_I2C.Error.UnexpectedNack, LP_I2C.Error.FifoError, LP_I2C.Error.BusBusy, LP_I2C.Error.ArbitrationLost => {
@@ -517,7 +517,7 @@ fn writev_then_readv(
     write_chunks: []const []const u8,
     read_chunks: []const []u8,
 ) I2C_Device.Error!void {
-    const dev: LP_I2C = @fromBackingInt(@intFromPtr(d));
+    const dev: LP_I2C = @fromBackingInt(@intCast(@intFromPtr(d)));
     const messages: []const LP_I2C.I2C_Msg = &.{ .{ .address = @backingInt(addr), .flags = .{ .direction = .write }, .chunks = .{ .write = write_chunks } }, .{ .address = @backingInt(addr), .flags = .{ .direction = .read }, .chunks = .{ .read = read_chunks } } };
     dev.transfer_blocking(messages) catch |err| switch (err) {
         LP_I2C.Error.UnexpectedNack, LP_I2C.Error.FifoError, LP_I2C.Error.BusBusy, LP_I2C.Error.ArbitrationLost => {

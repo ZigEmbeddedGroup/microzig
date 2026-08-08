@@ -84,7 +84,7 @@ pub fn num(n: u9) Pin {
         },
     }
 
-    return @fromBackingInt(n);
+    return @fromBackingInt(@intCast(n));
 }
 
 pub const mask = switch (chip) {

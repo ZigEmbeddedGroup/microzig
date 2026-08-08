@@ -187,7 +187,7 @@ pub const UART = struct {
                 });
             },
             else => |ps| {
-                const val: PS = @fromBackingInt(@backingInt(ps) - 1);
+                const val: PS = @fromBackingInt(@intCast(@backingInt(ps) - 1));
                 regs.CR1.modify(.{
                     .PCE = 1,
                     .PS = val,

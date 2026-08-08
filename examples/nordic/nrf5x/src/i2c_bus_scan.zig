@@ -43,7 +43,7 @@ pub fn main() !void {
         .sda_pin = gpio.num(0, 10),
     });
     for (0..std.math.maxInt(u7)) |addr| {
-        const a: i2c.Address = @fromBackingInt(addr);
+        const a: i2c.Address = @fromBackingInt(@intCast(addr));
 
         var rx_data: [1]u8 = undefined;
         _ = i2c0.read_blocking(a, &rx_data, null) catch |e| {
@@ -65,7 +65,7 @@ pub fn main() !void {
         .sda_pin = gpio.num(0, 10),
     });
     for (0..std.math.maxInt(u7)) |addr| {
-        const a: i2cdma.Address = @fromBackingInt(addr);
+        const a: i2cdma.Address = @fromBackingInt(@intCast(addr));
 
         var rx_data: [1]u8 = undefined;
         _ = i2c0dma.read_blocking(a, &rx_data, null) catch |e| {

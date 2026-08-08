@@ -220,7 +220,7 @@ pub const I2C = struct {
 
         regs.CCR.modify(.{
             .CCR = @as(u12, @intCast(CCR)),
-            .DUTY = @as(DUTY, @fromBackingInt(duty)),
+            .DUTY = @as(DUTY, @fromBackingInt(@intCast(duty))),
             .F_S = mode,
         });
 
