@@ -4,8 +4,6 @@ const assert = std.debug.assert;
 const Allocator = std.mem.Allocator;
 
 const Database = @import("../Database.zig");
-const Arch = Database.Arch;
-const DeviceID = Database.DeviceID;
 
 const gen = @import("../gen.zig");
 

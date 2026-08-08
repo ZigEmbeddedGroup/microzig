@@ -1,4 +1,3 @@
-const std = @import("std");
 
 pub inline fn exit(code: u8) noreturn {
     asm volatile (

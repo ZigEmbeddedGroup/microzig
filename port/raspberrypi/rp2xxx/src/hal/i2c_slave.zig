@@ -44,19 +44,13 @@
 //! parameter set to `false`.  The user can return 0 if no more data is available.
 //!
 
-const std = @import("std");
 const microzig = @import("microzig");
 const i2c = microzig.hal.i2c;
 
-const mdf = microzig.drivers;
 const peripherals = microzig.chip.peripherals;
 const I2C0 = peripherals.I2C0;
 const I2C1 = peripherals.I2C1;
 const I2cRegs = microzig.chip.types.peripherals.I2C0;
-
-const fifo_length = 16;
-
-const gpio = @import("gpio.zig");
 
 pub const RXCallback = *const fn (data: []const u8, first: bool, last: bool, gen_call: bool, param: ?*anyopaque) void;
 pub const TXCallback = *const fn (data: []u8, first: bool, param: ?*anyopaque) usize;

@@ -1,12 +1,9 @@
-const std = @import("std");
 const microzig = @import("microzig");
 const I2C = @import("i2c.zig");
 const drivers = microzig.drivers.base;
 const Duration = microzig.drivers.time.Duration;
 
 const DatagramDevice = drivers.DatagramDevice;
-const Stream_Device = drivers.Stream_Device;
-const Digital_IO = drivers.Digital_IO;
 
 const I2CError = drivers.I2C_Device.Error;
 // TODO: The STM HAL still has its own I2CAddress type, since it supports 10 bit addresses. For now

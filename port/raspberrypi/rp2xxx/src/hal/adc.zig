@@ -6,8 +6,6 @@ const assert = std.debug.assert;
 const microzig = @import("microzig");
 const ADC = microzig.chip.peripherals.ADC;
 const gpio = @import("gpio.zig");
-const resets = @import("resets.zig");
-const clocks = @import("clocks.zig");
 const compatibility = @import("compatibility.zig");
 
 const chip = compatibility.chip;

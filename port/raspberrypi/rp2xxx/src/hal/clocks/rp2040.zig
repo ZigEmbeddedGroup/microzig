@@ -15,7 +15,6 @@ const rosc_freq = common.rosc_freq;
 const pll = @import("../pll.zig");
 const microzig = @import("microzig");
 const peripherals = microzig.chip.peripherals;
-const CLOCKS = peripherals.CLOCKS;
 const WATCHDOG = peripherals.WATCHDOG;
 const AUX_SRC_SETTING_SRC_REG = common.AUX_SRC_SETTING_SRC_REG;
 

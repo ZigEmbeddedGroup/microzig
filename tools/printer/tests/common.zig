@@ -1,5 +1,3 @@
-const std = @import("std");
-const printer = @import("printer");
 
 pub const Test = struct {
     address: u64,

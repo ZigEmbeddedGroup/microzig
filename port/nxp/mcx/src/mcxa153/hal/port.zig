@@ -1,4 +1,3 @@
-const microzig = @import("microzig");
 const syscon = @import("./syscon.zig");
 const gpio = @import("./gpio.zig");
 

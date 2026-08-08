@@ -1,4 +1,3 @@
-const std = @import("std");
 const microzig = @import("microzig");
 const enums = @import("../common/enums.zig");
 const periferals = microzig.chip.peripherals;

@@ -22,8 +22,6 @@ const version: enum {
 
 const SPIM0 = peripherals.SPIM0;
 const SPIM1 = peripherals.SPIM1;
-const SPIM2 = peripherals.SPIM2;
-const SPIM3 = peripherals.SPIM3;
 
 const SpimRegs = microzig.chip.types.peripherals.SPIM0;
 

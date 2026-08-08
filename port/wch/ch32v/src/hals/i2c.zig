@@ -4,7 +4,6 @@
 //! Based on the WCH CH32V20x I2C peripheral implementation.
 //! Reference: CH32V20x Reference Manual Section on I2C
 //!
-const std = @import("std");
 const microzig = @import("microzig");
 const mdf = microzig.drivers;
 const drivers = mdf.base;

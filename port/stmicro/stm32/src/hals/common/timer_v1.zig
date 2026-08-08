@@ -1,7 +1,6 @@
 const std = @import("std");
 const microzig = @import("microzig");
 const enums = @import("enums.zig");
-const periferals = microzig.chip.peripherals;
 
 const TIM_GP16 = microzig.chip.types.peripherals.timer_v1.TIM_GP16;
 const DIR = microzig.chip.types.peripherals.timer_v1.DIR;

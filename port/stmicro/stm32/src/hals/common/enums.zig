@@ -1,4 +1,3 @@
-const std = @import("std");
 const util = @import("util.zig");
 const microzig = @import("microzig");
 

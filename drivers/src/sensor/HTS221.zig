@@ -5,11 +5,8 @@
 //! Datasheet:
 //! * HTS221: https://www.st.com/resource/en/datasheet/hts221.pdf
 //!
-const std = @import("std");
 const mdf_base = @import("../root.zig").base;
 const InterfaceError = mdf_base.I2C_Device.InterfaceError;
-
-const assert = std.debug.assert;
 
 pub const Config = struct {
     temperatureAverageSample: HTS221.AVGT,

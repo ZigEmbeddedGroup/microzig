@@ -1,7 +1,5 @@
 const std = @import("std");
 
-const logger = std.log.scoped(.flash);
-
 pub const BaseError = error{ Unsupported, InvalidSector };
 pub const WriteError = BaseError || error{ SectorOverrun, WriteDisabled };
 pub const ReadError = BaseError || error{ReadDisabled};

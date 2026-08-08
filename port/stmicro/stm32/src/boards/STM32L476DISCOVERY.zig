@@ -2,7 +2,6 @@
 // It is labeled as MB1184 C-04
 // Based on the user manual: UM1879:
 // https://www.st.com/resource/en/user_manual/um1879-discovery-kit-with-stm32l476vg-mcu-stmicroelectronics.pdf
-const std = @import("std");
 const microzig = @import("microzig");
 const hal = microzig.hal;
 const LcdRam = hal.lcd.LcdRam;

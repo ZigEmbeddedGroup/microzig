@@ -8,7 +8,6 @@
 //! https://www.pololu.com/file/0J1813/SH1106.pdf
 //!
 
-const std = @import("std");
 const mdf = @import("../root.zig");
 const common = @import("common.zig");
 

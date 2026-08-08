@@ -7,10 +7,8 @@
 //! builtins or `std.atomic.Value`.
 
 const std = @import("std");
-const builtin = @import("builtin");
 const microzig = @import("microzig");
 
-const chip = microzig.hal.compatibility.chip;
 const CriticalSection = microzig.interrupt.CriticalSection;
 
 const atomic_spinlock: microzig.hal.multicore.Spinlock = .atomics;

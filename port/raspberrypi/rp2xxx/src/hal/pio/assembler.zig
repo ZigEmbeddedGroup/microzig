@@ -1,7 +1,5 @@
 const std = @import("std");
-const assert = std.debug.assert;
 
-const microzig = @import("microzig");
 const BoundedArray = @import("bounded-array").BoundedArray;
 
 const Chip = @import("../chip.zig").Chip;

@@ -1,4 +1,3 @@
-const microzig = @import("microzig");
 pub const rcc = @import("./STM32F103/rcc.zig");
 pub const pins = @import("./STM32F103/pins.zig");
 pub const gpio = @import("./STM32F103/gpio.zig");

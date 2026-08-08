@@ -1,8 +1,5 @@
 //! CYW43 3-wire SPI driver build on PIO
 //! Code based on embassy cyw43-pio driver https://github.com/embassy-rs/embassy/tree/main/cyw43-pio (last commit: d41eeea)
-const std = @import("std");
-const mem = std.mem;
-const microzig = @import("microzig");
 const hal = @import("../hal.zig");
 
 const cyw43spi_program = blk: {

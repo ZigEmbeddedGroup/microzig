@@ -6,8 +6,6 @@ const SPI1_reg = peripherals.SPI1;
 
 const clocks = @import("clocks.zig");
 const dma = @import("dma.zig");
-const resets = @import("resets.zig");
-const time = @import("time.zig");
 const hw = @import("hw.zig");
 
 const SpiRegs = microzig.chip.types.peripherals.SPI0;
