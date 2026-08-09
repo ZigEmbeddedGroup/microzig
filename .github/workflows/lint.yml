@@ -15,7 +15,7 @@ jobs:
     steps:
       # SECURITY: Checkout base branch for linter binary
       - name: Checkout base branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.base_ref }}
           path: base
@@ -32,11 +32,12 @@ jobs:
 
       # Now checkout PR code to analyze (but not execute)
       - name: Checkout PR code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           path: pr
           fetch-depth: 0
+          allow-unsafe-pr-checkout: true
 
       - name: Run linter
         working-directory: pr
