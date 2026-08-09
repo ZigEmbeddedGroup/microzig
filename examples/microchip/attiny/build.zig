@@ -16,7 +16,6 @@ pub fn build(b: *std.Build) void {
         .{ .target = mb.ports.attiny.boards.digispark, .name = "digispark_blinky", .file = "src/blinky.zig" },
         .{ .target = mb.ports.attiny.boards.adafruit.trinket, .name = "trinket_blinky", .file = "src/blinky.zig" },
         .{ .target = mb.ports.attiny.boards.adafruit.gemma, .name = "gemma_blinky", .file = "src/blinky.zig" },
-        .{ .target = mb.ports.attiny.chips.attiny85, .name = "attiny85_blinky", .file = "src/blinky.zig" },
         .{ .target = mb.ports.attiny.chips.attiny85, .name = "attiny85_blinky_interrupt", .file = "src/blinky_interrupt.zig" },
         .{ .target = mb.ports.attiny.chips.attiny84, .name = "attiny84_blinky", .file = "src/blinky84.zig" },
         .{ .target = mb.ports.attiny.chips.attiny1634, .name = "attiny1634_pwm_adc", .file = "src/attiny1634_pwm_adc.zig" },

@@ -7,6 +7,10 @@ const aux_led = hal.gpio.pin(.b, 5);
 const switch_pin = hal.gpio.pin(.a, 5);
 const Ramp = hal.progmem.Table(u8, 4, .{ 1, 4, 16, 64 });
 
+comptime {
+    _ = microzig.export_startup();
+}
+
 pub fn main() void {
     hal.clock.use_default20_m_hz_div2();
 
