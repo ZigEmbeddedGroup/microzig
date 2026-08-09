@@ -714,7 +714,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
 
             /// Adds an object file to the firmware.
             pub fn add_object_file(fw: *Firmware, source: LazyPath) void {
-                fw.exe.addObjectFile(source);
+                fw.exe.root_module.addObjectFile(source);
             }
         };
 
