@@ -7,6 +7,10 @@ const fet_pwm = hal.gpio.pin(.c, 0);
 const voltage = hal.gpio.pin(.b, 1);
 const Gamma = hal.progmem.Table(u8, 4, .{ 0, 8, 32, 255 });
 
+comptime {
+    _ = microzig.export_startup();
+}
+
 pub fn main() void {
     ch1_pwm.set_direction(.output);
     ch2_pwm.set_direction(.output);

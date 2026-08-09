@@ -17,9 +17,16 @@ pub const interrupt = struct {
 };
 
 /// AVR interrupt handler function type.
-pub const HandlerFn = extern union {
+pub const HandlerFn = union(enum) {
+    /// Standard AVR interrupt handler. Disables global interrupts while it is
+    /// executing. Compiler generates prologue for pushing clobbered registers to
+    /// the stack, and corresponding epilogue with `reti` intsruction for
+    /// returning from an interrupt.
     signal: *const fn () callconv(.avr_signal) void,
+    /// Similar to the signal calling convention, but global interrupts are
+    /// enabled in the prologue, allowing for nested interrupts.
     interrupt: *const fn () callconv(.avr_interrupt) void,
+    /// No prologue, no epilogue, best for handwritten assembly.
     naked: *const fn () callconv(.naked) noreturn,
 };
 
@@ -78,8 +85,8 @@ pub fn generate_vector_table_asm(comptime jump_insn: JumpInstruction) []const u8
     for (field_names[1..]) |field_name| {
         const handler = @field(interrupt_options, field_name);
         if (handler) |func| {
-            const isr = make_isr_handler(field_name, func);
-            asm_str = asm_str ++ jump_insn.to_string() ++ isr.exported_name ++ "\n";
+            const isr_symbol = export_isr_handler(field_name, func);
+            asm_str = asm_str ++ jump_insn.to_string() ++ " " ++ isr_symbol ++ "\n";
         } else {
             asm_str = asm_str ++ jump_insn.to_string() ++ " microzig_unhandled_vector\n";
         }
@@ -88,28 +95,14 @@ pub fn generate_vector_table_asm(comptime jump_insn: JumpInstruction) []const u8
     return asm_str;
 }
 
-fn make_isr_handler(comptime name: []const u8, comptime func: anytype) type {
-    const calling_convention = switch (@typeInfo(@TypeOf(func))) {
-        .@"fn" => |info| info.calling_convention,
-        .pointer => |info| switch (@typeInfo(info.child)) {
-            .@"fn" => |fn_info| fn_info.calling_convention,
-            else => @compileError("Declarations in 'interrupts' namespace must all be functions. '" ++ name ++ "' is not a function"),
-        },
-        else => @compileError("Declarations in 'interrupts' namespace must all be functions. '" ++ name ++ "' is not a function"),
-    };
+fn export_isr_handler(comptime name: []const u8, comptime handler: HandlerFn) []const u8 {
+    const exported_name = "microzig_isr_" ++ name;
 
-    switch (calling_convention) {
-        .auto, .avr_signal, .avr_interrupt => {},
-        else => @compileError("Calling conventions for interrupts must be 'avr_interrupt', 'avr_signal', or unspecified. The avr_signal calling convention leaves global interrupts disabled during the ISR, where avr_interrupt enables global interrupts for nested ISRs."),
+    switch (handler) {
+        inline else => |func| @export(func, .{ .name = exported_name }),
     }
 
-    return struct {
-        pub const exported_name = "microzig_isr_" ++ name;
-
-        comptime {
-            @export(func, .{ .name = exported_name });
-        }
-    };
+    return exported_name;
 }
 
 pub const startup_logic = struct {
