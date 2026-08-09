@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
       - name: Run zig fmt
@@ -28,7 +28,7 @@ jobs:
     steps:
       - run: sudo apt install -y yq
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - run: |
           set -e
 
@@ -69,7 +69,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
       - name: Unit Test Regz
@@ -85,7 +85,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
       - name: Unit Test UF2
@@ -101,7 +101,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
       - name: Unit Test ESP Image
@@ -117,7 +117,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
       - name: Build Printer
@@ -139,7 +139,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
       - name: Build Sorcerer
@@ -155,7 +155,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
       - name: Generate Code
@@ -181,7 +181,7 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
       - name: Build
@@ -197,7 +197,7 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
       - name: Generate and test packages
@@ -214,7 +214,7 @@ jobs:
         os: [ubuntu-latest]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
         with:
