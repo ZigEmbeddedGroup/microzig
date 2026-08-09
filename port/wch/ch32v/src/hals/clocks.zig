@@ -564,7 +564,7 @@ pub fn enable_usbhs_clock(comptime cfg: USB_HS_ClockConfig) void {
             .hsi => 1,
         },
         .USBHSDIV = div_to_usbhsdiv(chosen_div),
-        .USBHSCLK = @as(u2, @intFromEnum(chosen_ref)),
+        .USBHSCLK = @as(u2, @backingInt(chosen_ref)),
         .USBHSPLL = 1,
         .USBFSSRC = 1, // RM: USBHS 48MHz clock source = USB PHY
     });

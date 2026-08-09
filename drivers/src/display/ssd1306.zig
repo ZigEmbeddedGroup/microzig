@@ -233,15 +233,15 @@ pub fn SSD1306_Generic(comptime options: SSD1306_Options) type {
         }
 
         pub fn entire_display_on(self: Self, mode: DisplayOnMode) !void {
-            try self.execute_command(@intFromEnum(mode), &.{});
+            try self.execute_command(@backingInt(mode), &.{});
         }
 
         pub fn set_normal_or_inverse_display(self: Self, mode: NormalOrInverseDisplay) !void {
-            try self.execute_command(@intFromEnum(mode), &.{});
+            try self.execute_command(@backingInt(mode), &.{});
         }
 
         pub fn set_display(self: Self, mode: DisplayMode) !void {
-            try self.execute_command(@intFromEnum(mode), &.{});
+            try self.execute_command(@backingInt(mode), &.{});
         }
 
         // Scrolling Commands
@@ -249,7 +249,7 @@ pub fn SSD1306_Generic(comptime options: SSD1306_Options) type {
             if (end_page < start_page)
                 return PageError.EndPageIsSmallerThanStartPage;
 
-            try self.execute_command(@intFromEnum(direction), &.{
+            try self.execute_command(@backingInt(direction), &.{
                 0x00, // Dummy byte
                 @as(u8, start_page),
                 @as(u8, frame_frequency),
@@ -260,7 +260,7 @@ pub fn SSD1306_Generic(comptime options: SSD1306_Options) type {
         }
 
         pub fn continuous_vertical_and_horizontal_scroll_setup(self: Self, direction: VerticalAndHorizontalScrollDirection, start_page: u3, end_page: u3, frame_frequency: u3, vertical_scrolling_offset: u6) !void {
-            try self.execute_command(@intFromEnum(direction), &.{
+            try self.execute_command(@backingInt(direction), &.{
                 0x00, // Dummy byte
                 @as(u8, start_page),
                 @as(u8, frame_frequency),
@@ -283,13 +283,13 @@ pub fn SSD1306_Generic(comptime options: SSD1306_Options) type {
 
         // Addressing Setting Commands
         pub fn set_column_start_address_for_page_addressing_mode(self: Self, column: Column, address: u4) !void {
-            const cmd = (@as(u8, @intFromEnum(column)) << 4) | @as(u8, address);
+            const cmd = (@as(u8, @backingInt(column)) << 4) | @as(u8, address);
 
             try self.execute_command(cmd, &.{});
         }
 
         pub fn set_memory_addressing_mode(self: Self, mode: MemoryAddressingMode) !void {
-            try self.execute_command(0x20, &.{@as(u8, @intFromEnum(mode))});
+            try self.execute_command(0x20, &.{@as(u8, @backingInt(mode))});
         }
 
         pub fn set_column_address(self: Self, start: u7, end: u7) !void {
@@ -618,7 +618,7 @@ pub fn SSD1306_Generic(comptime options: SSD1306_Options) type {
                 var td = TestDevice.init_receiver_only();
                 defer td.deinit();
 
-                const expected_data = &[_]u8{ 0x00, 0x20, @as(u8, @intFromEnum(mode)) };
+                const expected_data = &[_]u8{ 0x00, 0x20, @as(u8, @backingInt(mode)) };
                 // Act
                 const driver = try SSD1306_I2C.init(td.datagram_device());
                 try driver.set_memory_addressing_mode(mode);

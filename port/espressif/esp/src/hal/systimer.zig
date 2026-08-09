@@ -9,12 +9,12 @@ pub fn ticks_per_us() u52 {
 }
 
 pub fn unit(num: u1) Unit {
-    return @enumFromInt(num);
+    return @fromBackingInt(num);
 }
 
 pub fn alarm(num: u2) Alarm {
     std.debug.assert(num <= 2);
-    return @enumFromInt(num);
+    return @fromBackingInt(num);
 }
 
 pub const Unit = enum(u1) {
@@ -136,7 +136,7 @@ pub const Alarm = enum(u2) {
 
     pub fn set_unit(self: Alarm, unit_: Unit) void {
         const conf = self.target_conf_reg();
-        conf.modify(.{ .TARGET0_TIMER_UNIT_SEL = @intFromEnum(unit_) });
+        conf.modify(.{ .TARGET0_TIMER_UNIT_SEL = @backingInt(unit_) });
     }
 
     pub const Mode = enum {

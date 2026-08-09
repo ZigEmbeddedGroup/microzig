@@ -171,9 +171,9 @@ pub fn Stepper(comptime Driver: type) type {
             // Get index of table for microsteps
             const i = @as(u3, @intCast(std.math.log2(new_microsteps)));
             const mask = Driver.MS_TABLE[i];
-            try self.ms1_pin.?.write(@enumFromInt(@intFromBool((mask & 1) != 0)));
-            try self.ms2_pin.?.write(@enumFromInt(@intFromBool((mask & 2) != 0)));
-            try self.ms3_pin.?.write(@enumFromInt(@intFromBool((mask & 4) != 0)));
+            try self.ms1_pin.?.write(@fromBackingInt(@intFromBool((mask & 1) != 0)));
+            try self.ms2_pin.?.write(@fromBackingInt(@intFromBool((mask & 2) != 0)));
+            try self.ms3_pin.?.write(@fromBackingInt(@intFromBool((mask & 4) != 0)));
 
             return self.microsteps;
         }
@@ -210,7 +210,7 @@ pub fn Stepper(comptime Driver: type) type {
                     const decel_f: f64 = @floatFromInt(p.decel);
                     // speed is in [steps/s]
                     var speed: f64 = (self.rpm * @as(f64, @floatFromInt(self.motor_steps))) / 60;
-                    if (@intFromEnum(time) > 0) {
+                    if (@backingInt(time) > 0) {
                         // Calculate a new speed to finish in the time requested
                         const t: f64 = @as(f64, @floatFromInt(time.to_us())) / 1e+6; // convert to seconds
                         const d: f64 = @as(f64, @floatFromInt(self.steps_remaining)) / microstep_f; // convert to full steps
@@ -229,16 +229,16 @@ pub fn Stepper(comptime Driver: type) type {
                         self.steps_to_brake = self.steps_remaining - self.steps_to_cruise;
                     }
                     // Initial pulse (c0) including error correction factor 0.676 [us]
-                    self.step_pulse = @enumFromInt(@as(u64, @intFromFloat((1e+6) * 0.676 * std.math.sqrt(2.0 / accel_f / microstep_f))));
+                    self.step_pulse = @fromBackingInt(@as(u64, @intFromFloat((1e+6) * 0.676 * std.math.sqrt(2.0 / accel_f / microstep_f))));
                     // Save cruise timing since we will no longer have the calculated target speed later
-                    self.cruise_step_pulse = @enumFromInt(@as(u64, @intFromFloat(1e+6 / speed / microstep_f)));
+                    self.cruise_step_pulse = @fromBackingInt(@as(u64, @intFromFloat(1e+6 / speed / microstep_f)));
                 },
                 .constant_speed => {
                     self.steps_to_cruise = 0;
                     self.steps_to_brake = 0;
                     self.step_pulse = common.get_step_pulse(self.motor_steps, self.microsteps, self.rpm);
                     // If we have a deadline, we might have to shorten the pulses to finish in time
-                    if (@intFromEnum(time) > self.steps_remaining * @intFromEnum(self.step_pulse)) {
+                    if (@backingInt(time) > self.steps_remaining * @backingInt(self.step_pulse)) {
                         self.step_pulse = .from_us(@intFromFloat(@as(f64, @floatFromInt(time.to_us())) /
                             @as(f64, @floatFromInt(self.steps_remaining))));
                     }
@@ -258,13 +258,13 @@ pub fn Stepper(comptime Driver: type) type {
                 switch (self.get_current_state()) {
                     .accelerating => {
                         if (self.step_count < self.steps_to_cruise) {
-                            var numerator = 2 * @intFromEnum(self.step_pulse) + @intFromEnum(self.remainder);
+                            var numerator = 2 * @backingInt(self.step_pulse) + @backingInt(self.remainder);
                             const denominator = 4 * self.step_count + 1;
                             // Pulse shrinks as we are nearer to cruising speed, based on step_count
-                            self.step_pulse = self.step_pulse.minus(@enumFromInt(numerator / denominator));
+                            self.step_pulse = self.step_pulse.minus(@fromBackingInt(numerator / denominator));
                             // Update based on new step_pulse
-                            numerator = 2 * @intFromEnum(self.step_pulse) + @intFromEnum(self.remainder);
-                            self.remainder = @enumFromInt(numerator % denominator);
+                            numerator = 2 * @backingInt(self.step_pulse) + @backingInt(self.remainder);
+                            self.remainder = @fromBackingInt(numerator % denominator);
                         } else {
                             // The series approximates target, set the final value to what it should be instead
                             self.step_pulse = self.cruise_step_pulse;
@@ -272,13 +272,13 @@ pub fn Stepper(comptime Driver: type) type {
                         }
                     },
                     .decelerating => {
-                        var numerator = 2 * @intFromEnum(self.step_pulse) + @intFromEnum(self.remainder);
+                        var numerator = 2 * @backingInt(self.step_pulse) + @backingInt(self.remainder);
                         const denominator = 4 * self.steps_remaining + 1;
                         // Pulse grows as we are near stopped, based on steps_remaining
-                        self.step_pulse = self.step_pulse.plus(@enumFromInt(numerator / denominator));
+                        self.step_pulse = self.step_pulse.plus(@fromBackingInt(numerator / denominator));
                         // Update based on new step_pulse
-                        numerator = 2 * @intFromEnum(self.step_pulse) + @intFromEnum(self.remainder);
-                        self.remainder = @enumFromInt(numerator % denominator);
+                        numerator = 2 * @backingInt(self.step_pulse) + @backingInt(self.remainder);
+                        self.remainder = @fromBackingInt(numerator % denominator);
                     },
                     // If not accelerating or decelerating, we are either stopped
                     // or cruising, in which case, the step_pulse is already

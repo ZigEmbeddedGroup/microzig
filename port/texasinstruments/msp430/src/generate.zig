@@ -1,5 +1,4 @@
 const std = @import("std");
-const regz = @import("regz");
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};

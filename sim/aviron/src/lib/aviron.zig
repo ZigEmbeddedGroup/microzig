@@ -1,5 +1,3 @@
-const std = @import("std");
-const builtin = @import("builtin");
 const bus = @import("bus.zig");
 const isa = @import("isa");
 

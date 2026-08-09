@@ -76,7 +76,7 @@ const Command = union(enum) {
             .write => .WRITE,
             .read => .READ,
         };
-        cmd |= @as(u14, @intFromEnum(opcode)) << 11;
+        cmd |= @as(u14, @backingInt(opcode)) << 11;
 
         // Set ack_check_en bit
         if (self == .write and self.write.ack_check_en) {
@@ -424,7 +424,7 @@ pub const I2C = struct {
 
         // Load address and R/W bit
         if (start)
-            self.write_fifo(@as(u8, @intFromEnum(addr)) << 1 | @intFromEnum(OperationType.read));
+            self.write_fifo(@as(u8, @backingInt(addr)) << 1 | @backingInt(OperationType.read));
     }
 
     fn setup_write(self: I2C, addr: Address, bytes: []const u8, start: bool, cmd_start_idx: *usize) !void {
@@ -444,7 +444,7 @@ pub const I2C = struct {
 
         // Load address and R/W bit
         if (start)
-            self.write_fifo(@as(u8, @intFromEnum(addr)) << 1 | @intFromEnum(OperationType.write));
+            self.write_fifo(@as(u8, @backingInt(addr)) << 1 | @backingInt(OperationType.write));
 
         // Load data bytes into FIFO
         for (bytes) |byte|

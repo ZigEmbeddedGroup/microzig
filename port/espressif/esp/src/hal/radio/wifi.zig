@@ -292,11 +292,11 @@ pub const WifiMode = enum(u32) {
 pub fn get_mode() InternalError!WifiMode {
     var mode: c.wifi_mode_t = undefined;
     try c_err(c.esp_wifi_get_mode(&mode));
-    return @enumFromInt(mode);
+    return @fromBackingInt(mode);
 }
 
 pub fn set_mode(mode: WifiMode) InternalError!void {
-    try c_err(c.esp_wifi_set_mode(@intFromEnum(mode)));
+    try c_err(c.esp_wifi_set_mode(@backingInt(mode)));
 }
 
 fn apply_access_point_config(config: Config.AccessPoint) ConfigError!void {
@@ -310,7 +310,7 @@ fn apply_access_point_config(config: Config.AccessPoint) ConfigError!void {
     var ap_cfg: c_patched.wifi_ap_config_t = .{
         .ssid_len = @intCast(config.ssid.len),
         .channel = config.channel,
-        .authmode = @intFromEnum(config.auth_method),
+        .authmode = @backingInt(config.auth_method),
         .ssid_hidden = @intFromBool(config.ssid_hidden),
         .max_connection = config.max_connections,
         .beacon_interval = 100,
@@ -341,7 +341,7 @@ fn apply_station_config(config: Config.Station) ConfigError!void {
     }
 
     var sta_cfg: c_patched.wifi_sta_config_t = .{
-        .scan_method = @intFromEnum(config.scan_method),
+        .scan_method = @backingInt(config.scan_method),
         .bssid_set = config.bssid != null,
         .bssid = config.bssid orelse @splat(0),
         .channel = config.channel,
@@ -349,7 +349,7 @@ fn apply_station_config(config: Config.Station) ConfigError!void {
         .sort_method = c.WIFI_CONNECT_AP_BY_SIGNAL,
         .threshold = .{
             .rssi = -99,
-            .authmode = @intFromEnum(config.auth_method),
+            .authmode = @backingInt(config.auth_method),
             .rssi_5g_adjustment = 0,
         },
         .pmf_cfg = .{
@@ -374,7 +374,7 @@ pub const PowerSaveMode = enum(u32) {
 };
 
 pub fn set_power_save_mode(mode: PowerSaveMode) InternalError!void {
-    try c_err(c.esp_wifi_set_ps(@intFromEnum(mode)));
+    try c_err(c.esp_wifi_set_ps(@backingInt(mode)));
 }
 
 pub const Protocol = enum(u8) {
@@ -400,7 +400,7 @@ pub const Protocol = enum(u8) {
 pub fn set_protocol(protocols: []const Config.AccessPoint.Protocol) InternalError!void {
     var combined: u8 = 0;
     for (protocols) |protocol| {
-        combined |= @intFromEnum(protocol);
+        combined |= @backingInt(protocol);
     }
 
     const mode = try get_mode();
@@ -423,7 +423,7 @@ pub fn set_protocol(protocols: []const Config.AccessPoint.Protocol) InternalErro
 /// 300s. Must be at least 10s.
 pub fn set_inactive_time(interface: Interface, inactive_time: u32) InternalError!void {
     try c_err(c.esp_wifi_set_inactive_time(
-        @intFromEnum(interface),
+        @backingInt(interface),
         inactive_time,
     ));
 }
@@ -662,7 +662,7 @@ pub const Event = union(EventType) {
 
 /// Internal function. Called by osi layer.
 pub fn on_event_post(id: i32, data: ?*anyopaque, data_size: usize) void {
-    const event_type: EventType = @enumFromInt(id);
+    const event_type: EventType = @fromBackingInt(id);
     log.debug("event received: {t}", .{event_type});
 
     update_sta_state(event_type);
@@ -749,7 +749,7 @@ pub const Interface = enum(u32) {
 };
 
 pub fn send_packet(iface: Interface, data: []const u8) (error{TooManyPacketsInFlight} || InternalError)!void {
-    try c_err(c.esp_wifi_internal_tx(@intFromEnum(iface), @ptrCast(@constCast(data.ptr)), @intCast(data.len)));
+    try c_err(c.esp_wifi_internal_tx(@backingInt(iface), @ptrCast(@constCast(data.ptr)), @intCast(data.len)));
 }
 
 fn tx_done_cb(
@@ -761,7 +761,7 @@ fn tx_done_cb(
     log.debug("tx_done_cb", .{});
 
     if (wifi_options.on_packet_transmitted) |on_packet_transmitted|
-        on_packet_transmitted(@intFromEnum(iface_idx), data_ptr[0..data_len], status);
+        on_packet_transmitted(@backingInt(iface_idx), data_ptr[0..data_len], status);
 }
 
 fn recv_cb_ap(buf: ?*anyopaque, len: u16, eb: ?*anyopaque) callconv(.c) c.esp_err_t {

@@ -21,7 +21,6 @@
 //! * Add missing functionality (maybe also getters for some registers)
 //! * DMP support
 
-const std = @import("std");
 const mdf = @import("../root.zig");
 const DatagramDevice = mdf.base.DatagramDevice;
 const ClockDevice = mdf.base.ClockDevice;
@@ -362,7 +361,7 @@ pub const MPU_6050 = struct {
         try self.dev.connect();
         defer self.dev.disconnect();
 
-        try self.dev.write(&.{ @intFromEnum(reg), value });
+        try self.dev.write(&.{ @backingInt(reg), value });
     }
 
     fn read_byte(self: MPU_6050, reg: Register) Error!u8 {
@@ -370,7 +369,7 @@ pub const MPU_6050 = struct {
         defer self.dev.disconnect();
 
         var value: u8 = undefined;
-        try self.dev.write_then_read(&.{@intFromEnum(reg)}, (&value)[0..1]);
+        try self.dev.write_then_read(&.{@backingInt(reg)}, (&value)[0..1]);
         return value;
     }
 
@@ -379,7 +378,7 @@ pub const MPU_6050 = struct {
         defer self.dev.disconnect();
 
         var buf: [2 * n]u8 = undefined;
-        try self.dev.write_then_read(&.{@intFromEnum(reg)}, &buf);
+        try self.dev.write_then_read(&.{@backingInt(reg)}, &buf);
         var out: [n]i16 = undefined;
         inline for (0..n) |i| {
             out[i] = @bitCast(@as(u16, buf[2 * i]) << 8 | buf[2 * i + 1]);

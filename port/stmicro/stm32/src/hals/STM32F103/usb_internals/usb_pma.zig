@@ -3,12 +3,6 @@ const microzig = @import("microzig");
 const USB = microzig.chip.peripherals.USB;
 const PMA_BASE: u32 = 0x40006000;
 
-const pma_data = packed struct(u32) {
-    low_byte: u8,
-    high_byte: u8,
-    _res: u16 = 0,
-};
-
 //PMA(u16) <==> CPU(u32)
 const PMA_value = packed struct(u32) {
     value: u16,
@@ -31,12 +25,12 @@ pub const RX_size = struct {
     block_qtd: usize,
 
     pub fn calc_rx_size(size: *const RX_size) usize {
-        const mul: usize = if (@intFromEnum(size.block_size) == 0) 2 else 32;
+        const mul: usize = if (@backingInt(size.block_size) == 0) 2 else 32;
         return size.block_qtd * mul;
     }
 
     pub fn to_RXcount(size: *const RX_size) u16 {
-        const SL_bit: u16 = @as(u16, @intFromEnum(size.block_size)) << 15;
+        const SL_bit: u16 = @as(u16, @backingInt(size.block_size)) << 15;
         const pkg_qtd: u16 = @as(u16, @intCast(size.block_qtd)) << 10;
         return SL_bit | pkg_qtd;
     }
@@ -92,7 +86,6 @@ pub const BTABLEError = error{
 const BTABLE: *volatile [8]BTABLEDescriptor = @ptrFromInt(PMA_BASE);
 
 var metadata: [8]?EntryMetadata = undefined;
-var init = false;
 pub fn btable_init(config: Config) BTABLEError!void {
     try load_and_check(config);
 

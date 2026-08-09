@@ -48,7 +48,7 @@ pub fn stop() void {
 }
 
 fn control_value(mode: Mode, timeout: Timeout) u8 {
-    const raw: u4 = @intFromEnum(timeout);
+    const raw: u4 = @backingInt(timeout);
     const prescaler = (@as(u8, raw & 0b0111)) |
         ((@as(u8, raw >> 3) & 0x1) << regs.watchdog_bits.wdp3);
     return prescaler | switch (mode) {

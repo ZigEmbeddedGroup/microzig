@@ -2,7 +2,6 @@ const std = @import("std");
 const assert = std.debug.assert;
 
 const microzig = @import("microzig");
-const get_cpu = @import("compatibility.zig").get_cpu;
 const xosc_freq = microzig.board.xosc_freq;
 const peripherals = microzig.chip.peripherals;
 const RESETS = peripherals.RESETS;

@@ -31,9 +31,9 @@ pub fn configure_internal1v1(channel: Channel, prescaler: Prescaler) void {
     // ATtiny1634 datasheet section 17.13.1, page 177: ADMUX selects reference
     // and channel; ADCSRA starts/enables auto-triggered conversions.
     // https://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-8303-8-bit-AVR-Microcontroller-tinyAVR-ATtiny1634_Datasheet.pdf
-    regs.write(regs.ADMUX, 0b1000_0000 | @as(u8, @intFromEnum(channel)));
+    regs.write(regs.ADMUX, 0b1000_0000 | @as(u8, @backingInt(channel)));
     regs.write(regs.ADCSRB, 1 << 4);
-    regs.write(regs.ADCSRA, (1 << 7) | (1 << 5) | (1 << 3) | @as(u8, @intFromEnum(prescaler)));
+    regs.write(regs.ADCSRA, (1 << 7) | (1 << 5) | (1 << 3) | @as(u8, @backingInt(prescaler)));
 }
 
 pub inline fn start() void {

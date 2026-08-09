@@ -4,7 +4,7 @@ const compatibility = @import("compatibility.zig");
 
 pub fn num(n: u1) Timer {
     if (compatibility.chip == .RP2040) std.debug.assert(n == 0);
-    return @enumFromInt(n);
+    return @fromBackingInt(n);
 }
 
 pub const Timer = enum(u1) {
@@ -54,7 +54,7 @@ pub const Timer = enum(u1) {
     /// Clears the interrupt flag for the given alarm.
     pub fn clear_interrupt(timer: Timer, alarm: Alarm) void {
         const regs = timer.get_regs();
-        regs.INTR.write_raw(@as(u4, 1) << @intFromEnum(alarm));
+        regs.INTR.write_raw(@as(u4, 1) << @backingInt(alarm));
     }
 
     /// Schedules an alarm to be triggered when the low word of the timer
@@ -72,16 +72,16 @@ pub const Timer = enum(u1) {
     /// Stop an alarm before it triggers.
     pub fn stop_alarm(timer: Timer, alarm: Alarm) void {
         const regs = timer.get_regs();
-        regs.ARMED.write(.{ .ARMED = @as(u4, 1) << @intFromEnum(alarm) });
+        regs.ARMED.write(.{ .ARMED = @as(u4, 1) << @backingInt(alarm) });
     }
 
     pub fn get_regs(timer: Timer) *volatile Regs {
         return switch (compatibility.chip) {
-            .RP2040 => switch (@intFromEnum(timer)) {
+            .RP2040 => switch (@backingInt(timer)) {
                 0 => microzig.chip.peripherals.TIMER,
                 else => @panic("only timer 0 is available on RP2040"),
             },
-            .RP2350 => switch (@intFromEnum(timer)) {
+            .RP2350 => switch (@backingInt(timer)) {
                 0 => microzig.chip.peripherals.TIMER0,
                 1 => microzig.chip.peripherals.TIMER1,
             },

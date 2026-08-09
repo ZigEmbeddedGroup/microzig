@@ -321,7 +321,7 @@ const IO = struct {
 
     fn dev_read(ctx: *anyopaque, addr: IOBusType.Address) u8 {
         const bus_io: *IO = @ptrCast(@alignCast(ctx));
-        const reg: Register = @enumFromInt(@as(aviron.IO.Address, @intCast(addr)));
+        const reg: Register = @fromBackingInt(@as(aviron.IO.Address, @intCast(addr)));
         return switch (reg) {
             .exit => 0,
             .stdio => blk: {
@@ -371,7 +371,7 @@ const IO = struct {
 
     fn dev_write_masked(ctx: *anyopaque, addr: IOBusType.Address, mask: u8, value: u8) void {
         const bus_io: *IO = @ptrCast(@alignCast(ctx));
-        const reg: Register = @enumFromInt(@as(aviron.IO.Address, @intCast(addr)));
+        const reg: Register = @fromBackingInt(@as(aviron.IO.Address, @intCast(addr)));
         switch (reg) {
             .exit => {
                 bus_io.exit_code = value & mask;

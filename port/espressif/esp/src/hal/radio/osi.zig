@@ -368,7 +368,7 @@ const RecursiveMutex = struct {
         while (mutex.owning_task) |owning_task| {
             // Owning task inherits the priority of the current task if it the
             // current task has a bigger priority.
-            if (@intFromEnum(current_task.priority) > @intFromEnum(owning_task.priority)) {
+            if (@backingInt(current_task.priority) > @backingInt(owning_task.priority)) {
                 mutex.prev_priority = owning_task.priority;
                 owning_task.priority = current_task.priority;
                 var _hptw = false;
@@ -610,10 +610,10 @@ fn task_create_common(
     const task_entry: *const fn (param: ?*anyopaque) callconv(.c) noreturn = @ptrCast(@alignCast(task_func));
 
     // increase stack size if we are in debug mode
-    const stack_size: usize = stack_depth + if (builtin.mode == .Debug) 6000 else 0;
+    const stack_size: usize = stack_depth + if (builtin.mode == .debug) 6000 else 0;
     const task: *rtos.Task = rtos.spawn(gpa, task_wrapper, .{ task_entry, param }, .{
         .name = std.mem.span(name),
-        .priority = @enumFromInt(prio),
+        .priority = @fromBackingInt(@truncate(prio)),
         .stack_size = stack_size,
     }) catch {
         log.warn("failed to create task", .{});
@@ -690,7 +690,7 @@ pub fn task_get_current_task() callconv(.c) ?*anyopaque {
 }
 
 pub fn task_get_max_priority() callconv(.c) i32 {
-    return @intFromEnum(rtos.Priority.highest);
+    return @backingInt(rtos.Priority.highest);
 }
 
 pub fn esp_event_post(

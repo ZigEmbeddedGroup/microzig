@@ -3,7 +3,6 @@ const std = @import("std");
 const builtin = @import("builtin");
 
 const Allocator = std.mem.Allocator;
-const assert = std.debug.assert;
 const Io = std.Io;
 const log = std.log.scoped(.vio);
 
@@ -33,7 +32,7 @@ pub const Dir = struct {
         }
 
         pub fn get(id: ID, vio: *const VirtualIo) !*Dir {
-            const node = vio.nodes.getPtr(@intFromEnum(id)) orelse
+            const node = vio.nodes.getPtr(@backingInt(id)) orelse
                 return error.Unexpected;
             return switch (node.*) {
                 .dir => |*ret| ret,
@@ -66,7 +65,7 @@ pub const Dir = struct {
         if (node == null or node.? != T.kind)
             return error.Unexpected;
 
-        return @enumFromInt(id);
+        return @fromBackingInt(id);
     }
 
     pub fn create(dir: *Dir, vio: *VirtualIo, name: []const u8, T: type) !ResultID(T) {
@@ -95,7 +94,7 @@ pub const Dir = struct {
             result.value_ptr.* = T.empty;
         } else |_| return error.NoSpaceLeft;
 
-        return @enumFromInt(id);
+        return @fromBackingInt(id);
     }
 };
 
@@ -118,7 +117,7 @@ pub const File = struct {
         }
 
         pub fn get(id: ID, vio: *const VirtualIo) !*File {
-            const node = vio.nodes.getPtr(@intFromEnum(id)) orelse
+            const node = vio.nodes.getPtr(@backingInt(id)) orelse
                 return error.Unexpected;
             return switch (node.*) {
                 .file => |*ret| ret,
@@ -244,7 +243,7 @@ pub const VirtualIo = struct {
         var ret: VirtualIo = .{
             .gpa = gpa,
             .nodes = .empty,
-            .last_id = @intFromEnum(Dir.ID.root),
+            .last_id = @backingInt(Dir.ID.root),
         };
         try ret.nodes.put(gpa, ret.last_id, Dir.empty);
         return ret;
@@ -277,7 +276,7 @@ pub fn from_handle(T: type, handle: std.posix.fd_t) !T {
         .windows => @intFromPtr(handle),
         else => handle,
     })) |int|
-        @enumFromInt(int)
+        @fromBackingInt(int)
     else
         error.Unexpected;
 }
@@ -285,7 +284,7 @@ pub fn from_handle(T: type, handle: std.posix.fd_t) !T {
 pub fn to_handle(id: anytype) std.posix.fd_t {
     // const ID = @TypeOf(id);
     return switch (builtin.os.tag) {
-        .windows => @ptrFromInt(@intFromEnum(id)),
-        else => @intFromEnum(id),
+        .windows => @ptrFromInt(@backingInt(id)),
+        else => @backingInt(id),
     };
 }

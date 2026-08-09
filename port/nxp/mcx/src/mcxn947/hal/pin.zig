@@ -15,15 +15,15 @@ pub const Pin = enum(u8) {
     pub fn num(port: u8, pin: u5) Pin {
         @import("std").debug.assert(port <= 5);
 
-        return @enumFromInt((port << 5) | pin);
+        return @fromBackingInt((port << 5) | pin);
     }
 
     pub fn get_port(pin: Pin) hal.Port {
-        return hal.Port.num(@intCast(@intFromEnum(pin) >> 5));
+        return hal.Port.num(@intCast(@backingInt(pin) >> 5));
     }
 
     pub fn get_n(pin: Pin) u5 {
-        return @truncate(@intFromEnum(pin));
+        return @truncate(@backingInt(pin));
     }
 
     /// Apply a config to a pin (see `Pin.configure`).

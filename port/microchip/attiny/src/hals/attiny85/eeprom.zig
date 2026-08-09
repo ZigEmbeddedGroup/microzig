@@ -8,7 +8,7 @@ pub const Address = enum(u16) {
 };
 
 pub inline fn address(value: u16) Address {
-    return @enumFromInt(value);
+    return @fromBackingInt(value);
 }
 
 pub inline fn is_ready() bool {
@@ -43,21 +43,21 @@ pub fn update_byte(addr: Address, value: u8) void {
 }
 
 pub fn read_slice(addr: Address, dest: []u8) void {
-    const base = @intFromEnum(addr);
+    const base = @backingInt(addr);
     for (dest, 0..) |*byte, i| {
         byte.* = read_byte(address(base + @as(u16, @intCast(i))));
     }
 }
 
 pub fn update_slice(addr: Address, src: []const u8) void {
-    const base = @intFromEnum(addr);
+    const base = @backingInt(addr);
     for (src, 0..) |byte, i| {
         update_byte(address(base + @as(u16, @intCast(i))), byte);
     }
 }
 
 fn set_address(addr: Address) void {
-    const raw: u16 = @intFromEnum(addr);
+    const raw: u16 = @backingInt(addr);
     regs.write(regs.EEARL, @truncate(raw));
     regs.write(regs.EEARH, @truncate(raw >> 8));
 }

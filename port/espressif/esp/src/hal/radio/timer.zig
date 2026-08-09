@@ -190,7 +190,7 @@ fn find_next_wake_absolute() ?time.Absolute {
     var min_deadline: time.Deadline = .no_deadline;
     while (it) |node| : (it = node.next) {
         const timer: *Timer = @alignCast(@fieldParentPtr("node", node));
-        if (@intFromEnum(timer.deadline.timeout) < @intFromEnum(min_deadline.timeout)) {
+        if (@backingInt(timer.deadline.timeout) < @backingInt(min_deadline.timeout)) {
             min_deadline = timer.deadline;
         }
     }

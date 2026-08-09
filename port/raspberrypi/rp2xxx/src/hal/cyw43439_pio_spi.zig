@@ -1,8 +1,5 @@
 //! CYW43 3-wire SPI driver build on PIO
 //! Code based on embassy cyw43-pio driver https://github.com/embassy-rs/embassy/tree/main/cyw43-pio (last commit: d41eeea)
-const std = @import("std");
-const mem = std.mem;
-const microzig = @import("microzig");
 const hal = @import("../hal.zig");
 
 const cyw43spi_program = blk: {
@@ -32,7 +29,7 @@ const cyw43spi_program = blk: {
 };
 
 fn pin_num(pin: hal.gpio.Pin) u5 {
-    return @truncate(@intFromEnum(pin));
+    return @truncate(@backingInt(pin));
 }
 
 const Self = @This();
@@ -163,7 +160,7 @@ fn dma_read(self: *Self, data: []u32) void {
         .enable = true,
         .read_increment = false,
         .write_increment = true,
-        .dreq = @enumFromInt(@intFromEnum(self.pio) * @as(u6, 8) + @intFromEnum(self.sm) + 4),
+        .dreq = @fromBackingInt(@backingInt(self.pio) * @as(u6, 8) + @backingInt(self.sm) + 4),
     });
     ch.wait_for_finish_blocking();
 }
@@ -177,7 +174,7 @@ fn dma_write(self: *Self, data: []const u32) void {
         .enable = true,
         .read_increment = true,
         .write_increment = false,
-        .dreq = @enumFromInt(@intFromEnum(self.pio) * @as(u6, 8) + @intFromEnum(self.sm)),
+        .dreq = @fromBackingInt(@backingInt(self.pio) * @as(u6, 8) + @backingInt(self.sm)),
     });
     ch.wait_for_finish_blocking();
 }

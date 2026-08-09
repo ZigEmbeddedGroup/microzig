@@ -91,11 +91,11 @@ pub const channel = struct {
             }
 
             fn mode(self: *Self) Mode {
-                return @enumFromInt(self.flags & 3);
+                return @fromBackingInt(self.flags & 3);
             }
 
             fn set_mode(self: *Self, mode_: Mode) void {
-                self.flags = (self.flags & ~@as(usize, 3)) | @intFromEnum(mode_);
+                self.flags = (self.flags & ~@as(usize, 3)) | @backingInt(mode_);
             }
 
             /// Writes up to available space left in buffer for reading by probe, returning number of bytes
@@ -305,11 +305,11 @@ pub const channel = struct {
             }
 
             pub fn mode(self: *Self) Mode {
-                return @enumFromInt(self.mode & 3);
+                return @fromBackingInt(self.mode & 3);
             }
 
             pub fn set_mode(self: *Self, mode_: Mode) void {
-                self.flags = (self.flags & ~@as(usize, 3)) | @intFromEnum(mode_);
+                self.flags = (self.flags & ~@as(usize, 3)) | @backingInt(mode_);
             }
 
             /// Reads up to a number of bytes from probe non-blocking. Reading less than the requested number of bytes

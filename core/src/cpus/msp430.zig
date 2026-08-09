@@ -67,7 +67,7 @@ const vector_table: VectorTable = vector_table: {
     // Apply interrupts
     for (@typeInfo(@TypeOf(microzig.options.interrupts)).@"struct".field_names) |field_name| {
         const maybe_handler = @field(microzig.options.interrupts, field_name);
-        tmp.table[@intFromEnum(@field(Interrupt, field_name))] =
+        tmp.table[@backingInt(@field(Interrupt, field_name))] =
             maybe_handler orelse .{ .c = interrupt.unhandled };
     }
 

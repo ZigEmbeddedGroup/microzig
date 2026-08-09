@@ -1,4 +1,3 @@
-const std = @import("std");
 const microzig = @import("microzig");
 const chip = microzig.chip;
 
@@ -190,14 +189,14 @@ pub const Module = enum(u7) {
     ///
     /// This index is the same for `AHBCLKCTRLn` and `PRESETCTRLn` registers.
     fn cc(module: Module) u2 {
-        return @intCast(@intFromEnum(module) >> 5);
+        return @intCast(@backingInt(module) >> 5);
     }
 
     /// Returns the offset of the module in the corresponding control register.
     ///
     /// This offset is the same for `AHBCLKCTRLn` and `PRESETCTRLn` registers.
     fn offset(module: Module) u5 {
-        return @truncate(@intFromEnum(module));
+        return @truncate(@backingInt(module));
     }
 
     /// Whether a module is reserved (in both `AHBCLKCTRLn` and `PRESETCTRLn` registers).

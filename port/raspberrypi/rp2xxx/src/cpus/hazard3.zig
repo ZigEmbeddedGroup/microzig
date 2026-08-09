@@ -54,14 +54,14 @@ pub const interrupt = struct {
     pub const core = riscv32_common.utilities.interrupt.CoreImpl(CoreInterrupt);
 
     pub fn is_enabled(int: ExternalInterrupt) bool {
-        const num: u7 = @intFromEnum(int);
+        const num: u7 = @backingInt(int);
         const index: u3 = @intCast(num >> 4);
         const mask: u16 = @as(u16, 1) << @as(u4, @intCast(num & 0xf));
         return csr.meiea.read_set(.{ .index = index }).window & mask != 0;
     }
 
     pub fn enable(int: ExternalInterrupt) void {
-        const num: u7 = @intFromEnum(int);
+        const num: u7 = @backingInt(int);
         const index: u3 = @intCast(num >> 4);
         const mask: u16 = @as(u16, 1) << @as(u4, @intCast(num & 0xf));
         csr.meiea.set(.{
@@ -71,7 +71,7 @@ pub const interrupt = struct {
     }
 
     pub fn disable(int: ExternalInterrupt) void {
-        const num: u7 = @intFromEnum(int);
+        const num: u7 = @backingInt(int);
         const index: u3 = @intCast(num >> 4);
         const mask: u16 = @as(u16, 1) << @as(u4, @intCast(num & 0xf));
         csr.meiea.clear(.{
@@ -81,21 +81,21 @@ pub const interrupt = struct {
     }
 
     pub fn is_pending(int: ExternalInterrupt) bool {
-        const num: u7 = @intFromEnum(int);
+        const num: u7 = @backingInt(int);
         const index: u3 = @intCast(num >> 4);
         const mask: u16 = @as(u16, 1) << @as(u4, @intCast(num & 0xf));
         return csr.meipa.read_set(.{ .index = index }).window & mask != 0;
     }
 
     pub fn set_pending(int: ExternalInterrupt) void {
-        const num: u7 = @intFromEnum(int);
+        const num: u7 = @backingInt(int);
         const index: u3 = @intCast(num >> 4);
         const mask: u16 = @as(u16, 1) << @as(u4, @intCast(num & 0xf));
         csr.meifa.set(.{ .index = index, .window = mask });
     }
 
     pub fn clear_pending(int: ExternalInterrupt) void {
-        const num: u7 = @intFromEnum(int);
+        const num: u7 = @backingInt(int);
         const index: u3 = @intCast(num >> 4);
         const mask: u16 = @as(u16, 1) << @as(u4, @intCast(num & 0xf));
         csr.meifa.clear(.{ .index = index, .window = mask });
@@ -108,21 +108,21 @@ pub const interrupt = struct {
     };
 
     pub fn set_priority(int: ExternalInterrupt, priority: Priority) void {
-        const num: u7 = @intFromEnum(int);
+        const num: u7 = @backingInt(int);
         const index: u5 = @intCast(num >> 2);
         const shift: u4 = @intCast(4 * (num & 0x4));
-        const set_mask: u16 = @as(u16, @intFromEnum(priority)) << shift;
+        const set_mask: u16 = @as(u16, @backingInt(priority)) << shift;
         const clear_mask: u16 = @as(u16, 0xf) << shift;
         csr.meipra.clear(.{ .index = index, .window = clear_mask });
         csr.meipra.set(.{ .index = index, .window = set_mask });
     }
 
     pub fn get_priority(int: ExternalInterrupt) Priority {
-        const num: u7 = @intFromEnum(int);
+        const num: u7 = @backingInt(int);
         const index: u5 = @intCast(num >> 2);
         const shift: u4 = @intCast(4 * (num & 0x4));
         const mask: u16 = @as(u16, 0xf) << shift;
-        return @enumFromInt((csr.meipra.read_set(.{ .index = index }).window & mask) >> shift);
+        return @fromBackingInt((csr.meipra.read_set(.{ .index = index }).window & mask) >> shift);
     }
 };
 

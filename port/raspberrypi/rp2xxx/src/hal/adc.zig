@@ -6,8 +6,6 @@ const assert = std.debug.assert;
 const microzig = @import("microzig");
 const ADC = microzig.chip.peripherals.ADC;
 const gpio = @import("gpio.zig");
-const resets = @import("resets.zig");
-const clocks = @import("clocks.zig");
 const compatibility = @import("compatibility.zig");
 
 const chip = compatibility.chip;
@@ -21,7 +19,7 @@ pub const Error = error{
 
 /// temp_sensor is not valid because you can refer to it by name.
 pub fn input(n: u2) Input {
-    return @as(Input, @enumFromInt(n));
+    return @as(Input, @fromBackingInt(n));
 }
 
 /// Enable the ADC controller.
@@ -77,13 +75,13 @@ pub fn apply(config: Config) void {
 
 /// Select analog input for next conversion.
 pub fn select_input(in: Input) void {
-    ADC.CS.modify(.{ .AINSEL = @intFromEnum(in) });
+    ADC.CS.modify(.{ .AINSEL = @backingInt(in) });
 }
 
 /// Get the currently selected analog input.
 pub fn get_selected_input() Input {
     const cs = ADC.SC.read();
-    return @as(Input, @enumFromInt(cs.AINSEL));
+    return @as(Input, @fromBackingInt(cs.AINSEL));
 }
 
 /// For RP2040 and RP2350A, the values are:
@@ -113,7 +111,7 @@ pub const Input = if (has_rp2350b)
 
         pub fn get_gpio_pin(in: Input) gpio.Pin {
             return switch (in) {
-                else => gpio.num(@as(u9, @intFromEnum(in)) + 40),
+                else => gpio.num(@as(u9, @backingInt(in)) + 40),
                 .temp_sensor => @panic("temp_sensor doesn't have a pin"),
             };
         }
@@ -133,7 +131,7 @@ else
 
         pub fn get_gpio_pin(in: Input) gpio.Pin {
             return switch (in) {
-                else => gpio.num(@as(u5, @intFromEnum(in)) + 26),
+                else => gpio.num(@as(u5, @backingInt(in)) + 26),
                 .temp_sensor => @panic("temp_sensor doesn't have a pin"),
             };
         }

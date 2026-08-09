@@ -1,12 +1,6 @@
-const std = @import("std");
-const assert = std.debug.assert;
-
-const microzig = @import("microzig");
-
 const common = @import("common.zig");
 
 const gpio = @import("../gpio.zig");
-const resets = @import("../resets.zig");
 const hw = @import("../hw.zig");
 
 pub const Pio = enum(u1) {
@@ -52,8 +46,8 @@ pub const Pio = enum(u1) {
             .AUTOPUSH = @intFromBool(options.autopush),
             .AUTOPULL = @intFromBool(options.autopull),
 
-            .IN_SHIFTDIR = @intFromEnum(options.in_shiftdir),
-            .OUT_SHIFTDIR = @intFromEnum(options.out_shiftdir),
+            .IN_SHIFTDIR = @backingInt(options.in_shiftdir),
+            .OUT_SHIFTDIR = @backingInt(options.out_shiftdir),
 
             .PUSH_THRESH = options.push_threshold,
             .PULL_THRESH = options.pull_threshold,

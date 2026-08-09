@@ -8,7 +8,7 @@ pub fn init() void {
 }
 
 pub fn get_time_since_boot() time.Absolute {
-    return @enumFromInt(get_time());
+    return @fromBackingInt(get_time());
 }
 
 pub fn sleep_ms(time_ms: u32) void {

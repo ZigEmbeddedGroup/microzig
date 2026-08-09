@@ -128,10 +128,10 @@ test "uart.validate_baudrate" {
 }
 
 pub const instance = struct {
-    pub const UART0: UART = @enumFromInt(0);
-    pub const UART1: UART = @enumFromInt(1);
+    pub const UART0: UART = @fromBackingInt(0);
+    pub const UART1: UART = @fromBackingInt(1);
     pub fn num(n: u1) UART {
-        return @enumFromInt(n);
+        return @fromBackingInt(n);
     }
 };
 
@@ -226,7 +226,7 @@ pub const UART = enum(u1) {
     }
 
     pub inline fn get_regs(uart: UART) *volatile UartRegs {
-        return switch (@intFromEnum(uart)) {
+        return switch (@backingInt(uart)) {
             0 => UART0_reg,
             1 => UART1_reg,
         };
@@ -301,14 +301,14 @@ pub const UART = enum(u1) {
 
     pub fn tx(uart: UART) dma.DMA_WriteTarget {
         return .{
-            .dreq = if (@intFromEnum(uart) == 0) .uart0_tx else .uart1_tx,
+            .dreq = if (@backingInt(uart) == 0) .uart0_tx else .uart1_tx,
             .addr = @intFromPtr(&uart.get_regs().UARTDR),
         };
     }
 
     pub fn rx(uart: UART) dma.DMA_ReadTarget {
         return .{
-            .dreq = if (@intFromEnum(uart) == 0) .uart0_rx else .uart1_rx,
+            .dreq = if (@backingInt(uart) == 0) .uart0_rx else .uart1_rx,
             .addr = @intFromPtr(&uart.get_regs().UARTDR),
         };
     }
@@ -388,7 +388,7 @@ pub const UART = enum(u1) {
 
     // TODO: Will potentially be modified in a future DMA overhaul
     pub fn dreq_tx(uart: UART) dma.Dreq {
-        return switch (@intFromEnum(uart)) {
+        return switch (@backingInt(uart)) {
             0 => .uart0_tx,
             1 => .uart1_tx,
         };

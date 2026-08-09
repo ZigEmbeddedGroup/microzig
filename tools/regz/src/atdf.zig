@@ -11,7 +11,6 @@ const StructID = Database.StructID;
 const RegisterID = Database.RegisterID;
 
 const xml = @import("xml");
-const Arch = @import("arch.zig").Arch;
 
 const log = std.log.scoped(.atdf);
 

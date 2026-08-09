@@ -37,7 +37,7 @@ pub const Flash_MMU_PageSize = enum(u8) {
     @"64k" = 16,
 
     pub fn in_bytes(self: Flash_MMU_PageSize) usize {
-        return @as(usize, 1) << @intCast(@intFromEnum(self));
+        return @as(usize, 1) << @intCast(@backingInt(self));
     }
 };
 

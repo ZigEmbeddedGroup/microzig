@@ -34,7 +34,7 @@ pub fn main() !void {
     i2c0.apply(.{
         .clock_config = rp2040.clock_config,
     });
-    var expander = PCF8574(.{ .I2C_Device = I2C_Device }).init(i2c_device, @enumFromInt(0x27));
+    var expander = PCF8574(.{ .I2C_Device = I2C_Device }).init(i2c_device, @fromBackingInt(0x27));
     var led = expander.digital_IO(3);
     while (true) {
         try led.write(State.high);

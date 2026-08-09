@@ -40,7 +40,7 @@ pub const Pull = Regs.Pull;
 pub const DriveStrength = Regs.DriveStrength;
 
 pub fn num(bank: u1, n: u5) Pin {
-    return @enumFromInt(@as(u6, bank) * 32 + n);
+    return @fromBackingInt(@as(u6, bank) * 32 + n);
 }
 
 // TODO: Do we want to follow the rp2350 design where we encode the package
@@ -53,7 +53,7 @@ pub const Pin = enum(u6) {
         return switch (version) {
             .nrf51 => peripherals.GPIO,
             .nrf5283x => peripherals.P0,
-            .nrf52840 => if (@intFromEnum(pin) <= 31)
+            .nrf52840 => if (@backingInt(pin) <= 31)
                 peripherals.P0
             else
                 peripherals.P1,
@@ -62,13 +62,13 @@ pub const Pin = enum(u6) {
 
     /// Get the index of the pin, relative to its bank
     pub fn index(pin: Pin) u5 {
-        const n = @intFromEnum(pin);
+        const n = @backingInt(pin);
         return @truncate(if (n <= 31) n else (n - 32));
     }
 
     /// Get the port of the pin
     pub fn port(pin: Pin) u1 {
-        const n = @intFromEnum(pin);
+        const n = @backingInt(pin);
         if (n <= 31) {
             return 0;
         } else return 1;
@@ -95,7 +95,7 @@ pub const Pin = enum(u6) {
 
     pub inline fn set_sense(pin: Pin, sense: Sense) void {
         const regs = pin.get_regs();
-        regs.PIN_CNF[@intFromEnum(pin)].modify(.{
+        regs.PIN_CNF[@backingInt(pin)].modify(.{
             .SENSE = switch (sense) {
                 .disabled => .Disabled,
                 .high => .High,
@@ -106,7 +106,7 @@ pub const Pin = enum(u6) {
 
     pub inline fn set_input_buffer(pin: Pin, input_buffer: InputBuffer) void {
         const regs = pin.get_regs();
-        regs.PIN_CNF[@intFromEnum(pin)].modify(.{
+        regs.PIN_CNF[@backingInt(pin)].modify(.{
             .INPUT = switch (input_buffer) {
                 .connect => .Connect,
                 .disconnect => .Disconnect,
@@ -149,7 +149,7 @@ test "pin number" {
     };
     inline for (tcs) |tc| {
         const pin = num(tc[0], tc[1]);
-        try std.testing.expectEqual(tc[2], @intFromEnum(pin));
+        try std.testing.expectEqual(tc[2], @backingInt(pin));
     }
 }
 

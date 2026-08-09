@@ -9,11 +9,9 @@ const enums = @import("../common/enums.zig");
 const assert = std.debug.assert;
 
 const mdf = microzig.drivers;
-const drivers = mdf.base;
 const Duration = mdf.time.Duration;
 const Deadline = mdf.time.Deadline;
 
-const peripherals = microzig.chip.peripherals;
 const USART_Peripheral = microzig.chip.types.peripherals.usart_v1.USART;
 const M0 = microzig.chip.types.peripherals.usart_v1.M0;
 const PS = microzig.chip.types.peripherals.usart_v1.PS;
@@ -167,14 +165,14 @@ pub const UART = struct {
     fn set_wordbits(uart: *const UART, word: WordBits) void {
         const regs = uart.regs;
         regs.CR1.modify(.{
-            .M0 = @as(M0, @enumFromInt(@intFromEnum(word))),
+            .M0 = @as(M0, @fromBackingInt(@backingInt(word))),
         });
     }
 
     fn set_stopbits(uart: *const UART, stops: StopBits) void {
         const regs = uart.regs;
         regs.CR2.modify(.{
-            .STOP = @as(STOP, @enumFromInt(@intFromEnum(stops))),
+            .STOP = @as(STOP, @fromBackingInt(@backingInt(stops))),
         });
     }
 
@@ -187,7 +185,7 @@ pub const UART = struct {
                 });
             },
             else => |ps| {
-                const val: PS = @enumFromInt(@intFromEnum(ps) - 1);
+                const val: PS = @fromBackingInt(@intCast(@backingInt(ps) - 1));
                 regs.CR1.modify(.{
                     .PCE = 1,
                     .PS = val,

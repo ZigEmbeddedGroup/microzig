@@ -5,11 +5,8 @@
 //!
 //!
 const std = @import("std");
-const assert = std.debug.assert;
 
 const microzig = @import("microzig");
-const mdf = microzig.drivers;
-const drivers = mdf.base;
 const hal = microzig.hal;
 
 const DMA1 = microzig.chip.peripherals.DMA1;
@@ -58,7 +55,7 @@ pub const Channel = enum(u3) {
     /// Get the register pointers for a specific DMA channel
     /// Currently supports DMA1 channels 1-7 only (CH32V203)
     pub inline fn get_regs(comptime chan: Channel) Regs {
-        const chan_num = @intFromEnum(chan);
+        const chan_num = @backingInt(chan);
         const cfgr_name = std.fmt.comptimePrint("CFGR{d}", .{chan_num});
         const cntr_name = std.fmt.comptimePrint("CNTR{d}", .{chan_num});
         const paddr_name = std.fmt.comptimePrint("PADDR{d}", .{chan_num});
@@ -226,7 +223,7 @@ pub const Channel = enum(u3) {
 
         // Clear all interrupt flags for this channel. There are four interrupts per channel, so we
         // shift by 4 * (channel - 1). Channel enum is 1-indexed, so subtract 1 for bit position.
-        const flag_shift: u5 = (@as(u5, @intFromEnum(chan)) - 1) * 4;
+        const flag_shift: u5 = (@as(u5, @backingInt(chan)) - 1) * 4;
         regs.INTFCR.write_raw(@as(u32, 0b1111) << flag_shift);
 
         // NOTE: DIR bit affects transfer direction even in MEM2MEM mode (undocumented behavior):
@@ -248,13 +245,13 @@ pub const Channel = enum(u3) {
         // Set the amount of data to transfer
         regs.CNTR.write_raw(count);
         // Set the priority
-        regs.CFGR.modify(.{ .PL = @intFromEnum(config.priority) });
+        regs.CFGR.modify(.{ .PL = @backingInt(config.priority) });
         // Set the rest of the config
         regs.CFGR.modify(.{
             .MEM2MEM = @intFromBool(direction == .Mem2Mem),
-            .MSIZE = @intFromEnum(data_size),
+            .MSIZE = @backingInt(data_size),
             .MINC = @intFromBool(memory_increment),
-            .PSIZE = @intFromEnum(data_size),
+            .PSIZE = @backingInt(data_size),
             .PINC = @intFromBool(peripheral_increment),
             .CIRC = @intFromBool(config.circular_mode),
             // DIR applies in all modes. Set DIR=1 only for Mem→Periph (MADDR→PADDR);
@@ -283,7 +280,7 @@ pub const Channel = enum(u3) {
         if (cfg.CIRC == 1) return true;
 
         // In normal mode, check if transfer is complete
-        const flag_shift: u5 = (@as(u5, @intFromEnum(chan)) - 1) * 4;
+        const flag_shift: u5 = (@as(u5, @backingInt(chan)) - 1) * 4;
         const tcif_bit: u5 = flag_shift + 1;
         const tcif_mask: u32 = @as(u32, 1) << tcif_bit;
         const tcif = (regs.INTFR.raw & tcif_mask) != 0;
@@ -313,7 +310,7 @@ pub const Channel = enum(u3) {
     /// This flag is set after each cycle in circular mode, or once in normal mode
     pub fn has_completed_cycle(comptime chan: Channel) bool {
         const regs = chan.get_regs();
-        const flag_shift: u5 = (@as(u5, @intFromEnum(chan)) - 1) * 4;
+        const flag_shift: u5 = (@as(u5, @backingInt(chan)) - 1) * 4;
         const tcif_bit: u5 = flag_shift + 1;
         const tcif_mask: u32 = @as(u32, 1) << tcif_bit;
         return (regs.INTFR.raw & tcif_mask) != 0;
@@ -322,7 +319,7 @@ pub const Channel = enum(u3) {
     /// Clear the transfer complete flag (useful in circular mode to detect next cycle)
     pub fn clear_complete_flag(comptime chan: Channel) void {
         const regs = chan.get_regs();
-        const flag_shift: u5 = (@as(u5, @intFromEnum(chan)) - 1) * 4;
+        const flag_shift: u5 = (@as(u5, @backingInt(chan)) - 1) * 4;
         regs.INTFCR.write_raw(@as(u32, 0b0010) << flag_shift); // Clear only TCIF
     }
 

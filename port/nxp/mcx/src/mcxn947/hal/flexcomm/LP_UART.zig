@@ -55,7 +55,7 @@ pub const LP_UART = enum(u4) {
     pub fn init(interface: u4, config: Config) ConfigError!LP_UART {
         FlexComm.num(interface).init(.UART);
 
-        const uart: LP_UART = @enumFromInt(interface);
+        const uart: LP_UART = @fromBackingInt(interface);
         const regs = uart.get_regs();
         uart.reset();
         _ = uart.disable();
@@ -67,7 +67,7 @@ pub const LP_UART = enum(u4) {
         var ctrl = std.mem.zeroes(@TypeOf(regs.CTRL).underlying_type);
         ctrl.M7 = if (config.data_mode == .@"7bit") .DATA7 else .NO_EFFECT;
         ctrl.PE = if (config.parity != .none) .ENABLED else .DISABLED;
-        ctrl.PT = if (@intFromEnum(config.parity) & 1 == 0) .EVEN else .ODD;
+        ctrl.PT = if (@backingInt(config.parity) & 1 == 0) .EVEN else .ODD;
         ctrl.M = if (config.data_mode == .@"9bit") .DATA9 else .DATA8;
         ctrl.TXINV = if (config.tx_invert) .INVERTED else .NOT_INVERTED;
         ctrl.IDLECFG = .IDLE_2; // TODO: make this configurable ?
@@ -188,7 +188,7 @@ pub const LP_UART = enum(u4) {
 
         var baud = regs.BAUD.read();
         baud.SBR = best_sbr;
-        baud.OSR = @enumFromInt(best_osr - 1);
+        baud.OSR = @fromBackingInt(best_osr - 1);
         baud.BOTHEDGE = if (best_osr <= 7) .ENABLED else .DISABLED;
         regs.BAUD.write(baud);
     }
@@ -199,7 +199,7 @@ pub const LP_UART = enum(u4) {
         const regs = uart.get_regs();
         const baud = regs.BAUD.read();
 
-        var osr: u32 = @intFromEnum(baud.OSR);
+        var osr: u32 = @backingInt(baud.OSR);
         if (osr == 1 or osr == 2) unreachable; // reserved baudrates
         if (osr == 0) osr = 15;
         osr += 1;
@@ -207,7 +207,7 @@ pub const LP_UART = enum(u4) {
     }
 
     fn get_n(uart: LP_UART) u4 {
-        return @intFromEnum(uart);
+        return @backingInt(uart);
     }
 
     pub fn get_regs(uart: LP_UART) RegTy {
@@ -215,7 +215,7 @@ pub const LP_UART = enum(u4) {
     }
 
     pub fn get_flexcomm(uart: LP_UART) FlexComm {
-        return FlexComm.num(@intFromEnum(uart));
+        return FlexComm.num(@backingInt(uart));
     }
 
     fn can_write(uart: LP_UART) bool {

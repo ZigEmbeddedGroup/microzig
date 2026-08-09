@@ -146,7 +146,7 @@ pub fn Polled(config: Config) type {
                         // registers, IN being first
                         const ep_num = shift / 2;
                         const ep: usb.types.Endpoint = comptime .{
-                            .num = @enumFromInt(ep_num),
+                            .num = @fromBackingInt(ep_num),
                             .dir = if (shift % 2 == 0) .In else .Out,
                         };
 
@@ -273,7 +273,7 @@ pub fn Polled(config: Config) type {
 
             const self: *@This() = @fieldParentPtr("interface", itf);
 
-            const bufctrl_ptr = &buffer_control[@intFromEnum(ep_num)].in;
+            const bufctrl_ptr = &buffer_control[@backingInt(ep_num)].in;
             const ep = self.hardware_endpoint_get_by_address(.in(ep_num));
             var hw_buf: []align(1) u8 = ep.data_buffer;
 
@@ -322,7 +322,7 @@ pub fn Polled(config: Config) type {
             const self: *@This() = @fieldParentPtr("interface", itf);
             assert(data.len > 0);
 
-            const bufctrl = buffer_control[@intFromEnum(ep_num)].out.read();
+            const bufctrl = buffer_control[@backingInt(ep_num)].out.read();
             const ep = self.hardware_endpoint_get_by_address(.out(ep_num));
             var hw_buf: []align(1) u8 = ep.data_buffer[0..bufctrl.LENGTH_0];
             for (data) |dst| {
@@ -345,7 +345,7 @@ pub fn Polled(config: Config) type {
             log.debug("listen {t} {}", .{ ep_num, len });
 
             const self: *@This() = @fieldParentPtr("interface", itf);
-            const bufctrl_ptr = &buffer_control[@intFromEnum(ep_num)].out;
+            const bufctrl_ptr = &buffer_control[@backingInt(ep_num)].out;
 
             var bufctrl = bufctrl_ptr.read();
             const ep = self.hardware_endpoint_get_by_address(.out(ep_num));
@@ -394,7 +394,7 @@ pub fn Polled(config: Config) type {
         }
 
         fn hardware_endpoint_get_by_address(self: *@This(), ep: usb.types.Endpoint) *HardwareEndpointData {
-            return &self.endpoints[@intFromEnum(ep.num)][@intFromEnum(ep.dir)];
+            return &self.endpoints[@backingInt(ep.num)][@backingInt(ep.dir)];
         }
 
         fn ep_open(itf: *usb.DeviceInterface, desc: *const usb.descriptor.Endpoint) void {
@@ -407,23 +407,23 @@ pub fn Polled(config: Config) type {
 
             const self: *@This() = @fieldParentPtr("interface", itf);
 
-            assert(@intFromEnum(desc.endpoint.num) <= config.max_endpoints_count);
+            assert(@backingInt(desc.endpoint.num) <= config.max_endpoints_count);
 
             const ep_hard = self.hardware_endpoint_get_by_address(ep);
 
             assert(desc.max_packet_size.into() <= max_supported_packet_size);
 
-            buffer_control[@intFromEnum(ep.num)].get(ep.dir).modify(.{ .PID_0 = 1 });
+            buffer_control[@backingInt(ep.num)].get(ep.dir).modify(.{ .PID_0 = 1 });
 
             if (ep.num == .ep0) {
                 // ep0 has fixed data buffer
                 ep_hard.data_buffer = rp2xxx_buffers.ep0_buffer0;
             } else {
                 ep_hard.data_buffer = self.endpoint_alloc(desc) catch unreachable;
-                endpoint_control[@intFromEnum(ep.num) - 1].get(ep.dir).write(.{
+                endpoint_control[@backingInt(ep.num) - 1].get(ep.dir).write(.{
                     .ENABLE = 1,
                     .INTERRUPT_PER_BUFF = 1,
-                    .ENDPOINT_TYPE = @enumFromInt(@intFromEnum(attr.transfer_type)),
+                    .ENDPOINT_TYPE = @fromBackingInt(@backingInt(attr.transfer_type)),
                     .BUFFER_ADDRESS = rp2xxx_buffers.data_offset(ep_hard.data_buffer),
                 });
             }
@@ -463,8 +463,8 @@ pub fn ResetDriver(bootsel_activity_led: ?u5, interface_disable_mask: u32) type 
                     .num_endpoints = 0,
                     .interface_triple = .from(
                         .VendorSpecific,
-                        @enumFromInt(0x00),
-                        @enumFromInt(0x01),
+                        @fromBackingInt(0x00),
+                        @fromBackingInt(0x01),
                     ),
                     .interface_s = alloc.string(interface_str),
                 } } };

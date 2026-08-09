@@ -11,8 +11,8 @@ const I2C_Device = mdf.base.I2C_Device;
 const ClockDevice = mdf.base.ClockDevice;
 
 /// TLV493D I2C addresses
-pub const ADDRESS0: I2C_Device.Address = @enumFromInt(0x1F);
-pub const ADDRESS1: I2C_Device.Address = @enumFromInt(0x5E); // Default
+pub const ADDRESS0: I2C_Device.Address = @fromBackingInt(0x1F);
+pub const ADDRESS1: I2C_Device.Address = @fromBackingInt(0x5E); // Default
 
 /// Startup delay in milliseconds
 pub const STARTUPDELAY_MS: u32 = 40;
@@ -283,7 +283,7 @@ pub const TLV493D = struct {
 
     /// Set access mode
     pub fn set_access_mode(self: *Self, mode: AccessMode) Error!void {
-        const mode_config = &ACCESS_MODE_CONFIGS[@intFromEnum(mode)];
+        const mode_config = &ACCESS_MODE_CONFIGS[@backingInt(mode)];
 
         self.write_data.FAST = mode_config.fast;
         self.write_data.LOWPOWER = mode_config.lp;
@@ -322,7 +322,7 @@ pub const TLV493D = struct {
 
     /// Get measurement delay (in ms) for current mode
     pub fn get_measurement_delay(self: *Self) u16 {
-        return ACCESS_MODE_CONFIGS[@intFromEnum(self.mode)].measurement_time;
+        return ACCESS_MODE_CONFIGS[@backingInt(self.mode)].measurement_time;
     }
 
     /// Update sensor data

@@ -72,11 +72,11 @@ pub const Config = struct {
 
 pub fn configure(config: Config) void {
     regs.write(regs.adc0_ctrla, 0);
-    regs.write(regs.vref_ctrla, @intFromEnum(config.reference));
-    regs.write(regs.adc0_muxpos, @intFromEnum(config.channel));
-    regs.write(regs.adc0_ctrlb, @intFromEnum(config.sample_count));
-    regs.write(regs.adc0_ctrlc, @intFromEnum(config.prescaler) | if (config.sample_capacitance) regs.bit(regs.adc_bits.sample_capacitance) else 0);
-    regs.write(regs.adc0_ctrld, @intFromEnum(config.initial_delay));
+    regs.write(regs.vref_ctrla, @backingInt(config.reference));
+    regs.write(regs.adc0_muxpos, @backingInt(config.channel));
+    regs.write(regs.adc0_ctrlb, @backingInt(config.sample_count));
+    regs.write(regs.adc0_ctrlc, @backingInt(config.prescaler) | if (config.sample_capacitance) regs.bit(regs.adc_bits.sample_capacitance) else 0);
+    regs.write(regs.adc0_ctrld, @backingInt(config.initial_delay));
     regs.write(regs.adc0_sampctrl, config.sample_control);
 
     var ctrla = regs.bit(regs.adc_bits.enable);

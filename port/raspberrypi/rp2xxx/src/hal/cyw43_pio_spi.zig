@@ -1,12 +1,9 @@
 //! CYW43 3-wire SPI driver build on PIO
 //! Code based on embassy cyw43-pio driver https://github.com/embassy-rs/embassy/tree/main/cyw43-pio (last commit: d41eeea)
-const std = @import("std");
 const microzig = @import("microzig");
 const hal = @import("../hal.zig");
 
 const CYW43_SPI = microzig.drivers.wireless.CYW43_SPI;
-
-const chip = microzig.hal.compatibility.chip;
 
 const cyw43spi_program = blk: {
     @setEvalBranchQuota(5000);
@@ -226,11 +223,11 @@ pub const CYW43_PIO_SPI = struct {
     }
 
     inline fn get_pio_tx_dreq(self: *Self) hal.dma.Dreq {
-        return @enumFromInt(@intFromEnum(self.pio) * @as(u6, 8) + @intFromEnum(self.sm));
+        return @fromBackingInt(@backingInt(self.pio) * @as(u6, 8) + @backingInt(self.sm));
     }
 
     inline fn get_pio_rx_dreq(self: *Self) hal.dma.Dreq {
-        return @enumFromInt(@intFromEnum(self.pio) * @as(u6, 8) + @intFromEnum(self.sm) + 4);
+        return @fromBackingInt(@backingInt(self.pio) * @as(u6, 8) + @backingInt(self.sm) + 4);
     }
 
     /// CYW43_SPI interface implementation

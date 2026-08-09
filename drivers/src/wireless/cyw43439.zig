@@ -1,5 +1,4 @@
 const std = @import("std");
-const mem = std.mem;
 const assert = std.debug.assert;
 
 const Link = @import("link");

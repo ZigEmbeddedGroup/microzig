@@ -332,7 +332,7 @@ pub const Timezone = enum(i16) {
             minute_offset = -minute_offset;
         }
 
-        return @enumFromInt(minute_offset);
+        return @fromBackingInt(minute_offset);
     }
 
     /// Convert a Timezone to a string like "+00:00" or "-00:00"
@@ -345,9 +345,9 @@ pub const Timezone = enum(i16) {
     pub fn to_string(self: Timezone, out_string: []u8, separator: ?[]const u8) Error!usize {
         if (out_string.len < 5 + (separator orelse @as([]const u8, ":")).len) return error.NotEnoughSpace;
 
-        const minus = @intFromEnum(self) < 0;
+        const minus = @backingInt(self) < 0;
 
-        var m = @abs(@intFromEnum(self));
+        var m = @abs(@backingInt(self));
         const h = m / 60;
         m = m % 60;
 
@@ -383,8 +383,8 @@ pub const Timezone = enum(i16) {
     /// This number is the number of milliseconds to add to a time in the this timezone
     /// to get the time in the other timezone
     pub fn offset(self: Timezone, other: Timezone) i64 {
-        var delta: i64 = @intFromEnum(other);
-        delta -= @intFromEnum(self);
+        var delta: i64 = @backingInt(other);
+        delta -= @backingInt(self);
         delta *= 60_000;
         return delta;
     }
@@ -575,7 +575,7 @@ pub fn day_of_week(self: DateTime) DayOfWeek {
     var dow: i32 = (13 * (m + 1) / 5) + y + (y / 4) + (c / 4) + self.day;
     dow -= 2 * c;
 
-    return @enumFromInt(@mod(dow, 7) - 1);
+    return @fromBackingInt(@intCast(@mod(dow, 7) - 1));
 }
 
 /// Convert the DateTime to an ISO 8601 string.
@@ -656,20 +656,20 @@ pub fn to_string(self: DateTime, out_string: []u8, format: []const u8, localizat
             if (f >= format.len) break;
             switch (format[f]) {
                 'a' => {
-                    const val = l10n.day_abbr[@intFromEnum(self.day_of_week())];
+                    const val = l10n.day_abbr[@backingInt(self.day_of_week())];
                     if (i + val.len > out_string.len) return error.NotEnoughSpace;
                     std.mem.copyForwards(u8, out_string[i..], val);
                     i += val.len;
                 },
                 'A' => {
-                    const val = l10n.day_names[@intFromEnum(self.day_of_week())];
+                    const val = l10n.day_names[@backingInt(self.day_of_week())];
                     if (i + val.len > out_string.len) return error.NotEnoughSpace;
                     std.mem.copyForwards(u8, out_string[i..], val);
                     i += val.len;
                 },
                 'w' => {
                     if (i + 1 > out_string.len) return error.NotEnoughSpace;
-                    i += int_to_string_padded(out_string[i..], @intFromEnum(self.day_of_week()), 1);
+                    i += int_to_string_padded(out_string[i..], @backingInt(self.day_of_week()), 1);
                 },
                 'd' => {
                     if (i + 2 > out_string.len) return error.NotEnoughSpace;

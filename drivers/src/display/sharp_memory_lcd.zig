@@ -127,10 +127,10 @@ pub fn SharpMemory_LCD(comptime config: Config) type {
             if (comptime config.vcom_mode == .software) {
                 // Toggle VCOM state
                 self.vcom_state = !self.vcom_state;
-                return @intFromEnum(base_cmd) | if (self.vcom_state) @intFromEnum(Cmd.VCOM) else 0;
+                return @backingInt(base_cmd) | if (self.vcom_state) @backingInt(Cmd.VCOM) else 0;
             }
             // No VCOM overhead for displays that don't need it
-            return @intFromEnum(base_cmd);
+            return @backingInt(base_cmd);
         }
 
         /// Clear the entire display to white

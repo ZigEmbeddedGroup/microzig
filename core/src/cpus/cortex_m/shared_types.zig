@@ -2,8 +2,6 @@
 //! This file contains types shared between different CPUs
 //!
 
-const builtin = @import("builtin");
-
 pub const CpuFlags = struct {
     has_hard_fault: bool = true,
     has_bus_fault: bool,

@@ -1,6 +1,5 @@
 const std = @import("std");
 const assembler = @import("../assembler.zig");
-const tokenizer = @import("tokenizer.zig");
 const Chip = @import("../../chip.zig").Chip;
 
 const c = @import("c");

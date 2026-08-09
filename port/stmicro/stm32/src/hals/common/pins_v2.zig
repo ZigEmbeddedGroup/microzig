@@ -242,8 +242,8 @@ pub const GlobalConfiguration = struct {
             if (@field(config, port_field_name)) |port_config| {
                 inline for (@typeInfo(Port.Configuration).@"struct".field_names) |field_name| {
                     if (@field(port_config, field_name)) |pin_config| {
-                        const port = @intFromEnum(@field(Port, port_field_name));
-                        var pin = gpio.Pin.from_port(@enumFromInt(port), @intFromEnum(@field(Pin, field_name)));
+                        const port = @backingInt(@field(Port, port_field_name));
+                        var pin = gpio.Pin.from_port(@fromBackingInt(port), @backingInt(@field(Pin, field_name)));
                         pin.write_pin_config(pin_config.mode.?);
                         const default_name = "P" ++ port_field_name[4..5] ++ field_name[3..];
 

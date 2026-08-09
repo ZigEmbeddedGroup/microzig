@@ -2,7 +2,6 @@
 //! This file implements driver abstractions based on HAL devices.
 //!
 
-const std = @import("std");
 const microzig = @import("microzig");
 const gpio = @import("./gpio.zig");
 const i2c = @import("./i2c.zig");
@@ -14,7 +13,6 @@ const time = microzig.hal.time;
 const drivers = microzig.drivers.base;
 
 const DatagramDevice = drivers.DatagramDevice;
-const Stream_Device = drivers.Stream_Device;
 const Digital_IO = drivers.Digital_IO;
 const I2CError = drivers.I2C_Device.Error;
 const I2CAddress = drivers.I2C_Device.Address;
@@ -172,7 +170,7 @@ pub const GPIO_Device = struct {
     }
 
     pub fn read(dio: GPIO_Device) ReadError!State {
-        return @enumFromInt(dio.pin.read());
+        return @fromBackingInt(dio.pin.read());
     }
 
     const vtable = Digital_IO.VTable{
@@ -353,7 +351,7 @@ pub const ClockDevice = struct {
     fn get_time_since_boot_fn(td: *anyopaque) time.Absolute {
         _ = td;
         const t = time.get_time_since_boot().to_us();
-        return @enumFromInt(t);
+        return @fromBackingInt(t);
     }
 };
 

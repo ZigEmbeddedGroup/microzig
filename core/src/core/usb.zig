@@ -30,12 +30,12 @@ pub const DescriptorAllocator = struct {
     }
 
     pub fn next_ep(self: *@This(), dir: types.Dir) types.Endpoint {
-        const idx: u1 = @intFromEnum(dir);
+        const idx: u1 = @backingInt(dir);
         const ret = self.next_ep_num[idx];
         self.next_ep_num[idx] += 1;
         if (self.unique_endpoints)
             self.next_ep_num[idx ^ 1] += 1;
-        return .{ .dir = dir, .num = @enumFromInt(ret) };
+        return .{ .dir = dir, .num = @fromBackingInt(ret) };
     }
 
     pub fn next_itf(self: *@This()) u8 {
@@ -328,8 +328,8 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
                     switch (field_type) {
                         // Register handler for endpoints
                         descriptor.Endpoint => {
-                            const ep_dir = @intFromEnum(desc.endpoint.dir);
-                            const ep_num = @intFromEnum(desc.endpoint.num);
+                            const ep_dir = @backingInt(desc.endpoint.dir);
+                            const ep_num = @backingInt(desc.endpoint.num);
 
                             if (ep_handler_types[ep_dir][ep_num] != void)
                                 @compileError(std.fmt.comptimePrint(
@@ -369,8 +369,8 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
             const const_ep_handlers = ep_handlers;
 
             const DriverConfig = @Struct(.@"extern", null, &field_names, &field_types, &field_attrs);
-            const idx_in = @intFromEnum(types.Dir.In);
-            const idx_out = @intFromEnum(types.Dir.Out);
+            const idx_in = @backingInt(types.Dir.In);
+            const idx_out = @backingInt(types.Dir.Out);
             break :blk .{
                 .device_descriptor = desc_device,
                 .config_descriptor = extern struct {
@@ -464,8 +464,8 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
         pub fn on_buffer(self: *@This(), device_itf: *DeviceInterface, comptime ep: types.Endpoint) void {
             log.debug("on_buffer {t} {t}", .{ ep.num, ep.dir });
 
-            const driver_opt = comptime handlers_ep.drv[@intFromEnum(ep.dir)][@intFromEnum(ep.num)];
-            const handler = comptime @field(handlers_ep.han, @tagName(ep.dir))[@intFromEnum(ep.num)];
+            const driver_opt = comptime handlers_ep.drv[@backingInt(ep.dir)][@backingInt(ep.num)];
+            const handler = comptime @field(handlers_ep.han, @tagName(ep.dir))[@backingInt(ep.num)];
 
             if (comptime ep == types.Endpoint.in(.ep0)) {
                 // We use this opportunity to finish the delayed
@@ -513,7 +513,7 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
         fn process_device_setup(self: *@This(), device_itf: *DeviceInterface, setup: *const types.SetupPacket) ?[]const u8 {
             switch (setup.request_type.type) {
                 .Standard => {
-                    const request: types.SetupRequest = @enumFromInt(setup.request);
+                    const request: types.SetupRequest = @fromBackingInt(setup.request);
                     log.debug("Device setup: {any}", .{request});
                     switch (request) {
                         .GetStatus => {
@@ -525,7 +525,7 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
                         .SetConfiguration => self.process_set_config(device_itf, setup.value.into()),
                         .GetDescriptor => return get_descriptor(setup.value.into()),
                         .SetFeature => {
-                            const feature: types.FeatureSelector = @enumFromInt(setup.value.into() >> 8);
+                            const feature: types.FeatureSelector = @fromBackingInt(@intCast(setup.value.into() >> 8));
                             switch (feature) {
                                 .DeviceRemoteWakeup, .EndpointHalt => {},
                                 // TODO: https://github.com/ZigEmbeddedGroup/microzig/issues/453
@@ -563,7 +563,7 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
         // Return the appropriate descriptor type as determined by the top 8 bits of the value.
         fn get_descriptor(value: u16) ?[]const u8 {
             const asBytes = std.mem.asBytes;
-            const desc_type: descriptor.Type = @enumFromInt(value >> 8);
+            const desc_type: descriptor.Type = @fromBackingInt(@intCast(value >> 8));
             const desc_idx: u8 = @truncate(value);
             log.debug("Request for {any} descriptor {}", .{ desc_type, desc_idx });
             return switch (desc_type) {

@@ -95,7 +95,7 @@
   "mileage": 0,
   "cpu": "attiny816",
   "cpus": null,
-  "optimize": "ReleaseSmall",
+  "optimize": "small",
   "gcc_flags": [
     "-g",
     "-O2",

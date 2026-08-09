@@ -4,7 +4,6 @@ const enums = @import("enums.zig");
 
 const I2C_Type = enums.I2C_Type;
 const I2C_Peripherals = microzig.chip.types.peripherals.i2c_v2.I2C;
-const peripherals = microzig.chip.peripherals;
 const hal = microzig.hal;
 const drivers = microzig.drivers.base;
 
@@ -136,7 +135,7 @@ const I2C = struct {
 
         regs.CR2.modify(.{
             .NBYTES = @as(u8, @intCast(chunks.len)),
-            .SADD = @as(u10, @intCast(@intFromEnum(addr))) << 1,
+            .SADD = @as(u10, @intCast(@backingInt(addr))) << 1,
             .DIR = .Read,
         });
         regs.CR2.modify(.{
@@ -159,7 +158,7 @@ const I2C = struct {
 
         regs.CR2.modify(.{
             .NBYTES = @as(u8, @intCast(chunks.len)),
-            .SADD = @as(u10, @intCast(@intFromEnum(addr))) << 1,
+            .SADD = @as(u10, @intCast(@backingInt(addr))) << 1,
             .AUTOEND = if (restart) .Software else .Automatic,
             .DIR = .Write,
         });

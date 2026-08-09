@@ -169,7 +169,7 @@ pub const ICM_20948 = struct {
         inline fn value(self: @This()) u8 {
             // This peels off the outer union to get access to the inner enum
             return switch (self) {
-                inline else => |e| @intFromEnum(e),
+                inline else => |e| @backingInt(e),
             };
         }
         inline fn bank(self: @This()) u2 {
@@ -523,8 +523,8 @@ pub const ICM_20948 = struct {
             reserved_6: u2 = 0,
         }{
             .ACCEL_FCHOICE = if (config.accel_dlp == .disabled) 0 else 1,
-            .ACCEL_FS_SEL = @intFromEnum(config.accel_range),
-            .ACCEL_DLPFCFG = @truncate(@intFromEnum(config.accel_dlp)),
+            .ACCEL_FS_SEL = @backingInt(config.accel_range),
+            .ACCEL_DLPFCFG = @truncate(@backingInt(config.accel_dlp)),
         };
 
         try self.write_byte(.{ .bank2 = .accel_config }, @bitCast(reg));
@@ -595,8 +595,8 @@ pub const ICM_20948 = struct {
             reserved_6: u2 = 0,
         }{
             .GYRO_FCHOICE = if (config.gyro_dlp == .disabled) 0 else 1,
-            .GYRO_FS_SEL = @intFromEnum(config.gyro_range),
-            .GYRO_DLPFCFG = @truncate(@intFromEnum(config.gyro_dlp)),
+            .GYRO_FS_SEL = @backingInt(config.gyro_range),
+            .GYRO_DLPFCFG = @truncate(@backingInt(config.gyro_dlp)),
         };
 
         try self.write_byte(.{ .bank2 = .gyro_config_1 }, @bitCast(reg));
@@ -797,7 +797,7 @@ pub const ICM_20948 = struct {
         try self.set_mag_read();
         self.clock.sleep_us(MAG_WRITE_DELAY_US);
         // Set register to read from
-        try self.write_byte(.{ .bank3 = .i2c_slv0_reg }, @intFromEnum(reg));
+        try self.write_byte(.{ .bank3 = .i2c_slv0_reg }, @backingInt(reg));
         // Configure master to auto-read into SENS_DATA regs
         try self.write_byte(.{ .bank3 = .i2c_slv0_ctrl }, @bitCast(i2c_slv0_ctrl{
             .i2c_slv0_leng = @truncate(buf.len),
@@ -818,7 +818,7 @@ pub const ICM_20948 = struct {
     pub inline fn mag_write_byte(self: *Self, reg: MagRegister, val: u8) Error!void {
         try self.set_mag_write();
         self.clock.sleep_us(MAG_WRITE_DELAY_US);
-        try self.write_byte(.{ .bank3 = .i2c_slv0_reg }, @intFromEnum(reg));
+        try self.write_byte(.{ .bank3 = .i2c_slv0_reg }, @backingInt(reg));
         try self.write_byte(.{ .bank3 = .i2c_slv0_do }, val);
         try self.write_byte(.{ .bank3 = .i2c_slv0_ctrl }, @bitCast(i2c_slv0_ctrl{
             .i2c_slv0_leng = 1,
@@ -850,7 +850,7 @@ pub const ICM_20948 = struct {
         // NOTE: We set the address to the byte before hxl, and set the length to 9 bytes so
         // that we read status1 which we can check, but more importantly, we read out
         // status2, which MUST BE READ between reads otherwise the values won't get updated.
-        try self.write_byte(.{ .bank3 = .i2c_slv0_reg }, @intFromEnum(MagRegister.status1));
+        try self.write_byte(.{ .bank3 = .i2c_slv0_reg }, @backingInt(MagRegister.status1));
         try self.write_byte(.{ .bank3 = .i2c_slv0_ctrl }, @bitCast(i2c_slv0_ctrl{
             .i2c_slv0_en = 1,
             .i2c_slv0_leng = 9,
@@ -905,7 +905,7 @@ test "set_bank" {
     defer d.deinit();
     const id = d.i2c_device();
 
-    var dev = try ICM_20948.init(id, @enumFromInt(0), ttd.clock_device(), .{});
+    var dev = try ICM_20948.init(id, @fromBackingInt(0), ttd.clock_device(), .{});
 
     // Nothing is sent in init
     try d.expect_sent(&.{});
@@ -933,7 +933,7 @@ test "reset" {
     defer d.deinit();
     const id = d.i2c_device();
 
-    var dev = try ICM_20948.init(id, @enumFromInt(0), ttd.clock_device(), .{});
+    var dev = try ICM_20948.init(id, @fromBackingInt(0), ttd.clock_device(), .{});
 
     // Nothing is sent in init
     try d.expect_sent(&.{});
@@ -951,7 +951,7 @@ test "read_byte" {
     defer d.deinit();
     const id = d.i2c_device();
 
-    var dev = try ICM_20948.init(id, @enumFromInt(0), ttd.clock_device(), .{});
+    var dev = try ICM_20948.init(id, @fromBackingInt(0), ttd.clock_device(), .{});
 
     // Read byte will set the bank
     // -- Put in the values it expects to read
@@ -968,7 +968,7 @@ test "error handling in setup" {
     defer d.deinit();
     const id = d.i2c_device();
 
-    var dev = try ICM_20948.init(id, @enumFromInt(0), ttd.clock_device(), .{});
+    var dev = try ICM_20948.init(id, @fromBackingInt(0), ttd.clock_device(), .{});
 
     // Test wrong WHO_AM_I response, first byte is read during reset()
     d.input_sequence = &.{ &.{0x00}, &.{0xFF} }; // Wrong ID after reset
@@ -982,7 +982,7 @@ test "device responsiveness check" {
     defer d.deinit();
     const id = d.i2c_device();
 
-    var dev = try ICM_20948.init(id, @enumFromInt(0), ttd.clock_device(), .{});
+    var dev = try ICM_20948.init(id, @fromBackingInt(0), ttd.clock_device(), .{});
 
     // Test with correct WHO_AM_I
     d.input_sequence = &.{&.{ICM_20948.WHOAMI}};

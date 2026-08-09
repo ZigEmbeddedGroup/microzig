@@ -67,7 +67,7 @@ pub inline fn set_datetime(datetime: DateTime) void {
         .DAY = datetime.day,
     });
     RTC.SETUP_1.modify(.{
-        .DOTW = @intFromEnum(datetime.day_of_week),
+        .DOTW = @backingInt(datetime.day_of_week),
         .HOUR = datetime.hour,
         .MIN = datetime.minute,
         .SEC = datetime.second,
@@ -94,7 +94,7 @@ pub inline fn get_datetime() DateTime {
         .year = RTC1.YEAR,
         .month = RTC1.MONTH,
         .day = RTC1.DAY,
-        .day_of_week = @enumFromInt(RTC0.DOTW),
+        .day_of_week = @fromBackingInt(RTC0.DOTW),
         .hour = RTC0.HOUR,
         .minute = RTC0.MIN,
         .second = RTC0.SEC,
@@ -158,7 +158,7 @@ pub const alarm = struct {
         }
 
         if (config.day_of_week) |day_of_week| {
-            irq_setup1.DOTW = @intFromEnum(day_of_week);
+            irq_setup1.DOTW = @backingInt(day_of_week);
             irq_setup1.DOTW_ENA = 1;
         }
         if (config.hour) |hour| {

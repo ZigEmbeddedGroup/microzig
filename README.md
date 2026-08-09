@@ -4,7 +4,7 @@
 
 ## What version of Zig to use
 
-`0.17.0-dev.1158+1d1193aa7`
+`0.17.0-dev.1471+ff10b90bc`
 
 ## Getting Started With MicroZig
 

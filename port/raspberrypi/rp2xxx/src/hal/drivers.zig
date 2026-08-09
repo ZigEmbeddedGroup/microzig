@@ -11,7 +11,6 @@ const drivers = microzig.drivers.base;
 const time = microzig.drivers.time;
 
 const DatagramDevice = drivers.DatagramDevice;
-const Stream_Device = drivers.Stream_Device;
 const Digital_IO = drivers.Digital_IO;
 const ClockDevice = drivers.ClockDevice;
 const I2CError = drivers.I2C_Device.Error;
@@ -412,7 +411,7 @@ pub const GPIO_Device = struct {
     }
 
     pub fn read(dio: GPIO_Device) ReadError!State {
-        return @enumFromInt(dio.pin.read());
+        return @fromBackingInt(dio.pin.read());
     }
 
     const vtable = Digital_IO.VTable{
@@ -603,7 +602,7 @@ pub const WiFi = struct {
             0 => @ptrCast(&IO_BANK0.PROC0_INTE0),
             else => @ptrCast(&IO_BANK0.PROC1_INTE0),
         };
-        const pin_num = @intFromEnum(pin);
+        const pin_num = @backingInt(pin);
         const bits: u4 = @truncate(ints_base[pin_num >> 3] & 0xF);
         const events: hal.gpio.IrqEvents = @bitCast(bits);
         return events;

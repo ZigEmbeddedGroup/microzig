@@ -22,8 +22,6 @@ const version: enum {
 
 const SPIM0 = peripherals.SPIM0;
 const SPIM1 = peripherals.SPIM1;
-const SPIM2 = peripherals.SPIM2;
-const SPIM3 = peripherals.SPIM3;
 
 const SpimRegs = microzig.chip.types.peripherals.SPIM0;
 
@@ -61,14 +59,14 @@ pub const TransactionError = error{
 };
 
 pub fn num(n: u2) SPIM {
-    return @as(SPIM, @enumFromInt(n));
+    return @as(SPIM, @fromBackingInt(n));
 }
 
 pub const SPIM = enum(u1) {
     _,
 
     pub fn get_regs(spi: SPIM) *volatile SpimRegs {
-        return switch (@intFromEnum(spi)) {
+        return switch (@backingInt(spi)) {
             0 => SPIM0,
             1 => SPIM1,
         };
@@ -113,22 +111,22 @@ pub const SPIM = enum(u1) {
         // TODO: Does MOSI idle change here?
         switch (config.mode) {
             .mode0 => regs.CONFIG.write(.{
-                .ORDER = @enumFromInt(@intFromBool(config.bit_order == .lsb_first)),
+                .ORDER = @fromBackingInt(@intFromBool(config.bit_order == .lsb_first)),
                 .CPHA = .Leading,
                 .CPOL = .ActiveHigh,
             }),
             .mode1 => regs.CONFIG.write(.{
-                .ORDER = @enumFromInt(@intFromBool(config.bit_order == .lsb_first)),
+                .ORDER = @fromBackingInt(@intFromBool(config.bit_order == .lsb_first)),
                 .CPHA = .Trailing,
                 .CPOL = .ActiveHigh,
             }),
             .mode2 => regs.CONFIG.write(.{
-                .ORDER = @enumFromInt(@intFromBool(config.bit_order == .lsb_first)),
+                .ORDER = @fromBackingInt(@intFromBool(config.bit_order == .lsb_first)),
                 .CPHA = .Leading,
                 .CPOL = .ActiveLow,
             }),
             .mode3 => regs.CONFIG.write(.{
-                .ORDER = @enumFromInt(@intFromBool(config.bit_order == .lsb_first)),
+                .ORDER = @fromBackingInt(@intFromBool(config.bit_order == .lsb_first)),
                 .CPHA = .Trailing,
                 .CPOL = .ActiveLow,
             }),

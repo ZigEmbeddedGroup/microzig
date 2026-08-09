@@ -144,19 +144,19 @@ pub const default = struct {
             else => return GenericLock(*Context, ErrorLock.error_lock_unlock, ErrorLock.error_lock_unlock),
         }
 
-        if (builtin.cpu.features.isEnabled(@intFromEnum(std.Target.arm.Feature.v6m)) or builtin.cpu.features.isEnabled(@intFromEnum(std.Target.arm.Feature.v8m))) {
+        if (builtin.cpu.features.isEnabled(@backingInt(std.Target.arm.Feature.v6m)) or builtin.cpu.features.isEnabled(@backingInt(std.Target.arm.Feature.v8m))) {
             return GenericLock(
                 *Context,
                 ArmV6mV8m.lock,
                 ArmV6mV8m.unlock,
             );
-        } else if (builtin.cpu.features.isEnabled(@intFromEnum(std.Target.arm.Feature.v7m)) or builtin.cpu.features.isEnabled(@intFromEnum(std.Target.arm.Feature.v7em)) or builtin.cpu.features.isEnabled(@intFromEnum(std.Target.arm.Feature.v8m_main))) {
+        } else if (builtin.cpu.features.isEnabled(@backingInt(std.Target.arm.Feature.v7m)) or builtin.cpu.features.isEnabled(@backingInt(std.Target.arm.Feature.v7em)) or builtin.cpu.features.isEnabled(@backingInt(std.Target.arm.Feature.v8m_main))) {
             return GenericLock(
                 *Context,
                 ArmV7mV7emV8mMain.lock,
                 ArmV7mV7emV8mMain.unlock,
             );
-        } else if (builtin.cpu.features.isEnabled(@intFromEnum(std.Target.arm.Feature.v7a)) or builtin.cpu.features.isEnabled(@intFromEnum(std.Target.arm.Feature.v7r))) {
+        } else if (builtin.cpu.features.isEnabled(@backingInt(std.Target.arm.Feature.v7a)) or builtin.cpu.features.isEnabled(@backingInt(std.Target.arm.Feature.v7r))) {
             return GenericLock(
                 *Context,
                 ArmV7aV7r.lock,

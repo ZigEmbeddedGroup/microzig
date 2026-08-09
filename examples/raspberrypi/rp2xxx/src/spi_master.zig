@@ -4,7 +4,6 @@ const microzig = @import("microzig");
 const rp2xxx = microzig.hal;
 const time = rp2xxx.time;
 
-const BUF_LEN = 0x100;
 const spi = rp2xxx.spi.instance.SPI0;
 
 // These may change depending on which GPIO pins you have your SPI device routed to.

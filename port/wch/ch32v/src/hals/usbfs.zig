@@ -45,7 +45,7 @@ fn PerEndpointArray(comptime N: comptime_int) type {
 }
 
 fn epn(ep: types.Endpoint.Num) u4 {
-    return @as(u4, @intCast(@intFromEnum(ep)));
+    return @as(u4, @intCast(@backingInt(ep)));
 }
 // --- USBHD token encodings ---
 const TOKEN_OUT: u2 = 0;
@@ -214,7 +214,7 @@ pub fn Polled(comptime cfg: Config) type {
         }
 
         fn st(self: *Self, ep_num: types.Endpoint.Num, dir: types.Dir) *EP_State {
-            return &self.endpoints[@intFromEnum(ep_num)][@intFromEnum(dir)];
+            return &self.endpoints[@backingInt(ep_num)][@backingInt(dir)];
         }
 
         fn arm_ep0_out_always(self: *Self) void {
@@ -225,9 +225,9 @@ pub fn Polled(comptime cfg: Config) type {
         fn on_bus_reset_local(self: *Self) void {
             // Clear state
             inline for (0..cfg.max_endpoints_count) |i| {
-                self.endpoints[i][@intFromEnum(types.Dir.Out)].rx_armed = false;
-                self.endpoints[i][@intFromEnum(types.Dir.Out)].rx_last_len = 0;
-                self.endpoints[i][@intFromEnum(types.Dir.In)].tx_busy = false;
+                self.endpoints[i][@backingInt(types.Dir.Out)].rx_armed = false;
+                self.endpoints[i][@backingInt(types.Dir.Out)].rx_last_len = 0;
+                self.endpoints[i][@backingInt(types.Dir.In)].tx_busy = false;
             }
 
             // Default: NAK all non-EP0 endpoints.
@@ -255,13 +255,13 @@ pub fn Polled(comptime cfg: Config) type {
             switch (dir) {
                 .In => switch (ep) {
                     inline 0...15 => |i| {
-                        const num: types.Endpoint.Num = @enumFromInt(i);
+                        const num: types.Endpoint.Num = @fromBackingInt(i);
                         controller.on_buffer(&self.interface, .{ .num = num, .dir = .In });
                     },
                 },
                 .Out => switch (ep) {
                     inline 0...15 => |i| {
-                        const num: types.Endpoint.Num = @enumFromInt(i);
+                        const num: types.Endpoint.Num = @fromBackingInt(i);
                         controller.on_buffer(&self.interface, .{ .num = num, .dir = .Out });
                     },
                 },
@@ -344,7 +344,7 @@ pub fn Polled(comptime cfg: Config) type {
                 return;
             }
 
-            const num: types.Endpoint.Num = @enumFromInt(ep);
+            const num: types.Endpoint.Num = @fromBackingInt(ep);
             const st_out = self.st(num, .Out);
 
             // Only read if previously armed (ep_listen)
@@ -365,7 +365,7 @@ pub fn Polled(comptime cfg: Config) type {
 
         // IN => into host from device
         fn handle_in(self: *Self, ep: u4, controller: anytype) void {
-            const num: types.Endpoint.Num = @enumFromInt(ep);
+            const num: types.Endpoint.Num = @fromBackingInt(ep);
             const st_in = self.st(num, .In);
 
             if (!st_in.tx_busy) return;

@@ -80,7 +80,7 @@ comptime {
 
 pub fn main() !void {
     pio.gpio_init(led_pin);
-    sm_set_consecutive_pindirs(pio, sm, @intFromEnum(led_pin), 1, true);
+    sm_set_consecutive_pindirs(pio, sm, @backingInt(led_pin), 1, true);
 
     const cycles_per_bit: comptime_int = ws2812_program.defines[0].value + //T1
         ws2812_program.defines[1].value + //T2

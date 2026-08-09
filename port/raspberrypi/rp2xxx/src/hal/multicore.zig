@@ -1,6 +1,4 @@
-const builtin = @import("builtin");
 const std = @import("std");
-const assert = std.debug.assert;
 
 const microzig = @import("microzig");
 const interrupt = microzig.interrupt;
@@ -9,7 +7,6 @@ const peripherals = microzig.chip.peripherals;
 const CriticalSection = interrupt.CriticalSection;
 const SIO = peripherals.SIO;
 const PSM = peripherals.PSM;
-const PPB = peripherals.PPB;
 
 pub const fifo = struct {
     /// Check if the FIFO has valid data for reading.

@@ -6,7 +6,6 @@ const bkp = @import("backup.zig");
 const rtc = @import("rtc.zig");
 const timer = @import("../common/timer_v1.zig");
 const time = microzig.drivers.time;
-const std = @import("std");
 
 //timer ctx
 var tim_ctx: ?timer.GPTimer = null;
@@ -117,7 +116,7 @@ fn rtc_get_time_since_boot() time.Absolute {
 
     const frac = rtc_freq - sec_frac;
     const us: u64 = (sec * 1_000_000) + (frac * 1_000_000) / rtc_freq;
-    return @enumFromInt(us);
+    return @fromBackingInt(us);
 }
 
 fn deinit_timer() void {
@@ -132,11 +131,11 @@ fn deinit_timer() void {
 }
 
 fn timer_get_time_since_boot() time.Absolute {
-    const tim = tim_ctx orelse return @enumFromInt(0);
+    const tim = tim_ctx orelse return @fromBackingInt(0);
     const p = microzig.cpu.atomic.load(u32, &period, .acquire);
     const counter = tim.get_counter();
     const ticks = (@as(u64, p) << 15) + @as(u64, counter ^ ((p & 1) << 15));
-    return @enumFromInt(ticks);
+    return @fromBackingInt(ticks);
 }
 
 pub fn TIM_handler() callconv(.c) void {
@@ -149,7 +148,7 @@ pub fn TIM_handler() callconv(.c) void {
 }
 
 pub fn get_time_since_boot() time.Absolute {
-    const callback = get_time orelse return @enumFromInt(0);
+    const callback = get_time orelse return @fromBackingInt(0);
     return callback();
 }
 

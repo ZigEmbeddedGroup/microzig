@@ -101,7 +101,7 @@ pub fn configure_input(gpio_pin: Pin, pullup: bool, sense: Sense) void {
     // PORT PINnCTRL selects the per-pin input/sense mode used for pin interrupts.
     // https://ww1.microchip.com/downloads/en/DeviceDoc/ATtiny1614-16-17-DataSheet-DS40002204A.pdf
     set_direction(gpio_pin, .input);
-    var value: u8 = @intFromEnum(sense);
+    var value: u8 = @backingInt(sense);
     if (pullup) value |= regs.bit(regs.port_bits.pullupen);
     regs.write(port_registers(gpio_pin.port).pinctrl + gpio_pin.index, value);
 }

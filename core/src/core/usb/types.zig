@@ -1,5 +1,4 @@
 const std = @import("std");
-const assert = std.debug.assert;
 
 pub const ClassSubclassProtocol = extern struct {
     /// Class of device, giving a broad functional area.
@@ -277,8 +276,8 @@ pub const ClassSubclassProtocol = extern struct {
     ) @This() {
         return .{
             .class = class,
-            .subclass = @intFromEnum(subclass),
-            .protocol = @intFromEnum(protocol),
+            .subclass = @backingInt(subclass),
+            .protocol = @backingInt(protocol),
         };
     }
 };

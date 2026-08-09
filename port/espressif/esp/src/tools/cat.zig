@@ -18,7 +18,7 @@ pub fn main(init: std.process.Init) !void {
     var file_writer = output_file.writer(io, &write_buf);
     const writer = &file_writer.interface;
     for (src_paths) |src_path| {
-        const file = try std.Io.Dir.openFileAbsolute(io, src_path, .{ .mode = .read_only });
+        const file = try std.Io.Dir.openFile(.cwd(), io, src_path, .{ .mode = .read_only });
         defer file.close(io);
 
         var read_buf: [1024 * 1024]u8 = undefined;

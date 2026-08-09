@@ -85,7 +85,7 @@ pub fn build(b: *Build) !void {
             .root_module = b.createModule(.{
                 .root_source_file = b.path(b.fmt("samples/{s}.zig", .{sample_name})),
                 .target = avr_target,
-                .optimize = .ReleaseSmall,
+                .optimize = .small,
                 .strip = false,
             }),
             .use_llvm = true,
@@ -105,7 +105,7 @@ pub fn build(b: *Build) !void {
 
     // Set up test scanning - this reads existing JSON files and runs tests
     // Only set up if we're not exclusively running update-testsuite
-    try add_test_suite(b, test_step, debug_testsuite_step, target, avr_target, optimize, aviron_module);
+    try add_test_suite(b, test_step, debug_testsuite_step, target, avr_target, optimize, aviron_module, flags_module);
 }
 
 fn add_test_suite(
@@ -116,6 +116,7 @@ fn add_test_suite(
     avr_target: ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
     aviron_module: *Build.Module,
+    flags_module: *Build.Module,
 ) !void {
     const unit_tests = b.addTest(.{
         .root_module = b.createModule(.{
@@ -148,6 +149,7 @@ fn add_test_suite(
         .use_llvm = true,
     });
     testrunner_exe.root_module.addImport("aviron", aviron_module);
+    testrunner_exe.root_module.addImport("flags", flags_module);
 
     debug_step.dependOn(&b.addInstallArtifact(testrunner_exe, .{}).step);
 

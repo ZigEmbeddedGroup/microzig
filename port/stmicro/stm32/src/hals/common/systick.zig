@@ -11,8 +11,6 @@ const SystickError = error{
     ClkUnderflow,
 };
 
-const MAX_COUNTER = 0xFFFFFF;
-
 // HAL should provide clock source for systick as well as ahb.
 // We will choose from the fastest clock source.
 // See: https://developer.arm.com/documentation/dui0497/a/cortex-m0-peripherals/optional-system-timer--systick/systick-control-and-status-register

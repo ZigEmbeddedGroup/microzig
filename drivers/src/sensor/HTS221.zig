@@ -5,11 +5,8 @@
 //! Datasheet:
 //! * HTS221: https://www.st.com/resource/en/datasheet/hts221.pdf
 //!
-const std = @import("std");
 const mdf_base = @import("../root.zig").base;
 const InterfaceError = mdf_base.I2C_Device.InterfaceError;
-
-const assert = std.debug.assert;
 
 pub const Config = struct {
     temperatureAverageSample: HTS221.AVGT,
@@ -18,7 +15,7 @@ pub const Config = struct {
 };
 
 pub const HTS221 = struct {
-    const address: mdf_base.I2C_Device.Address = @enumFromInt(0b1011111);
+    const address: mdf_base.I2C_Device.Address = @fromBackingInt(0b1011111);
     const RegsAddr = enum(u8) {
         WHO_AM_I = 0x0F,
         AV_CONF = 0x10,
@@ -39,11 +36,11 @@ pub const HTS221 = struct {
         T1_OUT = 0x3E,
 
         fn v(self: @This()) u8 {
-            return @intFromEnum(self);
+            return @backingInt(self);
         }
 
         fn auto_v(self: @This()) u8 {
-            return @intFromEnum(self) | 0x80;
+            return @backingInt(self) | 0x80;
         }
     };
 
