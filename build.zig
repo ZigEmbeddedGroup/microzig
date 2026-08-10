@@ -37,7 +37,6 @@ const port_list: []const struct {
 };
 
 pub fn build(b: *Build) void {
-    const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
     const generate_linker_script_mod = b.createModule(.{
@@ -57,65 +56,6 @@ pub fn build(b: *Build) void {
     );
 
     b.installArtifact(generate_linker_script_exe);
-
-    pass_through_module(b, "drivers", b.dependency(
-        "drivers",
-        .{},
-    ).module("drivers"));
-
-    pass_through_module(b, "bounded-array", b.dependency(
-        "modules/bounded-array",
-        .{},
-    ).module("bounded-array"));
-
-    // const libc_single_threaded = b.option(bool, "libc_single_threaded", "Create a single-threaded libc implementation (default: false)");
-    // pass_through_module(b, "foundation-libc", b.dependency(
-    //     "modules/foundation-libc",
-    //     .{ .target = target, .optimize = optimize, .single_threaded = libc_single_threaded },
-    // ).module("")); // Library, not module
-
-    const freertos_port_name = b.option(
-        @import("modules/freertos").FreeRTOS_Port,
-        "freertos_port",
-        "FreeRTOS port to use",
-    );
-    const freertos_idle_hook = b.option(bool, "freertos_idle_hook", "Enable");
-    const freertos_tick_hook = b.option(bool, "freertos_tick_hook", "Enable FreeRTOS tick hook");
-    pass_through_module(b, "freertos", b.dependency(
-        "modules/freertos",
-        .{
-            .target = target,
-            .optimize = optimize,
-            .port_name = freertos_port_name,
-            .cfg_idle_hook = freertos_idle_hook,
-            .cfg_tick_hook = freertos_tick_hook,
-        },
-    ).module("freertos"));
-
-    // pass_through_module(b, "lwip", b.dependency(
-    //     "modules/lwip",
-    //     .{ .target = target, .optimize = optimize },
-    // ).module("")); // Library, not module
-
-    pass_through_module(b, "net", b.dependency(
-        "modules/network",
-        .{ .target = target, .optimize = optimize },
-    ).module("net"));
-
-    pass_through_module(b, "riscv32-common", b.dependency(
-        "modules/riscv32-common",
-        .{ .target = target, .optimize = optimize },
-    ).module("riscv32-common"));
-
-    pass_through_module(b, "rtt", b.dependency(
-        "modules/rtt",
-        .{ .target = target, .optimize = optimize },
-    ).module("rtt"));
-
-    pass_through_module(b, "virtual-io", b.dependency(
-        "modules/virtual-io",
-        .{ .target = target, .optimize = optimize },
-    ).module("virtual-io"));
 }
 
 pub const PortSelect = struct {
@@ -881,18 +821,4 @@ inline fn custom_find_import_pkg_hash_or_fatal(comptime dep_name: []const u8) []
     };
 
     @panic("dependency not found");
-}
-
-fn pass_through_module(b: *std.Build, name: []const u8, module: *std.Build.Module) void {
-    const gop = b.modules.getOrPutValue(
-        b.graph.arena,
-        b.graph.dupeString(name),
-        module,
-    ) catch @panic("OOM");
-    if (gop.found_existing) {
-        std.debug.panic(
-            "A module with the name '{s}' has already been added to the package.",
-            .{name},
-        );
-    }
 }
