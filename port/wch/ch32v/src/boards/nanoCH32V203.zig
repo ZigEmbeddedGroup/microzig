@@ -24,6 +24,9 @@ pub fn init() void {
     ch32v.clocks.enable_usbfs_clock();
 }
 
+/// Default UART: USART1 on PA9
+pub const uart_config: ch32v.usart.UartConfig = .{};
+
 pub const pin_config = ch32v.pins.GlobalConfiguration{
     .GPIOA = .{
         .PIN15 = .{
