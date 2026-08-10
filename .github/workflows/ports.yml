@@ -96,12 +96,10 @@ jobs:
       working-directory: examples/gigadevice/gd32
 
     - name: microchip/atmega
-      if: 0 # https://codeberg.org/ziglang/zig/issues/32108
       run: zig build -Doptimize=ReleaseSmall
       working-directory: examples/microchip/atmega
 
     - name: microchip/attiny
-      if: 0 # https://codeberg.org/ziglang/zig/issues/32108
       run: zig build -Doptimize=ReleaseSmall
       working-directory: examples/microchip/attiny
 

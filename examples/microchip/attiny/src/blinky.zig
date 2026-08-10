@@ -3,6 +3,10 @@ const microzig = @import("microzig");
 
 const led_pin = microzig.board.led_pin;
 
+comptime {
+    _ = microzig.export_startup();
+}
+
 pub fn main() void {
     led_pin.set_direction(.output);
 
