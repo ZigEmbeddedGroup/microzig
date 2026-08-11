@@ -102,28 +102,28 @@ const GPIO_Pin = struct {
     pin: Pin,
     port: Port,
 
-    inline fn write_pin_config(_gpio: GPIO_Pin, mode: Mode) void {
+    inline fn write_pin_config(p: GPIO_Pin, mode: Mode) void {
         switch (mode) {
             .input => |imode| {
-                _gpio.set_moder(MODER.Input);
-                _gpio.set_bias(imode.resistor);
+                p.set_moder(MODER.Input);
+                p.set_bias(imode.resistor);
             },
             .output => |omode| {
-                _gpio.set_moder(MODER.Output);
-                _gpio.set_output_type(omode.o_type);
-                _gpio.set_bias(omode.resistor);
-                _gpio.set_speed(omode.o_speed);
+                p.set_moder(MODER.Output);
+                p.set_output_type(omode.o_type);
+                p.set_bias(omode.resistor);
+                p.set_speed(omode.o_speed);
             },
             .analog => |amode| {
-                _gpio.set_moder(MODER.Analog);
-                _gpio.set_bias(amode.resistor);
+                p.set_moder(MODER.Analog);
+                p.set_bias(amode.resistor);
             },
             .alternate_function => |afmode| {
-                _gpio.set_moder(MODER.Alternate);
-                _gpio.set_bias(afmode.resistor);
-                _gpio.set_speed(afmode.o_speed);
-                _gpio.set_output_type(afmode.o_type);
-                _gpio.set_alternate_function(afmode.afr);
+                p.set_moder(MODER.Alternate);
+                p.set_bias(afmode.resistor);
+                p.set_speed(afmode.o_speed);
+                p.set_output_type(afmode.o_type);
+                p.set_alternate_function(afmode.afr);
             },
             .digital_io => {
                 // Nothing for now
