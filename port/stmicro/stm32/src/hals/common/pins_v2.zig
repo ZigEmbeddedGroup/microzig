@@ -182,6 +182,14 @@ const GPIO_Pin = struct {
         port.OTYPER.write_raw((port.OTYPER.raw & ~_gpio.mask()) | @as(u32, @backingInt(otype)) << pin);
     }
 
+    inline fn set_alternate_function(_gpio: GPIO_Pin, afr: AF) void {
+        const port = _gpio.get_port();
+        const pin: u5 = @backingInt(_gpio.pin);
+        const afrMask: u32 = @as(u32, 0b1111) << ((pin % 8) << 2);
+        const register = if (pin > 7) &port.AFR[1] else &port.AFR[0];
+        register.write_raw((register.raw & ~afrMask) | @as(u32, @backingInt(afr)) << ((pin % 8) << 2));
+    }
+
     fn from_port(port: Port, pin: Pin) GPIO_Pin {
         return .{
             .port = port,
@@ -342,7 +350,6 @@ fn _port() type {
         }
     }
 
-
     var field_names: [result_len][]const u8 = undefined;
     var field_values: [result_len]u8 = undefined;
     var v: u8 = 0;
@@ -360,7 +367,6 @@ fn _port() type {
 }
 
 pub const Port = _port();
-
 
 pub const PortConfiguration = struct {
     PIN0: ?Pin.Configuration = null,
@@ -389,21 +395,28 @@ pub const PortConfiguration = struct {
 };
 
 pub const GlobalConfiguration = struct {
-    GPIOA: ?if (util.has_port('A')) PortConfiguration else struct{} = null,
-    GPIOB: ?if (util.has_port('B')) PortConfiguration else struct{} = null,
-    GPIOC: ?if (util.has_port('C')) PortConfiguration else struct{} = null,
-    GPIOD: ?if (util.has_port('D')) PortConfiguration else struct{} = null,
-    GPIOE: ?if (util.has_port('E')) PortConfiguration else struct{} = null,
-    GPIOF: ?if (util.has_port('F')) PortConfiguration else struct{} = null,
-    GPIOG: ?if (util.has_port('G')) PortConfiguration else struct{} = null,
-    GPIOH: ?if (util.has_port('H')) PortConfiguration else struct{} = null,
-    GPIOI: ?if (util.has_port('I')) PortConfiguration else struct{} = null,
-    GPIOJ: ?if (util.has_port('J')) PortConfiguration else struct{} = null,
-    GPIOK: ?if (util.has_port('K')) PortConfiguration else struct{} = null,
+    GPIOA: ?if (util.has_port('A')) PortConfiguration else struct {} = null,
+    GPIOB: ?if (util.has_port('B')) PortConfiguration else struct {} = null,
+    GPIOC: ?if (util.has_port('C')) PortConfiguration else struct {} = null,
+    GPIOD: ?if (util.has_port('D')) PortConfiguration else struct {} = null,
+    GPIOE: ?if (util.has_port('E')) PortConfiguration else struct {} = null,
+    GPIOF: ?if (util.has_port('F')) PortConfiguration else struct {} = null,
+    GPIOG: ?if (util.has_port('G')) PortConfiguration else struct {} = null,
+    GPIOH: ?if (util.has_port('H')) PortConfiguration else struct {} = null,
+    GPIOI: ?if (util.has_port('I')) PortConfiguration else struct {} = null,
+    GPIOJ: ?if (util.has_port('J')) PortConfiguration else struct {} = null,
+    GPIOK: ?if (util.has_port('K')) PortConfiguration else struct {} = null,
 
     comptime {
         const port_field_count = @typeInfo(Port).@"enum".field_names.len;
-        const config_field_count = @typeInfo(GlobalConfiguration).@"struct".field_names.len;
+
+        var config_field_count: usize = 0;
+        for (@typeInfo(GlobalConfiguration).@"struct".field_types) |port_field_type| {
+            if (port_field_type == ?PortConfiguration) {
+                config_field_count += 1;
+            }
+        }
+
         if (port_field_count != config_field_count)
             @compileError(comptimePrint("{} {}", .{ port_field_count, config_field_count }));
     }
