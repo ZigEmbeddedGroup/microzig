@@ -143,11 +143,16 @@ const GPIO_Pin = struct {
 
     //NOTE: should invalid pins panic or just be ignored?
     fn get_port(_gpio: GPIO_Pin) *volatile gpio_v2.GPIO {
-        return _gpio.port.get_port();
+        switch (@backingInt(_gpio.port)) {
+            inline 0...@typeInfo(Port).@"enum".field_names.len - 1 => |p| {
+                return @field(peripherals, @typeInfo(Port).@"enum".field_names[p]);
+            },
+            else => unreachable,
+        }
     }
 
     inline fn set_bias(_gpio: GPIO_Pin, bias: PUPDR) void {
-        const port = _gpio.port.get_port();
+        const port = _gpio.get_port();
         const pin: u4 = @backingInt(_gpio.pin);
         const modMask: u32 = _gpio.mask_2bit();
 
@@ -155,7 +160,7 @@ const GPIO_Pin = struct {
     }
 
     inline fn set_speed(_gpio: GPIO_Pin, speed: OSPEEDR) void {
-        const port = _gpio.port.get_port();
+        const port = _gpio.get_port();
         const pin: u5 = @backingInt(_gpio.pin);
         const modMask: u32 = _gpio.mask_2bit();
 
@@ -163,7 +168,7 @@ const GPIO_Pin = struct {
     }
 
     inline fn set_moder(_gpio: GPIO_Pin, moder: MODER) void {
-        const port = _gpio.port.get_port();
+        const port = _gpio.get_port();
         const pin: u5 = @backingInt(_gpio.pin);
         const modMask: u32 = _gpio.mask_2bit();
 
@@ -171,7 +176,7 @@ const GPIO_Pin = struct {
     }
 
     inline fn set_output_type(_gpio: GPIO_Pin, otype: OT) void {
-        const port = _gpio.port.get_port();
+        const port = _gpio.get_port();
         const pin: u5 = @backingInt(_gpio.pin);
 
         port.OTYPER.write_raw((port.OTYPER.raw & ~_gpio.mask()) | @as(u32, @backingInt(otype)) << pin);
@@ -290,12 +295,12 @@ pub fn GPIO(comptime mode: Mode) type {
 
 pub fn Pins(comptime config: GlobalConfiguration) type {
     var count: usize = 0;
-    for (@typeInfo(GlobalConfiguration).@"struct".field_names, @typeInfo(GlobalConfiguration).@"struct".fiel_types) |port_field_name, port_field_type| {
-        if (port_field_type != ?Port.Configuration) {
+    for (@typeInfo(GlobalConfiguration).@"struct".field_names, @typeInfo(GlobalConfiguration).@"struct".field_types) |port_field_name, port_field_type| {
+        if (port_field_type != ?PortConfiguration) {
             continue;
         }
         if (@field(config, port_field_name)) |port_config| {
-            for (@typeInfo(Port.Configuration).@"struct".field_names) |field_name| {
+            for (@typeInfo(PortConfiguration).@"struct".field_names) |field_name| {
                 if (@field(port_config, field_name) != null) {
                     count += 1;
                 }
@@ -307,12 +312,12 @@ pub fn Pins(comptime config: GlobalConfiguration) type {
     var field_types: [count]type = undefined;
     var field_attrs: [count]std.builtin.Type.Struct.FieldAttributes = undefined;
     var i: usize = 0;
-    for (@typeInfo(GlobalConfiguration).@"struct".field_names, @typeInfo(GlobalConfiguration).@"struct".fiel_types) |port_field_name, port_field_type| {
-        if (port_field_type != ?Port.Configuration) {
+    for (@typeInfo(GlobalConfiguration).@"struct".field_names, @typeInfo(GlobalConfiguration).@"struct".field_types) |port_field_name, port_field_type| {
+        if (port_field_type != ?PortConfiguration) {
             continue;
         }
         if (@field(config, port_field_name)) |port_config| {
-            for (@typeInfo(Port.Configuration).@"struct".field_names) |field_name| {
+            for (@typeInfo(PortConfiguration).@"struct".field_names) |field_name| {
                 if (@field(port_config, field_name)) |pin_config| {
                     const default_name = "P" ++ port_field_name[4..5] ++ field_name[3..];
                     field_names[i] = pin_config.name orelse default_name;
@@ -327,68 +332,74 @@ pub fn Pins(comptime config: GlobalConfiguration) type {
     return @Struct(.auto, null, &field_names, &field_types, &field_attrs);
 }
 
-pub const Port = enum(u8) {
-    GPIOA = if (util.has_port('A')) 0 else undefined,
-    GPIOB = if (util.has_port('B')) 1 else undefined,
-    GPIOC = if (util.has_port('C')) 2 else undefined,
-    GPIOD = if (util.has_port('D')) 3 else undefined,
-    GPIOE = if (util.has_port('E')) 4 else undefined,
-    GPIOF = if (util.has_port('F')) 5 else undefined,
-    GPIOG = if (util.has_port('G')) 6 else undefined,
-    GPIOH = if (util.has_port('H')) 7 else undefined,
-    GPIOI = if (util.has_port('I')) 8 else undefined,
-    GPIOJ = if (util.has_port('J')) 9 else undefined,
-    GPIOK = if (util.has_port('K')) 10 else undefined,
+fn _port() type {
+    var result_len: usize = 0;
 
-    pub const Configuration = struct {
-        PIN0: ?Pin.Configuration = null,
-        PIN1: ?Pin.Configuration = null,
-        PIN2: ?Pin.Configuration = null,
-        PIN3: ?Pin.Configuration = null,
-        PIN4: ?Pin.Configuration = null,
-        PIN5: ?Pin.Configuration = null,
-        PIN6: ?Pin.Configuration = null,
-        PIN7: ?Pin.Configuration = null,
-        PIN8: ?Pin.Configuration = null,
-        PIN9: ?Pin.Configuration = null,
-        PIN10: ?Pin.Configuration = null,
-        PIN11: ?Pin.Configuration = null,
-        PIN12: ?Pin.Configuration = null,
-        PIN13: ?Pin.Configuration = null,
-        PIN14: ?Pin.Configuration = null,
-        PIN15: ?Pin.Configuration = null,
-
-        comptime {
-            const pin_field_count = @typeInfo(Pin).@"enum".field_names.len;
-            const config_field_count = @typeInfo(Port.Configuration).@"struct".field_names.len;
-            if (pin_field_count != config_field_count)
-                @compileError(comptimePrint("{} {}", .{ pin_field_count, config_field_count }));
+    for (0..11) |i| {
+        const port_id: u8 = "ABCDEFGHIJK"[i];
+        if (util.has_port(port_id)) {
+            result_len += 1;
         }
-    };
+    }
 
-    pub fn get_port(port: Port) *volatile gpio_v2.GPIO {
-        switch (@backingInt(port)) {
-            inline 0...@typeInfo(Port).@"enum".field_names.len - 1 => |p| {
-                const port_id = [_]u8{"ABCDEFGHIJK"[p]};
-                return @field(peripherals, "GPIO" ++ port_id);
-            },
-            else => unreachable,
+
+    var field_names: [result_len][]const u8 = undefined;
+    var field_values: [result_len]u8 = undefined;
+    var v: u8 = 0;
+    for (0..11) |i| {
+        const port_id: u8 = "ABCDEFGHIJK"[i];
+        if (util.has_port(port_id)) {
+            const x: []const u8 = "GPIO" ++ .{port_id};
+            field_names[v] = x;
+            field_values[v] = v;
+            v += 1;
         }
+    }
+
+    return @Enum(u8, .exhaustive, &field_names, &field_values);
+}
+
+pub const Port = _port();
+
+
+pub const PortConfiguration = struct {
+    PIN0: ?Pin.Configuration = null,
+    PIN1: ?Pin.Configuration = null,
+    PIN2: ?Pin.Configuration = null,
+    PIN3: ?Pin.Configuration = null,
+    PIN4: ?Pin.Configuration = null,
+    PIN5: ?Pin.Configuration = null,
+    PIN6: ?Pin.Configuration = null,
+    PIN7: ?Pin.Configuration = null,
+    PIN8: ?Pin.Configuration = null,
+    PIN9: ?Pin.Configuration = null,
+    PIN10: ?Pin.Configuration = null,
+    PIN11: ?Pin.Configuration = null,
+    PIN12: ?Pin.Configuration = null,
+    PIN13: ?Pin.Configuration = null,
+    PIN14: ?Pin.Configuration = null,
+    PIN15: ?Pin.Configuration = null,
+
+    comptime {
+        const pin_field_count = @typeInfo(Pin).@"enum".field_names.len;
+        const config_field_count = @typeInfo(PortConfiguration).@"struct".field_names.len;
+        if (pin_field_count != config_field_count)
+            @compileError(comptimePrint("{} {}", .{ pin_field_count, config_field_count }));
     }
 };
 
 pub const GlobalConfiguration = struct {
-    GPIOA: ?if (util.has_port('A')) Port.Configuration else undefined = null,
-    GPIOB: ?if (util.has_port('B')) Port.Configuration else undefined = null,
-    GPIOC: ?if (util.has_port('C')) Port.Configuration else undefined = null,
-    GPIOD: ?if (util.has_port('D')) Port.Configuration else undefined = null,
-    GPIOE: ?if (util.has_port('E')) Port.Configuration else undefined = null,
-    GPIOF: ?if (util.has_port('F')) Port.Configuration else undefined = null,
-    GPIOG: ?if (util.has_port('G')) Port.Configuration else undefined = null,
-    GPIOH: ?if (util.has_port('H')) Port.Configuration else undefined = null,
-    GPIOI: ?if (util.has_port('I')) Port.Configuration else undefined = null,
-    GPIOJ: ?if (util.has_port('J')) Port.Configuration else undefined = null,
-    GPIOK: ?if (util.has_port('K')) Port.Configuration else undefined = null,
+    GPIOA: ?if (util.has_port('A')) PortConfiguration else struct{} = null,
+    GPIOB: ?if (util.has_port('B')) PortConfiguration else struct{} = null,
+    GPIOC: ?if (util.has_port('C')) PortConfiguration else struct{} = null,
+    GPIOD: ?if (util.has_port('D')) PortConfiguration else struct{} = null,
+    GPIOE: ?if (util.has_port('E')) PortConfiguration else struct{} = null,
+    GPIOF: ?if (util.has_port('F')) PortConfiguration else struct{} = null,
+    GPIOG: ?if (util.has_port('G')) PortConfiguration else struct{} = null,
+    GPIOH: ?if (util.has_port('H')) PortConfiguration else struct{} = null,
+    GPIOI: ?if (util.has_port('I')) PortConfiguration else struct{} = null,
+    GPIOJ: ?if (util.has_port('J')) PortConfiguration else struct{} = null,
+    GPIOK: ?if (util.has_port('K')) PortConfiguration else struct{} = null,
 
     comptime {
         const port_field_count = @typeInfo(Port).@"enum".field_names.len;
@@ -400,8 +411,8 @@ pub const GlobalConfiguration = struct {
     pub fn apply(comptime config: GlobalConfiguration) Pins(config) {
         var ret: Pins(config) = undefined;
 
-        inline for (@typeInfo(GlobalConfiguration).@"struct".field_names) |port_field_name| {
-            if (port_field_name.type != ?Port.Configuration) {
+        inline for (@typeInfo(GlobalConfiguration).@"struct".field_names, @typeInfo(GlobalConfiguration).@"struct".field_types) |port_field_name, port_field_type| {
+            if (port_field_type != ?PortConfiguration) {
                 continue;
             }
             if (@field(config, port_field_name)) |_| {
@@ -409,12 +420,12 @@ pub const GlobalConfiguration = struct {
             }
         }
 
-        inline for (@typeInfo(GlobalConfiguration).@"struct".field_names) |port_field_name| {
-            if (port_field_name.type != ?Port.Configuration) {
+        inline for (@typeInfo(GlobalConfiguration).@"struct".field_names, @typeInfo(GlobalConfiguration).@"struct".field_types) |port_field_name, port_field_type| {
+            if (port_field_type != ?PortConfiguration) {
                 continue;
             }
             if (@field(config, port_field_name)) |port_config| {
-                inline for (@typeInfo(Port.Configuration).@"struct".field_names) |field_name| {
+                inline for (@typeInfo(PortConfiguration).@"struct".field_names) |field_name| {
                     if (@field(port_config, field_name)) |pin_config| {
                         const port = @field(Port, port_field_name);
                         var pin = GPIO_Pin.from_port(port, @field(Pin, field_name));
