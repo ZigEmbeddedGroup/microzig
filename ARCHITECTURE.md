@@ -171,9 +171,9 @@ copies the result to _zig-out/firmware/_.
 
 - **Drivers never import port-specific code.** They operate exclusively through the base interfaces in
   `drivers/src/base/`. This is what makes them portable.
-- **Ports never import other ports.** Each port is self-contained.
-- **Core has no knowledge of specific chips.** It receives chip/HAL/board configuration through comptime module imports
-  injected by the build system.
+- **Ports are self-contained**.
+- **Core is port-agnostic.** It receives chip/HAL/board configuration through comptime module imports injected by the
+  build system.
 - **Register definitions are generated, not hand-written.** The source of truth is the vendor SVD/ATDF file plus
   patches. Don't edit generated register code in your local build, and don't edit the _svd_ files.
 - **No global mutable state in libraries.** Embedded code uses explicit initialization and passed handles.
@@ -193,4 +193,4 @@ formatting.
 
 **MMIO access**: All register access should go through `Mmio`. The packed struct defines the register layout, the `Mmio`
 wrapper prevents the compiler from optimizing away or reordering accesses. If a register is incorrect in the SVD, add a
-patch. If a register is missing, you might have to use `@ptrFromInt`.
+patch. If a register is missing, you might have to use `@ptrFromInt` on its raw address.
