@@ -67,7 +67,7 @@ pub const Slice = enum(u32) {
 pub fn get_pwm(pinnum: u9) Pwm {
     const tmp_num: u32 = if (pinnum > 15) pinnum - 16 else pinnum;
     const slice_num: u32 = tmp_num >> 1;
-    const chan: Channel = @fromBackingInt(tmp_num & 1);
+    const chan: Channel = @fromBackingInt(@truncate(tmp_num & 1));
     return .{ .channel = chan, .slice_number = slice_num };
 }
 
