@@ -26,11 +26,12 @@ const mmio = microzig.mmio;
 const peripherals = microzig.chip.peripherals;
 const RCC = peripherals.RCC;
 
+pub const pins = @import("./common/pins_v2.zig");
+pub const enums = @import("./common/enums.zig");
+
 const Digital_IO = microzig.drivers.base.Digital_IO;
 
 const State = Digital_IO.State;
-
-pub const pins = @import("./common/pins_v2.zig");
 
 pub const clock = struct {
     pub const Domain = enum {
