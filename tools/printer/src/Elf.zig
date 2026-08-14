@@ -100,15 +100,15 @@ pub fn init(allocator: std.mem.Allocator, file_reader: *std.Io.File.Reader) !Elf
 
     var program_header_iterator = elf_header.iterateProgramHeaders(file_reader);
     while (try program_header_iterator.next()) |phdr| {
-        if (phdr.p_type != std.elf.PT_LOAD) continue;
+        if (phdr.type != std.elf.PT.LOAD) continue;
 
         try loaded_regions.append(allocator, .{
-            .start_address = phdr.p_vaddr,
-            .end_address = phdr.p_vaddr + phdr.p_memsz,
+            .start_address = phdr.vaddr,
+            .end_address = phdr.vaddr + phdr.memsz,
             .flags = .{
-                .read = phdr.p_flags & std.elf.PF_R != 0,
-                .write = phdr.p_flags & std.elf.PF_W != 0,
-                .exec = phdr.p_flags & std.elf.PF_X != 0,
+                .read = phdr.flags.R,
+                .write = phdr.flags.W,
+                .exec = phdr.flags.X,
             },
         });
     }
