@@ -177,6 +177,8 @@ pub const UART = enum(u1) {
             .deadline = deadline,
             .interface = .{
                 .buffer = buffer,
+                .seek = 0,
+                .end = 0,
                 .vtable = &.{
                     .stream = stream,
                 },
@@ -206,21 +208,15 @@ pub const UART = enum(u1) {
         return n;
     }
 
-    fn stream(io_reader: *std.Io.Reader, w: *std.Io.Writer, limit: std.Io.Limit) std.Io.Reader.StreamError!usize {
-        const r: *Reader = @fieldParentPtr("interface", io_reader);
+    fn stream(r: *std.Io.Reader, w: *std.Io.Writer, limit: std.Io.Limit) std.Io.Reader.StreamError!usize {
+        const uart_reader: *Reader = @alignCast(@fieldParentPtr("interface", r));
+        const uart = uart_reader.uart;
         return switch (limit) {
             .nothing => 0,
-            else => blk: {
-                var buf: [1]u8 = undefined;
-                const n = r.uart.read_blocking(&buf, null) catch |err| switch (err) {
-                    error.ReceiveError => return error.ReadError,
-                };
-
-                break :blk switch (n) {
-                    0 => 0,
-                    1 => try w.writeByte(buf[0]),
-                    else => unreachable,
-                };
+            else => {
+                const b = uart.read_word_blocking(uart_reader.deadline) catch return error.ReadFailed;
+                try w.writeByte(b);
+                return 1;
             },
         };
     }
