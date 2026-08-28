@@ -582,7 +582,7 @@ var uart_logger: ?UART.Writer = null;
 ///     .logFn = hal.uart.log,
 /// };
 pub fn init_logger(uart: UART) void {
-    uart_logger = uart.writer(.no_deadline, &.{});
+    uart_logger = uart.writer(no_deadline, &.{});
     uart_logger.?.interface.writeAll("\r\n================ STARTING NEW LOGGER ================\r\n") catch {};
 }
 
