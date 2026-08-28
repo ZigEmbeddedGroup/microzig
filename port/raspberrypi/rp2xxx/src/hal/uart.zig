@@ -206,7 +206,6 @@ pub const UART = enum(u1) {
             .deadline => |d| d,
             .timeout_us => |t| time.deadline_in_us(t),
         };
-        // logg.debug("hello from drain with deadline {any}", .{deadline});
 
         // bytes from buffer are not included in count.
         w.end -= uart.write_blocking(w.buffer[0..w.end], deadline) catch |err| switch (err) {
@@ -234,7 +233,6 @@ pub const UART = enum(u1) {
             .deadline => |d| d,
             .timeout_us => |t| time.deadline_in_us(t),
         };
-        // logg.debug("hello from stream with deadline {any}", .{deadline});
 
         return switch (limit) {
             .nothing => 0,
