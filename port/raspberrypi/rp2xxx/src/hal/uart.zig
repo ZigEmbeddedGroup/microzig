@@ -152,28 +152,28 @@ pub const UART = enum(u1) {
 
     pub const Writer = struct {
         uart: UART,
-        timeFrontier: TimeFrontier,
+        time_frontier: TimeFrontier,
         interface: std.Io.Writer,
 
         pub fn set_deadline(self: *Writer, deadline: mdf.time.Deadline) void {
-            self.*.timeFrontier = TimeFrontier{ .deadline = deadline };
+            self.*.time_frontier = TimeFrontier{ .deadline = deadline };
         }
     };
 
     pub const Reader = struct {
         uart: UART,
-        timeFrontier: TimeFrontier,
+        time_frontier: TimeFrontier,
         interface: std.Io.Reader,
 
         pub fn set_deadline(self: *Reader, deadline: mdf.time.Deadline) void {
-            self.*.timeFrontier = TimeFrontier{ .deadline = deadline };
+            self.*.time_frontier = TimeFrontier{ .deadline = deadline };
         }
     };
 
-    pub fn writer(uart: UART, timeFrontier: TimeFrontier, buffer: []u8) Writer {
+    pub fn writer(uart: UART, time_frontier: TimeFrontier, buffer: []u8) Writer {
         return .{
             .uart = uart,
-            .timeFrontier = timeFrontier,
+            .time_frontier = time_frontier,
             .interface = .{
                 .buffer = buffer,
                 .vtable = &.{
@@ -183,10 +183,10 @@ pub const UART = enum(u1) {
         };
     }
 
-    pub fn reader(uart: UART, timeFrontier: TimeFrontier, buffer: []u8) Reader {
+    pub fn reader(uart: UART, time_frontier: TimeFrontier, buffer: []u8) Reader {
         return .{
             .uart = uart,
-            .timeFrontier = timeFrontier,
+            .time_frontier = time_frontier,
             .interface = .{
                 .buffer = buffer,
                 .seek = 0,
@@ -203,7 +203,7 @@ pub const UART = enum(u1) {
         const uart = uart_writer.uart;
 
         var deadline: mdf.time.Deadline = undefined;
-        switch (uart_writer.timeFrontier) {
+        switch (uart_writer.time_frontier) {
             .deadline => |d| deadline = d,
             .timeout_us => |t| deadline = time.deadline_in_us(t),
         }
@@ -232,7 +232,7 @@ pub const UART = enum(u1) {
         const uart = uart_reader.uart;
 
         var deadline: mdf.time.Deadline = undefined;
-        switch (uart_reader.timeFrontier) {
+        switch (uart_reader.time_frontier) {
             .deadline => |d| deadline = d,
             .timeout_us => |t| deadline = time.deadline_in_us(t),
         }
