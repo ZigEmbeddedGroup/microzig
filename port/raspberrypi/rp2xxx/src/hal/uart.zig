@@ -156,7 +156,7 @@ pub const UART = enum(u1) {
         interface: std.Io.Writer,
 
         pub fn set_deadline(self: *Writer, deadline: mdf.time.Deadline) void {
-            self.*.time_frontier = TimeFrontier{ .deadline = deadline };
+            self.time_frontier = TimeFrontier{ .deadline = deadline };
         }
     };
 
@@ -166,7 +166,7 @@ pub const UART = enum(u1) {
         interface: std.Io.Reader,
 
         pub fn set_deadline(self: *Reader, deadline: mdf.time.Deadline) void {
-            self.*.time_frontier = TimeFrontier{ .deadline = deadline };
+            self.time_frontier = TimeFrontier{ .deadline = deadline };
         }
     };
 
