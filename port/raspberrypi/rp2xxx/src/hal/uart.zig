@@ -202,11 +202,10 @@ pub const UART = enum(u1) {
         const uart_writer: *Writer = @alignCast(@fieldParentPtr("interface", w));
         const uart = uart_writer.uart;
 
-        var deadline: mdf.time.Deadline = undefined;
-        switch (uart_writer.time_frontier) {
-            .deadline => |d| deadline = d,
-            .timeout_us => |t| deadline = time.deadline_in_us(t),
-        }
+        const deadline: mdf.time.Deadline = switch (uart_writer.time_frontier) {
+            .deadline => |d| d,
+            .timeout_us => |t| time.deadline_in_us(t),
+        };
         // logg.debug("hello from drain with deadline {any}", .{deadline});
 
         // bytes from buffer are not included in count.
@@ -231,11 +230,10 @@ pub const UART = enum(u1) {
         const uart_reader: *Reader = @alignCast(@fieldParentPtr("interface", r));
         const uart = uart_reader.uart;
 
-        var deadline: mdf.time.Deadline = undefined;
-        switch (uart_reader.time_frontier) {
-            .deadline => |d| deadline = d,
-            .timeout_us => |t| deadline = time.deadline_in_us(t),
-        }
+        const deadline: mdf.time.Deadline = switch (uart_reader.time_frontier) {
+            .deadline => |d| d,
+            .timeout_us => |t| time.deadline_in_us(t),
+        };
         // logg.debug("hello from stream with deadline {any}", .{deadline});
 
         return switch (limit) {
