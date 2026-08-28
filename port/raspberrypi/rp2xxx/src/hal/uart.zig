@@ -154,7 +154,7 @@ pub const UART = enum(u1) {
         interface: std.Io.Writer,
 
         pub fn set_deadline(self: *Writer, deadline: mdf.time.Deadline) void {
-            self.*.timeFrontier = TimeFrontier{.deadline = deadline};
+            self.*.timeFrontier = TimeFrontier{ .deadline = deadline };
         }
     };
 
@@ -164,7 +164,7 @@ pub const UART = enum(u1) {
         interface: std.Io.Reader,
 
         pub fn set_deadline(self: *Reader, deadline: mdf.time.Deadline) void {
-            self.*.timeFrontier = TimeFrontier{.deadline = deadline};
+            self.*.timeFrontier = TimeFrontier{ .deadline = deadline };
         }
     };
 
@@ -203,8 +203,9 @@ pub const UART = enum(u1) {
         var deadline: mdf.time.Deadline = undefined;
         switch (uart_writer.timeFrontier) {
             .deadline => |d| deadline = d,
-            .timeout_us => |t| deadline = time.deadline_in_us(t)
+            .timeout_us => |t| deadline = time.deadline_in_us(t),
         }
+        // logg.debug("hello from drain with deadline {any}", .{deadline});
 
         // bytes from buffer are not included in count.
         w.end -= uart.write_blocking(w.buffer[0..w.end], deadline) catch |err| switch (err) {
@@ -231,8 +232,9 @@ pub const UART = enum(u1) {
         var deadline: mdf.time.Deadline = undefined;
         switch (uart_reader.timeFrontier) {
             .deadline => |d| deadline = d,
-            .timeout_us => |t| deadline = time.deadline_in_us(t)
+            .timeout_us => |t| deadline = time.deadline_in_us(t),
         }
+        // logg.debug("hello from stream with deadline {any}", .{deadline});
 
         return switch (limit) {
             .nothing => 0,
@@ -582,7 +584,7 @@ var uart_logger: ?UART.Writer = null;
 ///     .logFn = hal.uart.log,
 /// };
 pub fn init_logger(uart: UART) void {
-    uart_logger = uart.writer(.{.deadline = .no_deadline}, &.{});
+    uart_logger = uart.writer(.{ .deadline = .no_deadline }, &.{});
     uart_logger.?.interface.writeAll("\r\n================ STARTING NEW LOGGER ================\r\n") catch {};
 }
 
