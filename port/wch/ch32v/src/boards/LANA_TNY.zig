@@ -21,7 +21,7 @@ pub fn init() void {
 }
 
 /// Default UART: USART2 on PA2 (exposed on the board header)
-pub const uart_config: ch32v.usart.UartConfig = .{
+pub const uart_setup: ch32v.usart.UartSetup = .{
     .instance = .USART2,
     .tx_pin = ch32v.gpio.Pin.init(0, 2), // PA2
 };

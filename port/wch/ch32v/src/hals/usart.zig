@@ -92,23 +92,26 @@ pub const ReceiveError = error{
 
 const gpio = hal.gpio;
 
-/// Configuration for board-level UART defaults.
-/// Boards export a `uart_config` const of this type with their preferred
-/// USART instance, TX pin, and serial settings. Examples can use these
-/// defaults directly or construct their own `UartConfig`.
-pub const UartConfig = struct {
-    instance: USART = .USART1,
-    tx_pin: gpio.Pin = gpio.Pin.init(0, 9), // PA9 (USART1 default TX)
-    config: Config = .{ .baud_rate = 115200 },
-};
+/// Physical-layer UART setup: which USART instance and TX pin to use.
+/// Boards export a `uart_setup` const of this type. Application-level
+/// settings (baud rate, parity, etc.) are passed separately via `Config`.
+pub const UartSetup = struct {
+    instance: USART,
+    tx_pin: gpio.Pin,
 
-/// Configure a UART from a `UartConfig`: sets up the TX pin as alternate
-/// function push-pull, then applies the USART peripheral configuration
-/// (clock enable, AFIO remap, baud rate, etc.).
-pub fn setup_uart(comptime cfg: UartConfig) void {
-    cfg.tx_pin.configure_alternate_function(.push_pull, .max_50MHz);
-    cfg.instance.apply(cfg.config);
-}
+    /// Throw a compile error if an application tries to use the default, but
+    /// the board it is being compiled for does not provide one.
+    pub const default: UartSetup = if (microzig.config.has_board and @hasDecl(microzig.board, "uart_setup"))
+        microzig.board.uart_setup
+    else
+        @compileError("board does not provide a default uart_setup");
+
+    /// Apply 'setup' and 'config'
+    pub fn setup(comptime self: UartSetup, comptime config: Config) void {
+        self.tx_pin.configure_alternate_function(.push_pull, .max_50MHz);
+        self.instance.apply(config);
+    }
+};
 
 pub const instance = struct {
     pub const USART1: USART = .USART1;
