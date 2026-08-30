@@ -20,7 +20,7 @@ comptime {
 pub fn main() !void {
     board.init();
 
-    uart.setup(.{ .baud_rate = 115200 });
+    uart.apply(.{ .baud_rate = 115200 });
     hal.usart.init_logger(uart.instance);
 
     var i: u32 = 0;

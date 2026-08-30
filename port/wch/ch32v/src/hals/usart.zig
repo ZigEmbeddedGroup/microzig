@@ -106,8 +106,8 @@ pub const UartSetup = struct {
     else
         @compileError("board does not provide a default uart_setup");
 
-    /// Apply 'setup' and 'config'
-    pub fn setup(comptime self: UartSetup, comptime config: Config) void {
+    /// Apply settings
+    pub fn apply(comptime self: UartSetup, comptime config: Config) void {
         self.tx_pin.configure_alternate_function(.push_pull, .max_50MHz);
         self.instance.apply(config);
     }
