@@ -135,7 +135,10 @@ pub const instance = struct {
     }
 };
 
-pub const TimeFrontier = union(enum) { timeout_us: u64, deadline: mdf.time.Deadline };
+pub const TimeFrontier = union(enum) {
+    timeout_us: u64,
+    deadline: mdf.time.Deadline,
+};
 
 pub const no_deadline: TimeFrontier = .{ .deadline = .no_deadline };
 
