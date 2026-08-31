@@ -10,25 +10,12 @@
         .drivers = .{ .path = "drivers" },
 
         // tools
-        .@"tools/esp-image" = .{ .path = "tools/esp-image" },
-        .@"tools/printer" = .{ .path = "tools/printer" },
-        .@"tools/regz" = .{ .path = "tools/regz" },
-        .@"tools/uf2" = .{ .path = "tools/uf2" },
-        .@"tools/dfu" = .{ .path = "tools/dfu" },
-        .@"tools/flags" = .{ .path = "tools/flags" },
-
-        // modules
-        .@"modules/bounded-array" = .{ .path = "modules/bounded-array" },
-        .@"modules/foundation-libc" = .{ .path = "modules/foundation-libc" },
-        .@"modules/freertos" = .{ .path = "modules/freertos" },
-        .@"modules/lwip" = .{ .path = "modules/lwip" },
-        .@"modules/network" = .{ .path = "modules/network" },
-        .@"modules/riscv32-common" = .{ .path = "modules/riscv32-common" },
-        .@"modules/rtt" = .{ .path = "modules/rtt" },
-        .@"modules/virtual-io" = .{ .path = "modules/virtual-io" },
-
-        // simulators
-        .@"sim/aviron" = .{ .path = "sim/aviron", .lazy = true },
+        //.@"tools/esp-image" = .{ .path = "tools/esp-image" },
+        //.@"tools/printer" = .{ .path = "tools/printer" },
+        //.@"tools/regz" = .{ .path = "tools/regz" },
+        //.@"tools/uf2" = .{ .path = "tools/uf2" },
+        //.@"tools/dfu" = .{ .path = "tools/dfu" },
+        //.@"tools/flags" = .{ .path = "tools/flags" },
 
         // ports
         .@"port/espressif/esp" = .{ .path = "port/espressif/esp", .lazy = true },
@@ -45,6 +32,20 @@
         .@"port/texasinstruments/mspm0" = .{ .path = "port/texasinstruments/mspm0", .lazy = true },
         .@"port/texasinstruments/tm4c" = .{ .path = "port/texasinstruments/tm4c", .lazy = true },
         .@"port/wch/ch32v" = .{ .path = "port/wch/ch32v", .lazy = true },
+    },
+    .additional_package_roots = .{
+        // modules
+        //.@"modules/bounded-array" = .{ .path = "modules/bounded-array" },
+        //.@"modules/foundation-libc" = .{ .path = "modules/foundation-libc" },
+        //.@"modules/freertos" = .{ .path = "modules/freertos" },
+        //.@"modules/lwip" = .{ .path = "modules/lwip" },
+        //.@"modules/network" = .{ .path = "modules/network" },
+        //.@"modules/riscv32-common" = .{ .path = "modules/riscv32-common" },
+        //.@"modules/rtt" = .{ .path = "modules/rtt" },
+        //.@"modules/virtual-io" = .{ .path = "modules/virtual-io" },
+
+        // simulators
+        //.@"sim/aviron" = .{ .path = "sim/aviron", .lazy = true },
     },
     .paths = .{
         "README.md",

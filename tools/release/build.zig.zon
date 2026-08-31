@@ -1,0 +1,9 @@
+.{
+    .name = .mz_tools_release,
+    .version = "0.0.1",
+    .paths = .{""},
+    .fingerprint = 0xa203fd28cb541ff7,
+    .dependencies = .{
+        .flags = .{ .path = "../flags" },
+    },
+}
