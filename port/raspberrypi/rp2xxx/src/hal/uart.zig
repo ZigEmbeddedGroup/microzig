@@ -138,9 +138,9 @@ pub const instance = struct {
 pub const TimeFrontier = union(enum) {
     timeout_us: u64,
     deadline: mdf.time.Deadline,
-};
 
-pub const no_deadline: TimeFrontier = .{ .deadline = .no_deadline };
+    pub const no_deadline: TimeFrontier = .{ .deadline = .no_deadline };
+};
 
 /// An API for interacting with the RP2040's UART driver.
 ///
@@ -585,7 +585,7 @@ var uart_logger: ?UART.Writer = null;
 ///     .logFn = hal.uart.log,
 /// };
 pub fn init_logger(uart: UART) void {
-    uart_logger = uart.writer(no_deadline, &.{});
+    uart_logger = uart.writer(.no_deadline, &.{});
     uart_logger.?.interface.writeAll("\r\n================ STARTING NEW LOGGER ================\r\n") catch {};
 }
 
