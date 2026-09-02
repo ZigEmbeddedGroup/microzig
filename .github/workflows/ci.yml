@@ -217,6 +217,7 @@ jobs:
         uses: actions/checkout@v7
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
+        working-directory: website
       - name: Build Website
         run: zig build
         working-directory: website

@@ -2,6 +2,7 @@
     .name = .mz_website,
     .fingerprint = 0xf41bcd0e071e6f03,
     .version = "0.2.0",
+    .minimum_zig_version = "0.17.0-dev.1471+ff10b90bc",
     .paths = .{
         "README.md",
         "build.zig",

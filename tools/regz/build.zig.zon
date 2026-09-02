@@ -10,13 +10,13 @@
     },
     .dependencies = .{
         .libxml2 = .{
-            .url = "git+https://github.com/allyourcodebase/libxml2.git#38fb69d375bc364490a5cc9ac465732d03c836d3",
-            .hash = "libxml2-2.15.1-2-qHdjhjJXAADjFgEs5a_JV1oMyd9G6EsY12PvbfRAZwG-",
+            .url = "git+https://github.com/allyourcodebase/libxml2#f7bab883c713fa60f33cbf5e562696c529812967",
+            .hash = "libxml2-2.15.1-2-qHdjhjJXAAADBouSraVVXa-w--J3KeGvrpVuaW01KpT2",
         },
         .virtual_io = .{ .path = "../../modules/virtual-io" },
         .zqlite = .{
-            .url = "git+https://github.com/karlseguin/zqlite.zig?ref=dev#b6e439d83fe7a06c2c7e8eed8e07bd79c87b0925",
-            .hash = "zqlite-0.0.1-RWLaY8k8nACL-MBb7ZkqdAESSZDG-1aCWwnathuy7Mzb",
+            .url = "git+https://github.com/mattnite/zqlite.zig#48509708f7c965b3f0b5b29ec3d0f56c4a6fb32a",
+            .hash = "zqlite-0.0.1-RWLaY4Q-nAAkr-6kmFrU59kWxesGyFzgXMHJDAxwgLEA",
         },
     },
 }

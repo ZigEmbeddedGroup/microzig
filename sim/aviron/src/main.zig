@@ -89,7 +89,7 @@ fn run_with_mcu(
 
                 var pheaders = header.iterateProgramHeaders(&reader);
                 while (try pheaders.next()) |phdr| {
-                    if (phdr.p_type != std.elf.PT_LOAD)
+                    if (phdr.type != std.elf.PT.LOAD)
                         continue; // Header isn't loaded
 
                     if (phdr.p_memsz == 0)
