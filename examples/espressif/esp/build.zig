@@ -13,16 +13,16 @@ pub fn build(b: *std.Build) void {
     const mb = MicroBuild.init(b, mz_dep) orelse return;
 
     const examples: []const Example = &.{
-        .{ .name = "blinky", .file = "src/blinky.zig" },
-        .{ .name = "custom_clock_config", .file = "src/custom_clock_config.zig" },
-        .{ .name = "gpio_input", .file = "src/gpio_input.zig" },
+        .{ .name = "blinky", .file = "src/blinky.zig", .chips = &.{ .esp32_c3, .esp32_c6 } },
+        .{ .name = "custom_clock_config", .file = "src/custom_clock_config.zig", .chips = &.{ .esp32_c3, .esp32_c6 } },
+        .{ .name = "gpio_input", .file = "src/gpio_input.zig", .chips = &.{ .esp32_c3, .esp32_c6 } },
         .{ .name = "i2c_bus_scan", .file = "src/i2c_bus_scan.zig" },
         .{ .name = "i2c_temp", .file = "src/i2c_temp.zig" },
         .{ .name = "i2c_display_sh1106", .file = "src/i2c_display_sh1106.zig" },
         .{ .name = "ledc_pwm_servo", .file = "src/ledc_pwm_servo.zig" },
         .{ .name = "stepper_driver", .file = "src/stepper_driver.zig" },
         .{ .name = "stepper_driver_dumb", .file = "src/stepper_driver_dumb.zig" },
-        .{ .name = "systimer", .file = "src/systimer.zig" },
+        .{ .name = "systimer", .file = "src/systimer.zig", .chips = &.{ .esp32_c3, .esp32_c6 } },
         .{ .name = "ws2812_blinky", .file = "src/ws2812_blinky.zig" },
         .{ .name = "rtos", .file = "src/rtos.zig" },
         .{ .name = "tcp_server", .file = "src/tcp_server.zig", .features = .{
@@ -39,6 +39,9 @@ pub fn build(b: *std.Build) void {
 
         for (std.enums.values(TargetEnum)) |target_enum| {
             if (!example.features.flashless and std.mem.containsAtLeast(u8, @tagName(target_enum), 1, "flashless"))
+                continue;
+
+            if (std.mem.indexOfScalar(Chip, example.chips, target_enum.chip()) == null)
                 continue;
 
             const target_desc = target_enum.get_target_desc(mb);
@@ -93,6 +96,9 @@ const TargetEnum = enum {
     esp32_c3,
     esp32_c3_direct_boot,
     esp32_c3_flashless,
+    esp32_c6,
+    esp32_c6_direct_boot,
+    esp32_c6_flashless,
 
     fn get_target_desc(target_enum: TargetEnum, mb: *MicroBuild) TargetDescription {
         return switch (target_enum) {
@@ -108,8 +114,32 @@ const TargetEnum = enum {
                 .prefix = "esp32_c3_flashless",
                 .target = mb.ports.esp.chips.esp32_c3_flashless,
             },
+            .esp32_c6 => .{
+                .prefix = "esp32_c6",
+                .target = mb.ports.esp.chips.esp32_c6,
+            },
+            .esp32_c6_direct_boot => .{
+                .prefix = "esp32_c6_direct_boot",
+                .target = mb.ports.esp.chips.esp32_c6_direct_boot,
+            },
+            .esp32_c6_flashless => .{
+                .prefix = "esp32_c6_flashless",
+                .target = mb.ports.esp.chips.esp32_c6_flashless,
+            },
         };
     }
+
+    fn chip(target_enum: TargetEnum) Chip {
+        return switch (target_enum) {
+            .esp32_c3, .esp32_c3_direct_boot, .esp32_c3_flashless => .esp32_c3,
+            .esp32_c6, .esp32_c6_direct_boot, .esp32_c6_flashless => .esp32_c6,
+        };
+    }
+};
+
+const Chip = enum {
+    esp32_c3,
+    esp32_c6,
 };
 
 const TargetDescription = struct {
@@ -126,4 +156,6 @@ const Example = struct {
     name: []const u8,
     file: []const u8,
     features: Features = .{},
+    /// Chips this example builds for. Most of the hal is not ported to the esp32c6 yet.
+    chips: []const Chip = &.{.esp32_c3},
 };

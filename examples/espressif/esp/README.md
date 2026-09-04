@@ -3,6 +3,11 @@
 - [Blinky](src/blinky.zig) on [ESP32-C3-32S-Kit](https://www.waveshare.com/wiki/ESP-C3-32S-Kit)
   Showcases how to do a simple RGB cycling.
 
+Most examples are esp32c3 only for now. `blinky`, `custom_clock_config`, `gpio_input` and
+`systimer` also build for the esp32c6; the pin numbers in them are the ones of the C3 kit, so pick
+the pads of your own board. On a Seeed XIAO ESP32C6 the user led sits on GPIO15 and the usb
+serial/jtag port is the USB-C connector itself.
+
 ## How to flash the image onto the device
 
 - esp image
@@ -24,4 +29,12 @@ esptool.py --chip esp32c3 --baud 460800 --before default_reset --after hard_rese
 
 ```sh
 esptool.py --chip esp32c3 --baud 460800 --no-stub load_ram zig-out/firmware/esp32_c3_flashless_blinky.bin
+```
+
+For the esp32c6 the commands are the same with `--chip esp32c6` and the matching firmware name,
+for example:
+
+```sh
+esptool.py --chip esp32c6 --baud 460800 --before default_reset --after hard_reset write_flash 0x0 \
+    zig-out/firmware/esp32_c6_direct_boot_blinky.bin
 ```

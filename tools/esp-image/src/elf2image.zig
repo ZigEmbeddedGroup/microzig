@@ -291,6 +291,14 @@ pub const chips: std.enums.EnumMap(esp_image.ChipId, Chip) = .init(.{
         .drom_map_start = 0x3C000000,
         .drom_map_end = 0x3C800000,
     },
+    // The esp32c6 maps the instruction and the data view of the flash into the same address
+    // space, so both windows are identical here.
+    .esp32_c6 = .{
+        .irom_map_start = 0x42000000,
+        .irom_map_end = 0x42800000,
+        .drom_map_start = 0x42000000,
+        .drom_map_end = 0x42800000,
+    },
 });
 
 const Chip = struct {

@@ -8,6 +8,9 @@ chips: struct {
     esp32_c3: *const microzig.Target,
     esp32_c3_direct_boot: *const microzig.Target,
     esp32_c3_flashless: *const microzig.Target,
+    esp32_c6: *const microzig.Target,
+    esp32_c6_direct_boot: *const microzig.Target,
+    esp32_c6_flashless: *const microzig.Target,
 },
 
 boards: struct {},
@@ -28,6 +31,22 @@ pub fn init(dep: *std.Build.Dependency) ?Self {
         .abi = .eabi,
     };
 
+    // The esp32c6 high performance core is rv32imac, it has the atomics extension the esp32c3
+    // core lacks.
+    const esp32_c6_zig_target: std.Target.Query = .{
+        .cpu_arch = .riscv32,
+        .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv32 },
+        .cpu_features_add = std.Target.riscv.featureSet(&.{
+            .a,
+            .c,
+            .m,
+            .zicsr,
+            .zifencei,
+        }),
+        .os_tag = .freestanding,
+        .abi = .eabi,
+    };
+
     const riscv32_common_dep = b.dependency("microzig/modules/riscv32-common", .{});
     const riscv32_common_mod = riscv32_common_dep.module("riscv32-common");
 
@@ -36,6 +55,13 @@ pub fn init(dep: *std.Build.Dependency) ?Self {
 
     const esp_wifi_sys_dep = b.lazyDependency("esp-wifi-sys", .{}) orelse return null;
     const esp_wifi_driver_mod = make_esp_wifi_driver_module(b, esp_wifi_sys_dep, "esp32c3", esp32_c3_zig_target);
+
+    // esp-wifi-sys ships blobs and headers for the esp32c6 as well, but translating them needs a
+    // wider libc shim than the one in `src/hal/radio/libc_dummy_include`. Until `hal.radio` is
+    // ported to that chip its hal gets a stub that only fails if something reaches for it.
+    const unsupported_wifi_driver_mod = b.createModule(.{
+        .root_source_file = b.path("src/hal/radio/unsupported.zig"),
+    });
 
     const chip_esp32_c3: microzig.Target = .{
         .dep = dep,
@@ -52,7 +78,7 @@ pub fn init(dep: *std.Build.Dependency) ?Self {
             .imports = b.allocator.dupe(Import, &.{
                 .{
                     .name = "cpu-config",
-                    .module = get_cpu_config(b, .image),
+                    .module = get_cpu_config(b, .esp32_c3, .image),
                 },
                 .{
                     .name = "riscv32-common",
@@ -96,6 +122,69 @@ pub fn init(dep: *std.Build.Dependency) ?Self {
         },
     };
 
+    const chip_esp32_c6: microzig.Target = .{
+        .dep = dep,
+        .preferred_binary_format = .{ .esp = .{
+            .chip_id = .esp32_c6,
+            .flash_mode = .dio,
+            .flash_size = .@"4mb",
+            .flash_freq = .@"40m",
+        } },
+        .zig_target = esp32_c6_zig_target,
+        .cpu = .{
+            .name = "esp_riscv",
+            .root_source_file = b.path("src/cpus/esp_riscv.zig"),
+            .imports = b.allocator.dupe(Import, &.{
+                .{
+                    .name = "cpu-config",
+                    .module = get_cpu_config(b, .esp32_c6, .image),
+                },
+                .{
+                    .name = "riscv32-common",
+                    .module = riscv32_common_mod,
+                },
+            }) catch @panic("OOM"),
+        },
+        .chip = .{
+            .name = "ESP32-C6",
+            .url = "https://www.espressif.com/en/products/socs/esp32-c6",
+            .register_definition = .{ .svd = b.path("src/chips/ESP32-C6.svd") },
+            .memory_regions = &.{
+                // The instruction and the data view of the flash share one address space on this
+                // chip, both start at 0x42000000.
+                .{ .name = "IROM", .offset = 0x4200_0000, .length = 0x0080_0000, .access = .rx },
+                .{ .name = "DROM", .offset = 0x4200_0000, .length = 0x0080_0000, .access = .r },
+                // Same for the 512 KiB of HP SRAM. Everything from 0x4086E610 up is taken by the
+                // rom: shared download buffers, the rom stack and the rom .bss/.data.
+                .{ .name = "IRAM", .offset = 0x4080_0000, .length = 0x4086_E610 - 0x4080_0000, .access = .x },
+                // tag for stack
+                .{ .name = "DRAM", .tag = .ram, .offset = 0x4080_0000, .length = 0x4086_E610 - 0x4080_0000, .access = .rw },
+            },
+        },
+        .hal = .{
+            .root_source_file = b.path("src/hal.zig"),
+            .imports = b.allocator.dupe(std.Build.Module.Import, &.{
+                .{
+                    .name = "esp_image",
+                    .module = esp_image_mod,
+                },
+                .{
+                    .name = "esp-wifi-driver",
+                    .module = unsupported_wifi_driver_mod,
+                },
+            }) catch @panic("OOM"),
+        },
+        .linker_script = .{
+            .generate = .memory_regions,
+            .file = generate_linker_script(
+                dep,
+                "final.ld",
+                b.path("ld/esp32_c6/image_boot_sections.ld"),
+                b.path("ld/esp32_c6/rom_functions.ld"),
+            ),
+        },
+    };
+
     return .{
         .chips = .{
             .esp32_c3 = chip_esp32_c3.derive(.{}),
@@ -107,7 +196,7 @@ pub fn init(dep: *std.Build.Dependency) ?Self {
                     .imports = b.allocator.dupe(Import, &.{
                         .{
                             .name = "cpu-config",
-                            .module = get_cpu_config(b, .direct),
+                            .module = get_cpu_config(b, .esp32_c3, .direct),
                         },
                         .{
                             .name = "riscv32-common",
@@ -134,6 +223,45 @@ pub fn init(dep: *std.Build.Dependency) ?Self {
                         "final.ld",
                         b.path("ld/esp32_c3/flashless_sections.ld"),
                         b.path("ld/esp32_c3/rom_functions.ld"),
+                    ),
+                },
+            }),
+            .esp32_c6 = chip_esp32_c6.derive(.{}),
+            .esp32_c6_direct_boot = chip_esp32_c6.derive(.{
+                .preferred_binary_format = .binary,
+                .cpu = .{
+                    .name = "esp_riscv",
+                    .root_source_file = b.path("src/cpus/esp_riscv.zig"),
+                    .imports = b.allocator.dupe(Import, &.{
+                        .{
+                            .name = "cpu-config",
+                            .module = get_cpu_config(b, .esp32_c6, .direct),
+                        },
+                        .{
+                            .name = "riscv32-common",
+                            .module = riscv32_common_mod,
+                        },
+                    }) catch @panic("OOM"),
+                },
+                .linker_script = .{
+                    .generate = .memory_regions,
+                    .file = generate_linker_script(
+                        dep,
+                        "final.ld",
+                        b.path("ld/esp32_c6/direct_boot_sections.ld"),
+                        b.path("ld/esp32_c6/rom_functions.ld"),
+                    ),
+                },
+            }),
+            .esp32_c6_flashless = chip_esp32_c6.derive(.{
+                .ram_image = true,
+                .linker_script = .{
+                    .generate = .memory_regions,
+                    .file = generate_linker_script(
+                        dep,
+                        "final.ld",
+                        b.path("ld/esp32_c6/flashless_sections.ld"),
+                        b.path("ld/esp32_c6/rom_functions.ld"),
                     ),
                 },
             }),
@@ -169,13 +297,19 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(cat_exe);
 }
 
+const Chip = enum {
+    esp32_c3,
+    esp32_c6,
+};
+
 const BootMode = enum {
     direct,
     image,
 };
 
-fn get_cpu_config(b: *std.Build, boot_mode: BootMode) *std.Build.Module {
+fn get_cpu_config(b: *std.Build, chip: Chip, boot_mode: BootMode) *std.Build.Module {
     const options = b.addOptions();
+    options.addOption(Chip, "chip", chip);
     options.addOption(BootMode, "boot_mode", boot_mode);
     return b.createModule(.{
         .root_source_file = options.getOutput(),
@@ -217,7 +351,9 @@ fn make_esp_wifi_driver_module(
     translate_c.addIncludePath(esp_wifi_sys_dep.path(b.fmt("c/include/{s}", .{chip_name})));
     translate_c.addIncludePath(esp_wifi_sys_dep.path(b.fmt("c/headers/{s}", .{chip_name})));
 
-    const mod = translate_c.addModule("esp-wifi-driver");
+    // A private module: the package can only register one module per name and there is one
+    // of these per supported chip.
+    const mod = translate_c.createModule();
     mod.addLibraryPath(esp_wifi_sys_dep.path(b.fmt("esp-wifi-sys-{s}/libs", .{chip_name})));
 
     inline for (&.{
