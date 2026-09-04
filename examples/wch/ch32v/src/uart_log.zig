@@ -4,7 +4,7 @@ const hal = microzig.hal;
 const board = microzig.board;
 const time = hal.time;
 
-const uart = hal.usart.UartSetup.default;
+const uart = board.uart_setup;
 
 pub const panic = microzig.panic;
 

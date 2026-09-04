@@ -92,23 +92,22 @@ pub const ReceiveError = error{
 
 const gpio = hal.gpio;
 
-/// Physical-layer UART setup: which USART instance and TX pin to use.
+/// Physical-layer UART setup: which USART instance and pins to use.
 /// Boards export a `uart_setup` const of this type. Application-level
 /// settings (baud rate, parity, etc.) are passed separately via `Config`.
 pub const UartSetup = struct {
     instance: USART,
-    tx_pin: gpio.Pin,
+    tx_pin: ?gpio.Pin = null,
+    rx_pin: ?gpio.Pin = null,
 
-    /// Throw a compile error if an application tries to use the default, but
-    /// the board it is being compiled for does not provide one.
-    pub const default: UartSetup = if (microzig.config.has_board and @hasDecl(microzig.board, "uart_setup"))
-        microzig.board.uart_setup
-    else
-        @compileError("board does not provide a default uart_setup");
-
-    /// Apply settings
+    /// Apply settings: configure whichever pins are present, then apply
+    /// the USART peripheral config (clock, baud rate, etc.).
     pub fn apply(comptime self: UartSetup, comptime config: Config) void {
-        self.tx_pin.configure_alternate_function(.push_pull, .max_50MHz);
+        if (self.tx_pin) |tx| tx.configure_alternate_function(.push_pull, .max_50MHz);
+        if (self.rx_pin) |rx| {
+            rx.enable_clock();
+            rx.set_input_mode(.floating);
+        }
         self.instance.apply(config);
     }
 };
