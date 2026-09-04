@@ -13,7 +13,11 @@ chips: struct {
     esp32_c6_flashless: *const microzig.Target,
 },
 
-boards: struct {},
+boards: struct {
+    seeedstudio: struct {
+        xiao_esp32_c6: *const microzig.Target,
+    },
+},
 
 pub fn init(dep: *std.Build.Dependency) ?Self {
     const b = dep.builder;
@@ -266,7 +270,17 @@ pub fn init(dep: *std.Build.Dependency) ?Self {
                 },
             }),
         },
-        .boards = .{},
+        .boards = .{
+            .seeedstudio = .{
+                .xiao_esp32_c6 = chip_esp32_c6.derive(.{
+                    .board = .{
+                        .name = "Seeed Studio XIAO ESP32C6",
+                        .url = "https://wiki.seeedstudio.com/xiao_esp32c6_getting_started/",
+                        .root_source_file = b.path("src/boards/xiao_esp32_c6.zig"),
+                    },
+                }),
+            },
+        },
     };
 }
 

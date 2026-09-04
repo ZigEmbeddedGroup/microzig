@@ -16,6 +16,12 @@ the system timer and the usb serial/jtag logger. `hal.i2c`, `hal.spi`, `hal.ledc
 `hal.radio` have not been ported to it yet and still speak to esp32c3 registers, so they only
 compile when their chip supports them.
 
+## Boards
+
+| Board                                                                       | Target                              |
+| --------------------------------------------------------------------------- | ----------------------------------- |
+| [Seeed Studio XIAO ESP32C6](https://wiki.seeedstudio.com/xiao_esp32c6_getting_started/) | `boards.seeedstudio.xiao_esp32_c6` |
+
 ## Chip specific code
 
 Most of the hal is shared. Where a peripheral differs between chips, the module either switches on

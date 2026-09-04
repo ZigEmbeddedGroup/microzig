@@ -31,6 +31,15 @@ pub fn build(b: *std.Build) void {
         } },
     };
 
+    const board_examples: []const BoardExample = &.{
+        .{
+            .name = "board_blinky",
+            .file = "src/xiao_esp32_c6_blinky.zig",
+            .prefix = "xiao_esp32_c6",
+            .target = mb.ports.esp.boards.seeedstudio.xiao_esp32_c6,
+        },
+    };
+
     for (examples) |example| {
         // If we specify example, only select the ones that match
         if (maybe_example) |selected_example|
@@ -90,7 +99,33 @@ pub fn build(b: *std.Build) void {
             mb.install_firmware(fw, .{ .format = .elf });
         }
     }
+
+    for (board_examples) |example| {
+        // If we specify example, only select the ones that match
+        if (maybe_example) |selected_example|
+            if (!std.mem.containsAtLeast(u8, example.name, 1, selected_example))
+                continue;
+
+        const fw = mb.add_firmware(.{
+            .name = b.fmt("{s}_{s}", .{ example.prefix, example.name }),
+            .target = example.target,
+            .optimize = optimize,
+            .root_source_file = b.path(example.file),
+        });
+
+        mb.install_firmware(fw, .{});
+        mb.install_firmware(fw, .{ .format = .elf });
+    }
 }
+
+/// An example written against one specific board instead of a bare chip.
+const BoardExample = struct {
+    name: []const u8,
+    file: []const u8,
+    /// Prefixed to the installed firmware name.
+    prefix: []const u8,
+    target: *const microzig.Target,
+};
 
 const TargetEnum = enum {
     esp32_c3,
