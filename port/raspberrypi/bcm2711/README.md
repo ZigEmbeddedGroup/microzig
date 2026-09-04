@@ -26,6 +26,21 @@ exception vector table before calling `main`.
 The port stays at the exception level it was handed, EL2, rather than dropping to EL1. Everything
 it touches is reachable from there and it keeps the bring up small.
 
+It does bring the mmu up, with a flat identity mapping of the low four gigabytes: the first three
+are Normal memory and the fourth, which holds the peripheral window, is Device. That is not an
+optimization. While the mmu is off every access is treated as Device-nGnRnE, and device memory
+does not allow unaligned accesses at all, so ordinary compiled code faults the moment it touches
+an unaligned field; `std.fmt` does so on the first log line.
+
+## Testing under QEMU
+
+QEMU emulates this board, so unlike most microzig targets this one can be exercised without
+hardware:
+
+```sh
+qemu-system-aarch64 -M raspi4b -kernel zig-out/firmware/blinky.bin -display none -serial stdio
+```
+
 ## Getting a firmware onto a board
 
 Take a card with Raspberry Pi OS on it, or any card whose boot partition holds the firmware files
@@ -62,8 +77,6 @@ low peripheral view: what the datasheet places at `0x7E000000` the ARM cores see
 ## Not here yet
 
 - The GIC-400, so interrupts can only be masked globally.
-- The mmu and the caches, which are left off. Every access goes to memory, which is correct but
-  slow.
 - The firmware mailbox, and with it the framebuffer, the board revision and the gpio expander. The
   green ACT led of a Pi 4B hangs off that expander rather than a BCM gpio, which is why the board
   definition cannot drive it.

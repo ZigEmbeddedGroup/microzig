@@ -52,6 +52,7 @@ pub const startup_logic = struct {
         microzig.utilities.initialize_system_memories(.bss_only);
 
         install_vector_table();
+        enable_mmu();
 
         microzig_main();
     }
@@ -92,6 +93,66 @@ fn install_vector_table() void {
     isb();
 }
 
+/// Identity mapping of the low four gigabytes, one 1 GiB block descriptor per entry. Lives in
+/// bss, so it is zeroed before `enable_mmu` fills it in.
+var page_table: [512]u64 align(4096) = undefined;
+
+/// Brings the mmu up with a flat identity mapping and turns the caches on.
+///
+/// This is not an optimization. While the mmu is off every access is treated as
+/// Device-nGnRnE, and device memory does not allow unaligned accesses at all, so ordinary
+/// compiled code faults as soon as it touches an unaligned field. Anything past the simplest
+/// register poking needs the ram to be mapped as Normal memory first.
+///
+/// The mapping is deliberately blunt: the first three gigabytes are Normal memory and the fourth,
+/// which holds the peripheral window at 0xFE000000, is Device. That covers the ram of every
+/// Raspberry Pi 4 model up to the 3 GiB mark, which is as much as this port lays claim to.
+fn enable_mmu() void {
+    const normal_memory = 0; // MAIR attribute 0
+    const device_memory = 1; // MAIR attribute 1
+
+    @memset(&page_table, 0);
+
+    for (page_table[0..4], 0..) |*entry, gigabyte| {
+        const is_peripheral = gigabyte == 3;
+
+        entry.* = (@as(u64, gigabyte) << 30) |
+            0b01 | // a block descriptor, and valid
+            (@as(u64, if (is_peripheral) device_memory else normal_memory) << 2) |
+            (@as(u64, 0b00) << 6) | // read/write
+            (@as(u64, if (is_peripheral) 0b00 else 0b11) << 8) | // inner shareable for normal memory
+            (@as(u64, 1) << 10); // access flag, or the first touch faults
+    }
+
+    // Attribute 0 is Normal memory, write back and read/write allocate. Attribute 1 is
+    // Device-nGnRnE.
+    write_special_register("mair_el2", 0x0000_0000_0000_00ff);
+
+    write_special_register("ttbr0_el2", @intFromPtr(&page_table));
+
+    // 39 bit address space over 4 KiB granules, so each level one entry covers a gigabyte.
+    // Walks are cacheable and inner shareable, and the output is 40 bits, enough for the 8 GiB
+    // model. Bits 23 and 31 are RES1 in the non-VHE layout of this register.
+    write_special_register("tcr_el2", 25 | // T0SZ
+        (@as(u64, 0b01) << 8) | // IRGN0, write back
+        (@as(u64, 0b01) << 10) | // ORGN0, write back
+        (@as(u64, 0b11) << 12) | // SH0, inner shareable
+        (@as(u64, 0b00) << 14) | // TG0, 4 KiB
+        (@as(u64, 0b010) << 16) | // PS, 40 bit
+        (@as(u64, 1) << 23) |
+        (@as(u64, 1) << 31));
+
+    dsb();
+    asm volatile ("tlbi alle2" ::: .{ .memory = true });
+    dsb();
+    isb();
+
+    // M enables the mmu, C the data cache and I the instruction cache.
+    const sctlr = read_special_register("sctlr_el2");
+    write_special_register("sctlr_el2", sctlr | (1 << 0) | (1 << 2) | (1 << 12));
+    isb();
+}
+
 /// The sixteen entries of an AArch64 exception vector table, 128 bytes apart, aligned to 2 KiB.
 ///
 /// Nothing is dispatched yet: every entry lands in the same handler, which panics with the
@@ -113,7 +174,15 @@ fn _vector_table() align(2048) callconv(.naked) void {
 
 /// Reports an exception and stops. It never returns, so the vector table above does not bother
 /// saving any state before branching here.
+var handling_exception: bool = false;
+
 fn handle_exception() callconv(.c) noreturn {
+    // Reporting a fault goes through the formatter and the uart, either of which can fault in
+    // turn. Without this the second fault would re-enter here and the console would fill with
+    // half printed messages.
+    if (handling_exception) hang();
+    handling_exception = true;
+
     const esr, const elr, const far = switch (current_el()) {
         2 => .{
             read_special_register("esr_el2"),
@@ -133,6 +202,17 @@ fn handle_exception() callconv(.c) noreturn {
 
 comptime {
     @export(&handle_exception, .{ .name = "microzig_handle_exception" });
+}
+
+fn hang() noreturn {
+    while (true) wfe();
+}
+
+fn write_special_register(comptime name: []const u8, value: u64) void {
+    asm volatile ("msr " ++ name ++ ", %[value]"
+        :
+        : [value] "r" (value),
+        : .{ .memory = true });
 }
 
 fn read_special_register(comptime name: []const u8) u64 {

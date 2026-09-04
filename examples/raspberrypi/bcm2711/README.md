@@ -13,6 +13,17 @@ header pin 40 and ground on pin 39 instead.
 The serial console is the PL011 on header pins 8 (TX) and 10 (RX), with ground on pin 6, at
 115200 baud. A usb to serial cable on those three pins is enough.
 
+## How to run it under QEMU
+
+QEMU emulates this board, which is the quickest way to see a firmware run:
+
+```sh
+qemu-system-aarch64 -M raspi4b -kernel zig-out/firmware/blinky.bin -display none -serial stdio
+```
+
+Note that the generic timer runs at a different rate under QEMU than it does on silicon, which is
+why `hal.time` reads `CNTFRQ_EL0` rather than assuming 54 MHz.
+
 ## How to run it on a device
 
 Build, then put the image on the boot partition of a card that already carries the Raspberry Pi
