@@ -1,0 +1,14 @@
+.{
+    .name = .examples_raspberrypi_bcm2711,
+    .fingerprint = 0xd4f9ea7f3932f8ea,
+    .version = "0.0.0",
+    .dependencies = .{
+        .microzig = .{ .path = "../../.." },
+    },
+    .paths = .{
+        "README.md",
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}

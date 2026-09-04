@@ -1,0 +1,15 @@
+.{
+    .name = .mz_port_raspberrypi_bcm2711,
+    .fingerprint = 0xe5b7e64a518a0c86,
+    .version = "0.0.0",
+    .dependencies = .{
+        .@"microzig/build-internals" = .{ .path = "../../../build-internals" },
+    },
+    .paths = .{
+        "README.md",
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        "ld",
+    },
+}
