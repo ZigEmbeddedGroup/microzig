@@ -135,9 +135,7 @@ pub const interrupt = struct {
     }
 
     fn get_priority_register_for(int: Interrupt) *volatile u32 {
-        std.debug.assert(@backingInt(int) != 0);
-        const bits = comptime @typeInfo(@typeInfo(Interrupt).@"enum".tag_type).int.bits;
-        const base: *volatile [bits]u32 = @ptrCast(&INTERRUPT_CORE0.CPU_INT_PRI_0);
+        const base: [*]volatile u32 = @ptrCast(&INTERRUPT_CORE0.CPU_INT_PRI_0);
         return &base[@backingInt(int)];
     }
 
@@ -316,9 +314,7 @@ pub const startup_logic = struct {
     else
         "microzig_flash_start";
 
-    fn _start() linksection(_start_link_section) callconv(.c) noreturn {
-        interrupt.disable_interrupts();
-
+    fn _start() linksection(_start_link_section) callconv(.naked) noreturn {
         asm volatile (
             \\.option push
             \\.option norelax
@@ -333,6 +329,14 @@ pub const startup_logic = struct {
             :
             : [eos] "r" (@as(u32, @intFromPtr(eos))),
         );
+
+        asm volatile (
+            \\j _start_c
+        );
+    }
+
+    fn _start_c() callconv(.c) noreturn {
+        interrupt.disable_interrupts();
 
         switch (cpu_config.boot_mode) {
             .direct => microzig.utilities.initialize_system_memories(.all),
@@ -349,6 +353,7 @@ pub const startup_logic = struct {
 
 pub fn export_startup_logic() void {
     @export(&startup_logic._start, .{ .name = "_start" });
+    @export(&startup_logic._start_c, .{ .name = "_start_c" });
 }
 
 /// Gets interrupts into a known state after the bootloader.
