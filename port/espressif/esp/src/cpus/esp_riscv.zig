@@ -331,7 +331,9 @@ pub const startup_logic = struct {
         );
 
         asm volatile (
-            \\j _start_c
+            \\jr %[start_c]
+            :
+            : [start_c] "r" (@as(u32, @intFromPtr(&_start_c))),
         );
     }
 
@@ -353,7 +355,6 @@ pub const startup_logic = struct {
 
 pub fn export_startup_logic() void {
     @export(&startup_logic._start, .{ .name = "_start" });
-    @export(&startup_logic._start_c, .{ .name = "_start_c" });
 }
 
 /// Gets interrupts into a known state after the bootloader.
