@@ -73,8 +73,6 @@ const cpu_common_features = std.Target.riscv.featureSet(&.{
 });
 
 pub fn init(dep: *std.Build.Dependency) ?Self {
-    // const b = dep.builder;
-
     const chip_v3f = create_core(dep, "qingkev3f", dep.path("src/cpus/qingkev3f.zig"), &.{
         .{ .name = "FLASH", .tag = .flash, .offset = 0x0000_0000, .length = default_v5f_image_offset, .access = .rx },
         .{ .name = "SRAM", .tag = .ram, .offset = 0x2010_0000, .length = 512 * KiB, .access = .rwx },
@@ -130,7 +128,7 @@ pub fn DualCoreFirmware(comptime mb_type: type) type {
 }
 
 /// Builds the V3F and V5F applications as two independent firmwares and merges
-/// both flat binaries into one flash image, gap padded with 0xFF.
+/// both ELF images into one flash image, gap padded with 0xFF.
 pub fn addDualCoreFirmware(
     self: Self,
     mb: anytype,
@@ -152,7 +150,7 @@ pub fn addDualCoreFirmware(
         .optimize = options.optimize,
     });
 
-    // Host tool that concatenates the two flat binaries at the given offset.
+    // Host tool that merges the per-core ELF images into one flash image.
     const merge_exe = b.addExecutable(.{
         .name = "merge_dual_core_image",
         .root_module = b.createModule(.{

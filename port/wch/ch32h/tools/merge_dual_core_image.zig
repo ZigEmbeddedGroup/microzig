@@ -1,16 +1,8 @@
-//! merge_dual_core_image - merges the V3F and V5F firmwares of the CH32H417
-//! into one flash image.
+//! merge_dual_core_image - merge the CH32H417 V3F and V5F firmware ELFs into
+//! one flash image. PT_LOAD segments inside the CodeFlash window are placed at
+//! their load address (V3F @ 0x0, V5F @ <v5f_offset>), gaps 0xFF-padded.
 //!
 //! Usage: merge_dual_core_image <v3f.elf> <v5f.elf> <v5f_offset> <out.bin>
-//!
-//! For each ELF, all PT_LOAD segments whose physical (load) address lies in
-//! the CodeFlash window (0x0000_0000 .. 0x0010_0000) are extracted and placed
-//! at their absolute flash address (V3F is linked at 0x0, V5F at <v5f_offset>).
-//! Any gap is padded with 0xFF and overlapping segments are rejected.
-//!
-//! Reading the ELFs directly (instead of objcopy'd flat binaries) sidesteps
-//! the LLVM objcopy NOLOAD-segment issue, which otherwise inflates binaries
-//! by the flash-to-RAM address gap (~512 MB).
 
 const std = @import("std");
 
@@ -59,8 +51,7 @@ fn place_segments(
             try image.resize(allocator, @intCast(end));
             @memset(image.items[old_len..], 0xFF); // erased flash pattern
         }
-        // Overlaps would indicate a broken memory layout; refuse to silently
-        // produce a corrupt image.
+        // Reject overlaps: they indicate a broken memory layout.
         for (image.items[@intCast(start)..@intCast(end)]) |byte| {
             if (byte != 0xFF) return error.OverlappingSegments;
         }

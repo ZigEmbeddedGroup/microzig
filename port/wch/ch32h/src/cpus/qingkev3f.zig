@@ -132,9 +132,8 @@ pub const Interrupt = enum(u8) {
     USART_WKUP = 148,
 };
 
-/// System initialization. The stock EVT startup code configures the PLL here
-/// (RCC @ 0x40021000); the chip boots from the internal 25 MHz HSI, so this is
-/// left as a no-op for now. TODO: port the PLL bring-up from the EVT.
+/// System initialization: no-op for now (both cores boot from the 25 MHz HSI).
+// TODO: port the PLL/clock bring-up from the EVT startup code.
 pub inline fn system_init(comptime chip: anytype) void {
     _ = chip;
 }
