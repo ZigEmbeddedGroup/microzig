@@ -19,8 +19,4 @@ pub fn build(b: *std.Build) void {
     });
 
     mb.ports.ch32h.installFirmware(mb, fw);
-
-    // // Also install the individual per-core ELFs for debugging.
-    // mb.install_firmware(fw.v3f, .{ .format = .elf });
-    // mb.install_firmware(fw.v5f, .{ .format = .elf });
 }

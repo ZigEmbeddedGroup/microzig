@@ -1,4 +1,5 @@
 const microzig = @import("microzig");
+const std = @import("std");
 
 pub const panic = microzig.panic;
 
@@ -9,6 +10,7 @@ comptime {
 }
 
 const RCC = microzig.chip.peripherals.RCC;
+const PFIC = microzig.chip.peripherals.PFIC;
 const GPIOC = microzig.chip.peripherals.GPIOC;
 
 const pin: u4 = 2;
@@ -20,16 +22,17 @@ fn delay(cycles: u32) void {
 }
 
 pub fn main() !void {
-    // Enable the GPIOA peripheral clock (IOPAEN = RCC_HB2PCENR bit 2).
     RCC.HB2PCENR.modify(.{ .IOPCEN = 1 });
 
-    // PC2: general purpose open-drain output, 50 MHz.
     GPIOC.CFGLR.modify(.{ .MODE2 = 0b11, .CNF2 = 0b01 });
+
+    PFIC.WAKEIP1.raw = 0x10000 & ~@as(u32, 0x3FF);
+    PFIC.SCTLR.raw |= (1 << 5);
 
     while (true) {
         microzig.hal.gpio.write(GPIOC, pin, 1);
-        delay(100_000);
+        delay(10_000);
         microzig.hal.gpio.write(GPIOC, pin, 0);
-        delay(100_000);
+        delay(10_000);
     }
 }
