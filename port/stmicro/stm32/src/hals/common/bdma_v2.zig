@@ -8,6 +8,7 @@ const enums = @import("../common/enums.zig");
 pub const Instances = enums.DMA_Type;
 
 const hal = microzig.hal;
+
 const DMA_Peripheral = microzig.chip.types.peripherals.bdma_v2.DMA;
 
 pub const Error = error{
