@@ -4,7 +4,7 @@ const hal = microzig.hal;
 const board = microzig.board;
 const time = hal.time;
 
-const uart = board.uart_setup;
+const uart_setup = board.uart_setup;
 
 pub const panic = microzig.panic;
 
@@ -20,8 +20,8 @@ comptime {
 pub fn main() !void {
     board.init();
 
-    uart.apply(.{ .baud_rate = 115200 });
-    hal.usart.init_logger(uart.instance);
+    uart_setup.apply(.{ .baud_rate = 115200 });
+    hal.usart.init_logger(uart_setup.instance);
 
     var i: u32 = 0;
     while (true) : (i += 1) {

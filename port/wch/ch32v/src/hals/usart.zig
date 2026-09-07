@@ -95,14 +95,14 @@ const gpio = hal.gpio;
 /// Physical-layer UART setup: which USART instance and pins to use.
 /// Boards export a `uart_setup` const of this type. Application-level
 /// settings (baud rate, parity, etc.) are passed separately via `Config`.
-pub const UartSetup = struct {
+pub const Setup = struct {
     instance: USART,
     tx_pin: ?gpio.Pin = null,
     rx_pin: ?gpio.Pin = null,
 
     /// Apply settings: configure whichever pins are present, then apply
     /// the USART peripheral config (clock, baud rate, etc.).
-    pub fn apply(comptime self: UartSetup, comptime config: Config) void {
+    pub fn apply(comptime self: Setup, comptime config: Config) void {
         if (self.tx_pin) |tx| tx.configure_alternate_function(.push_pull, .max_50MHz);
         if (self.rx_pin) |rx| {
             rx.enable_clock();
