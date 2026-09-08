@@ -35,9 +35,9 @@ const Header = extern struct {
 
 pub const channel = struct {
     pub const Mode = enum(usize) {
-        NoBlockSkip = 0,
-        NoBlockTrim = 1,
-        BlockIfFull = 2,
+        no_block_skip = 0,
+        no_block_trim = 1,
+        block_if_full = 2,
         _,
     };
 
@@ -161,15 +161,15 @@ pub const channel = struct {
                 exclusive_access.lock_fn(exclusive_access.context);
                 defer exclusive_access.unlock_fn(exclusive_access.context);
                 switch (self.mode()) {
-                    .NoBlockSkip => {
+                    .no_block_skip => {
                         if (bytes.len <= self.available_space()) {
                             return self.write_available(bytes);
                         } else return 0;
                     },
-                    .NoBlockTrim => {
+                    .no_block_trim => {
                         return self.write_available(bytes);
                     },
-                    .BlockIfFull => {
+                    .block_if_full => {
                         return self.write_blocking(bytes);
                     },
                     _ => unreachable,
@@ -182,15 +182,15 @@ pub const channel = struct {
                 exclusive_access.lock_fn(exclusive_access.context);
                 defer exclusive_access.unlock_fn(exclusive_access.context);
                 switch (self.mode()) {
-                    .NoBlockSkip => {
+                    .no_block_skip => {
                         if (bytes.len <= self.available_space()) {
                             _ = self.write_available(bytes);
                         }
                     },
-                    .NoBlockTrim => {
+                    .no_block_trim => {
                         _ = self.write_available(bytes);
                     },
-                    .BlockIfFull => {
+                    .block_if_full => {
                         _ = self.write_blocking(bytes);
                     },
                     _ => unreachable,
@@ -488,8 +488,8 @@ fn ControlBlock(comptime up_channels: []const channel.Config, comptime down_chan
 
 /// Compile time configuration of RTT instance
 pub const Config = struct {
-    up_channels: []const channel.Config = &[_]channel.Config{.{ .name = "Terminal", .buffer_size = 1024, .mode = .NoBlockSkip }},
-    down_channels: []const channel.Config = &[_]channel.Config{.{ .name = "Terminal", .buffer_size = 16, .mode = .BlockIfFull }},
+    up_channels: []const channel.Config = &[_]channel.Config{.{ .name = "Terminal", .buffer_size = 1024, .mode = .no_block_skip }},
+    down_channels: []const channel.Config = &[_]channel.Config{.{ .name = "Terminal", .buffer_size = 16, .mode = .block_if_full }},
     /// Optionally supply a custom implementation of exclusive access protection (lock/unlock),
     /// defaults to original Segger lock implementation when not provided, disables lock protection when
     /// provided with null.

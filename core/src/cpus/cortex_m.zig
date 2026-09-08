@@ -943,8 +943,8 @@ pub const debug = struct {
             context.xpsr,
         });
         logger.err("  instruction bus error             = {}", .{bfsr.instruction_bus_error});
-        logger.err("  precice data bus error            = {}", .{bfsr.precice_data_bus_error});
-        logger.err("  imprecice data bus error          = {}", .{bfsr.imprecice_data_bus_error});
+        logger.err("  precise data bus error            = {}", .{bfsr.precise_data_bus_error});
+        logger.err("  imprecise data bus error          = {}", .{bfsr.imprecise_data_bus_error});
         logger.err("  unstacking exception error        = {}", .{bfsr.unstacking_exception_error});
         logger.err("  exception stacking error          = {}", .{bfsr.exception_stacking_error});
         if (has_fpu)

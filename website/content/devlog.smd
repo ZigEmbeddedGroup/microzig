@@ -11,14 +11,14 @@
 .draft = false,
 ---
 
-## [About]($section.id('about'))
+# [About]($section.id('about'))
 
 This is a non-exhaustive, curated list of changes meant to help users quickly
 see what has improved since they last checked.
 
 You can [subscribe to this page via RSS]($link.alternative('rss')).
 
-## Changes
+# Changes
 
 ## [MSP430 Support]($section.id('2026-01-07'))
 

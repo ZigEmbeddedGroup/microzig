@@ -14,14 +14,14 @@ pub fn main(init: std.process.Init) !void {
     const output_file = try std.Io.Dir.cwd().createFile(io, dst_path, .{});
     defer output_file.close(io);
 
-    var write_buf: [1024 * 1024]u8 = undefined;
+    var write_buf: [1024]u8 = undefined;
     var file_writer = output_file.writer(io, &write_buf);
     const writer = &file_writer.interface;
     for (src_paths) |src_path| {
         const file = try std.Io.Dir.openFile(.cwd(), io, src_path, .{ .mode = .read_only });
         defer file.close(io);
 
-        var read_buf: [1024 * 1024]u8 = undefined;
+        var read_buf: [1024]u8 = undefined;
         var reader = file.reader(io, &read_buf);
 
         _ = try reader.interface.streamRemaining(writer);

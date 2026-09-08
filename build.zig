@@ -278,6 +278,12 @@ pub fn MicroBuild(port_select: PortSelect) type {
 
             /// Dwarf format option for the firmware executable.
             dwarf_format: ?std.dwarf.Format = null,
+
+            /// On embedded systems you're likely to use release-small for the
+            /// optimization mode in order to make your code fit on hardware.
+            /// This unfortunately turns off safety checks. Enabling this allows
+            /// you to have asserts run in release builds.
+            asserts: bool = false,
         };
 
         /// Creates a new firmware for a given target.
@@ -338,6 +344,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
             config.addOption(?[]const u8, "board_name", if (maybe_board) |board| board.name else null);
             config.addOption(EndOfStack, "end_of_stack", end_of_stack);
             config.addOption(bool, "ram_image", target.ram_image);
+            config.addOption(bool, "asserts", options.asserts);
 
             const core_mod = b.createModule(.{
                 .root_source_file = mb.core_dep.path("src/microzig.zig"),

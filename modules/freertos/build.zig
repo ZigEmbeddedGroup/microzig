@@ -1,7 +1,7 @@
 const std = @import("std");
 const Translator = @import("translate_c").Translator;
 
-const FreeRTOS_Port = enum {
+pub const FreeRTOS_Port = enum {
     RP2040,
     RP2350_ARM,
     RP2350_RISCV,

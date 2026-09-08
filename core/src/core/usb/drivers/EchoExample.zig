@@ -57,7 +57,7 @@ tx_ready: std.atomic.Value(bool),
 /// This function is called when the host chooses a configuration that contains this driver. `self`
 /// points to undefined memory. `data` is of the length specified in `Descriptor.create()`.
 pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterface, data: []u8) void {
-    assert(data.len == desc.ep_in.max_packet_size.into());
+    assert(data.len == desc.ep_in.max_packet_size.native());
     self.* = .{
         .device = device,
         .descriptor = desc,
@@ -66,7 +66,7 @@ pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterfac
     };
     device.ep_listen(
         desc.ep_out.endpoint.num,
-        @intCast(desc.ep_out.max_packet_size.into()),
+        @intCast(desc.ep_out.max_packet_size.native()),
     );
 }
 
@@ -74,7 +74,7 @@ pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterfac
 /// Data returned by this function is sent on endpoint 0.
 pub fn class_request(self: *@This(), setup: *const usb.types.SetupPacket) ?[]const u8 {
     _ = self;
-    log.debug("setup: {x}, {}, {}", .{ setup.request, setup.length.into(), setup.value.into() });
+    log.debug("setup: {x}, {}, {}", .{ setup.request, setup.length.native(), setup.value.native() });
     return usb.ack;
 }
 

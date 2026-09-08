@@ -151,8 +151,8 @@ pub const ReportItem = union(enum) {
 
     pub fn main_io(dir: usb.types.Dir, payload: InputOutput) @This() {
         return switch (dir) {
-            .In => .{ .main_input = payload },
-            .Out => .{ .main_output = payload },
+            .in => .{ .main_input = payload },
+            .out => .{ .main_output = payload },
         };
     }
 
@@ -356,12 +356,12 @@ pub fn InterruptDriver(options: InterruptDriverOptions) type {
                         .report_length = .from(report_descriptor.len),
                     },
                     .ep_out = .interrupt(
-                        alloc.next_ep(.Out),
+                        alloc.next_ep(.out),
                         @sizeOf(OutReport),
                         desc_options.poll_interval,
                     ),
                     .ep_in = .interrupt(
-                        alloc.next_ep(.In),
+                        alloc.next_ep(.in),
                         @sizeOf(InReport),
                         desc_options.poll_interval,
                     ),
@@ -389,23 +389,23 @@ pub fn InterruptDriver(options: InterruptDriverOptions) type {
             };
             self.device.ep_listen(
                 self.descriptor.ep_out.endpoint.num,
-                @intCast(self.descriptor.ep_out.max_packet_size.into()),
+                @intCast(self.descriptor.ep_out.max_packet_size.native()),
             );
         }
 
         pub fn class_request(self: *@This(), setup: *const usb.types.SetupPacket) ?[]const u8 {
             log.debug("class_request {any}", .{setup});
             switch (setup.request_type.type) {
-                .Standard => {
-                    const hid_desc_type: usb.descriptor.HID.CsType = @fromBackingInt(@intCast(setup.value.into() >> 8));
+                .standard => {
+                    const hid_desc_type: usb.descriptor.HID.CsType = @fromBackingInt(@intCast(setup.value.native() >> 8));
                     const request_code: usb.types.SetupRequest = @fromBackingInt(setup.request);
 
-                    if (request_code == .GetDescriptor and hid_desc_type == .HID)
+                    if (request_code == .get_descriptor and hid_desc_type == .HID)
                         return std.mem.asBytes(&self.descriptor.hid)
-                    else if (request_code == .GetDescriptor and hid_desc_type == .Report)
+                    else if (request_code == .get_descriptor and hid_desc_type == .Report)
                         return report_descriptor;
                 },
-                .Class => {
+                .class => {
                     const hid_request_type: RequestType = @fromBackingInt(setup.request);
                     switch (hid_request_type) {
                         .SetIdle => {
@@ -480,7 +480,7 @@ pub fn InterruptDriver(options: InterruptDriverOptions) type {
             var report: OutReport = undefined;
             const ep_num = self.descriptor.ep_out.endpoint.num;
             const len = self.device.ep_readv(ep_num, &.{std.mem.asBytes(&report)});
-            self.device.ep_listen(ep_num, @intCast(self.descriptor.ep_out.max_packet_size.into()));
+            self.device.ep_listen(ep_num, @intCast(self.descriptor.ep_out.max_packet_size.native()));
 
             log.debug("received report {} {any}", .{ len, report });
 

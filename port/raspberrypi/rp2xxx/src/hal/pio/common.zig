@@ -105,7 +105,7 @@ pub fn PinMapping(comptime Count: type) type {
         low: gpio.Pin,
         high: gpio.Pin,
 
-        fn count(range: @This()) Count {
+        pub fn count(range: @This()) Count {
             return @intCast(@backingInt(range.high) - @backingInt(range.low) + 1);
         }
     };

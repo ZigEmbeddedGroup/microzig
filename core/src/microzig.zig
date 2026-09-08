@@ -33,6 +33,18 @@ pub const mmio = @import("mmio.zig");
 pub const utilities = @import("utilities.zig");
 pub const Allocator = @import("allocator.zig");
 
+pub const AssertOptions = struct {};
+
+pub fn assert(expr: bool, opts: AssertOptions) void {
+    _ = opts;
+    if (!config.asserts)
+        return;
+
+    if (!expr) {
+        @panic("Assertion failed");
+    }
+}
+
 /// The microzig default panic handler. Will disable interrupts and loop endlessly.
 pub const panic = std.debug.FullPanic(struct {
     pub fn panic_fn(message: []const u8, first_trace_address: ?usize) noreturn {

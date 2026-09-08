@@ -433,6 +433,7 @@ pub const TLV493D = struct {
 
 /// Map I2C_Device errors to device errors
 fn map_error(err: I2C_Device.InterfaceError) Error {
+    std.log.info("mapping error: {}", .{err});
     return switch (err) {
         I2C_Device.Error.NoAcknowledge,
         I2C_Device.Error.Timeout,

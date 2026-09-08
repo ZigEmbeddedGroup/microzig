@@ -86,29 +86,29 @@ const Keyboard = usb.drivers.hid.InterruptDriver(.{
             .usage_range = .{ 0xE0, 0xE7 },
             .count = 8,
             .Child = bool,
-            .dir = .In,
+            .dir = .in,
             .type = .dynamic,
         } },
         // Reserved 8 bits
-        .{ .data_static = .{ .In, u8 } },
+        .{ .data_static = .{ .in, u8 } },
         // Output: indicator LEDs
         .{ .data = .{
             .usage = .{ .global_page = .led },
             .usage_range = .{ 1, 5 },
             .count = 5,
             .Child = bool,
-            .dir = .Out,
+            .dir = .out,
             .type = .dynamic,
         } },
         // Padding
-        .{ .data_static = .{ .Out, u3 } },
+        .{ .data_static = .{ .out, u3 } },
         // Input: up to 6 pressed key codes
         .{ .data = .{
             .usage = .{ .global_page = .keyboard },
             .usage_range = .{ 0x00, 0xff },
             .count = 6,
             .Child = u8,
-            .dir = .In,
+            .dir = .in,
             .type = .selector,
         } },
         // End

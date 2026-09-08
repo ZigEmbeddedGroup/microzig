@@ -1,6 +1,11 @@
 const std = @import("std");
+const microzig = @import("../../../microzig.zig");
+const assert = microzig.assert;
+
+const mem = @import("../../mem.zig");
+const EndianInt = mem.EndianInt;
+
 const usb = @import("../../usb.zig");
-const assert = std.debug.assert;
 const log = std.log.scoped(.usb_cdc);
 
 /// CDC PSTN Subclass Management Element Requests
@@ -40,7 +45,7 @@ pub const LineCoding = extern struct {
         _,
     };
 
-    bit_rate: usb.types.U32_Le,
+    bit_rate: EndianInt(u32, .little),
     stop_bits: StopBits,
     parity: Parity,
     data_bits: u8,
@@ -127,7 +132,7 @@ pub const Descriptor = extern struct {
                 // are expressed directly in milliseconds. Keep the intended
                 // polling period at 16 ms for both speeds.
                 .ep_notifi = .interrupt(
-                    alloc.next_ep(.In),
+                    alloc.next_ep(.in),
                     8,
                     if (max_supported_packet_size > 64) 8 else 16,
                 ),
@@ -138,8 +143,8 @@ pub const Descriptor = extern struct {
                     .interface_triple = .from(.CDC_Data, .Unused, .NoneRequired),
                     .interface_s = alloc.string(strings.itf_data),
                 },
-                .ep_out = .bulk(alloc.next_ep(.Out), max_supported_packet_size),
-                .ep_in = .bulk(alloc.next_ep(.In), max_supported_packet_size),
+                .ep_out = .bulk(alloc.next_ep(.out), max_supported_packet_size),
+                .ep_in = .bulk(alloc.next_ep(.in), max_supported_packet_size),
             },
             .alloc_bytes = 2 * max_supported_packet_size,
         };
@@ -215,7 +220,7 @@ pub fn flush(self: *@This()) bool {
     assert(self.tx_end == self.device.ep_writev(
         self.descriptor.ep_in.endpoint.num,
         &.{self.tx_data[0..self.tx_end]},
-    ));
+    ), .{});
     self.tx_end = 0;
     return true;
 }
@@ -223,8 +228,8 @@ pub fn flush(self: *@This()) bool {
 // Called when the host selects a configuration.
 pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterface, data: []u8) void {
     const len_half = @divExact(data.len, 2);
-    assert(len_half == desc.ep_in.max_packet_size.into());
-    assert(len_half == desc.ep_out.max_packet_size.into());
+    assert(len_half == desc.ep_in.max_packet_size.native(), .{});
+    assert(len_half == desc.ep_out.max_packet_size.native(), .{});
     self.* = .{
         .device = device,
         .descriptor = desc,
@@ -248,7 +253,7 @@ pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterfac
 /// Called by DeviceController when the interface number matches this driver.
 pub fn class_request(self: *@This(), setup: *const usb.types.SetupPacket) ?[]const u8 {
     const mgmt_request: ManagementRequestType = @fromBackingInt(setup.request);
-    log.debug("cdc setup: {any} {} {}", .{ mgmt_request, setup.length.into(), setup.value.into() });
+    log.debug("cdc setup: {any} {} {}", .{ mgmt_request, setup.length.native(), setup.value.native() });
 
     return switch (mgmt_request) {
         .SetLineCoding => usb.ack, // we should handle data phase somehow to read sent line_coding

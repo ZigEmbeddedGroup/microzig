@@ -90,8 +90,11 @@ pub fn init(dep: *std.Build.Dependency) ?Self {
             .file = generate_linker_script(
                 dep,
                 "final.ld",
-                b.path("ld/esp32_c3/image_boot_sections.ld"),
-                b.path("ld/esp32_c3/rom_functions.ld"),
+                &.{
+                    b.path("ld/esp32_c3/image_boot_sections.ld"),
+                    b.path("ld/esp32_c3/common_sections.ld"),
+                    b.path("ld/esp32_c3/rom_functions.ld"),
+                },
             ),
         },
     };
@@ -120,8 +123,11 @@ pub fn init(dep: *std.Build.Dependency) ?Self {
                     .file = generate_linker_script(
                         dep,
                         "final.ld",
-                        b.path("ld/esp32_c3/direct_boot_sections.ld"),
-                        b.path("ld/esp32_c3/rom_functions.ld"),
+                        &.{
+                            b.path("ld/esp32_c3/direct_boot_sections.ld"),
+                            b.path("ld/esp32_c3/common_sections.ld"),
+                            b.path("ld/esp32_c3/rom_functions.ld"),
+                        },
                     ),
                 },
             }),
@@ -132,8 +138,11 @@ pub fn init(dep: *std.Build.Dependency) ?Self {
                     .file = generate_linker_script(
                         dep,
                         "final.ld",
-                        b.path("ld/esp32_c3/flashless_sections.ld"),
-                        b.path("ld/esp32_c3/rom_functions.ld"),
+                        &.{
+                            b.path("ld/esp32_c3/flashless_sections.ld"),
+                            b.path("ld/esp32_c3/common_sections.ld"),
+                            b.path("ld/esp32_c3/rom_functions.ld"),
+                        },
                     ),
                 },
             }),
@@ -185,15 +194,15 @@ fn get_cpu_config(b: *std.Build, boot_mode: BootMode) *std.Build.Module {
 fn generate_linker_script(
     dep: *std.Build.Dependency,
     output_name: []const u8,
-    base_path: std.Build.LazyPath,
-    rom_functions_path: std.Build.LazyPath,
+    input_paths: []const std.Build.LazyPath,
 ) std.Build.LazyPath {
     const b = dep.builder;
     const cat_exe = dep.artifact("cat");
 
     const run = b.addRunArtifact(cat_exe);
-    run.addFileArg(base_path);
-    run.addFileArg(rom_functions_path);
+    for (input_paths) |path| {
+        run.addFileArg(path);
+    }
     return run.addOutputFileArg(output_name);
 }
 

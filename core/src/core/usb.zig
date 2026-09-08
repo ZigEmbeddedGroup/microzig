@@ -369,8 +369,8 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
             const const_ep_handlers = ep_handlers;
 
             const DriverConfig = @Struct(.@"extern", null, &field_names, &field_types, &field_attrs);
-            const idx_in = @backingInt(types.Dir.In);
-            const idx_out = @backingInt(types.Dir.Out);
+            const idx_in = @backingInt(types.Dir.in);
+            const idx_out = @backingInt(types.Dir.out);
             break :blk .{
                 .device_descriptor = desc_device,
                 .config_descriptor = extern struct {
@@ -387,8 +387,8 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
                 .string_descriptors = const_alloc.string_descriptors(config.language),
                 .handlers_itf = itf_handlers,
                 .handlers_ep = struct {
-                    In: ep_handlers_types[idx_in] = const_ep_handlers[idx_in],
-                    Out: ep_handlers_types[idx_out] = const_ep_handlers[idx_out],
+                    in: ep_handlers_types[idx_in] = const_ep_handlers[idx_in],
+                    out: ep_handlers_types[idx_out] = const_ep_handlers[idx_out],
                 }{},
                 .drivers_ep = ep_handler_drivers,
                 .DriverAlloc = @Struct(
@@ -444,15 +444,15 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
             log.debug("on_setup_req", .{});
 
             const ret = switch (setup.request_type.recipient) {
-                .Device => self.process_device_setup(device_itf, setup),
-                .Interface => self.process_interface_setup(setup),
+                .device => self.process_device_setup(device_itf, setup),
+                .interface => self.process_interface_setup(setup),
                 else => nak,
             };
             if (ret) |data| {
                 if (data.len == 0)
                     device_itf.ep_ack(.ep0)
                 else {
-                    const limited = data[0..@min(data.len, setup.length.into())];
+                    const limited = data[0..@min(data.len, setup.length.native())];
                     const len = device_itf.ep_writev(.ep0, &.{limited});
                     assert(len <= device_descriptor.max_packet_size0);
                     self.tx_slice = limited[len..];
@@ -512,20 +512,20 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
 
         fn process_device_setup(self: *@This(), device_itf: *DeviceInterface, setup: *const types.SetupPacket) ?[]const u8 {
             switch (setup.request_type.type) {
-                .Standard => {
+                .standard => {
                     const request: types.SetupRequest = @fromBackingInt(setup.request);
                     log.debug("Device setup: {any}", .{request});
                     switch (request) {
-                        .GetStatus => {
+                        .get_status => {
                             const attr = config_descriptor.first.attributes;
                             const status: types.DeviceStatus = comptime .create(attr.self_powered, false);
                             return std.mem.asBytes(&status);
                         },
-                        .SetAddress => self.new_address = @truncate(setup.value.into()),
-                        .SetConfiguration => self.process_set_config(device_itf, setup.value.into()),
-                        .GetDescriptor => return get_descriptor(setup.value.into()),
-                        .SetFeature => {
-                            const feature: types.FeatureSelector = @fromBackingInt(@intCast(setup.value.into() >> 8));
+                        .set_address => self.new_address = @truncate(setup.value.native()),
+                        .set_configuration => self.process_set_config(device_itf, setup.value.native()),
+                        .get_descriptor => return get_descriptor(setup.value.native()),
+                        .set_feature => {
+                            const feature: types.FeatureSelector = @fromBackingInt(@intCast(setup.value.native() >> 8));
                             switch (feature) {
                                 .DeviceRemoteWakeup, .EndpointHalt => {},
                                 // TODO: https://github.com/ZigEmbeddedGroup/microzig/issues/453
@@ -548,7 +548,7 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
         }
 
         fn process_interface_setup(self: *@This(), setup: *const types.SetupPacket) ?[]const u8 {
-            const itf_num: u8 = @truncate(setup.index.into());
+            const itf_num: u8 = @truncate(setup.index.native());
             switch (itf_num) {
                 inline else => |itf| if (comptime itf < handlers_itf.len) {
                     const drv = handlers_itf[itf];
@@ -567,10 +567,10 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
             const desc_idx: u8 = @truncate(value);
             log.debug("Request for {any} descriptor {}", .{ desc_type, desc_idx });
             return switch (desc_type) {
-                .Device => asBytes(&device_descriptor),
-                .DeviceQualifier => asBytes(comptime &device_descriptor.qualifier()),
-                .Configuration => asBytes(&config_descriptor),
-                .String => if (desc_idx < string_descriptors.len)
+                .device => asBytes(&device_descriptor),
+                .device_qualifier => asBytes(comptime &device_descriptor.qualifier()),
+                .configuration => asBytes(&config_descriptor),
+                .string => if (desc_idx < string_descriptors.len)
                     string_descriptors[desc_idx].data
                 else {
                     log.warn(
@@ -606,7 +606,7 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
                 // Open OUT endpoint first so that the driver can call ep_listen in init
                 inline for (desc_info.field_names, desc_info.field_types) |field_name, field_type| {
                     const desc = &@field(cfg, field_name);
-                    if (comptime field_type == descriptor.Endpoint and desc.endpoint.dir == .Out)
+                    if (comptime field_type == descriptor.Endpoint and desc.endpoint.dir == .out)
                         device_itf.ep_open(desc);
                 }
 
@@ -620,7 +620,7 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
                 // Open IN endpoint last so that callbacks can happen
                 inline for (desc_info.field_names, desc_info.field_types) |field_name, field_type| {
                     const desc = &@field(cfg, field_name);
-                    if (comptime field_type == descriptor.Endpoint and desc.endpoint.dir == .In)
+                    if (comptime field_type == descriptor.Endpoint and desc.endpoint.dir == .in)
                         device_itf.ep_open(desc);
                 }
             }

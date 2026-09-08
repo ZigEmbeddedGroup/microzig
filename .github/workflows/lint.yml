@@ -6,6 +6,26 @@ on:
   workflow_dispatch:
 
 jobs:
+  # Ensure that the zig version found in build.zig.zon is present in the readme
+  readme-version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - run: |
+          DOC_FILES="README.md website/content/docs/getting-started.smd"
+          EXIT_CODE=0
+          for FILE in $DOC_FILES
+          do
+              if ! grep -q $(cat build.zig.zon | sed -n 's/.*\.minimum_zig_version = "\(.*\)",/\1/p') $FILE
+              then
+                  echo Zig version documented in \'$FILE'\ out of sync with build.zig.zon
+                  EXIT_CODE=1
+              fi
+          done
+
+          exit $EXIT_CODE
+
   lint:
     runs-on: ubuntu-latest
     permissions:

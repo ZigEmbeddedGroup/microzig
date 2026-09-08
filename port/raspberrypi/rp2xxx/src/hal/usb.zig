@@ -57,8 +57,8 @@ fn PerEndpoint(T: type) type {
 
         fn get(self: *volatile @This(), dir: usb.types.Dir) *volatile T {
             return switch (dir) {
-                .In => &self.in,
-                .Out => &self.out,
+                .in => &self.in,
+                .out => &self.out,
             };
         }
     };
@@ -147,7 +147,7 @@ pub fn Polled(config: Config) type {
                         const ep_num = shift / 2;
                         const ep: usb.types.Endpoint = comptime .{
                             .num = @fromBackingInt(ep_num),
-                            .dir = if (shift % 2 == 0) .In else .Out,
+                            .dir = if (shift % 2 == 0) .in else .out,
                         };
 
                         // We should only get here if we've been notified that
@@ -402,7 +402,7 @@ pub fn Polled(config: Config) type {
             const attr = desc.attributes;
             log.debug(
                 "ep open {t} {t} {{ type: {t}, sync: {t}, usage: {t}, size: {} }}",
-                .{ ep.num, ep.dir, attr.transfer_type, attr.synchronisation, attr.usage, desc.max_packet_size.into() },
+                .{ ep.num, ep.dir, attr.transfer_type, attr.synchronisation, attr.usage, desc.max_packet_size.native() },
             );
 
             const self: *@This() = @fieldParentPtr("interface", itf);
@@ -411,7 +411,7 @@ pub fn Polled(config: Config) type {
 
             const ep_hard = self.hardware_endpoint_get_by_address(ep);
 
-            assert(desc.max_packet_size.into() <= max_supported_packet_size);
+            assert(desc.max_packet_size.native() <= max_supported_packet_size);
 
             buffer_control[@backingInt(ep.num)].get(ep.dir).modify(.{ .PID_0 = 1 });
 
@@ -432,7 +432,7 @@ pub fn Polled(config: Config) type {
 
         fn endpoint_alloc(self: *@This(), desc: *const usb.descriptor.Endpoint) ![]align(64) u8 {
             // round up size to multiple of 64
-            var size = try std.math.divCeil(u16, desc.max_packet_size.into(), 64) * 64;
+            var size = try std.math.divCeil(u16, desc.max_packet_size.native(), 64) * 64;
             // double buffered Bulk endpoint
             if (desc.attributes.transfer_type == .Bulk)
                 size *= 2;
@@ -481,7 +481,7 @@ pub fn ResetDriver(bootsel_activity_led: ?u5, interface_disable_mask: u32) type 
             _ = self;
             switch (setup.request) {
                 0x01 => {
-                    const value = setup.value.into();
+                    const value = setup.value.native();
                     const mask = @as(u32, 1) << if (value & 0x100 != 0)
                         @intCast(value >> 9)
                     else

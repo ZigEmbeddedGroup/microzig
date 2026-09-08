@@ -17,7 +17,7 @@ pub const Header = extern struct {
 
     length: u8 = @sizeOf(@This()),
     // Type of this descriptor, must be `ClassSpecific`.
-    descriptor_type: Type = .CsInterface,
+    descriptor_type: Type = .cs_interface,
     // Subtype of this descriptor, must be `Header`.
     descriptor_subtype: SubType = .Header,
     // USB Class Definitions for Communication Devices Specification release
@@ -44,7 +44,7 @@ pub const CallManagement = extern struct {
 
     length: u8 = @sizeOf(@This()),
     // Type of this descriptor, must be `ClassSpecific`.
-    descriptor_type: Type = .CsInterface,
+    descriptor_type: Type = .cs_interface,
     // Subtype of this descriptor, must be `CallManagement`.
     descriptor_subtype: SubType = .CallManagement,
     // Capabilities. Should be 0x00 for use as a serial device.
@@ -76,7 +76,7 @@ pub const AbstractControlModel = extern struct {
 
     length: u8 = @sizeOf(@This()),
     // Type of this descriptor, must be `ClassSpecific`.
-    descriptor_type: Type = .CsInterface,
+    descriptor_type: Type = .cs_interface,
     // Subtype of this descriptor, must be `AbstractControlModel`.
     descriptor_subtype: SubType = .AbstractControlModel,
     // Capabilities. Should be 0x02 for use as a serial device.
@@ -91,7 +91,7 @@ pub const Union = extern struct {
 
     length: u8 = @sizeOf(@This()),
     // Type of this descriptor, must be `ClassSpecific`.
-    descriptor_type: Type = .CsInterface,
+    descriptor_type: Type = .cs_interface,
     // Subtype of this descriptor, must be `Union`.
     descriptor_subtype: SubType = .Union,
     // The interface number of the communication or data class interface

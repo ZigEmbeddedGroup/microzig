@@ -1,4 +1,7 @@
 const std = @import("std");
+
+const EndianInt = @import("../mem.zig").EndianInt;
+
 const types = @import("types.zig");
 const assert = std.debug.assert;
 
@@ -9,19 +12,19 @@ test "descriptor tests" {
 }
 
 pub const Type = enum(u8) {
-    Device = 0x01,
-    Configuration = 0x02,
-    String = 0x03,
-    Interface = 0x04,
-    Endpoint = 0x05,
-    DeviceQualifier = 0x06,
-    InterfaceAssociation = 0x0B,
-    BOS = 0x0F,
-    CsDevice = 0x21,
-    CsConfig = 0x22,
-    CsString = 0x23,
-    CsInterface = 0x24,
-    CsEndpoint = 0x25,
+    device = 0x01,
+    configuration = 0x02,
+    string = 0x03,
+    interface = 0x04,
+    endpoint = 0x05,
+    device_qualifier = 0x06,
+    interface_association = 0x0B,
+    bos = 0x0F,
+    cs_device = 0x21,
+    cs_config = 0x22,
+    cs_string = 0x23,
+    cs_interface = 0x24,
+    cs_endpoint = 0x25,
     _,
 };
 
@@ -38,7 +41,7 @@ pub const Device = extern struct {
 
         length: u8 = @sizeOf(@This()),
         /// Type of this descriptor, must be `DeviceQualifier`.
-        descriptor_type: Type = .DeviceQualifier,
+        descriptor_type: Type = .device_qualifier,
         /// Specification version as Binary Coded Decimal
         bcd_usb: types.Version,
         /// Class, subclass and protocol of device.
@@ -58,7 +61,7 @@ pub const Device = extern struct {
 
     length: u8 = @sizeOf(@This()),
     /// Type of this descriptor, must be `Device`.
-    descriptor_type: Type = .Device,
+    descriptor_type: Type = .device,
     /// Specification version as Binary Coded Decimal
     bcd_usb: types.Version,
     /// Class, subclass and protocol of device.
@@ -66,9 +69,9 @@ pub const Device = extern struct {
     /// Maximum length of data this device can move.
     max_packet_size0: u8,
     /// ID of product vendor.
-    vendor: types.U16_Le align(1),
+    vendor: EndianInt(u16, .little) align(1),
     /// ID of product.
-    product: types.U16_Le align(1),
+    product: EndianInt(u16, .little) align(1),
     /// Device version number as Binary Coded Decimal.
     bcd_device: types.Version,
     /// Index of manufacturer name in string descriptor table.
@@ -123,11 +126,11 @@ pub const Configuration = extern struct {
 
     length: u8 = @sizeOf(@This()),
     /// Type of this descriptor, must be `Configuration`.
-    descriptor_type: Type = .Configuration,
+    descriptor_type: Type = .configuration,
     /// Total length of all descriptors in this configuration, concatenated.
     /// This will include this descriptor, plus at least one interface
     /// descriptor, plus each interface descriptor's endpoint descriptors.
-    total_length: types.U16_Le align(1),
+    total_length: EndianInt(u16, .little) align(1),
     /// Number of interface descriptors in this configuration.
     num_interfaces: u8,
     /// Number to use when requesting this configuration via a
@@ -153,8 +156,8 @@ pub const String = struct {
     pub fn from_lang(comptime lang: Language) @This() {
         const ret: *const extern struct {
             length: u8 = @sizeOf(@This()),
-            descriptor_type: Type = .String,
-            lang: types.U16_Le align(1),
+            descriptor_type: Type = .string,
+            lang: EndianInt(u16, .little) align(1),
         } = comptime &.{ .lang = .from(@backingInt(lang)) };
         return .{ .data = std.mem.asBytes(ret) };
     }
@@ -162,7 +165,7 @@ pub const String = struct {
     pub fn from_str(comptime string: []const u8) @This() {
         @setEvalBranchQuota(10000);
         const encoded: []const u8 = std.mem.sliceAsBytes(std.unicode.utf8ToUtf16LeStringLiteral(string));
-        return .{ .data = &[2]u8{ encoded.len + 2, @backingInt(Type.String) } ++ encoded };
+        return .{ .data = &[2]u8{ encoded.len + 2, @backingInt(Type.string) } ++ encoded };
     }
 };
 
@@ -196,7 +199,7 @@ pub const Endpoint = extern struct {
 
     length: u8 = @sizeOf(@This()),
     /// Type of this descriptor, must be `Endpoint`.
-    descriptor_type: Type = .Endpoint,
+    descriptor_type: Type = .endpoint,
     /// Address of this endpoint, where the bottom 4 bits give the endpoint
     /// number (0..15) and the top bit distinguishes IN (1) from OUT (0).
     endpoint: types.Endpoint,
@@ -204,7 +207,7 @@ pub const Endpoint = extern struct {
     /// control the transfer type using the values from `TransferType`.
     attributes: Attributes,
     /// Maximum packet size this endpoint can accept/produce.
-    max_packet_size: types.U16_Le align(1),
+    max_packet_size: EndianInt(u16, .little) align(1),
     /// Interval for polling interrupt/isochronous endpoints (which we don't
     /// currently support) in milliseconds.
     interval: u8,
@@ -246,7 +249,7 @@ pub const Interface = extern struct {
 
     length: u8 = @sizeOf(@This()),
     /// Type of this descriptor, must be `Interface`.
-    descriptor_type: Type = .Interface,
+    descriptor_type: Type = .interface,
     /// ID of this interface.
     interface_number: u8,
     /// Allows a single `interface_number` to have several alternate interface
@@ -269,8 +272,8 @@ pub const InterfaceAssociation = extern struct {
     }
 
     length: u8 = @sizeOf(@This()),
-    // Type of this descriptor, must be `InterfaceAssociation`.
-    descriptor_type: Type = .InterfaceAssociation,
+    // Type of this descriptor, must be `interface_association`.
+    descriptor_type: Type = .interface_association,
     // First interface number of the set of interfaces that follow this
     // descriptor.
     first_interface: u8,
@@ -296,8 +299,8 @@ pub const BOS = struct {
         const data: []const u8 = "";
         const header: []const u8 = std.mem.asBytes(&extern struct {
             length: u8 = @sizeOf(@This()),
-            descriptor_type: Type = .BOS,
-            total_length: types.U16_Le align(1) = .from(@sizeOf(@This()) + data.len),
+            descriptor_type: Type = .bos,
+            total_length: EndianInt(u16, .little) align(1) = .from(@sizeOf(@This()) + data.len),
             num_descriptors: u8 = @intCast(objects.len),
         }{});
         return .{ .data = header ++ data };
@@ -364,7 +367,7 @@ pub const HID = extern struct {
 
     length: u8 = @sizeOf(@This()),
     /// Type of this descriptor
-    descriptor_type: Type = .CsDevice,
+    descriptor_type: Type = .cs_device,
     /// Numeric expression identifying the HID Class Specification release
     /// 1.11 seems to be the only one
     bcd_hid: types.Version = .v1_11,
@@ -375,5 +378,5 @@ pub const HID = extern struct {
     /// Type of HID class report
     report_type: CsType = .Report,
     /// The total size of the Report descriptor
-    report_length: types.U16_Le align(1),
+    report_length: EndianInt(u16, .little) align(1),
 };

@@ -29,7 +29,7 @@ const PowerState = union(enum) {
 };
 
 const EP0_State = struct {
-    direction: usb.types.Dir = .Out,
+    direction: usb.types.Dir = .out,
     remaining_size: u16 = 0,
     in_pending: bool = false,
     in_start_frame: u11 = 0,
@@ -148,10 +148,10 @@ pub const USBD = struct {
                         .length = .from(@as(u16, @intCast(peripherals.USBD.WLENGTHH.raw)) << 8 | @as(u16, @intCast(peripherals.USBD.WLENGTHL.raw))),
                     };
                     self.ep0_state.direction = switch (peripherals.USBD.BMREQUESTTYPE.read().DIRECTION) {
-                        .HostToDevice => .Out,
-                        .DeviceToHost => .In,
+                        .HostToDevice => .out,
+                        .DeviceToHost => .in,
                     };
-                    self.ep0_state.remaining_size = setup.length.into();
+                    self.ep0_state.remaining_size = setup.length.native();
                     controller.on_setup_req(&self.interface, &setup);
                 }
 
@@ -163,9 +163,9 @@ pub const USBD = struct {
                     peripherals.USBD.EVENTS_EP0DATADONE.write_raw(0);
                     self.ep0_state.in_pending = false;
                     switch (self.ep0_state.direction) {
-                        .In => controller.on_buffer(&self.interface, .in(.ep0)),
+                        .in => controller.on_buffer(&self.interface, .in(.ep0)),
                         // Control-OUT with data-phase is unhandled in the controller
-                        .Out => peripherals.USBD.TASKS_EP0STATUS.write_raw(1),
+                        .out => peripherals.USBD.TASKS_EP0STATUS.write_raw(1),
                     }
                 }
 
@@ -377,12 +377,12 @@ pub const USBD = struct {
         const i = @backingInt(ep.num);
         const mask: u32 = @as(u32, 1) << i;
         switch (ep.dir) {
-            .In => {
-                self.eps_in[i].max_packet_size = desc.max_packet_size.into();
+            .in => {
+                self.eps_in[i].max_packet_size = desc.max_packet_size.native();
                 peripherals.USBD.EPINEN.write_raw(peripherals.USBD.EPINEN.raw | mask);
             },
-            .Out => {
-                self.eps_out[i].max_packet_size = desc.max_packet_size.into();
+            .out => {
+                self.eps_out[i].max_packet_size = desc.max_packet_size.native();
                 peripherals.USBD.EPOUTEN.write_raw(peripherals.USBD.EPOUTEN.raw | mask);
             },
         }
@@ -390,7 +390,7 @@ pub const USBD = struct {
         const attr = desc.attributes;
         log.debug(
             "ep_open {t} {t}: {{ type: {t}, sync: {t}, usage: {t}, size: {} }}",
-            .{ ep.num, ep.dir, attr.transfer_type, attr.synchronisation, attr.usage, desc.max_packet_size.into() },
+            .{ ep.num, ep.dir, attr.transfer_type, attr.synchronisation, attr.usage, desc.max_packet_size.native() },
         );
     }
 

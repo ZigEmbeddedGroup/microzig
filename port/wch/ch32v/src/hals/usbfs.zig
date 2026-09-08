@@ -225,9 +225,9 @@ pub fn Polled(comptime cfg: Config) type {
         fn on_bus_reset_local(self: *Self) void {
             // Clear state
             inline for (0..cfg.max_endpoints_count) |i| {
-                self.endpoints[i][@backingInt(types.Dir.Out)].rx_armed = false;
-                self.endpoints[i][@backingInt(types.Dir.Out)].rx_last_len = 0;
-                self.endpoints[i][@backingInt(types.Dir.In)].tx_busy = false;
+                self.endpoints[i][@backingInt(types.Dir.out)].rx_armed = false;
+                self.endpoints[i][@backingInt(types.Dir.out)].rx_last_len = 0;
+                self.endpoints[i][@backingInt(types.Dir.in)].tx_busy = false;
             }
 
             // Default: NAK all non-EP0 endpoints.
@@ -242,7 +242,7 @@ pub fn Polled(comptime cfg: Config) type {
         }
 
         fn read_setup_from_ep0(self: *Self) types.SetupPacket {
-            const ep0 = self.st(.ep0, .Out);
+            const ep0 = self.st(.ep0, .out);
             assert(ep0.buf.len >= 8);
             const words_ptr: *align(4) const [2]u32 = @ptrCast(ep0.buf.ptr);
             return @bitCast(words_ptr.*);
@@ -253,16 +253,16 @@ pub fn Polled(comptime cfg: Config) type {
         fn call_on_buffer(self: *Self, dir: types.Dir, ep: u4, controller: anytype) void {
             // controller.on_buffer requires comptime ep parameter
             switch (dir) {
-                .In => switch (ep) {
+                .in => switch (ep) {
                     inline 0...15 => |i| {
                         const num: types.Endpoint.Num = @fromBackingInt(i);
-                        controller.on_buffer(&self.interface, .{ .num = num, .dir = .In });
+                        controller.on_buffer(&self.interface, .{ .num = num, .dir = .in });
                     },
                 },
-                .Out => switch (ep) {
+                .out => switch (ep) {
                     inline 0...15 => |i| {
                         const num: types.Endpoint.Num = @fromBackingInt(i);
-                        controller.on_buffer(&self.interface, .{ .num = num, .dir = .Out });
+                        controller.on_buffer(&self.interface, .{ .num = num, .dir = .out });
                     },
                 },
             }
@@ -315,7 +315,7 @@ pub fn Polled(comptime cfg: Config) type {
                     const setup: types.SetupPacket = self.read_setup_from_ep0();
                     Regs.R8_UEP0_T_CTRL.modify(.{ .RB_UEP_T_TOG = TOG_DATA1 });
                     set_rx_ctrl(0, RES_ACK, TOG_DATA1, false);
-                    const st_in = self.st(.ep0, .In);
+                    const st_in = self.st(.ep0, .in);
                     st_in.tx_busy = false;
                     controller.on_setup_req(&self.interface, &setup);
                 },
@@ -335,17 +335,17 @@ pub fn Polled(comptime cfg: Config) type {
 
             // EP0 OUT is always armed; accept status ZLP.
             if (ep == 0) {
-                const st_out = self.st(.ep0, .Out);
+                const st_out = self.st(.ep0, .out);
                 st_out.rx_last_len = len;
                 const next = toggle_next(current_rx_tog(0));
                 set_rx_ctrl(0, RES_ACK, next, false);
                 // stay ACK
-                self.call_on_buffer(.Out, 0, controller);
+                self.call_on_buffer(.out, 0, controller);
                 return;
             }
 
             const num: types.Endpoint.Num = @fromBackingInt(ep);
-            const st_out = self.st(num, .Out);
+            const st_out = self.st(num, .out);
 
             // Only read if previously armed (ep_listen)
             if (!st_out.rx_armed) {
@@ -360,13 +360,13 @@ pub fn Polled(comptime cfg: Config) type {
             const n = @min(@as(usize, len), st_out.buf.len);
             st_out.rx_last_len = @as(u16, @intCast(n));
 
-            self.call_on_buffer(.Out, ep, controller);
+            self.call_on_buffer(.out, ep, controller);
         }
 
         // IN => into host from device
         fn handle_in(self: *Self, ep: u4, controller: anytype) void {
             const num: types.Endpoint.Num = @fromBackingInt(ep);
-            const st_in = self.st(num, .In);
+            const st_in = self.st(num, .in);
 
             if (!st_in.tx_busy) return;
 
@@ -376,7 +376,7 @@ pub fn Polled(comptime cfg: Config) type {
             set_tx_ctrl(ep, RES_NAK, next, false);
 
             // Notify controller/drivers of IN completion.
-            self.call_on_buffer(.In, ep, controller);
+            self.call_on_buffer(.in, ep, controller);
 
             // After EP0 IN completes, re-arm EP0 OUT for the next SETUP.
             // SETUP packets always use DATA0 toggle; the WCH USBFS hardware
@@ -402,11 +402,11 @@ pub fn Polled(comptime cfg: Config) type {
             assert(ep_i < cfg.max_endpoints_count);
             log.debug("ep_open ep{} dir={}", .{ ep_i, e.dir });
 
-            const mps: u16 = desc.max_packet_size.into();
+            const mps: u16 = desc.max_packet_size.native();
             assert(mps > 0 and mps <= 64);
 
-            const out_st = self.st(e.num, .Out);
-            const in_st = self.st(e.num, .In);
+            const out_st = self.st(e.num, .out);
+            const in_st = self.st(e.num, .in);
             const first_open = out_st.buf.len == 0;
 
             // We "open" the endpoint for both directions at once because the DMA buffers
@@ -439,8 +439,8 @@ pub fn Polled(comptime cfg: Config) type {
                 set_tx_ctrl(ep_i, RES_NAK, TOG_DATA0, false);
             }
             switch (e.dir) {
-                .Out => set_rx_ctrl(ep_i, RES_NAK, TOG_DATA0, false),
-                .In => set_tx_ctrl(ep_i, RES_NAK, TOG_DATA0, false),
+                .out => set_rx_ctrl(ep_i, RES_NAK, TOG_DATA0, false),
+                .in => set_tx_ctrl(ep_i, RES_NAK, TOG_DATA0, false),
             }
 
             const tx_len: *volatile Reg_U8 = &EP_Regs[ep_i].UEP_T_LEN;
@@ -459,7 +459,7 @@ pub fn Polled(comptime cfg: Config) type {
 
             // EP0 OUT is always armed; ignore listen semantics here.
             if (ep_num == .ep0) {
-                const st0 = self.st(.ep0, .Out);
+                const st0 = self.st(.ep0, .out);
                 st0.rx_limit = @as(u16, @intCast(len));
                 return;
             }
@@ -468,7 +468,7 @@ pub fn Polled(comptime cfg: Config) type {
             if (ep_i >= cfg.max_endpoints_count)
                 @panic("ep_listen called for invalid endpoint");
 
-            const st_out = self.st(ep_num, .Out);
+            const st_out = self.st(ep_num, .out);
             if (st_out.buf.len == 0)
                 @panic("ep_listen called for endpoint with no buffer allocated");
 
@@ -488,7 +488,7 @@ pub fn Polled(comptime cfg: Config) type {
         fn ep_readv(itf: *usb.DeviceInterface, ep_num: types.Endpoint.Num, data: []const []u8) types.Len {
             const self: *Self = @fieldParentPtr("interface", itf);
 
-            const st_out = self.st(ep_num, .Out);
+            const st_out = self.st(ep_num, .out);
             assert(st_out.buf.len != 0);
 
             const want: usize = @as(usize, st_out.rx_last_len);
@@ -521,7 +521,7 @@ pub fn Polled(comptime cfg: Config) type {
             const ep_i: u4 = epn(ep_num);
             assert(ep_i < cfg.max_endpoints_count);
 
-            const st_in = self.st(ep_num, .In);
+            const st_in = self.st(ep_num, .in);
             assert(st_in.buf.len != 0);
 
             if (st_in.tx_busy) {
