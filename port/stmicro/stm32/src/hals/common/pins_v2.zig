@@ -1,7 +1,5 @@
 const std = @import("std");
-const assert = std.debug.assert;
 const comptimePrint = std.fmt.comptimePrint;
-const StructField = std.builtin.Type.StructField;
 
 const microzig = @import("microzig");
 const util = @import("util.zig");
@@ -20,7 +18,6 @@ const PUPDR = gpio_v2.PUPDR;
 const MODER = gpio_v2.MODER;
 const OSPEEDR = gpio_v2.OSPEEDR;
 const OT = gpio_v2.OT;
-const AFIO = microzig.chip.peripherals.AFIO;
 
 const rcc = microzig.hal.rcc;
 const peripherals = microzig.chip.peripherals;

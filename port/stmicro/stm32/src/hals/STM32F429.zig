@@ -20,15 +20,11 @@
 //!
 //! TODO: add more clock calculations when adding Uart
 
-const std = @import("std");
 const microzig = @import("microzig");
-const mmio = microzig.mmio;
 const peripherals = microzig.chip.peripherals;
 const RCC = peripherals.RCC;
 
 const Digital_IO = microzig.drivers.base.Digital_IO;
-
-const State = Digital_IO.State;
 
 pub const pins = @import("./common/pins_v2.zig");
 
@@ -52,7 +48,6 @@ pub const clock_frequencies = .{
 // TODO: There should be a common rcc with stuff like this, just like pins_v2.zig
 pub const rcc = struct {
     const util = @import("common/util.zig");
-    const _rcc = microzig.chip.peripherals.RCC;
 
     // Any peripheral that must be enable in RCC.
     pub const Peripherals = util.create_peripheral_enum(&.{
@@ -62,7 +57,7 @@ pub const rcc = struct {
     ///configure the power and clock registers before enabling the RTC
     ///this function also can be called from `rtc.enable()`
     pub fn enable_rtc(on: bool) void {
-        _rcc.BDCR.modify(.{ .RTCEN = @intFromBool(on) });
+        RCC.BDCR.modify(.{ .RTCEN = @intFromBool(on) });
     }
 
     pub fn set_clock(comptime peri: Peripherals, state: u1) void {
@@ -98,7 +93,7 @@ pub const rcc = struct {
             "GPIOA",
         })) "AHB1ENR" else "AHB1ENR";
 
-        @field(_rcc, rcc_register_name).modify_one(field, state);
+        @field(RCC, rcc_register_name).modify_one(field, state);
     }
 
     pub fn enable_clock(comptime peri: Peripherals) void {
