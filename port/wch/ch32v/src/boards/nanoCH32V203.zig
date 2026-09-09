@@ -25,7 +25,11 @@ pub fn init() void {
 }
 
 /// Default UART: USART1 on PA9
-pub const uart_config: ch32v.usart.UartConfig = .{};
+pub const uart_setup: ch32v.usart.Setup = .{
+    .instance = .USART1,
+    .tx_pin = ch32v.gpio.Pin.init(0, 9), // PA9
+    .rx_pin = ch32v.gpio.Pin.init(0, 10), // PA10
+};
 
 pub const pin_config = ch32v.pins.GlobalConfiguration{
     .GPIOA = .{
