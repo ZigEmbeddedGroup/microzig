@@ -31,6 +31,21 @@ pub const uart_setup: ch32v.usart.Setup = .{
     .rx_pin = ch32v.gpio.Pin.init(0, 10), // PA10
 };
 
+/// Default I2C: I2C1 on PB6 (SCL) / PB7 (SDA)
+pub const i2c_setup: ch32v.i2c.Setup = .{
+    .instance = ch32v.i2c.instance.I2C1,
+    .scl_pin = ch32v.gpio.Pin.init(1, 6), // PB6
+    .sda_pin = ch32v.gpio.Pin.init(1, 7), // PB7
+};
+
+/// Default SPI: SPI1 on PA5 (SCK) / PA6 (MISO) / PA7 (MOSI)
+pub const spi_setup: ch32v.spi.Setup = .{
+    .instance = ch32v.spi.instance.SPI1,
+    .sck_pin = ch32v.gpio.Pin.init(0, 5), // PA5
+    .mosi_pin = ch32v.gpio.Pin.init(0, 7), // PA7
+    .miso_pin = ch32v.gpio.Pin.init(0, 6), // PA6
+};
+
 pub const pin_config = ch32v.pins.GlobalConfiguration{
     .GPIOA = .{
         .PIN15 = .{
