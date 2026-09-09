@@ -10,6 +10,7 @@ pub fn build(b: *Build) !void {
     const libxml2_dep = b.dependency("libxml2", .{
         .target = target,
         .optimize = .ReleaseSafe,
+        .iconv = false,
     });
 
     const virtual_io = b.dependency("virtual_io", .{
