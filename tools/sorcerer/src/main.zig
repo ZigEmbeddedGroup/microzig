@@ -2,7 +2,6 @@ const std = @import("std");
 const dvui = @import("dvui");
 const regz = @import("regz");
 const schemas = @import("schemas");
-const RegisterSchemaUsage = @import("RegisterSchemaUsage");
 const RegzWindow = @import("RegzWindow.zig");
 const SrceryTheme = @import("SrceryTheme.zig");
 
@@ -36,7 +35,7 @@ pub const std_options: std.Options = .{
     .log_level = .info,
 };
 
-var gpa_instance = std.heap.GeneralPurposeAllocator(.{}){};
+var gpa_instance: std.heap.DebugAllocator(.{}) = .init;
 const gpa = gpa_instance.allocator();
 var arena: std.heap.ArenaAllocator = .init(gpa);
 
@@ -44,7 +43,7 @@ var state: State = .{};
 
 const State = struct {
     orig_content_scale: f32 = 1.0,
-    regz_windows: std.StringArrayHashMapUnmanaged(*RegzWindow) = .{},
+    regz_windows: std.StringArrayHashMapUnmanaged(*RegzWindow) = .empty,
     show_from_microzig_window: bool = false,
     show_stats_window: bool = true,
     show_search_chips_window: bool = false,
@@ -72,7 +71,9 @@ pub fn AppInit(win: *dvui.Window) !void {
 }
 
 // Run as app is shutting down before dvui.Window.deinit()
-pub fn AppDeinit() void {}
+pub fn AppDeinit(win: *dvui.Window) void {
+    _ = win;
+}
 
 // Run each frame to do normal UI
 pub fn AppFrame() !dvui.App.Result {
@@ -127,7 +128,7 @@ pub fn frame() !dvui.App.Result {
     // Stats floating window
     show_stats_window();
 
-    dvui.Examples.demo();
+    dvui.Examples.demo(.lite);
 
     from_microzig_menu();
     search_chips_window();
@@ -187,7 +188,7 @@ const Stats = struct {
     targetdb_count: usize,
 };
 
-fn compute_stats(rsus: []const RegisterSchemaUsage) Stats {
+fn compute_stats(rsus: []const schemas.Usage) Stats {
     var stats: Stats = .{
         .total_chips = 0,
         .total_boards = 0,
@@ -199,8 +200,8 @@ fn compute_stats(rsus: []const RegisterSchemaUsage) Stats {
         .targetdb_count = 0,
     };
 
-    var ports_seen = std.StringHashMap(void).init(gpa);
-    defer ports_seen.deinit();
+    var ports_seen: std.StringHashMapUnmanaged(void) = .empty;
+    defer ports_seen.deinit(gpa);
 
     for (rsus) |rsu| {
         stats.total_chips += rsu.chips.len;
@@ -216,7 +217,7 @@ fn compute_stats(rsus: []const RegisterSchemaUsage) Stats {
             .src_path => |loc| loc.port_name,
             .dependency => |loc| loc.port_name,
         };
-        ports_seen.put(port_name, {}) catch {};
+        ports_seen.put(gpa, port_name, {}) catch {};
 
         switch (rsu.format) {
             .svd => stats.svd_count += 1,
@@ -292,29 +293,20 @@ fn open_register_schema_submenu(m: *dvui.MenuWidget) !void {
     }
 }
 
-var highlight_style: dvui.GridWidget.CellStyle.HoveredRow = .{
-    .cell_opts = .{
-        .color_fill_hover = .gray,
-        .background = true,
-        .border = .{
-            .y = 0,
-            .h = 0,
-            .x = 0,
-            .w = 1,
-        },
-    },
+const grid_cell_options: dvui.Options = .{
+    .background = true,
+    .border = .{ .y = 0, .h = 0, .x = 0, .w = 1 },
 };
 
-const header_style: dvui.GridWidget.CellStyle = .{
-    .cell_opts = .{
-        .border = .{
-            .y = 0,
-            .h = 1,
-            .x = 0,
-            .w = 0,
-        },
-    },
+const grid_header_options: dvui.Options = .{
+    .border = .{ .y = 0, .h = 1, .x = 0, .w = 0 },
 };
+
+fn gridCellOptions(hovered: ?dvui.GridWidget.Cell, row: usize) dvui.Options {
+    var options = grid_cell_options;
+    if (hovered != null and hovered.?.row == row) options.color_fill = .gray;
+    return options;
+}
 
 fn from_microzig_menu() void {
     if (!state.show_from_microzig_window)
@@ -328,23 +320,29 @@ fn from_microzig_menu() void {
 
     float.dragAreaSet(dvui.windowHeader("Open From MicroZig", "", &state.show_from_microzig_window));
 
-    var grid = dvui.grid(@src(), .numCols(3), .{ .scroll_opts = .{ .horizontal_bar = .auto } }, .{ .expand = .both, .background = true });
+    var grid = dvui.grid(@src(), .{ .scroll_opts = .{ .horizontal = .auto } }, .{ .expand = .both, .background = true });
     defer grid.deinit();
 
-    const row_clicked: ?usize = blk: {
-        for (dvui.events()) |*e| {
-            if (!dvui.eventMatchSimple(e, grid.data())) continue;
-            if (e.evt != .mouse) continue;
-            const me = e.evt.mouse;
-            if (me.action != .press) continue;
-            if (grid.pointToCell(me.p)) |cell| {
-                if (cell.col_num > 0) break :blk cell.row_num;
-            }
-        }
-        break :blk null;
-    };
+    {
+        const cell = grid.colHeader(0, grid_header_options);
+        defer cell.deinit();
+        dvui.labelNoFmt(@src(), "Port", .{}, .{ .gravity_x = 0.5 });
+    }
+    {
+        const cell = grid.colHeader(1, grid_header_options);
+        defer cell.deinit();
+        dvui.labelNoFmt(@src(), "Package", .{}, .{ .gravity_x = 0.5 });
+    }
+    {
+        const cell = grid.colHeader(2, grid_header_options);
+        defer cell.deinit();
+        dvui.labelNoFmt(@src(), "Location", .{}, .{ .gravity_x = 0.5 });
+    }
 
-    if (row_clicked) |row_num| {
+    if (grid.cellActivated()) |activation| {
+        const row_num = activation.cell.row;
+        if (row_num >= schemas.schemas.len) return;
+
         std.log.info("clicked row: {}", .{row_num});
         const register_schema = schemas.schemas[row_num];
 
@@ -392,33 +390,38 @@ fn from_microzig_menu() void {
         }
     }
 
-    dvui.gridHeading(@src(), grid, 0, "Port", .fixed, header_style);
-    dvui.gridHeading(@src(), grid, 1, "Package", .fixed, header_style);
-    dvui.gridHeading(@src(), grid, 2, "Location", .fixed, header_style);
-
-    highlight_style.processEvents(grid);
+    const hovered_cell = grid.cellHovered();
 
     for (schemas.schemas, 0..) |rsu, row_num| {
-        var cell_num: dvui.GridWidget.Cell = .colRow(0, row_num);
+        var cell_num: dvui.GridWidget.Cell = .{ .col = 0, .row = row_num };
         switch (rsu.location) {
             .src_path => |src| {
                 {
-                    defer cell_num.col_num += 1;
-                    var cell = grid.bodyCell(@src(), cell_num, highlight_style.cellOptions(cell_num));
+                    defer cell_num.col += 1;
+                    var cell = grid.cell(
+                        .{ .col = cell_num.col, .row = cell_num.row },
+                        gridCellOptions(hovered_cell, cell_num.row),
+                    );
                     defer cell.deinit();
 
                     dvui.labelNoFmt(@src(), src.port_name, .{}, .{});
                 }
                 {
-                    defer cell_num.col_num += 1;
-                    var cell = grid.bodyCell(@src(), cell_num, highlight_style.cellOptions(cell_num));
+                    defer cell_num.col += 1;
+                    var cell = grid.cell(
+                        .{ .col = cell_num.col, .row = cell_num.row },
+                        gridCellOptions(hovered_cell, cell_num.row),
+                    );
                     defer cell.deinit();
 
                     dvui.labelNoFmt(@src(), "", .{}, .{});
                 }
                 {
-                    defer cell_num.col_num += 1;
-                    var cell = grid.bodyCell(@src(), cell_num, highlight_style.cellOptions(cell_num));
+                    defer cell_num.col += 1;
+                    var cell = grid.cell(
+                        .{ .col = cell_num.col, .row = cell_num.row },
+                        gridCellOptions(hovered_cell, cell_num.row),
+                    );
                     defer cell.deinit();
 
                     dvui.labelNoFmt(@src(), src.sub_path, .{}, .{});
@@ -426,22 +429,31 @@ fn from_microzig_menu() void {
             },
             .dependency => |dep| {
                 {
-                    defer cell_num.col_num += 1;
-                    var cell = grid.bodyCell(@src(), cell_num, highlight_style.cellOptions(cell_num));
+                    defer cell_num.col += 1;
+                    var cell = grid.cell(
+                        .{ .col = cell_num.col, .row = cell_num.row },
+                        gridCellOptions(hovered_cell, cell_num.row),
+                    );
                     defer cell.deinit();
 
                     dvui.labelNoFmt(@src(), dep.port_name, .{}, .{});
                 }
                 {
-                    defer cell_num.col_num += 1;
-                    var cell = grid.bodyCell(@src(), cell_num, highlight_style.cellOptions(cell_num));
+                    defer cell_num.col += 1;
+                    var cell = grid.cell(
+                        .{ .col = cell_num.col, .row = cell_num.row },
+                        gridCellOptions(hovered_cell, cell_num.row),
+                    );
                     defer cell.deinit();
 
                     dvui.labelNoFmt(@src(), dep.dep_name, .{}, .{});
                 }
                 {
-                    defer cell_num.col_num += 1;
-                    var cell = grid.bodyCell(@src(), cell_num, highlight_style.cellOptions(cell_num));
+                    defer cell_num.col += 1;
+                    var cell = grid.cell(
+                        .{ .col = cell_num.col, .row = cell_num.row },
+                        gridCellOptions(hovered_cell, cell_num.row),
+                    );
                     defer cell.deinit();
 
                     dvui.labelNoFmt(@src(), dep.sub_path, .{}, .{});
@@ -483,28 +495,28 @@ fn search_chips_window() void {
         te.deinit();
     }
 
-    // Results grid - use explicit column widths for proper alignment
-    var col_widths = [_]f32{ 200, 150, 80 };
-    var grid = dvui.grid(@src(), .colWidths(&col_widths), .{ .scroll_opts = .{ .horizontal_bar = .auto } }, .{ .expand = .both, .background = true });
+    var grid = dvui.grid(@src(), .{ .scroll_opts = .{ .horizontal = .auto } }, .{ .expand = .both, .background = true });
     defer grid.deinit();
 
-    const row_clicked: ?ChipLocation = blk: {
-        for (dvui.events()) |*e| {
-            if (!dvui.eventMatchSimple(e, grid.data())) continue;
-            if (e.evt != .mouse) continue;
-            const me = e.evt.mouse;
-            if (me.action != .press) continue;
-            if (grid.pointToCell(me.p)) |cell| {
-                // Decode row_num to find which chip was clicked
-                if (find_chip_by_row(query, cell.row_num)) |result| {
-                    break :blk result;
-                }
-            }
-        }
-        break :blk null;
-    };
+    {
+        const cell = grid.colHeader(0, grid_header_options);
+        defer cell.deinit();
+        dvui.labelNoFmt(@src(), "Chip Name", .{}, .{ .gravity_x = 0.5 });
+    }
+    {
+        const cell = grid.colHeader(1, grid_header_options);
+        defer cell.deinit();
+        dvui.labelNoFmt(@src(), "Port", .{}, .{ .gravity_x = 0.5 });
+    }
+    {
+        const cell = grid.colHeader(2, grid_header_options);
+        defer cell.deinit();
+        dvui.labelNoFmt(@src(), "Format", .{}, .{ .gravity_x = 0.5 });
+    }
 
-    if (row_clicked) |clicked| {
+    if (grid.cellActivated()) |activation| blk: {
+        const clicked = find_chip_by_row(query, activation.cell.row) orelse break :blk;
+
         const rsus = schemas.schemas;
         if (clicked.rsu_idx >= rsus.len) return;
         const rsu = rsus[clicked.rsu_idx];
@@ -526,17 +538,13 @@ fn search_chips_window() void {
         }
     }
 
-    dvui.gridHeading(@src(), grid, 0, "Chip Name", .fixed, header_style);
-    dvui.gridHeading(@src(), grid, 1, "Port", .fixed, header_style);
-    dvui.gridHeading(@src(), grid, 2, "Format", .fixed, header_style);
-
-    highlight_style.processEvents(grid);
+    const hovered_cell = grid.cellHovered();
 
     // Only show results if user has typed something
     if (query.len == 0) return;
 
     // Track seen chip names to avoid duplicates
-    var seen_chips = std.StringHashMap(void).init(dvui.currentWindow().arena());
+    var seen_chips: std.StringHashMapUnmanaged(void) = .empty;
 
     const max_results: usize = 50;
 
@@ -561,30 +569,30 @@ fn search_chips_window() void {
                 if (seen_chips.contains(chip.name)) {
                     continue;
                 }
-                seen_chips.put(chip.name, {}) catch {};
+                seen_chips.put(dvui.currentWindow().arena(), chip.name, {}) catch {};
 
-                var cell_num: dvui.GridWidget.Cell = .colRow(0, row_num);
+                var cell_num: dvui.GridWidget.Cell = .{ .col = 0, .row = row_num };
 
                 // Chip name column
                 {
-                    defer cell_num.col_num += 1;
-                    var cell = grid.bodyCell(@src(), cell_num, highlight_style.cellOptions(cell_num));
+                    defer cell_num.col += 1;
+                    var cell = grid.cell(.{ .col = cell_num.col, .row = cell_num.row }, gridCellOptions(hovered_cell, cell_num.row));
                     defer cell.deinit();
                     dvui.labelNoFmt(@src(), chip.name, .{}, .{});
                 }
 
                 // Port column
                 {
-                    defer cell_num.col_num += 1;
-                    var cell = grid.bodyCell(@src(), cell_num, highlight_style.cellOptions(cell_num));
+                    defer cell_num.col += 1;
+                    var cell = grid.cell(.{ .col = cell_num.col, .row = cell_num.row }, gridCellOptions(hovered_cell, cell_num.row));
                     defer cell.deinit();
                     dvui.labelNoFmt(@src(), port_name, .{}, .{});
                 }
 
                 // Format column
                 {
-                    defer cell_num.col_num += 1;
-                    var cell = grid.bodyCell(@src(), cell_num, highlight_style.cellOptions(cell_num));
+                    defer cell_num.col += 1;
+                    var cell = grid.cell(.{ .col = cell_num.col, .row = cell_num.row }, gridCellOptions(hovered_cell, cell_num.row));
                     defer cell.deinit();
                     const format_str: []const u8 = switch (rsu.format) {
                         .svd => "SVD",
@@ -622,7 +630,7 @@ fn find_chip_by_row(query: []const u8, target_row: usize) ?ChipLocation {
     if (query.len == 0) return null;
 
     // Track seen chip names to match deduplication in display
-    var seen_chips = std.StringHashMap(void).init(dvui.currentWindow().arena());
+    var seen_chips: std.StringHashMapUnmanaged(void) = .empty;
 
     const max_results: usize = 50;
 
@@ -642,7 +650,7 @@ fn find_chip_by_row(query: []const u8, target_row: usize) ?ChipLocation {
                 if (seen_chips.contains(chip.name)) {
                     continue;
                 }
-                seen_chips.put(chip.name, {}) catch {};
+                seen_chips.put(dvui.currentWindow().arena(), chip.name, {}) catch {};
 
                 if (row_num == target_row) {
                     return .{ .rsu_idx = rsu_idx, .chip_idx = chip_idx };
@@ -718,33 +726,26 @@ fn target_selection_window() void {
     float.dragAreaSet(dvui.windowHeader(title, "", &state.show_target_selection_window));
 
     // Results grid
-    var col_widths = [_]f32{350};
-    var grid = dvui.grid(@src(), .colWidths(&col_widths), .{ .scroll_opts = .{ .horizontal_bar = .auto } }, .{ .expand = .both, .background = true });
+    var grid = dvui.grid(@src(), .{ .scroll_opts = .{ .horizontal = .auto } }, .{ .expand = .both, .background = true });
     defer grid.deinit();
 
-    const row_clicked: ?TargetLocation = blk: {
-        for (dvui.events()) |*e| {
-            if (!dvui.eventMatchSimple(e, grid.data())) continue;
-            if (e.evt != .mouse) continue;
-            const me = e.evt.mouse;
-            if (me.action != .press) continue;
-            if (grid.pointToCell(me.p)) |cell| {
-                if (find_target_by_row(state.selected_chip_name, cell.row_num)) |result| {
-                    break :blk result;
-                }
-            }
-        }
-        break :blk null;
-    };
+    {
+        const cell = grid.colHeader(0, grid_header_options);
+        defer cell.deinit();
+        dvui.labelNoFmt(@src(), "Target", .{}, .{ .gravity_x = 0.5 });
+    }
+
+    const row_clicked: ?TargetLocation = if (grid.cellActivated()) |activation|
+        find_target_by_row(state.selected_chip_name, activation.cell.row)
+    else
+        null;
 
     if (row_clicked) |clicked| {
         open_chip_target(clicked.rsu_idx, clicked.chip_idx);
         state.show_target_selection_window = false;
     }
 
-    dvui.gridHeading(@src(), grid, 0, "Target", .fixed, header_style);
-
-    highlight_style.processEvents(grid);
+    const hovered_cell = grid.cellHovered();
 
     const rsus = schemas.schemas;
     var row_num: usize = 0;
@@ -755,11 +756,14 @@ fn target_selection_window() void {
                 continue;
             }
 
-            var cell_num: dvui.GridWidget.Cell = .colRow(0, row_num);
+            var cell_num: dvui.GridWidget.Cell = .{ .col = 0, .row = row_num };
 
             {
-                defer cell_num.col_num += 1;
-                var cell = grid.bodyCell(@src(), cell_num, highlight_style.cellOptions(cell_num));
+                defer cell_num.col += 1;
+                var cell = grid.cell(
+                    .{ .col = cell_num.col, .row = cell_num.row },
+                    gridCellOptions(hovered_cell, cell_num.row),
+                );
                 defer cell.deinit();
                 dvui.labelNoFmt(@src(), chip.target_name, .{}, .{});
             }
@@ -806,24 +810,17 @@ fn rsu_target_selection_window() void {
     float.dragAreaSet(dvui.windowHeader("Select Target", "", &state.show_rsu_target_selection_window));
 
     // Results grid
-    var col_widths = [_]f32{350};
-    var grid = dvui.grid(@src(), .colWidths(&col_widths), .{ .scroll_opts = .{ .horizontal_bar = .auto } }, .{ .expand = .both, .background = true });
+    var grid = dvui.grid(@src(), .{ .scroll_opts = .{ .horizontal = .auto } }, .{ .expand = .both, .background = true });
     defer grid.deinit();
 
-    const row_clicked: ?usize = blk: {
-        for (dvui.events()) |*e| {
-            if (!dvui.eventMatchSimple(e, grid.data())) continue;
-            if (e.evt != .mouse) continue;
-            const me = e.evt.mouse;
-            if (me.action != .press) continue;
-            if (grid.pointToCell(me.p)) |cell| {
-                break :blk cell.row_num;
-            }
-        }
-        break :blk null;
-    };
+    {
+        const cell = grid.colHeader(0, grid_header_options);
+        defer cell.deinit();
+        dvui.labelNoFmt(@src(), "Target", .{}, .{ .gravity_x = 0.5 });
+    }
 
-    if (row_clicked) |chip_idx| {
+    if (grid.cellActivated()) |activation| {
+        const chip_idx = activation.cell.row;
         if (chip_idx < rsu.chips.len) {
             open_chip_target(rsu_idx, chip_idx);
             state.show_rsu_target_selection_window = false;
@@ -831,16 +828,15 @@ fn rsu_target_selection_window() void {
         }
     }
 
-    dvui.gridHeading(@src(), grid, 0, "Target", .fixed, header_style);
-
-    highlight_style.processEvents(grid);
-
+    const hovered_cell = grid.cellHovered();
     for (rsu.chips, 0..) |chip, row_num| {
-        var cell_num: dvui.GridWidget.Cell = .colRow(0, row_num);
-
+        var cell_num: dvui.GridWidget.Cell = .{ .col = 0, .row = row_num };
         {
-            defer cell_num.col_num += 1;
-            var cell = grid.bodyCell(@src(), cell_num, highlight_style.cellOptions(cell_num));
+            defer cell_num.col += 1;
+            var cell = grid.cell(
+                .{ .col = cell_num.col, .row = cell_num.row },
+                gridCellOptions(hovered_cell, cell_num.row),
+            );
             defer cell.deinit();
             dvui.labelNoFmt(@src(), chip.target_name, .{}, .{});
         }
@@ -881,41 +877,38 @@ fn search_boards_window() void {
     }
 
     // Results grid - use explicit column widths for proper alignment
-    var col_widths = [_]f32{ 200, 150, 80 };
-    var grid = dvui.grid(@src(), .colWidths(&col_widths), .{ .scroll_opts = .{ .horizontal_bar = .auto } }, .{ .expand = .both, .background = true });
+    var grid = dvui.grid(@src(), .{ .scroll_opts = .{ .horizontal = .auto } }, .{ .expand = .both, .background = true });
     defer grid.deinit();
 
-    const row_clicked: ?BoardLocation = blk: {
-        for (dvui.events()) |*e| {
-            if (!dvui.eventMatchSimple(e, grid.data())) continue;
-            if (e.evt != .mouse) continue;
-            const me = e.evt.mouse;
-            if (me.action != .press) continue;
-            if (grid.pointToCell(me.p)) |cell| {
-                if (find_board_by_row(query, cell.row_num)) |result| {
-                    break :blk result;
-                }
-            }
-        }
-        break :blk null;
-    };
+    {
+        const cell = grid.colHeader(0, grid_header_options);
+        defer cell.deinit();
+        dvui.labelNoFmt(@src(), "Board Name", .{}, .{ .gravity_x = 0.5 });
+    }
+    {
+        const cell = grid.colHeader(1, grid_header_options);
+        defer cell.deinit();
+        dvui.labelNoFmt(@src(), "Port", .{}, .{ .gravity_x = 0.5 });
+    }
+    {
+        const cell = grid.colHeader(2, grid_header_options);
+        defer cell.deinit();
+        dvui.labelNoFmt(@src(), "Format", .{}, .{ .gravity_x = 0.5 });
+    }
 
-    if (row_clicked) |clicked| {
+    if (grid.cellActivated()) |activation| blk: {
+        const clicked = find_board_by_row(query, activation.cell.row) orelse break :blk;
         open_board(clicked.rsu_idx, clicked.board_idx);
         state.show_search_boards_window = false;
     }
 
-    dvui.gridHeading(@src(), grid, 0, "Board Name", .fixed, header_style);
-    dvui.gridHeading(@src(), grid, 1, "Port", .fixed, header_style);
-    dvui.gridHeading(@src(), grid, 2, "Format", .fixed, header_style);
-
-    highlight_style.processEvents(grid);
+    const hovered_cell = grid.cellHovered();
 
     // Only show results if user has typed something
     if (query.len == 0) return;
 
     // Track seen board names to avoid duplicates
-    var seen_boards = std.StringHashMap(void).init(dvui.currentWindow().arena());
+    var seen_boards: std.StringHashMapUnmanaged(void) = .empty;
 
     const max_results: usize = 50;
 
@@ -940,30 +933,39 @@ fn search_boards_window() void {
                 if (seen_boards.contains(board.name)) {
                     continue;
                 }
-                seen_boards.put(board.name, {}) catch {};
+                seen_boards.put(dvui.currentWindow().arena(), board.name, {}) catch {};
 
-                var cell_num: dvui.GridWidget.Cell = .colRow(0, row_num);
+                var cell_num: dvui.GridWidget.Cell = .{ .col = 0, .row = row_num };
 
                 // Board name column
                 {
-                    defer cell_num.col_num += 1;
-                    var cell = grid.bodyCell(@src(), cell_num, highlight_style.cellOptions(cell_num));
+                    defer cell_num.col += 1;
+                    var cell = grid.cell(
+                        .{ .col = cell_num.col, .row = cell_num.row },
+                        gridCellOptions(hovered_cell, cell_num.row),
+                    );
                     defer cell.deinit();
                     dvui.labelNoFmt(@src(), board.name, .{}, .{});
                 }
 
                 // Port column
                 {
-                    defer cell_num.col_num += 1;
-                    var cell = grid.bodyCell(@src(), cell_num, highlight_style.cellOptions(cell_num));
+                    defer cell_num.col += 1;
+                    var cell = grid.cell(
+                        .{ .col = cell_num.col, .row = cell_num.row },
+                        gridCellOptions(hovered_cell, cell_num.row),
+                    );
                     defer cell.deinit();
                     dvui.labelNoFmt(@src(), port_name, .{}, .{});
                 }
 
                 // Format column
                 {
-                    defer cell_num.col_num += 1;
-                    var cell = grid.bodyCell(@src(), cell_num, highlight_style.cellOptions(cell_num));
+                    defer cell_num.col += 1;
+                    var cell = grid.cell(
+                        .{ .col = cell_num.col, .row = cell_num.row },
+                        gridCellOptions(hovered_cell, cell_num.row),
+                    );
                     defer cell.deinit();
                     const format_str: []const u8 = switch (rsu.format) {
                         .svd => "SVD",
@@ -985,7 +987,7 @@ fn find_board_by_row(query: []const u8, target_row: usize) ?BoardLocation {
     if (query.len == 0) return null;
 
     // Track seen board names to match deduplication in display
-    var seen_boards = std.StringHashMap(void).init(dvui.currentWindow().arena());
+    var seen_boards: std.StringHashMapUnmanaged(void) = .empty;
 
     const max_results: usize = 50;
 
@@ -1005,7 +1007,7 @@ fn find_board_by_row(query: []const u8, target_row: usize) ?BoardLocation {
                 if (seen_boards.contains(board.name)) {
                     continue;
                 }
-                seen_boards.put(board.name, {}) catch {};
+                seen_boards.put(dvui.currentWindow().arena(), board.name, {}) catch {};
 
                 if (row_num == target_row) {
                     return .{ .rsu_idx = rsu_idx, .board_idx = board_idx };
@@ -1086,36 +1088,36 @@ fn search_targets_window() void {
         te.deinit();
     }
 
-    // Results grid - use explicit column widths for proper alignment
-    var col_widths = [_]f32{ 280, 100, 80 };
-    var grid = dvui.grid(@src(), .colWidths(&col_widths), .{ .scroll_opts = .{ .horizontal_bar = .auto } }, .{ .expand = .both, .background = true });
+    var grid = dvui.grid(@src(), .{ .scroll_opts = .{ .horizontal = .auto } }, .{ .expand = .both, .background = true });
     defer grid.deinit();
 
-    const row_clicked: ?TargetLocation = blk: {
-        for (dvui.events()) |*e| {
-            if (!dvui.eventMatchSimple(e, grid.data())) continue;
-            if (e.evt != .mouse) continue;
-            const me = e.evt.mouse;
-            if (me.action != .press) continue;
-            if (grid.pointToCell(me.p)) |cell| {
-                if (find_target_by_query_row(query, cell.row_num)) |result| {
-                    break :blk result;
-                }
-            }
-        }
-        break :blk null;
-    };
+    {
+        const cell = grid.colHeader(0, grid_header_options);
+        defer cell.deinit();
+        dvui.labelNoFmt(@src(), "Target", .{}, .{ .gravity_x = 0.5 });
+    }
+    {
+        const cell = grid.colHeader(1, grid_header_options);
+        defer cell.deinit();
+        dvui.labelNoFmt(@src(), "Chip", .{}, .{ .gravity_x = 0.5 });
+    }
+    {
+        const cell = grid.colHeader(2, grid_header_options);
+        defer cell.deinit();
+        dvui.labelNoFmt(@src(), "Format", .{}, .{ .gravity_x = 0.5 });
+    }
+
+    const row_clicked: ?TargetLocation = if (grid.cellActivated()) |activation|
+        find_target_by_query_row(query, activation.cell.row)
+    else
+        null;
 
     if (row_clicked) |clicked| {
         open_chip_target(clicked.rsu_idx, clicked.chip_idx);
         state.show_search_targets_window = false;
     }
 
-    dvui.gridHeading(@src(), grid, 0, "Target", .fixed, header_style);
-    dvui.gridHeading(@src(), grid, 1, "Chip", .fixed, header_style);
-    dvui.gridHeading(@src(), grid, 2, "Format", .fixed, header_style);
-
-    highlight_style.processEvents(grid);
+    const hovered_cell = grid.cellHovered();
 
     // Only show results if user has typed something
     if (query.len == 0) return;
@@ -1134,28 +1136,37 @@ fn search_targets_window() void {
                     continue;
                 }
 
-                var cell_num: dvui.GridWidget.Cell = .colRow(0, row_num);
+                var cell_num: dvui.GridWidget.Cell = .{ .col = 0, .row = row_num };
 
                 // Target name column
                 {
-                    defer cell_num.col_num += 1;
-                    var cell = grid.bodyCell(@src(), cell_num, highlight_style.cellOptions(cell_num));
+                    defer cell_num.col += 1;
+                    var cell = grid.cell(
+                        .{ .col = cell_num.col, .row = cell_num.row },
+                        gridCellOptions(hovered_cell, cell_num.row),
+                    );
                     defer cell.deinit();
                     dvui.labelNoFmt(@src(), chip.target_name, .{}, .{});
                 }
 
                 // Chip name column
                 {
-                    defer cell_num.col_num += 1;
-                    var cell = grid.bodyCell(@src(), cell_num, highlight_style.cellOptions(cell_num));
+                    defer cell_num.col += 1;
+                    var cell = grid.cell(
+                        .{ .col = cell_num.col, .row = cell_num.row },
+                        gridCellOptions(hovered_cell, cell_num.row),
+                    );
                     defer cell.deinit();
                     dvui.labelNoFmt(@src(), chip.name, .{}, .{});
                 }
 
                 // Format column
                 {
-                    defer cell_num.col_num += 1;
-                    var cell = grid.bodyCell(@src(), cell_num, highlight_style.cellOptions(cell_num));
+                    defer cell_num.col += 1;
+                    var cell = grid.cell(
+                        .{ .col = cell_num.col, .row = cell_num.row },
+                        gridCellOptions(hovered_cell, cell_num.row),
+                    );
                     defer cell.deinit();
                     const format_str: []const u8 = switch (rsu.format) {
                         .svd => "SVD",

@@ -145,19 +145,23 @@ fn main_impl(init: std.process.Init) anyerror!void {
     defer db.destroy();
 
     for (args.patch_paths.items) |patch_path| {
-        const patch = try std.Io.Dir.cwd().readFileAllocOptions(io, patch_path, gpa, .unlimited, .@"1", 0);
-        defer gpa.free(patch);
+        const zon_text = try std.Io.Dir.cwd().readFileAllocOptions(io, patch_path, gpa, .unlimited, .@"1", 0);
+        defer gpa.free(zon_text);
 
         var diags: std.zon.parse.Diagnostics = .{};
         defer diags.deinit(db.gpa);
 
-        db.apply_patch(patch, &diags) catch |err| {
+        const patches = std.zon.parse.fromSliceAlloc([]const regz.Patch, db.gpa, zon_text, &diags, .{}) catch |err| {
             if (err == error.ParseZon) {
                 std.log.err("Failed to parse zon patch file '{s}': {f}", .{ patch_path, diags });
             }
 
             return err;
         };
+        defer std.zon.parse.free(db.gpa, patches);
+
+        for (patches) |patch|
+            try db.apply_patch(patch);
     }
 
     // arch dependent stuff

@@ -9,182 +9,161 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const mz_dep = b.dependency("microzig", .{});
+    const no_gui = b.option(bool, "no-gui", "Disable gui-only dependencies") orelse false;
 
-    const mb = MicroBuild.init(b, mz_dep) orelse return;
-    const register_schemas = get_register_schemas(b, mb) catch @panic("OOM");
-    const write_files = b.addWriteFiles();
+    const run_all_tests = b.step("test", "Run unit tests");
 
-    // Generate Zig file with embedded schemas (used by both CLI and GUI)
-    const register_schema_zig = write_files.add("register_schemas.zig", generate_zig_schema_literal(b.allocator, register_schemas) catch @panic("OOM"));
+    // ─────────────────────────────────────────────────────────────────────────
+    // Dependencies
+    // ─────────────────────────────────────────────────────────────────────────
+    const diffz_mod = b.dependency("diffz", .{
+        .target = target,
+        .optimize = optimize,
+    }).module("diffz");
 
-    const regz_dep = mz_dep.builder.dependency("tools/regz", .{
+    const microzig_dep = b.dependency("microzig", .{});
+
+    const regz_mod = microzig_dep.builder.dependency("tools/regz", .{
         .target = target,
         // Setting to release safe because on debug builds its what slows
         // things down. It _should_ be solid for the most part once you're
         // developing Sorcerer, if that's not the case then you can change this
         // manually.
         .optimize = .ReleaseSafe,
-    });
+    }).module("regz");
 
-    const regz_mod = regz_dep.module("regz");
+    // ─────────────────────────────────────────────────────────────────────────
+    // Diff algorithm unit tests
+    // ─────────────────────────────────────────────────────────────────────────
 
-    // Shared module for RegisterSchemaUsage (used by both schemas_mod and cli_mod)
-    const register_schema_usage_mod = b.createModule(.{
-        .root_source_file = b.path("src/RegisterSchemaUsage.zig"),
+    const diff_tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/test_diff.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{
+                .{ .name = "diffz", .module = diffz_mod },
+            },
+        }),
     });
+    run_all_tests.dependOn(&b.addRunArtifact(diff_tests).step);
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Generate register schemas
+    // ─────────────────────────────────────────────────────────────────────────
+    const mb = MicroBuild.init(b, microzig_dep) orelse return;
 
     // Create schemas module from generated Zig file
     const schemas_mod = b.createModule(.{
-        .root_source_file = register_schema_zig,
+        // Generate Zig file with embedded schemas (used by both CLI and GUI)
+        .root_source_file = b.addWriteFiles().add(
+            "register_schemas.zig",
+            generate_zig_schema_literal(
+                b.allocator,
+                get_register_schemas(b, mb) catch @panic("OOM"),
+            ) catch @panic("OOM"),
+        ),
         .imports = &.{
-            .{ .name = "RegisterSchemaUsage", .module = register_schema_usage_mod },
+            // Usage - needed by both the cli and gui app.
+            .{
+                .name = "RegisterSchemaUsage",
+                .module = b.createModule(.{
+                    .root_source_file = b.path("src/RegisterSchemaUsage.zig"),
+                }),
+            },
         },
     });
 
     // ─────────────────────────────────────────────────────────────────────────
     // CLI executable
     // ─────────────────────────────────────────────────────────────────────────
-    const cli_mod = b.createModule(.{
-        .root_source_file = b.path("src/cli.zig"),
-        .target = target,
-        .optimize = optimize,
-        .imports = &.{
-            .{ .name = "regz", .module = regz_mod },
-            .{ .name = "schemas", .module = schemas_mod },
-            .{ .name = "RegisterSchemaUsage", .module = register_schema_usage_mod },
-        },
-    });
-
     const cli_exe = b.addExecutable(.{
         .name = "sorcerer-cli",
-        .root_module = cli_mod,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/cli.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{
+                .{ .name = "regz", .module = regz_mod },
+                .{ .name = "schemas", .module = schemas_mod },
+            },
+        }),
     });
     b.installArtifact(cli_exe);
 
     const run_cli_cmd = b.addRunArtifact(cli_exe);
     run_cli_cmd.addPassthruArgs();
-    run_cli_cmd.step.dependOn(b.getInstallStep());
+    run_cli_cmd.step.dependOn(&cli_exe.step);
 
-    const run_cli_step = b.step("run-cli", "Run the CLI tool");
-    run_cli_step.dependOn(&run_cli_cmd.step);
+    b.step("run-cli", "Run the CLI tool")
+        .dependOn(&run_cli_cmd.step);
+
+    run_all_tests.dependOn(
+        &b.addRunArtifact(b.addTest(.{
+            .root_module = cli_exe.root_module,
+        })).step,
+    );
 
     // ─────────────────────────────────────────────────────────────────────────
     // GUI executable
     // ─────────────────────────────────────────────────────────────────────────
-    const dvui_dep = b.dependency("dvui", .{
-        .target = target,
-        .optimize = optimize,
-    });
+    if (no_gui) return;
 
-    const serial_dep = b.dependency("serial", .{
-        .target = target,
-        .optimize = optimize,
-    });
-
-    const dvui_mod = dvui_dep.module("dvui_sdl3");
-    const serial_mod = serial_dep.module("serial");
-
-    const exe_mod = b.createModule(.{
-        .root_source_file = b.path("src/main.zig"),
-        .target = target,
-        .optimize = optimize,
-        .imports = &.{
-            .{
-                .name = "dvui",
-                .module = dvui_mod,
-            },
-            .{
-                .name = "regz",
-                .module = regz_mod,
-            },
-            .{
-                .name = "serial",
-                .module = serial_mod,
-            },
-            .{
-                .name = "schemas",
-                .module = schemas_mod,
-            },
-            .{
-                .name = "RegisterSchemaUsage",
-                .module = register_schema_usage_mod,
-            },
-        },
-    });
-
-    const tree_sitter_zig_dep = b.lazyDependency("tree_sitter_zig", .{
-        .target = target,
-        .optimize = optimize,
-    });
-    if (tree_sitter_zig_dep) |tsd| {
-        exe_mod.addIncludePath(tsd.path("src"));
-        exe_mod.addCSourceFiles(.{
-            .root = tsd.path(""),
-            .files = &.{"src/parser.c"},
-            .flags = &.{"-std=c11"},
-        });
-    }
-
+    // GUI-only dependencies
     const tree_sitter_diff_dep = b.lazyDependency("tree_sitter_diff", .{
         .target = target,
         .optimize = optimize,
     });
+
+    const dvui_mod = (b.lazyDependency("dvui", .{
+        .target = target,
+        .optimize = optimize,
+        .backend = .sdl3,
+    }) orelse return).module("dvui_sdl3");
+
+    const gui_exe = b.addExecutable(.{
+        .name = "sorcerer",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/main.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{
+                .{ .name = "diffz", .module = diffz_mod },
+                .{ .name = "dvui", .module = dvui_mod },
+                .{ .name = "regz", .module = regz_mod },
+                .{ .name = "schemas", .module = schemas_mod },
+            },
+        }),
+    });
+    b.installArtifact(gui_exe);
+
     if (tree_sitter_diff_dep) |tsd| {
-        exe_mod.addIncludePath(tsd.path("src"));
-        exe_mod.addCSourceFiles(.{
+        gui_exe.root_module.addIncludePath(tsd.path("src"));
+        gui_exe.root_module.addCSourceFiles(.{
             .root = tsd.path(""),
             .files = &.{"src/parser.c"},
             .flags = &.{"-std=c11"},
         });
     }
 
-    const diffz_dep = b.dependency("diffz", .{
-        .target = target,
-        .optimize = optimize,
-    });
-    exe_mod.addImport("diffz", diffz_dep.module("diffz"));
-
-    const exe = b.addExecutable(.{
-        .name = "sorcerer",
-        .root_module = exe_mod,
-    });
-    b.installArtifact(exe);
-
-    const run_cmd = b.addRunArtifact(exe);
-    run_cmd.addPassthruArgs();
+    const run_gui_cmd = b.addRunArtifact(gui_exe);
+    run_gui_cmd.step.dependOn(&gui_exe.step);
+    run_gui_cmd.addPassthruArgs();
 
     // I only want the path to the register schema file, not the lazy path,
     // because I want to be able to refresh it with `zig build` while sorcerer
     // is running. Sorcerer will watch the file for changes and update itself
     // automatically.
-    run_cmd.step.dependOn(b.getInstallStep());
+    run_gui_cmd.step.dependOn(&gui_exe.step);
 
-    const run_step = b.step("run", "Run the GUI app");
-    run_step.dependOn(&run_cmd.step);
+    b.step("run", "Run the GUI app")
+        .dependOn(&run_gui_cmd.step);
 
-    const exe_unit_tests = b.addTest(.{
-        .root_module = exe_mod,
-    });
-
-    const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
-    const test_step = b.step("test", "Run unit tests");
-    test_step.dependOn(&run_exe_unit_tests.step);
-
-    // Diff algorithm unit tests
-    const diff_test_mod = b.createModule(.{
-        .root_source_file = b.path("src/test_diff.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    diff_test_mod.addImport("diffz", diffz_dep.module("diffz"));
-
-    const diff_tests = b.addTest(.{
-        .root_module = diff_test_mod,
-    });
-
-    const run_diff_tests = b.addRunArtifact(diff_tests);
-    test_step.dependOn(&run_diff_tests.step);
+    run_all_tests.dependOn(
+        &b.addRunArtifact(b.addTest(.{
+            .root_module = gui_exe.root_module,
+        })).step,
+    );
 }
 
 const TargetWithPath = struct {
@@ -195,8 +174,8 @@ const TargetWithPath = struct {
 fn get_targets(mb: *MicroBuild) []const TargetWithPath {
     @setEvalBranchQuota(50000);
     var ret: std.array_list.Managed(TargetWithPath) = .init(mb.builder.allocator);
-    inline for (@typeInfo(@FieldType(MicroBuild, "ports")).@"struct".fields) |field| {
-        recursively_collect_targets(@field(mb.ports, field.name), field.name, &ret) catch @panic("OOM");
+    inline for (@typeInfo(@FieldType(MicroBuild, "ports")).@"struct".field_names) |field_name| {
+        recursively_collect_targets(@field(mb.ports, field_name), field_name, &ret) catch @panic("OOM");
     }
 
     return ret.toOwnedSlice() catch unreachable;
@@ -219,9 +198,9 @@ fn recursively_collect_targets(field: anytype, path: []const u8, targets: *std.a
         return;
     }
 
-    inline for (type_info.@"struct".fields) |child_field| {
-        const new_path = std.fmt.allocPrint(targets.allocator, "{s}.{s}", .{ path, child_field.name }) catch @panic("OOM");
-        try recursively_collect_targets(@field(field, child_field.name), new_path, targets);
+    inline for (type_info.@"struct".field_names) |field_name| {
+        const new_path = std.fmt.allocPrint(targets.allocator, "{s}.{s}", .{ path, field_name }) catch @panic("OOM");
+        try recursively_collect_targets(@field(field, field_name), new_path, targets);
     }
 }
 
@@ -244,19 +223,19 @@ fn find_target_location(b: *std.Build, lazy_path: LazyPath) RegisterSchemaUsage.
             const build_root = get_build_root(b, dependency.builder);
             const root = @import("root");
             const packages = root.dependencies.packages;
-            const package_hash = inline for (@typeInfo(packages).@"struct".decls) |decl| {
-                const package = @field(packages, decl.name);
+            const package_hash = inline for (@typeInfo(packages).@"struct".decl_names) |decl_name| {
+                const package = @field(packages, decl_name);
                 if (!@hasDecl(package, "build_root"))
                     continue;
 
                 if (std.mem.eql(u8, package.build_root, build_root)) {
-                    break decl.name;
+                    break decl_name;
                 }
             } else unreachable;
 
             const Pair = struct { port: []const u8, dep: []const u8 };
-            const result: Pair = outer: inline for (@typeInfo(packages).@"struct".decls) |decl| {
-                const package = @field(packages, decl.name);
+            const result: Pair = outer: inline for (@typeInfo(packages).@"struct".decl_names) |decl_name| {
+                const package = @field(packages, decl_name);
                 if (!@hasDecl(package, "deps"))
                     continue;
 
@@ -264,7 +243,7 @@ fn find_target_location(b: *std.Build, lazy_path: LazyPath) RegisterSchemaUsage.
                     const name = dep[0];
                     const dep_package_hash = dep[1];
                     if (std.mem.eql(u8, package_hash, dep_package_hash)) {
-                        break :outer .{ .port = decl.name, .dep = name };
+                        break :outer .{ .port = decl_name, .dep = name };
                     }
                 }
             } else unreachable;
@@ -284,7 +263,7 @@ fn find_target_location(b: *std.Build, lazy_path: LazyPath) RegisterSchemaUsage.
 }
 
 fn convert_patch_files(b: *std.Build, patch_files: []const LazyPath) ![]const RegisterSchemaUsage.PatchFile {
-    var result: std.ArrayList(RegisterSchemaUsage.PatchFile) = .{};
+    var result: std.ArrayList(RegisterSchemaUsage.PatchFile) = .empty;
     for (patch_files) |patch_file| {
         const converted: RegisterSchemaUsage.PatchFile = switch (patch_file) {
             .src_path => |src_path| .{
@@ -311,18 +290,18 @@ fn find_dep_name(b: *std.Build, dependency: *std.Build.Dependency) []const u8 {
     const build_root = get_build_root(b, dependency.builder);
     const root = @import("root");
     const packages = root.dependencies.packages;
-    const package_hash = inline for (@typeInfo(packages).@"struct".decls) |decl| {
-        const package = @field(packages, decl.name);
+    const package_hash = inline for (@typeInfo(packages).@"struct".decl_names) |decl_name| {
+        const package = @field(packages, decl_name);
         if (!@hasDecl(package, "build_root"))
             continue;
 
         if (std.mem.eql(u8, package.build_root, build_root)) {
-            break decl.name;
+            break decl_name;
         }
     } else unreachable;
 
-    inline for (@typeInfo(packages).@"struct".decls) |decl| {
-        const package = @field(packages, decl.name);
+    inline for (@typeInfo(packages).@"struct".decl_names) |decl_name| {
+        const package = @field(packages, decl_name);
         if (!@hasDecl(package, "deps"))
             continue;
 
@@ -359,35 +338,36 @@ const LazyPathContext = struct {
             .src_path => |val| val.owner == b.src_path.owner and std.mem.eql(u8, val.sub_path, b.src_path.sub_path),
             .generated => @panic("Generated paths unsupported"),
             .cwd_relative => @panic("Cwd relative paths unsupported, you probably shouldn't be vendoring that in MicroZig anyways"),
+            .relative => @panic("Relative paths unsupported, you probably shouldn't be vendoring that in MicroZig anyways"),
             .dependency => |val| val.dependency == b.dependency.dependency and std.mem.eql(u8, val.sub_path, b.dependency.sub_path),
         };
     }
 };
 
 fn LazyPathHashMap(comptime Value: type) type {
-    return std.ArrayHashMap(std.Build.LazyPath, Value, LazyPathContext, true);
+    return std.ArrayHashMapUnmanaged(std.Build.LazyPath, Value, LazyPathContext, true);
 }
 
 fn get_register_schemas(b: *std.Build, mb: *MicroBuild) ![]const RegisterSchemaUsage {
     const targets = get_targets(mb);
-    var deduped_targets: LazyPathHashMap(RegisterSchemaUsage.Format) = .init(b.allocator);
-    var chips: LazyPathHashMap(std.ArrayList(RegisterSchemaUsage.Chip)) = .init(b.allocator);
-    var boards: LazyPathHashMap(std.ArrayList(RegisterSchemaUsage.Board)) = .init(b.allocator);
-    var locations: LazyPathHashMap(RegisterSchemaUsage.Location) = .init(b.allocator);
+    var deduped_targets: LazyPathHashMap(RegisterSchemaUsage.Format) = .empty;
+    var chips: LazyPathHashMap(std.ArrayList(RegisterSchemaUsage.Chip)) = .empty;
+    var boards: LazyPathHashMap(std.ArrayList(RegisterSchemaUsage.Board)) = .empty;
+    var locations: LazyPathHashMap(RegisterSchemaUsage.Location) = .empty;
 
     for (targets) |twp| {
         const t = twp.target;
         const lazy_path = switch (t.chip.register_definition) {
             .targetdb => |targetdb| blk: {
-                try deduped_targets.put(targetdb.path, .targetdb);
+                try deduped_targets.put(b.allocator, targetdb.path, .targetdb);
                 break :blk targetdb.path;
             },
             .embassy => |embassy| blk: {
-                try deduped_targets.put(embassy.path, .embassy);
+                try deduped_targets.put(b.allocator, embassy.path, .embassy);
                 break :blk embassy.path;
             },
             inline else => |lazy_path| blk: {
-                try deduped_targets.put(lazy_path, switch (t.chip.register_definition) {
+                try deduped_targets.put(b.allocator, lazy_path, switch (t.chip.register_definition) {
                     .svd => .svd,
                     .atdf => .atdf,
                     .embassy, .targetdb => unreachable,
@@ -407,13 +387,13 @@ fn get_register_schemas(b: *std.Build, mb: *MicroBuild) ![]const RegisterSchemaU
                 .patch_files = patch_files,
             });
         } else {
-            var chip_list: std.ArrayList(RegisterSchemaUsage.Chip) = .{};
+            var chip_list: std.ArrayList(RegisterSchemaUsage.Chip) = .empty;
             try chip_list.append(b.allocator, .{
                 .name = t.chip.name,
                 .target_name = twp.path,
                 .patch_files = patch_files,
             });
-            try chips.put(lazy_path, chip_list);
+            try chips.put(b.allocator, lazy_path, chip_list);
         }
 
         if (t.board) |board| if (boards.getEntry(lazy_path)) |entry| {
@@ -428,20 +408,20 @@ fn get_register_schemas(b: *std.Build, mb: *MicroBuild) ![]const RegisterSchemaU
                 });
             }
         } else {
-            var board_list: std.ArrayList(RegisterSchemaUsage.Board) = .{};
+            var board_list: std.ArrayList(RegisterSchemaUsage.Board) = .empty;
             try board_list.append(b.allocator, .{
                 .name = board.name,
             });
-            try boards.put(lazy_path, board_list);
+            try boards.put(b.allocator, lazy_path, board_list);
         };
     }
 
     for (deduped_targets.keys()) |lazy_path| {
         const location = find_target_location(b, lazy_path);
-        try locations.put(lazy_path, location);
+        try locations.put(b.allocator, lazy_path, location);
     }
 
-    var ret: std.ArrayList(RegisterSchemaUsage) = .{};
+    var ret: std.ArrayList(RegisterSchemaUsage) = .empty;
     for (deduped_targets.keys(), deduped_targets.values()) |lazy_path, format| {
         var chip_list = chips.get(lazy_path).?;
         var board_list = boards.get(lazy_path);
@@ -476,112 +456,111 @@ fn get_port_name(path: []const u8) []const u8 {
 }
 
 /// Generate a Zig source file containing the register schemas as compile-time constants.
-fn generate_zig_schema_literal(allocator: std.mem.Allocator, schemas: []const RegisterSchemaUsage) ![]const u8 {
-    var buf: std.ArrayList(u8) = .{};
-    const writer = buf.writer(allocator);
-
+fn generate_zig_schema_literal(arena: std.mem.Allocator, schemas: []const RegisterSchemaUsage) ![]const u8 {
     // Helper to normalize paths (convert backslashes to forward slashes for Windows compatibility)
-    const normalize_path = struct {
-        fn call(alloc: std.mem.Allocator, path: []const u8) ![]const u8 {
-            const result = try alloc.alloc(u8, path.len);
-            for (path, 0..) |c, i| {
-                result[i] = if (c == '\\') '/' else c;
-            }
-            return result;
-        }
-    }.call;
+    const NormalizedPath = struct {
+        s: []const u8,
 
-    try writer.writeAll(
+        pub fn format(
+            self: @This(),
+            w: *std.Io.Writer,
+        ) !void {
+            var tail = self.s;
+            while (std.mem.indexOfScalar(u8, tail, '\\')) |pos| {
+                try w.writeAll(tail[0..pos]);
+                try w.writeByte('/');
+                tail = tail[pos + 1 ..];
+            }
+            try w.writeAll(tail);
+        }
+    };
+
+    var writer: std.Io.Writer.Allocating = .init(arena);
+    const w = &writer.writer;
+
+    try w.writeAll(
         \\// Auto-generated file - do not edit manually.
         \\// Generated by tools/sorcerer/build.zig
         \\
-        \\const RegisterSchemaUsage = @import("RegisterSchemaUsage");
+        \\pub const Usage = @import("RegisterSchemaUsage");
         \\
-        \\pub const schemas: []const RegisterSchemaUsage = &.{
+        \\pub const schemas: []const Usage = &.{
         \\
     );
 
     for (schemas) |schema| {
-        try writer.writeAll("    .{\n");
+        try w.writeAll("    .{\n");
 
         // Format
-        try writer.print("        .format = .{s},\n", .{@tagName(schema.format)});
+        try w.print("        .format = .{s},\n", .{@tagName(schema.format)});
 
         // Chips
-        try writer.writeAll("        .chips = &.{\n");
+        try w.writeAll("        .chips = &.{\n");
         for (schema.chips) |chip| {
-            try writer.writeAll("            .{\n");
-            try writer.print("                .name = \"{s}\",\n", .{chip.name});
-            try writer.print("                .target_name = \"{s}\",\n", .{chip.target_name});
+            try w.writeAll("            .{\n");
+            try w.print("                .name = \"{s}\",\n", .{chip.name});
+            try w.print("                .target_name = \"{s}\",\n", .{chip.target_name});
             // Patch files
             if (chip.patch_files.len > 0) {
-                try writer.writeAll("                .patch_files = &.{\n");
+                try w.writeAll("                .patch_files = &.{\n");
                 for (chip.patch_files) |patch_file| {
                     switch (patch_file) {
                         .src_path => |src| {
-                            const sub_path = try normalize_path(allocator, src.sub_path);
-                            const build_root = try normalize_path(allocator, src.build_root);
-                            try writer.writeAll("                    .{ .src_path = .{\n");
-                            try writer.print("                        .sub_path = \"{s}\",\n", .{sub_path});
-                            try writer.print("                        .build_root = \"{s}\",\n", .{build_root});
-                            try writer.writeAll("                    } },\n");
+                            try w.writeAll("                    .{ .src_path = .{\n");
+                            try w.print("                        .sub_path = \"{f}\",\n", .{NormalizedPath{ .s = src.sub_path }});
+                            try w.print("                        .build_root = \"{f}\",\n", .{NormalizedPath{ .s = src.build_root }});
+                            try w.writeAll("                    } },\n");
                         },
                         .dependency => |dep| {
-                            const sub_path = try normalize_path(allocator, dep.sub_path);
-                            const build_root = try normalize_path(allocator, dep.build_root);
-                            try writer.writeAll("                    .{ .dependency = .{\n");
-                            try writer.print("                        .sub_path = \"{s}\",\n", .{sub_path});
-                            try writer.print("                        .build_root = \"{s}\",\n", .{build_root});
-                            try writer.print("                        .dep_name = \"{s}\",\n", .{dep.dep_name});
-                            try writer.writeAll("                    } },\n");
+                            try w.writeAll("                    .{ .dependency = .{\n");
+                            try w.print("                        .sub_path = \"{f}\",\n", .{NormalizedPath{ .s = dep.sub_path }});
+                            try w.print("                        .build_root = \"{f}\",\n", .{NormalizedPath{ .s = dep.build_root }});
+                            try w.print("                        .dep_name = \"{s}\",\n", .{dep.dep_name});
+                            try w.writeAll("                    } },\n");
                         },
                     }
                 }
-                try writer.writeAll("                },\n");
+                try w.writeAll("                },\n");
             }
-            try writer.writeAll("            },\n");
+            try w.writeAll("            },\n");
         }
-        try writer.writeAll("        },\n");
+        try w.writeAll("        },\n");
 
         // Boards
-        try writer.writeAll("        .boards = &.{");
+        try w.writeAll("        .boards = &.{");
         for (schema.boards, 0..) |board, i| {
-            if (i > 0) try writer.writeAll(", ");
-            try writer.print(".{{ .name = \"{s}\" }}", .{board.name});
+            if (i > 0) try w.writeAll(", ");
+            try w.print(".{{ .name = \"{s}\" }}", .{board.name});
         }
-        try writer.writeAll("},\n");
+        try w.writeAll("},\n");
 
         // Location
-        try writer.writeAll("        .location = ");
+        try w.writeAll("        .location = ");
         switch (schema.location) {
             .src_path => |src| {
-                const sub_path = try normalize_path(allocator, src.sub_path);
-                const build_root = try normalize_path(allocator, src.build_root);
-                try writer.writeAll(".{ .src_path = .{\n");
-                try writer.print("            .port_name = \"{s}\",\n", .{src.port_name});
-                try writer.print("            .sub_path = \"{s}\",\n", .{sub_path});
-                try writer.print("            .build_root = \"{s}\",\n", .{build_root});
-                try writer.writeAll("        } },\n");
+                try w.writeAll(".{ .src_path = .{\n");
+                try w.print("            .port_name = \"{s}\",\n", .{src.port_name});
+                try w.print("            .sub_path = \"{f}\",\n", .{NormalizedPath{ .s = src.sub_path }});
+                try w.print("            .build_root = \"{f}\",\n", .{NormalizedPath{ .s = src.build_root }});
+                try w.writeAll("        } },\n");
             },
             .dependency => |dep| {
-                const sub_path = try normalize_path(allocator, dep.sub_path);
-                const build_root = try normalize_path(allocator, dep.build_root);
-                try writer.writeAll(".{ .dependency = .{\n");
-                try writer.print("            .sub_path = \"{s}\",\n", .{sub_path});
-                try writer.print("            .build_root = \"{s}\",\n", .{build_root});
-                try writer.print("            .dep_name = \"{s}\",\n", .{dep.dep_name});
-                try writer.print("            .port_name = \"{s}\",\n", .{dep.port_name});
-                try writer.writeAll("        } },\n");
+                try w.writeAll(".{ .dependency = .{\n");
+                try w.print("            .sub_path = \"{f}\",\n", .{NormalizedPath{ .s = dep.sub_path }});
+                try w.print("            .build_root = \"{f}\",\n", .{NormalizedPath{ .s = dep.build_root }});
+                try w.print("            .dep_name = \"{s}\",\n", .{dep.dep_name});
+                try w.print("            .port_name = \"{s}\",\n", .{dep.port_name});
+                try w.writeAll("        } },\n");
             },
         }
 
-        try writer.writeAll("    },\n");
+        try w.writeAll("    },\n");
     }
 
-    try writer.writeAll(
+    try w.writeAll(
         \\};
         \\
     );
 
-    return buf.toOwnedSlice(allocator);
+    return w.buffered();
 }

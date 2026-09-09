@@ -2098,108 +2098,103 @@ fn cleanup_unused_enums(db: *Database) !void {
     , .{});
 }
 
-pub fn apply_patch(db: *Database, zon_text: [:0]const u8, diags: *std.zon.parse.Diagnostics) !void {
-    const patches = try std.zon.parse.fromSliceAlloc([]const Patch, db.gpa, zon_text, diags, .{});
-    defer std.zon.parse.free(db.gpa, patches);
+pub fn apply_patch(db: *Database, patch: Patch) !void {
+    switch (patch) {
+        .override_arch => |override_arch| {
+            const device_id = try db.get_device_id_by_name(override_arch.device_name) orelse {
+                return error.DeviceNotFound;
+            };
 
-    for (patches) |patch| {
-        switch (patch) {
-            .override_arch => |override_arch| {
-                const device_id = try db.get_device_id_by_name(override_arch.device_name) orelse {
-                    return error.DeviceNotFound;
-                };
+            try db.conn.exec(
+                \\UPDATE devices
+                \\SET arch = ?
+                \\WHERE id = ?;
+            , .{
+                override_arch.arch.to_string(),
+                @backingInt(device_id),
+            });
+        },
+        .set_device_property => |set_prop| {
+            const device_id = try db.get_device_id_by_name(set_prop.device_name) orelse {
+                return error.DeviceNotFound;
+            };
 
-                try db.conn.exec(
-                    \\UPDATE devices
-                    \\SET arch = ?
-                    \\WHERE id = ?;
-                , .{
-                    override_arch.arch.to_string(),
-                    @backingInt(device_id),
+            try db.conn.exec(
+                \\INSERT INTO device_properties
+                \\  (device_id, key, value, description)
+                \\VALUES
+                \\  (?, ?, ?, ?)
+                \\ON CONFLICT(device_id, key)
+                \\DO UPDATE SET
+                \\  value = excluded.value,
+                \\  description = excluded.description;
+            , .{
+                @backingInt(device_id),
+                set_prop.key,
+                set_prop.value,
+                set_prop.description,
+            });
+        },
+        .add_enum => |add_enum| {
+            const struct_id = try db.get_struct_ref(add_enum.parent);
+
+            const enum_id = try db.create_enum(struct_id, .{
+                .name = add_enum.@"enum".name,
+                .description = add_enum.@"enum".description,
+                .size_bits = add_enum.@"enum".bitsize,
+            });
+
+            for (add_enum.@"enum".fields) |enum_field| {
+                try db.add_enum_field(enum_id, .{
+                    .name = enum_field.name,
+                    .description = enum_field.description,
+                    .value = enum_field.value,
                 });
-            },
-            .set_device_property => |set_prop| {
-                const device_id = try db.get_device_id_by_name(set_prop.device_name) orelse {
-                    return error.DeviceNotFound;
-                };
+            }
+        },
+        .set_enum_type => |set_enum_type| {
+            const enum_id = if (set_enum_type.to) |to| try db.get_enum_ref(to) else null;
+            const field_name, const register_ref = try get_ref_last_component(set_enum_type.of);
+            const register_id = try db.get_register_ref(register_ref orelse return error.InvalidRef);
+            try db.set_register_field_enum_id(register_id, field_name, enum_id);
+            try db.cleanup_unused_enums();
+        },
+        .add_interrupt => |add_interrupt| {
+            const device_id = try db.get_device_id_by_name(add_interrupt.device_name) orelse {
+                return error.DeviceNotFound;
+            };
 
-                try db.conn.exec(
-                    \\INSERT INTO device_properties
-                    \\  (device_id, key, value, description)
-                    \\VALUES
-                    \\  (?, ?, ?, ?)
-                    \\ON CONFLICT(device_id, key)
-                    \\DO UPDATE SET
-                    \\  value = excluded.value,
-                    \\  description = excluded.description;
-                , .{
-                    @backingInt(device_id),
-                    set_prop.key,
-                    set_prop.value,
-                    set_prop.description,
+            _ = try db.create_interrupt(device_id, .{
+                .name = add_interrupt.name,
+                .description = add_interrupt.description,
+                .idx = add_interrupt.idx,
+            });
+        },
+        .add_enum_and_apply => |add_enum_patch| {
+            // First, create the enum (same as add_enum)
+            const struct_id = try db.get_struct_ref(add_enum_patch.parent);
+
+            const enum_id = try db.create_enum(struct_id, .{
+                .name = add_enum_patch.@"enum".name,
+                .description = add_enum_patch.@"enum".description,
+                .size_bits = add_enum_patch.@"enum".bitsize,
+            });
+
+            for (add_enum_patch.@"enum".fields) |enum_field| {
+                try db.add_enum_field(enum_id, .{
+                    .name = enum_field.name,
+                    .description = enum_field.description,
+                    .value = enum_field.value,
                 });
-            },
-            .add_enum => |add_enum| {
-                const struct_id = try db.get_struct_ref(add_enum.parent);
+            }
 
-                const enum_id = try db.create_enum(struct_id, .{
-                    .name = add_enum.@"enum".name,
-                    .description = add_enum.@"enum".description,
-                    .size_bits = add_enum.@"enum".bitsize,
-                });
-
-                for (add_enum.@"enum".fields) |enum_field| {
-                    try db.add_enum_field(enum_id, .{
-                        .name = enum_field.name,
-                        .description = enum_field.description,
-                        .value = enum_field.value,
-                    });
-                }
-            },
-            .set_enum_type => |set_enum_type| {
-                const enum_id = if (set_enum_type.to) |to| try db.get_enum_ref(to) else null;
-                const field_name, const register_ref = try get_ref_last_component(set_enum_type.of);
+            // Then, apply to all specified fields (same as set_enum_type)
+            for (add_enum_patch.apply_to) |field_ref| {
+                const field_name, const register_ref = try get_ref_last_component(field_ref);
                 const register_id = try db.get_register_ref(register_ref orelse return error.InvalidRef);
                 try db.set_register_field_enum_id(register_id, field_name, enum_id);
-                try db.cleanup_unused_enums();
-            },
-            .add_interrupt => |add_interrupt| {
-                const device_id = try db.get_device_id_by_name(add_interrupt.device_name) orelse {
-                    return error.DeviceNotFound;
-                };
-
-                _ = try db.create_interrupt(device_id, .{
-                    .name = add_interrupt.name,
-                    .description = add_interrupt.description,
-                    .idx = add_interrupt.idx,
-                });
-            },
-            .add_enum_and_apply => |add_enum_patch| {
-                // First, create the enum (same as add_enum)
-                const struct_id = try db.get_struct_ref(add_enum_patch.parent);
-
-                const enum_id = try db.create_enum(struct_id, .{
-                    .name = add_enum_patch.@"enum".name,
-                    .description = add_enum_patch.@"enum".description,
-                    .size_bits = add_enum_patch.@"enum".bitsize,
-                });
-
-                for (add_enum_patch.@"enum".fields) |enum_field| {
-                    try db.add_enum_field(enum_id, .{
-                        .name = enum_field.name,
-                        .description = enum_field.description,
-                        .value = enum_field.value,
-                    });
-                }
-
-                // Then, apply to all specified fields (same as set_enum_type)
-                for (add_enum_patch.apply_to) |field_ref| {
-                    const field_name, const register_ref = try get_ref_last_component(field_ref);
-                    const register_id = try db.get_register_ref(register_ref orelse return error.InvalidRef);
-                    try db.set_register_field_enum_id(register_id, field_name, enum_id);
-                }
-            },
-        }
+            }
+        },
     }
 }
 
@@ -2264,35 +2259,26 @@ test "add_enum_and_apply patch creates enum and applies to fields" {
     });
 
     // Apply the add_enum_and_apply patch
-    const patch_zon: [:0]const u8 =
-        \\.{
-        \\    .{
-        \\        .add_enum_and_apply = .{
-        \\            .parent = "types.peripherals.TEST_PERIPHERAL",
-        \\            .@"enum" = .{
-        \\                .name = "TestMode",
-        \\                .bitsize = 2,
-        \\                .fields = .{
-        \\                    .{ .value = 0x0, .name = "mode_a" },
-        \\                    .{ .value = 0x1, .name = "mode_b" },
-        \\                    .{ .value = 0x2, .name = "mode_c" },
-        \\                    .{ .value = 0x3, .name = "mode_d" },
-        \\                },
-        \\            },
-        \\            .apply_to = .{
-        \\                "types.peripherals.TEST_PERIPHERAL.REG0.MODE",
-        \\                "types.peripherals.TEST_PERIPHERAL.REG1.MODE",
-        \\                "types.peripherals.TEST_PERIPHERAL.REG2.MODE",
-        \\            },
-        \\        },
-        \\    },
-        \\}
-    ;
-
-    var diags: std.zon.parse.Diagnostics = .{};
-    defer diags.deinit(allocator);
-
-    try db.apply_patch(patch_zon, &diags);
+    try db.apply_patch(.{
+        .add_enum_and_apply = .{
+            .parent = "types.peripherals.TEST_PERIPHERAL",
+            .@"enum" = .{
+                .name = "TestMode",
+                .bitsize = 2,
+                .fields = &.{
+                    .{ .value = 0x0, .name = "mode_a" },
+                    .{ .value = 0x1, .name = "mode_b" },
+                    .{ .value = 0x2, .name = "mode_c" },
+                    .{ .value = 0x3, .name = "mode_d" },
+                },
+            },
+            .apply_to = &.{
+                "types.peripherals.TEST_PERIPHERAL.REG0.MODE",
+                "types.peripherals.TEST_PERIPHERAL.REG1.MODE",
+                "types.peripherals.TEST_PERIPHERAL.REG2.MODE",
+            },
+        },
+    });
 
     // Verify the enum was created
     var arena = std.heap.ArenaAllocator.init(allocator);
@@ -2330,29 +2316,20 @@ test "add_enum_and_apply patch with empty apply_to list" {
     const struct_id = try db.get_peripheral_struct(peripheral_id);
 
     // Apply patch with empty apply_to list (just creates the enum)
-    const patch_zon: [:0]const u8 =
-        \\.{
-        \\    .{
-        \\        .add_enum_and_apply = .{
-        \\            .parent = "types.peripherals.TEST_PERIPHERAL",
-        \\            .@"enum" = .{
-        \\                .name = "UnusedEnum",
-        \\                .bitsize = 4,
-        \\                .fields = .{
-        \\                    .{ .value = 0, .name = "value0" },
-        \\                    .{ .value = 1, .name = "value1" },
-        \\                },
-        \\            },
-        \\            .apply_to = .{},
-        \\        },
-        \\    },
-        \\}
-    ;
-
-    var diags: std.zon.parse.Diagnostics = .{};
-    defer diags.deinit(allocator);
-
-    try db.apply_patch(patch_zon, &diags);
+    try db.apply_patch(.{
+        .add_enum_and_apply = .{
+            .parent = "types.peripherals.TEST_PERIPHERAL",
+            .@"enum" = .{
+                .name = "UnusedEnum",
+                .bitsize = 4,
+                .fields = &.{
+                    .{ .value = 0, .name = "value0" },
+                    .{ .value = 1, .name = "value1" },
+                },
+            },
+            .apply_to = &.{},
+        },
+    });
 
     // Verify the enum was created
     var arena = std.heap.ArenaAllocator.init(allocator);
@@ -2373,29 +2350,20 @@ test "add_enum_and_apply patch with invalid field reference" {
     });
 
     // Apply patch with invalid field reference
-    const patch_zon: [:0]const u8 =
-        \\.{
-        \\    .{
-        \\        .add_enum_and_apply = .{
-        \\            .parent = "types.peripherals.TEST_PERIPHERAL",
-        \\            .@"enum" = .{
-        \\                .name = "TestEnum",
-        \\                .bitsize = 2,
-        \\                .fields = .{
-        \\                    .{ .value = 0, .name = "value0" },
-        \\                },
-        \\            },
-        \\            .apply_to = .{
-        \\                "types.peripherals.TEST_PERIPHERAL.NONEXISTENT.FIELD",
-        \\            },
-        \\        },
-        \\    },
-        \\}
-    ;
-
-    var diags: std.zon.parse.Diagnostics = .{};
-    defer diags.deinit(allocator);
-
-    const result = db.apply_patch(patch_zon, &diags);
+    const result = db.apply_patch(.{
+        .add_enum_and_apply = .{
+            .parent = "types.peripherals.TEST_PERIPHERAL",
+            .@"enum" = .{
+                .name = "TestEnum",
+                .bitsize = 2,
+                .fields = &.{
+                    .{ .value = 0, .name = "value0" },
+                },
+            },
+            .apply_to = &.{
+                "types.peripherals.TEST_PERIPHERAL.NONEXISTENT.FIELD",
+            },
+        },
+    });
     try std.testing.expectError(error.MissingEntity, result);
 }

@@ -257,6 +257,37 @@ pub const VirtualIo = struct {
         vio.nodes.deinit(vio.gpa);
     }
 
+    /// Copies all files and directories from `src` directory into `dst` (which must belong to `io_other`).
+    pub fn save_dir_recursive(vio: *const VirtualIo, src: Dir.ID, io_other: Io, dst: Io.Dir) !usize {
+        return save_dir_recursive_helper(vio, try src.get(vio), io_other, dst);
+    }
+
+    fn save_dir_recursive_helper(vio: *const VirtualIo, src: *const Dir, io_other: Io, dst: Io.Dir) !usize {
+        var it = src.inner.iterator();
+        var files_written: usize = 0;
+
+        while (it.next()) |entry| {
+            const sub_path = entry.key_ptr.*;
+            const node = vio.nodes.getPtr(entry.value_ptr.*) orelse return error.Invalid;
+            switch (node.*) {
+                .dir => |*dir| {
+                    const new_tgt = try dst.createDirPathOpen(io_other, sub_path, .{});
+                    defer new_tgt.close(io_other);
+                    files_written += try save_dir_recursive_helper(vio, dir, io_other, new_tgt);
+                },
+                .file => |file| {
+                    var writer = (try dst.createFile(io_other, sub_path, .{}))
+                        .writer(io_other, "");
+                    defer writer.file.close(io_other);
+                    try writer.interface.writeAll(file.inner.items);
+                    try writer.interface.flush();
+                    files_written += 1;
+                },
+            }
+        }
+        return files_written;
+    }
+
     pub fn total_file_count(vio: *const VirtualIo) usize {
         var ret: usize = 0;
         var it = vio.nodes.iterator();

@@ -8,13 +8,13 @@ const DiffLine = struct {
     const Kind = enum { context, added, removed };
 };
 
-fn compute_line_diff(arena: std.mem.Allocator, old_content: []const u8, new_content: []const u8) ![]const DiffLine {
+fn compute_line_diff(arena: std.mem.Allocator, io: std.Io, old_content: []const u8, new_content: []const u8) ![]const DiffLine {
     const Kind = DiffLine.Kind;
-    var result: std.ArrayList(DiffLine) = .{};
+    var result: std.ArrayList(DiffLine) = .empty;
 
     // Split content into lines
-    var old_lines: std.ArrayList([]const u8) = .{};
-    var new_lines: std.ArrayList([]const u8) = .{};
+    var old_lines: std.ArrayList([]const u8) = .empty;
+    var new_lines: std.ArrayList([]const u8) = .empty;
 
     var old_iter = std.mem.splitScalar(u8, old_content, '\n');
     while (old_iter.next()) |line| {
@@ -27,19 +27,19 @@ fn compute_line_diff(arena: std.mem.Allocator, old_content: []const u8, new_cont
     }
 
     // Encode lines as single characters for diffz (line-mode diffing)
-    var line_to_char: std.StringHashMap(u8) = .init(arena);
-    var char_to_line: std.ArrayList([]const u8) = .{};
+    var line_to_char: std.StringHashMapUnmanaged(u8) = .empty;
+    var char_to_line: std.ArrayList([]const u8) = .empty;
     var next_char: u8 = 1;
 
-    var old_chars: std.ArrayList(u8) = .{};
-    var new_chars: std.ArrayList(u8) = .{};
+    var old_chars: std.ArrayList(u8) = .empty;
+    var new_chars: std.ArrayList(u8) = .empty;
 
     // Encode old lines
     for (old_lines.items) |line| {
         if (line_to_char.get(line)) |c| {
             try old_chars.append(arena, c);
         } else {
-            try line_to_char.put(line, next_char);
+            try line_to_char.put(arena, line, next_char);
             try char_to_line.append(arena, line);
             try old_chars.append(arena, next_char);
             next_char +%= 1;
@@ -52,7 +52,7 @@ fn compute_line_diff(arena: std.mem.Allocator, old_content: []const u8, new_cont
         if (line_to_char.get(line)) |c| {
             try new_chars.append(arena, c);
         } else {
-            try line_to_char.put(line, next_char);
+            try line_to_char.put(arena, line, next_char);
             try char_to_line.append(arena, line);
             try new_chars.append(arena, next_char);
             next_char +%= 1;
@@ -61,8 +61,8 @@ fn compute_line_diff(arena: std.mem.Allocator, old_content: []const u8, new_cont
     }
 
     // Run diffz on the encoded character sequences
-    const dmp: diffz = .{ .diff_timeout = 0 };
-    const diffs = try dmp.diff(arena, old_chars.items, new_chars.items, false);
+    const dmp: diffz = .initDefault(io, arena);
+    const diffs = try dmp.diff(old_chars.items, new_chars.items, false, .none);
 
     // Decode diffs back to lines
     for (diffs.items) |d| {
@@ -93,7 +93,7 @@ fn expect_diff_lines(result: []const DiffLine, expected: []const DiffLine) !void
 }
 
 test "remove non-exhaustive marker from enum" {
-    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    var arena: std.heap.ArenaAllocator = .init(std.testing.allocator);
     defer arena.deinit();
     const allocator = arena.allocator();
 
@@ -111,7 +111,7 @@ test "remove non-exhaustive marker from enum" {
         \\};
     ;
 
-    const result = try compute_line_diff(allocator, old, new);
+    const result = try compute_line_diff(allocator, std.testing.io, old, new);
 
     try expect_diff_lines(result, &.{
         .{ .kind = .context, .text = "const Enum = enum {" },
@@ -123,7 +123,7 @@ test "remove non-exhaustive marker from enum" {
 }
 
 test "add line to content" {
-    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    var arena: std.heap.ArenaAllocator = .init(std.testing.allocator);
     defer arena.deinit();
     const allocator = arena.allocator();
 
@@ -137,7 +137,7 @@ test "add line to content" {
         \\line3
     ;
 
-    const result = try compute_line_diff(allocator, old, new);
+    const result = try compute_line_diff(allocator, std.testing.io, old, new);
 
     try expect_diff_lines(result, &.{
         .{ .kind = .context, .text = "line1" },
@@ -147,7 +147,7 @@ test "add line to content" {
 }
 
 test "modify line in content" {
-    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    var arena: std.heap.ArenaAllocator = .init(std.testing.allocator);
     defer arena.deinit();
     const allocator = arena.allocator();
 
@@ -162,7 +162,7 @@ test "modify line in content" {
         \\line3
     ;
 
-    const result = try compute_line_diff(allocator, old, new);
+    const result = try compute_line_diff(allocator, std.testing.io, old, new);
 
     try expect_diff_lines(result, &.{
         .{ .kind = .context, .text = "line1" },
@@ -173,7 +173,7 @@ test "modify line in content" {
 }
 
 test "identical content produces all context lines" {
-    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    var arena: std.heap.ArenaAllocator = .init(std.testing.allocator);
     defer arena.deinit();
     const allocator = arena.allocator();
 
@@ -183,7 +183,7 @@ test "identical content produces all context lines" {
         \\line3
     ;
 
-    const result = try compute_line_diff(allocator, content, content);
+    const result = try compute_line_diff(allocator, std.testing.io, content, content);
 
     try expect_diff_lines(result, &.{
         .{ .kind = .context, .text = "line1" },
@@ -193,7 +193,7 @@ test "identical content produces all context lines" {
 }
 
 test "empty old content shows all lines as added" {
-    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    var arena: std.heap.ArenaAllocator = .init(std.testing.allocator);
     defer arena.deinit();
     const allocator = arena.allocator();
 
@@ -203,7 +203,7 @@ test "empty old content shows all lines as added" {
         \\line2
     ;
 
-    const result = try compute_line_diff(allocator, old, new);
+    const result = try compute_line_diff(allocator, std.testing.io, old, new);
 
     try expect_diff_lines(result, &.{
         .{ .kind = .removed, .text = "" },
@@ -213,7 +213,7 @@ test "empty old content shows all lines as added" {
 }
 
 test "empty new content shows all lines as removed" {
-    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    var arena: std.heap.ArenaAllocator = .init(std.testing.allocator);
     defer arena.deinit();
     const allocator = arena.allocator();
 
@@ -223,7 +223,7 @@ test "empty new content shows all lines as removed" {
     ;
     const new = "";
 
-    const result = try compute_line_diff(allocator, old, new);
+    const result = try compute_line_diff(allocator, std.testing.io, old, new);
 
     try expect_diff_lines(result, &.{
         .{ .kind = .removed, .text = "line1" },
@@ -233,7 +233,7 @@ test "empty new content shows all lines as removed" {
 }
 
 test "duplicate lines are handled correctly" {
-    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    var arena: std.heap.ArenaAllocator = .init(std.testing.allocator);
     defer arena.deinit();
     const allocator = arena.allocator();
 
@@ -250,7 +250,7 @@ test "duplicate lines are handled correctly" {
         \\b
     ;
 
-    const result = try compute_line_diff(allocator, old, new);
+    const result = try compute_line_diff(allocator, std.testing.io, old, new);
 
     // The exact diff output depends on the diffz algorithm
     // Just verify we get a valid result with the right total lines
@@ -298,7 +298,7 @@ const TestPatch = union(enum) {
 };
 
 test "zon serialize single patch - raw output" {
-    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    var arena: std.heap.ArenaAllocator = .init(std.testing.allocator);
     defer arena.deinit();
     const allocator = arena.allocator();
 
@@ -333,7 +333,7 @@ test "zon serialize single patch - raw output" {
 }
 
 test "zon serialize multiple patches - raw output" {
-    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    var arena: std.heap.ArenaAllocator = .init(std.testing.allocator);
     defer arena.deinit();
     const allocator = arena.allocator();
 
