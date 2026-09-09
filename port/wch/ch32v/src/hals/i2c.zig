@@ -77,6 +77,8 @@ pub const Setup = struct {
     instance: I2C,
     scl_pin: gpio.Pin,
     sda_pin: gpio.Pin,
+    /// AFIO pin remap — must match the pins chosen above.
+    /// See the Remap enum doc comment for which pins each setting maps to.
     remap: Remap = .default,
 
     /// Apply settings: configure I2C pins and peripheral.

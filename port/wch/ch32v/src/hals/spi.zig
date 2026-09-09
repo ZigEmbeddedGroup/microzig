@@ -120,6 +120,8 @@ pub const Setup = struct {
     sck_pin: gpio.Pin,
     mosi_pin: ?gpio.Pin = null,
     miso_pin: ?gpio.Pin = null,
+    /// AFIO pin remap — must match the pins chosen above.
+    /// See the Remap enum doc comment for which pins each setting maps to.
     remap: Remap = .default,
 
     /// Apply settings: configure whichever pins are present, then apply

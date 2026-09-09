@@ -75,7 +75,6 @@ pub const Config = struct {
     stop_bits: StopBits = .one,
     parity: Parity = .none,
     flow_control: FlowControl = .none,
-    remap: Remap = .default,
 };
 
 pub const TransmitError = error{
@@ -99,6 +98,9 @@ pub const Setup = struct {
     instance: USART,
     tx_pin: ?gpio.Pin = null,
     rx_pin: ?gpio.Pin = null,
+    /// AFIO pin remap — must match the pins chosen above.
+    /// See the Remap enum doc comment for which pins each setting maps to.
+    remap: Remap = .default,
 
     /// Apply settings: configure whichever pins are present, then apply
     /// the USART peripheral config (clock, baud rate, etc.).
@@ -108,7 +110,7 @@ pub const Setup = struct {
             rx.enable_clock();
             rx.set_input_mode(.floating);
         }
-        self.instance.apply(config);
+        self.instance.apply(config, self.remap);
     }
 };
 
@@ -230,7 +232,7 @@ pub const USART = enum(u2) {
     }
 
     /// Apply configuration to the USART peripheral
-    pub fn apply(comptime usart: USART, comptime config: Config) void {
+    pub fn apply(comptime usart: USART, comptime config: Config, comptime remap: Remap) void {
         const regs = usart.get_regs();
 
         // Enable peripheral clock
@@ -245,7 +247,7 @@ pub const USART = enum(u2) {
         // Configure AFIO remap
         hal.clocks.enable_afio_clock();
         const AFIO = microzig.chip.peripherals.AFIO;
-        const remap_bits = @backingInt(config.remap);
+        const remap_bits = @backingInt(remap);
 
         switch (usart) {
             .USART1 => {
