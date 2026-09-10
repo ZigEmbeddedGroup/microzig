@@ -1,0 +1,6 @@
+.{
+    .name = .defmt,
+    .version = "0.0.1",
+    .paths = .{""},
+    .fingerprint = 0x6d0936fc18fb6b82,
+}
