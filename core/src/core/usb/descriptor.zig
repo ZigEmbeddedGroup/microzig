@@ -272,22 +272,19 @@ pub const InterfaceAssociation = extern struct {
     }
 
     length: u8 = @sizeOf(@This()),
-    // Type of this descriptor, must be `interface_association`.
+    /// Type of this descriptor, must be `interface_association`.
     descriptor_type: Type = .interface_association,
-    // First interface number of the set of interfaces that follow this
-    // descriptor.
+    /// First interface number of the set of interfaces that follow this
+    /// descriptor.
     first_interface: u8,
-    // The number of interfaces that follow this descriptor that are considered
-    // associated.
+    /// The number of interfaces that follow this descriptor that are considered
+    /// associated.
     interface_count: u8,
-    // The interface class used for associated interfaces.
-    function_class: u8,
-    // The interface subclass used for associated interfaces.
-    function_subclass: u8,
-    // The interface protocol used for associated interfaces.
-    function_protocol: u8,
-    // Index of the string descriptor describing the associated interfaces.
-    function: u8,
+    /// The interface class, subclass, and protocol for the associated
+    /// interfaces
+    function_triple: types.ClassSubclassProtocol,
+    /// Index of the string descriptor describing the associated interfaces.
+    function_s: u8,
 };
 
 pub const BOS = struct {
