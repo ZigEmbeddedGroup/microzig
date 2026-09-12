@@ -97,7 +97,7 @@ pub const Pin = enum(u6) {
 
     pub inline fn set_sense(pin: Pin, sense: Sense) void {
         const regs = pin.get_regs();
-        regs.PIN_CNF[@backingInt(pin)].modify(.{
+        regs.PIN_CNF[pin.index()].modify(.{
             .SENSE = switch (sense) {
                 .disabled => .Disabled,
                 .high => .High,
@@ -108,7 +108,7 @@ pub const Pin = enum(u6) {
 
     pub inline fn set_input_buffer(pin: Pin, input_buffer: InputBuffer) void {
         const regs = pin.get_regs();
-        regs.PIN_CNF[@backingInt(pin)].modify(.{
+        regs.PIN_CNF[pin.index()].modify(.{
             .INPUT = switch (input_buffer) {
                 .connect => .Connect,
                 .disconnect => .Disconnect,
