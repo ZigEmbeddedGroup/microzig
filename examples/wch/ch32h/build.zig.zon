@@ -1,0 +1,14 @@
+.{
+    .name = .examples_wch_ch32h,
+    .fingerprint = 0x98c6b66930eca2b,
+    .version = "0.0.0",
+    .dependencies = .{
+        .microzig = .{ .path = "../../.." },
+    },
+
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}
