@@ -176,3 +176,11 @@ pub fn delay_us(us: u32) void {
         asm volatile ("" ::: .{ .memory = true });
     }
 }
+
+pub fn deadline_in_ms(time_ms: u32) microzig.drivers.time.Deadline {
+    return .init_relative(get_time_since_boot(), .from_ms(time_ms));
+}
+
+pub fn deadline_in_us(time_us: u64) microzig.drivers.time.Deadline {
+    return .init_relative(get_time_since_boot(), .from_us(time_us));
+}
