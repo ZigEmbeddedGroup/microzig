@@ -380,14 +380,14 @@ pub fn Polled(comptime cfg: Config) type {
         fn on_bus_reset_local(self: *Self) void {
             // Clear state
             inline for (0..cfg.max_endpoints_count) |i| {
-                self.endpoints[i][@backingInt(types.Dir.Out)].rx_armed = false;
-                self.endpoints[i][@backingInt(types.Dir.Out)].rx_last_len = 0;
-                self.endpoints[i][@backingInt(types.Dir.In)].tx_busy = false;
+                self.endpoints[i][@backingInt(types.Dir.out)].rx_armed = false;
+                self.endpoints[i][@backingInt(types.Dir.out)].rx_last_len = 0;
+                self.endpoints[i][@backingInt(types.Dir.in)].tx_busy = false;
             }
 
             // Re-initialize BTABLE register and EP0 buffer descriptors
             USB_PERIPH.BTABLE.write_raw(0);
-            const ep0_buf = self.st(.ep0, .Out).pma_addr;
+            const ep0_buf = self.st(.ep0, .out).pma_addr;
             Btable.set_tx_addr(0, ep0_buf);
             Btable.set_tx_count(0, 0);
             Btable.set_rx_addr(0, ep0_buf);
@@ -408,16 +408,16 @@ pub fn Polled(comptime cfg: Config) type {
 
         fn call_on_buffer(self: *Self, dir: types.Dir, ep: u4, controller: anytype) void {
             switch (dir) {
-                .In => switch (ep) {
+                .in => switch (ep) {
                     inline 0...15 => |i| {
                         const num: types.Endpoint.Num = @fromBackingInt(@intCast(i));
-                        controller.on_buffer(&self.interface, .{ .num = num, .dir = .In });
+                        controller.on_buffer(&self.interface, .{ .num = num, .dir = .in });
                     },
                 },
-                .Out => switch (ep) {
+                .out => switch (ep) {
                     inline 0...15 => |i| {
                         const num: types.Endpoint.Num = @fromBackingInt(@intCast(i));
-                        controller.on_buffer(&self.interface, .{ .num = num, .dir = .Out });
+                        controller.on_buffer(&self.interface, .{ .num = num, .dir = .out });
                     },
                 },
             }
@@ -498,7 +498,7 @@ pub fn Polled(comptime cfg: Config) type {
             // receive the status stage or data stage.
             Epr.set_stat_rx(ep, .valid);
 
-            const st_in = self.st(.ep0, .In);
+            const st_in = self.st(.ep0, .in);
             st_in.tx_busy = false;
 
             controller.on_setup_req(&self.interface, &setup_pkt);
@@ -508,7 +508,7 @@ pub fn Polled(comptime cfg: Config) type {
             const len = Btable.get_rx_count(ep);
 
             if (ep == 0) {
-                const st_out = self.st(.ep0, .Out);
+                const st_out = self.st(.ep0, .out);
                 // Read data from PMA into staging buffer
                 const rx_addr = Pma.read16(Btable.rx_addr_offset(ep));
                 const n: usize = @min(@as(usize, len), 64);
@@ -517,12 +517,12 @@ pub fn Polled(comptime cfg: Config) type {
                 // Re-arm EP0 RX
                 Btable.set_rx_count(0, 64);
                 Epr.set_stat_rx(0, .valid);
-                self.call_on_buffer(.Out, 0, controller);
+                self.call_on_buffer(.out, 0, controller);
                 return;
             }
 
             const num: types.Endpoint.Num = @fromBackingInt(@intCast(ep));
-            const st_out = self.st(num, .Out);
+            const st_out = self.st(num, .out);
 
             if (!st_out.rx_armed) return;
 
@@ -536,12 +536,12 @@ pub fn Polled(comptime cfg: Config) type {
             // NAK until re-armed
             Epr.set_stat_rx(ep, .nak);
 
-            self.call_on_buffer(.Out, ep, controller);
+            self.call_on_buffer(.out, ep, controller);
         }
 
         fn handle_in(self: *Self, ep: u4, controller: anytype) void {
             const num: types.Endpoint.Num = @fromBackingInt(@intCast(ep));
-            const st_in = self.st(num, .In);
+            const st_in = self.st(num, .in);
 
             if (!st_in.tx_busy) return;
 
@@ -549,7 +549,7 @@ pub fn Polled(comptime cfg: Config) type {
             // NAK until next write
             Epr.set_stat_tx(ep, .nak);
 
-            self.call_on_buffer(.In, ep, controller);
+            self.call_on_buffer(.in, ep, controller);
 
             // After EP0 IN, re-arm EP0 OUT for next SETUP/status
             if (ep == 0) {
@@ -573,11 +573,11 @@ pub fn Polled(comptime cfg: Config) type {
             assert(ep_i < cfg.max_endpoints_count);
             log.debug("ep_open ep{} dir={}", .{ ep_i, e.dir });
 
-            const mps: u16 = desc.max_packet_size.into();
+            const mps: u16 = desc.max_packet_size.native();
             assert(mps > 0 and mps <= 64);
 
-            const out_st = self.st(e.num, .Out);
-            const in_st = self.st(e.num, .In);
+            const out_st = self.st(e.num, .out);
+            const in_st = self.st(e.num, .in);
 
             // Allocate PMA buffers on first open
             if (ep_i == 0) {
@@ -598,7 +598,7 @@ pub fn Polled(comptime cfg: Config) type {
                 }
             } else {
                 // Non-EP0: separate TX and RX buffers
-                if (e.dir == .Out and out_st.max_size == 0) {
+                if (e.dir == .out and out_st.max_size == 0) {
                     const buf_addr = self.pma_alloc(mps);
                     out_st.pma_addr = buf_addr;
                     out_st.max_size = mps;
@@ -606,7 +606,7 @@ pub fn Polled(comptime cfg: Config) type {
                     Btable.set_rx_addr(ep_i, buf_addr);
                     Btable.set_rx_count(ep_i, mps);
                 }
-                if (e.dir == .In and in_st.max_size == 0) {
+                if (e.dir == .in and in_st.max_size == 0) {
                     const buf_addr = self.pma_alloc(mps);
                     in_st.pma_addr = buf_addr;
                     in_st.max_size = mps;
@@ -633,8 +633,8 @@ pub fn Polled(comptime cfg: Config) type {
 
                 // Set the appropriate direction to desired state
                 switch (e.dir) {
-                    .Out => Epr.set_stat_rx(ep_i, .nak),
-                    .In => Epr.set_stat_tx(ep_i, .nak),
+                    .out => Epr.set_stat_rx(ep_i, .nak),
+                    .in => Epr.set_stat_tx(ep_i, .nak),
                 }
             }
         }
@@ -644,7 +644,7 @@ pub fn Polled(comptime cfg: Config) type {
             const self: *Self = @fieldParentPtr("interface", itf);
 
             if (ep_num == .ep0) {
-                const st0 = self.st(.ep0, .Out);
+                const st0 = self.st(.ep0, .out);
                 st0.rx_limit = @intCast(len);
                 return;
             }
@@ -653,7 +653,7 @@ pub fn Polled(comptime cfg: Config) type {
             if (ep_i >= cfg.max_endpoints_count)
                 @panic("ep_listen called for invalid endpoint");
 
-            const st_out = self.st(ep_num, .Out);
+            const st_out = self.st(ep_num, .out);
             if (st_out.max_size == 0)
                 @panic("ep_listen called for endpoint with no buffer allocated");
             if (st_out.rx_armed)
@@ -671,7 +671,7 @@ pub fn Polled(comptime cfg: Config) type {
 
         fn ep_readv(itf: *usb.DeviceInterface, ep_num: types.Endpoint.Num, data: []const []u8) types.Len {
             const self: *Self = @fieldParentPtr("interface", itf);
-            const st_out = self.st(ep_num, .Out);
+            const st_out = self.st(ep_num, .out);
 
             const want: usize = @as(usize, st_out.rx_last_len);
             defer st_out.rx_last_len = 0;
@@ -699,7 +699,7 @@ pub fn Polled(comptime cfg: Config) type {
             const ep_i: u4 = epn(ep_num);
             assert(ep_i < cfg.max_endpoints_count);
 
-            const st_in = self.st(ep_num, .In);
+            const st_in = self.st(ep_num, .in);
             if (st_in.max_size == 0)
                 @panic("ep_writev called for endpoint with no buffer allocated");
 
