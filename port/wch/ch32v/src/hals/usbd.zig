@@ -9,6 +9,9 @@
 //! (which uses DMA buffers in SRAM).
 //! NOTE: Some variants of the ch32v203 have USBD, some have USBFS, and some
 //! have both.
+//!
+//! Prerequisite: `hal.time.init()` must be called before USB init (typically
+//! done in `board.init()`) since we need SysTick for delays.
 
 const std = @import("std");
 const assert = std.debug.assert;
@@ -19,6 +22,7 @@ const peripherals = microzig.chip.peripherals;
 const usb = microzig.core.usb;
 const types = usb.types;
 const descriptor = usb.descriptor;
+const time = @import("time.zig");
 
 pub const max_packet_size: u11 = 64;
 
@@ -42,14 +46,6 @@ const USBD_BASE: usize = @intFromPtr(USB_PERIPH);
 /// EXTEND peripheral (for D+ pull-up control via USBDPU)
 const EXTEND = peripherals.EXTEND;
 
-/// Packet Memory Area base (CPU address space)
-const PMA_BASE: usize = 0x40006000;
-/// PMA size in bytes (peripheral address space)
-const PMA_SIZE: usize = 512;
-/// PMA access multiplier: each u16 PMA word occupies a u32 slot in CPU
-/// address space (2x mapping), same as STM32F103.
-const PMA_ACCESS_MULT: usize = 2;
-
 /// ISTR packed struct type (field names vary between chips: RST vs RESET)
 const Istr = @TypeOf(USB_PERIPH.ISTR).underlying_type;
 
@@ -62,237 +58,226 @@ const ISTR_SUSP: u16 = 1 << 11;
 const ISTR_ERR: u16 = 1 << 13;
 const ISTR_PMAOVR: u16 = 1 << 14;
 
-// -- EPR bit positions / masks (raw access needed for toggle-on-write) --
-const EPR_EA_MASK: u16 = 0x000F; // [3:0]   Endpoint Address
-const EPR_STAT_TX_MASK: u16 = 0x0030; // [5:4]   TX Status (toggle)
-const EPR_DTOG_TX: u16 = 0x0040; // [6]     TX Data Toggle (toggle)
-const EPR_CTR_TX: u16 = 0x0080; // [7]     Correct Transfer TX (W0C)
-const EPR_EP_KIND: u16 = 0x0100; // [8]     Endpoint Kind
-const EPR_EP_TYPE_MASK: u16 = 0x0600; // [10:9]  Endpoint Type
-const EPR_SETUP: u16 = 0x0800; // [11]    Setup transaction completed (RO)
-const EPR_STAT_RX_MASK: u16 = 0x3000; // [13:12] RX Status (toggle)
-const EPR_DTOG_RX: u16 = 0x4000; // [14]    RX Data Toggle (toggle)
-const EPR_CTR_RX: u16 = 0x8000; // [15]    Correct Transfer RX (W0C)
-
-// Bits that are read/write (non-toggle, non-W0C): EA, EP_KIND, EP_TYPE
-const EPR_RW_MASK: u16 = EPR_EA_MASK | EPR_EP_KIND | EPR_EP_TYPE_MASK;
-
-// EP_TYPE values (written into EPR bits [10:9])
-// TODO: Enum
-const EP_TYPE_BULK: u16 = 0x0000;
-const EP_TYPE_CONTROL: u16 = 0x0200;
-const EP_TYPE_ISO: u16 = 0x0400;
-const EP_TYPE_INTERRUPT: u16 = 0x0600;
-
-// STAT_TX / STAT_RX values (2-bit field)
-// TODO: Enum
-const STAT_DISABLED: u2 = 0b00;
-const STAT_STALL: u2 = 0b01;
-const STAT_NAK: u2 = 0b10;
-const STAT_VALID: u2 = 0b11;
+const EpType = enum(u2) { bulk = 0, control = 1, iso = 2, interrupt = 3 };
+const Stat = enum(u2) { disabled = 0b00, stall = 0b01, nak = 0b10, valid = 0b11 };
 
 /// ISTR helper (field names differ between chips: RST vs RESET)
 fn istr_is_reset(istr: Istr) bool {
     return if (@hasField(Istr, "RST")) istr.RST == 1 else istr.RESET == 1;
 }
 
-// --- Raw EPR reg access (bypass MMIO due to toggle-on-write semantics) ---
+// --- EPR register access and manipulation ---
 
-/// EPR registers: 0x00..0x1C (8 x u16 at u32 spacing).
+/// EPR (Endpoint Register) namespace: raw register access and toggle-on-write helpers.
+///
 /// These CANNOT use MMIO modify() because STAT_TX/RX, DTOG_TX/RX are
 /// toggle-on-write, and CTR_TX/RX are write-0-to-clear.
-fn epr_ptr(ep: u4) *volatile u16 {
-    return @ptrFromInt(USBD_BASE + @as(usize, ep) * 4);
-}
+const Epr = struct {
+    // Bit positions / masks
+    const ea_mask: u16 = 0x000F; // [3:0]   Endpoint Address
+    const stat_tx_mask: u16 = 0x0030; // [5:4]   TX Status (toggle)
+    const dtog_tx: u16 = 0x0040; // [6]     TX Data Toggle (toggle)
+    const ctr_tx: u16 = 0x0080; // [7]     Correct Transfer TX (W0C)
+    const ep_kind: u16 = 0x0100; // [8]     Endpoint Kind
+    const ep_type_mask: u16 = 0x0600; // [10:9]  Endpoint Type
+    const setup: u16 = 0x0800; // [11]    Setup transaction completed (RO)
+    const stat_rx_mask: u16 = 0x3000; // [13:12] RX Status (toggle)
+    const dtog_rx: u16 = 0x4000; // [14]    RX Data Toggle (toggle)
+    const ctr_rx: u16 = 0x8000; // [15]    Correct Transfer RX (W0C)
 
-fn epr_read(ep: u4) u16 {
-    return epr_ptr(ep).*;
-}
+    // Bits that are read/write (non-toggle, non-W0C): EA, EP_KIND, EP_TYPE
+    const rw_mask: u16 = ea_mask | ep_kind | ep_type_mask;
 
-fn epr_write(ep: u4, val: u16) void {
-    epr_ptr(ep).* = val;
-}
-
-// --- EPR manipulation helpers (XOR trick for toggle bits) ---
-
-/// Set STAT_TX to desired value using XOR trick.
-fn epr_set_stat_tx(ep: u4, stat: u2) void {
-    const val = epr_read(ep);
-    const current: u2 = @truncate((val & EPR_STAT_TX_MASK) >> 4);
-    const xor_val: u16 = @as(u16, current ^ stat) << 4;
-    // Preserve RW bits, set W0C bits to 1 (don't clear), zero other toggle bits
-    const write_val = (val & EPR_RW_MASK) | EPR_CTR_TX | EPR_CTR_RX | xor_val;
-    epr_write(ep, write_val);
-}
-
-/// Set STAT_RX to desired value using XOR trick.
-fn epr_set_stat_rx(ep: u4, stat: u2) void {
-    const val = epr_read(ep);
-    const current: u2 = @truncate((val & EPR_STAT_RX_MASK) >> 12);
-    const xor_val: u16 = @as(u16, current ^ stat) << 12;
-    const write_val = (val & EPR_RW_MASK) | EPR_CTR_TX | EPR_CTR_RX | xor_val;
-    epr_write(ep, write_val);
-}
-
-/// Set both STAT_TX and STAT_RX simultaneously.
-fn epr_set_stat_txrx(ep: u4, stat_tx: u2, stat_rx: u2) void {
-    const val = epr_read(ep);
-    const cur_tx: u2 = @truncate((val & EPR_STAT_TX_MASK) >> 4);
-    const cur_rx: u2 = @truncate((val & EPR_STAT_RX_MASK) >> 12);
-    const xor_tx: u16 = @as(u16, cur_tx ^ stat_tx) << 4;
-    const xor_rx: u16 = @as(u16, cur_rx ^ stat_rx) << 12;
-    const write_val = (val & EPR_RW_MASK) | EPR_CTR_TX | EPR_CTR_RX | xor_tx | xor_rx;
-    epr_write(ep, write_val);
-}
-
-/// Clear CTR_TX (write 0 to the W0C bit, keep CTR_RX as 1).
-fn epr_clear_ctr_tx(ep: u4) void {
-    const val = epr_read(ep);
-    epr_write(ep, (val & EPR_RW_MASK) | EPR_CTR_RX);
-}
-
-/// Clear CTR_RX (write 0 to the W0C bit, keep CTR_TX as 1).
-fn epr_clear_ctr_rx(ep: u4) void {
-    const val = epr_read(ep);
-    epr_write(ep, (val & EPR_RW_MASK) | EPR_CTR_TX);
-}
-
-/// Clear DTOG_TX by toggling it if currently set.
-fn epr_clear_dtog_tx(ep: u4) void {
-    const val = epr_read(ep);
-    if (val & EPR_DTOG_TX != 0) {
-        epr_write(ep, (val & EPR_RW_MASK) | EPR_CTR_TX | EPR_CTR_RX | EPR_DTOG_TX);
+    fn ptr(ep: u4) *volatile u16 {
+        return @ptrFromInt(USBD_BASE + @as(usize, ep) * 4);
     }
-}
 
-/// Clear DTOG_RX by toggling it if currently set.
-fn epr_clear_dtog_rx(ep: u4) void {
-    const val = epr_read(ep);
-    if (val & EPR_DTOG_RX != 0) {
-        epr_write(ep, (val & EPR_RW_MASK) | EPR_CTR_TX | EPR_CTR_RX | EPR_DTOG_RX);
+    fn read(ep: u4) u16 {
+        return ptr(ep).*;
     }
-}
 
-/// Configure an endpoint: set EA, EP_TYPE, clear toggles, set initial status.
-fn epr_configure(ep: u4, ep_type: u16, stat_tx: u2, stat_rx: u2) void {
-    // First write: set EA, EP_TYPE, clear everything else
-    const base: u16 = (@as(u16, ep) & EPR_EA_MASK) | (ep_type & EPR_EP_TYPE_MASK) | EPR_CTR_TX | EPR_CTR_RX;
-    epr_write(ep, base);
+    fn write(ep: u4, val: u16) void {
+        ptr(ep).* = val;
+    }
 
-    // Now set desired status bits using XOR trick
-    epr_set_stat_txrx(ep, stat_tx, stat_rx);
+    /// Set STAT_TX to desired value using XOR trick.
+    fn set_stat_tx(ep: u4, stat: Stat) void {
+        const val = read(ep);
+        const current: u2 = @truncate((val & stat_tx_mask) >> 4);
+        const xor_val: u16 = @as(u16, current ^ @backingInt(stat)) << 4;
+        write(ep, (val & rw_mask) | ctr_tx | ctr_rx | xor_val);
+    }
 
-    // Clear data toggles
-    epr_clear_dtog_tx(ep);
-    epr_clear_dtog_rx(ep);
-}
+    /// Set STAT_RX to desired value using XOR trick.
+    fn set_stat_rx(ep: u4, stat: Stat) void {
+        const val = read(ep);
+        const current: u2 = @truncate((val & stat_rx_mask) >> 12);
+        const xor_val: u16 = @as(u16, current ^ @backingInt(stat)) << 12;
+        write(ep, (val & rw_mask) | ctr_tx | ctr_rx | xor_val);
+    }
+
+    /// Set both STAT_TX and STAT_RX simultaneously.
+    fn set_stat_txrx(ep: u4, s_tx: Stat, s_rx: Stat) void {
+        const val = read(ep);
+        const cur_tx: u2 = @truncate((val & stat_tx_mask) >> 4);
+        const cur_rx: u2 = @truncate((val & stat_rx_mask) >> 12);
+        const xor_tx: u16 = @as(u16, cur_tx ^ @backingInt(s_tx)) << 4;
+        const xor_rx: u16 = @as(u16, cur_rx ^ @backingInt(s_rx)) << 12;
+        write(ep, (val & rw_mask) | ctr_tx | ctr_rx | xor_tx | xor_rx);
+    }
+
+    /// Clear CTR_TX (write 0 to the W0C bit, keep CTR_RX as 1).
+    fn clear_ctr_tx(ep: u4) void {
+        const val = read(ep);
+        write(ep, (val & rw_mask) | ctr_rx);
+    }
+
+    /// Clear CTR_RX (write 0 to the W0C bit, keep CTR_TX as 1).
+    fn clear_ctr_rx(ep: u4) void {
+        const val = read(ep);
+        write(ep, (val & rw_mask) | ctr_tx);
+    }
+
+    /// Clear DTOG_TX by toggling it if currently set.
+    fn clear_dtog_tx(ep: u4) void {
+        const val = read(ep);
+        if (val & dtog_tx != 0) {
+            write(ep, (val & rw_mask) | ctr_tx | ctr_rx | dtog_tx);
+        }
+    }
+
+    /// Clear DTOG_RX by toggling it if currently set.
+    fn clear_dtog_rx(ep: u4) void {
+        const val = read(ep);
+        if (val & dtog_rx != 0) {
+            write(ep, (val & rw_mask) | ctr_tx | ctr_rx | dtog_rx);
+        }
+    }
+
+    /// Configure an endpoint: set EA, EP_TYPE, clear toggles, set initial status.
+    fn configure(ep: u4, ep_type: EpType, s_tx: Stat, s_rx: Stat) void {
+        // First write: set EA, EP_TYPE, clear everything else
+        const base: u16 = (@as(u16, ep) & ea_mask) | (@as(u16, @backingInt(ep_type)) << 9) | ctr_tx | ctr_rx;
+        write(ep, base);
+
+        // Now set desired status bits using XOR trick
+        set_stat_txrx(ep, s_tx, s_rx);
+
+        // Clear data toggles
+        clear_dtog_tx(ep);
+        clear_dtog_rx(ep);
+    }
+};
 
 // --- PMA (Packet Memory Area) access helpers ---
 
-// The BTABLE descriptor for each endpoint occupies 8 bytes in PMA space
-// (4 x u16 words). With 2x mapping, each u16 occupies a u32 slot in CPU
-// address space (only lower 16 bits valid).
-//
-// Layout per endpoint (PMA offsets):
-//   +0: TX_ADDR   (u16)
-//   +2: TX_COUNT  (u16)
-//   +4: RX_ADDR   (u16)
-//   +6: RX_COUNT  (u16)
+/// PMA (Packet Memory Area) namespace: read/write helpers for the shared
+/// buffer memory. Each u16 PMA word occupies a u32 slot in CPU address
+/// space (2x mapping), same as STM32F103.
+const Pma = struct {
+    const base: usize = 0x40006000;
+    const size: usize = 512;
+    const access_mult: usize = 2;
 
-/// Read a u16 from PMA at the given PMA byte offset.
-fn pma_read16(pma_offset: u16) u16 {
-    const addr: usize = PMA_BASE + @as(usize, pma_offset) * PMA_ACCESS_MULT;
-    const ptr: *volatile u32 = @ptrFromInt(addr);
-    return @truncate(ptr.*);
-}
-
-/// Write a u16 to PMA at the given PMA byte offset.
-fn pma_write16(pma_offset: u16, val: u16) void {
-    const addr: usize = PMA_BASE + @as(usize, pma_offset) * PMA_ACCESS_MULT;
-    const ptr: *volatile u32 = @ptrFromInt(addr);
-    ptr.* = val;
-}
-
-/// BTABLE descriptor field offsets (in PMA u16 words = 2 bytes each)
-fn btable_tx_addr_offset(ep: u4) u16 {
-    return @as(u16, ep) * 8 + 0;
-}
-fn btable_tx_count_offset(ep: u4) u16 {
-    return @as(u16, ep) * 8 + 2;
-}
-fn btable_rx_addr_offset(ep: u4) u16 {
-    return @as(u16, ep) * 8 + 4;
-}
-fn btable_rx_count_offset(ep: u4) u16 {
-    return @as(u16, ep) * 8 + 6;
-}
-
-fn btable_set_tx_addr(ep: u4, pma_addr: u16) void {
-    pma_write16(btable_tx_addr_offset(ep), pma_addr);
-}
-fn btable_set_tx_count(ep: u4, count: u16) void {
-    pma_write16(btable_tx_count_offset(ep), count);
-}
-fn btable_get_tx_count(ep: u4) u16 {
-    return pma_read16(btable_tx_count_offset(ep)) & 0x03FF;
-}
-fn btable_set_rx_addr(ep: u4, pma_addr: u16) void {
-    pma_write16(btable_rx_addr_offset(ep), pma_addr);
-}
-
-/// Set RX_COUNT with block size encoding for max receivable bytes.
-/// For sizes <= 62: BL_SIZE=0, NUM_BLOCK = size/2
-/// For sizes > 62:  BL_SIZE=1, NUM_BLOCK = size/32 - 1
-fn btable_set_rx_count(ep: u4, max_size: u16) void {
-    var val: u16 = 0;
-    if (max_size <= 62) {
-        // BL_SIZE=0, NUM_BLOCK = max_size/2
-        val = (max_size / 2) << 10;
-    } else {
-        // BL_SIZE=1, NUM_BLOCK = max_size/32 - 1
-        val = (1 << 15) | (((max_size / 32) - 1) << 10);
+    /// Read a u16 from PMA at the given PMA byte offset.
+    fn read16(pma_offset: u16) u16 {
+        const addr: usize = base + @as(usize, pma_offset) * access_mult;
+        const p: *volatile u32 = @ptrFromInt(addr);
+        return @truncate(p.*);
     }
-    pma_write16(btable_rx_count_offset(ep), val);
-}
 
-fn btable_get_rx_count(ep: u4) u16 {
-    return pma_read16(btable_rx_count_offset(ep)) & 0x03FF;
-}
-
-/// Copy bytes from CPU memory into PMA.
-fn pma_write_bytes(pma_offset: u16, data: []const u8) void {
-    var off = pma_offset;
-    var i: usize = 0;
-    while (i < data.len) {
-        const lo: u16 = data[i];
-        const hi: u16 = if (i + 1 < data.len) data[i + 1] else 0;
-        pma_write16(off, lo | (hi << 8));
-        off += 2;
-        i += 2;
+    /// Write a u16 to PMA at the given PMA byte offset.
+    fn write16(pma_offset: u16, val: u16) void {
+        const addr: usize = base + @as(usize, pma_offset) * access_mult;
+        const p: *volatile u32 = @ptrFromInt(addr);
+        p.* = val;
     }
-}
 
-/// Copy bytes from PMA into CPU memory.
-fn pma_read_bytes(pma_offset: u16, buf: []u8, count: usize) void {
-    var off = pma_offset;
-    var i: usize = 0;
-    while (i < count) {
-        const word = pma_read16(off);
-        buf[i] = @truncate(word);
-        if (i + 1 < count) {
-            buf[i + 1] = @truncate(word >> 8);
+    /// Copy bytes from CPU memory into PMA.
+    fn write_bytes(pma_offset: u16, data: []const u8) void {
+        var off = pma_offset;
+        var i: usize = 0;
+        while (i < data.len) {
+            const lo: u16 = data[i];
+            const hi: u16 = if (i + 1 < data.len) data[i + 1] else 0;
+            write16(off, lo | (hi << 8));
+            off += 2;
+            i += 2;
         }
-        off += 2;
-        i += 2;
     }
-}
 
-// --- PMA buffer allocation (static layout, bump pointer) ---
+    /// Copy bytes from PMA into CPU memory.
+    fn read_bytes(pma_offset: u16, buf: []u8, count: usize) void {
+        var off = pma_offset;
+        var i: usize = 0;
+        while (i < count) {
+            const word = read16(off);
+            buf[i] = @truncate(word);
+            if (i + 1 < count) {
+                buf[i + 1] = @truncate(word >> 8);
+            }
+            off += 2;
+            i += 2;
+        }
+    }
+};
 
-/// PMA memory layout:
-///   0x00 - 0x3F: BTABLE (8 eps x 8 bytes = 64 bytes)
-///   0x40+:       endpoint buffers
-const PMA_BTABLE_SIZE: u16 = 64; // 8 endpoints * 8 bytes
+// --- BTABLE (Buffer Descriptor Table) ---
+
+/// BTABLE namespace: per-endpoint buffer descriptor access within PMA.
+///
+/// Layout per endpoint (PMA offsets):
+///   +0: TX_ADDR   (u16)
+///   +2: TX_COUNT  (u16)
+///   +4: RX_ADDR   (u16)
+///   +6: RX_COUNT  (u16)
+const Btable = struct {
+    /// Total BTABLE size: 8 endpoints * 8 bytes = 64 bytes
+    const size: u16 = 64;
+
+    fn tx_addr_offset(ep: u4) u16 {
+        return @as(u16, ep) * 8 + 0;
+    }
+    fn tx_count_offset(ep: u4) u16 {
+        return @as(u16, ep) * 8 + 2;
+    }
+    fn rx_addr_offset(ep: u4) u16 {
+        return @as(u16, ep) * 8 + 4;
+    }
+    fn rx_count_offset(ep: u4) u16 {
+        return @as(u16, ep) * 8 + 6;
+    }
+
+    fn set_tx_addr(ep: u4, pma_addr: u16) void {
+        Pma.write16(tx_addr_offset(ep), pma_addr);
+    }
+    fn set_tx_count(ep: u4, count: u16) void {
+        Pma.write16(tx_count_offset(ep), count);
+    }
+    fn get_tx_count(ep: u4) u16 {
+        return Pma.read16(tx_count_offset(ep)) & 0x03FF;
+    }
+    fn set_rx_addr(ep: u4, pma_addr: u16) void {
+        Pma.write16(rx_addr_offset(ep), pma_addr);
+    }
+
+    /// Set RX_COUNT with block size encoding for max receivable bytes.
+    /// For sizes <= 62: BL_SIZE=0, NUM_BLOCK = size/2
+    /// For sizes > 62:  BL_SIZE=1, NUM_BLOCK = size/32 - 1
+    fn set_rx_count(ep: u4, max_size: u16) void {
+        var val: u16 = 0;
+        if (max_size <= 62) {
+            val = (max_size / 2) << 10;
+        } else {
+            val = (1 << 15) | (((max_size / 32) - 1) << 10);
+        }
+        Pma.write16(rx_count_offset(ep), val);
+    }
+
+    fn get_rx_count(ep: u4) u16 {
+        return Pma.read16(rx_count_offset(ep)) & 0x03FF;
+    }
+};
 
 // --- Endpoint state tracking (mirrors usbfs.zig pattern) ---
 
@@ -312,7 +297,7 @@ fn PerEndpointArray(comptime N: comptime_int) type {
 }
 
 fn epn(ep: types.Endpoint.Num) u4 {
-    return @as(u4, @intCast(@intFromEnum(ep)));
+    return @backingInt(ep);
 }
 
 /// Polled USBFS device backend for the MicroZig core USB controller.
@@ -349,7 +334,7 @@ pub fn Polled(comptime cfg: Config) type {
             log.warn("USBD init starting", .{});
             self.interface = .{ .vtable = &vtable };
             self.endpoints = @splat(@splat(.{}));
-            self.pma_next = PMA_BTABLE_SIZE;
+            self.pma_next = Btable.size;
 
             usbd_hw_init();
 
@@ -368,7 +353,7 @@ pub fn Polled(comptime cfg: Config) type {
             });
 
             // EP0 OUT always accepts packets
-            epr_set_stat_rx(0, STAT_VALID);
+            Epr.set_stat_rx(0, .valid);
 
             // Enable interrupt masks: bus reset and correct transfer
             USB_PERIPH.CNTR.write(.{ .FRES = 0, .PDWN = 0, .RESETM = 1, .CTRM = 1 });
@@ -377,45 +362,39 @@ pub fn Polled(comptime cfg: Config) type {
             // Force a clean disconnect/connect cycle so the host detects
             // a fresh device attach (matches WCH EVT USB_Port_Set pattern).
             usb_port_set(false); // pull-up off, drive D+/D- low (SE0)
-            {
-                // ~20ms delay at 48MHz
-                var d: u32 = 0;
-                while (d < 960_000) : (d += 1) {
-                    asm volatile ("nop");
-                }
-            }
+            time.delay_us(20_000); // ~20ms disconnect
             usb_port_set(true); // pins to floating input, pull-up on
         }
 
-        fn pma_alloc(self: *Self, size: u16) u16 {
+        fn pma_alloc(self: *Self, alloc_size: u16) u16 {
             const addr = self.pma_next;
-            assert(addr + size <= PMA_SIZE);
-            self.pma_next += size;
+            assert(addr + alloc_size <= Pma.size);
+            self.pma_next += alloc_size;
             return addr;
         }
 
         fn st(self: *Self, ep_num: types.Endpoint.Num, dir: types.Dir) *EP_State {
-            return &self.endpoints[@intFromEnum(ep_num)][@intFromEnum(dir)];
+            return &self.endpoints[@backingInt(ep_num)][@backingInt(dir)];
         }
 
         fn on_bus_reset_local(self: *Self) void {
             // Clear state
             inline for (0..cfg.max_endpoints_count) |i| {
-                self.endpoints[i][@intFromEnum(types.Dir.Out)].rx_armed = false;
-                self.endpoints[i][@intFromEnum(types.Dir.Out)].rx_last_len = 0;
-                self.endpoints[i][@intFromEnum(types.Dir.In)].tx_busy = false;
+                self.endpoints[i][@backingInt(types.Dir.Out)].rx_armed = false;
+                self.endpoints[i][@backingInt(types.Dir.Out)].rx_last_len = 0;
+                self.endpoints[i][@backingInt(types.Dir.In)].tx_busy = false;
             }
 
             // Re-initialize BTABLE register and EP0 buffer descriptors
             USB_PERIPH.BTABLE.write_raw(0);
             const ep0_buf = self.st(.ep0, .Out).pma_addr;
-            btable_set_tx_addr(0, ep0_buf);
-            btable_set_tx_count(0, 0);
-            btable_set_rx_addr(0, ep0_buf);
-            btable_set_rx_count(0, 64);
+            Btable.set_tx_addr(0, ep0_buf);
+            Btable.set_tx_count(0, 0);
+            Btable.set_rx_addr(0, ep0_buf);
+            Btable.set_rx_count(0, 64);
 
             // Fully re-configure EP0: EA=0, CONTROL type, clear DTOGs
-            epr_configure(0, EP_TYPE_CONTROL, STAT_NAK, STAT_VALID);
+            Epr.configure(0, .control, .nak, .valid);
 
             // Non-EP0 endpoint registers are already at 0x0000 (DISABLED)
             // after hardware bus reset — leave them alone. Setting them to
@@ -431,13 +410,13 @@ pub fn Polled(comptime cfg: Config) type {
             switch (dir) {
                 .In => switch (ep) {
                     inline 0...15 => |i| {
-                        const num: types.Endpoint.Num = @enumFromInt(i);
+                        const num: types.Endpoint.Num = @fromBackingInt(@intCast(i));
                         controller.on_buffer(&self.interface, .{ .num = num, .dir = .In });
                     },
                 },
                 .Out => switch (ep) {
                     inline 0...15 => |i| {
-                        const num: types.Endpoint.Num = @enumFromInt(i);
+                        const num: types.Endpoint.Num = @fromBackingInt(@intCast(i));
                         controller.on_buffer(&self.interface, .{ .num = num, .dir = .Out });
                     },
                 },
@@ -488,12 +467,12 @@ pub fn Polled(comptime cfg: Config) type {
 
             if (ep >= cfg.max_endpoints_count) return;
 
-            const val = epr_read(ep);
+            const val = Epr.read(ep);
 
-            if (val & EPR_CTR_RX != 0) {
+            if (val & Epr.ctr_rx != 0) {
                 // SETUP or OUT
-                const is_setup = (val & EPR_SETUP) != 0;
-                epr_clear_ctr_rx(ep);
+                const is_setup = (val & Epr.setup) != 0;
+                Epr.clear_ctr_rx(ep);
 
                 if (is_setup) {
                     self.handle_setup(ep, controller);
@@ -502,80 +481,80 @@ pub fn Polled(comptime cfg: Config) type {
                 }
             }
 
-            if (val & EPR_CTR_TX != 0) {
-                epr_clear_ctr_tx(ep);
+            if (val & Epr.ctr_tx != 0) {
+                Epr.clear_ctr_tx(ep);
                 self.handle_in(ep, controller);
             }
         }
 
         fn handle_setup(self: *Self, ep: u4, controller: anytype) void {
             // Read 8-byte SETUP packet from PMA
-            const rx_addr = pma_read16(btable_rx_addr_offset(ep));
-            pma_read_bytes(rx_addr, &self.staging_buf, 8);
-            const setup: types.SetupPacket = @bitCast(self.staging_buf[0..8].*);
+            const rx_addr = Pma.read16(Btable.rx_addr_offset(ep));
+            Pma.read_bytes(rx_addr, &self.staging_buf, 8);
+            const setup_pkt: types.SetupPacket = @bitCast(self.staging_buf[0..8].*);
 
             // After SETUP, hardware forces STAT_TX=NAK, STAT_RX=NAK and
             // clears DTOG_TX/DTOG_RX. We set RX to VALID so EP0 can
             // receive the status stage or data stage.
-            epr_set_stat_rx(ep, STAT_VALID);
+            Epr.set_stat_rx(ep, .valid);
 
             const st_in = self.st(.ep0, .In);
             st_in.tx_busy = false;
 
-            controller.on_setup_req(&self.interface, &setup);
+            controller.on_setup_req(&self.interface, &setup_pkt);
         }
 
         fn handle_out(self: *Self, ep: u4, controller: anytype) void {
-            const len = btable_get_rx_count(ep);
+            const len = Btable.get_rx_count(ep);
 
             if (ep == 0) {
                 const st_out = self.st(.ep0, .Out);
                 // Read data from PMA into staging buffer
-                const rx_addr = pma_read16(btable_rx_addr_offset(ep));
+                const rx_addr = Pma.read16(Btable.rx_addr_offset(ep));
                 const n: usize = @min(@as(usize, len), 64);
-                pma_read_bytes(rx_addr, &self.staging_buf, n);
+                Pma.read_bytes(rx_addr, &self.staging_buf, n);
                 st_out.rx_last_len = @intCast(n);
                 // Re-arm EP0 RX
-                btable_set_rx_count(0, 64);
-                epr_set_stat_rx(0, STAT_VALID);
+                Btable.set_rx_count(0, 64);
+                Epr.set_stat_rx(0, .valid);
                 self.call_on_buffer(.Out, 0, controller);
                 return;
             }
 
-            const num: types.Endpoint.Num = @enumFromInt(ep);
+            const num: types.Endpoint.Num = @fromBackingInt(@intCast(ep));
             const st_out = self.st(num, .Out);
 
             if (!st_out.rx_armed) return;
 
             // Read data from PMA into staging buffer
-            const rx_addr = pma_read16(btable_rx_addr_offset(ep));
+            const rx_addr = Pma.read16(Btable.rx_addr_offset(ep));
             const n: usize = @min(@as(usize, len), @as(usize, st_out.max_size));
-            pma_read_bytes(rx_addr, &self.staging_buf, n);
+            Pma.read_bytes(rx_addr, &self.staging_buf, n);
 
             st_out.rx_armed = false;
             st_out.rx_last_len = @intCast(n);
             // NAK until re-armed
-            epr_set_stat_rx(ep, STAT_NAK);
+            Epr.set_stat_rx(ep, .nak);
 
             self.call_on_buffer(.Out, ep, controller);
         }
 
         fn handle_in(self: *Self, ep: u4, controller: anytype) void {
-            const num: types.Endpoint.Num = @enumFromInt(ep);
+            const num: types.Endpoint.Num = @fromBackingInt(@intCast(ep));
             const st_in = self.st(num, .In);
 
             if (!st_in.tx_busy) return;
 
             st_in.tx_busy = false;
             // NAK until next write
-            epr_set_stat_tx(ep, STAT_NAK);
+            Epr.set_stat_tx(ep, .nak);
 
             self.call_on_buffer(.In, ep, controller);
 
             // After EP0 IN, re-arm EP0 OUT for next SETUP/status
             if (ep == 0) {
-                btable_set_rx_count(0, 64);
-                epr_set_stat_rx(0, STAT_VALID);
+                Btable.set_rx_count(0, 64);
+                Epr.set_stat_rx(0, .valid);
             }
         }
 
@@ -610,12 +589,12 @@ pub fn Polled(comptime cfg: Config) type {
                     in_st.pma_addr = buf_addr;
                     in_st.max_size = 64;
 
-                    btable_set_tx_addr(0, buf_addr);
-                    btable_set_tx_count(0, 0);
-                    btable_set_rx_addr(0, buf_addr);
-                    btable_set_rx_count(0, 64);
+                    Btable.set_tx_addr(0, buf_addr);
+                    Btable.set_tx_count(0, 0);
+                    Btable.set_rx_addr(0, buf_addr);
+                    Btable.set_rx_count(0, 64);
 
-                    epr_configure(0, EP_TYPE_CONTROL, STAT_NAK, STAT_VALID);
+                    Epr.configure(0, .control, .nak, .valid);
                 }
             } else {
                 // Non-EP0: separate TX and RX buffers
@@ -624,38 +603,38 @@ pub fn Polled(comptime cfg: Config) type {
                     out_st.pma_addr = buf_addr;
                     out_st.max_size = mps;
 
-                    btable_set_rx_addr(ep_i, buf_addr);
-                    btable_set_rx_count(ep_i, mps);
+                    Btable.set_rx_addr(ep_i, buf_addr);
+                    Btable.set_rx_count(ep_i, mps);
                 }
                 if (e.dir == .In and in_st.max_size == 0) {
                     const buf_addr = self.pma_alloc(mps);
                     in_st.pma_addr = buf_addr;
                     in_st.max_size = mps;
 
-                    btable_set_tx_addr(ep_i, buf_addr);
-                    btable_set_tx_count(ep_i, 0);
+                    Btable.set_tx_addr(ep_i, buf_addr);
+                    Btable.set_tx_count(ep_i, 0);
                 }
 
                 // Determine EP type
-                const ep_type: u16 = switch (desc.attributes.transfer_type) {
-                    .Control => EP_TYPE_CONTROL,
-                    .Isochronous => EP_TYPE_ISO,
-                    .Bulk => EP_TYPE_BULK,
-                    .Interrupt => EP_TYPE_INTERRUPT,
+                const ep_type: EpType = switch (desc.attributes.transfer_type) {
+                    .Control => .control,
+                    .Isochronous => .iso,
+                    .Bulk => .bulk,
+                    .Interrupt => .interrupt,
                 };
 
                 // Configure EPR with the endpoint type
                 // We need to read current EPR to check if already configured
-                const cur = epr_read(ep_i);
-                if (cur & EPR_EA_MASK != @as(u16, ep_i)) {
+                const cur = Epr.read(ep_i);
+                if (cur & Epr.ea_mask != @as(u16, ep_i)) {
                     // First time configuring this endpoint
-                    epr_configure(ep_i, ep_type, STAT_NAK, STAT_NAK);
+                    Epr.configure(ep_i, ep_type, .nak, .nak);
                 }
 
                 // Set the appropriate direction to desired state
                 switch (e.dir) {
-                    .Out => epr_set_stat_rx(ep_i, STAT_NAK),
-                    .In => epr_set_stat_tx(ep_i, STAT_NAK),
+                    .Out => Epr.set_stat_rx(ep_i, .nak),
+                    .In => Epr.set_stat_tx(ep_i, .nak),
                 }
             }
         }
@@ -686,8 +665,8 @@ pub fn Polled(comptime cfg: Config) type {
             st_out.rx_last_len = 0;
 
             // Prepare BTABLE RX count and set RX to VALID
-            btable_set_rx_count(ep_i, limit);
-            epr_set_stat_rx(ep_i, STAT_VALID);
+            Btable.set_rx_count(ep_i, limit);
+            Epr.set_stat_rx(ep_i, .valid);
         }
 
         fn ep_readv(itf: *usb.DeviceInterface, ep_num: types.Endpoint.Num, data: []const []u8) types.Len {
@@ -739,12 +718,12 @@ pub fn Polled(comptime cfg: Config) type {
             }
 
             // Write to PMA
-            const tx_addr = pma_read16(btable_tx_addr_offset(ep_i));
-            pma_write_bytes(tx_addr, self.staging_buf[0..w]);
-            btable_set_tx_count(ep_i, @intCast(w));
+            const tx_addr = Pma.read16(Btable.tx_addr_offset(ep_i));
+            Pma.write_bytes(tx_addr, self.staging_buf[0..w]);
+            Btable.set_tx_count(ep_i, @intCast(w));
 
             st_in.tx_busy = true;
-            epr_set_stat_tx(ep_i, STAT_VALID);
+            Epr.set_stat_tx(ep_i, .valid);
 
             return @intCast(w);
         }
@@ -781,10 +760,7 @@ pub fn Polled(comptime cfg: Config) type {
             USB_PERIPH.CNTR.write(.{ .FRES = 1, .PDWN = 0 });
 
             // 2. Wait for analog transceiver startup (tSTARTUP >= 1us)
-            var i: u32 = 0;
-            while (i < 1000) : (i += 1) {
-                asm volatile ("nop");
-            }
+            time.delay_us(2); // 2us with margin
 
             // 3. Clear FRES to release USB from reset.
             //    EPR registers are held at 0 while FRES=1, so all
@@ -801,11 +777,8 @@ pub fn Polled(comptime cfg: Config) type {
             USB_PERIPH.DADDR.write(.{ .EF = 1, .ADD = 0 });
 
             // 7. Zero out the BTABLE area in PMA
-            {
-                var off: u16 = 0;
-                while (off < PMA_BTABLE_SIZE) : (off += 2) {
-                    pma_write16(off, 0);
-                }
+            inline for (0..Btable.size / 2) |i| {
+                Pma.write16(@intCast(i * 2), 0);
             }
         }
     };
