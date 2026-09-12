@@ -9,6 +9,8 @@ comptime {
     _ = microzig.export_startup();
 }
 
+const gpio = microzig.hal.gpio;
+
 const RCC = microzig.chip.peripherals.RCC;
 const PFIC = microzig.chip.peripherals.PFIC;
 const GPIOC = microzig.chip.peripherals.GPIOC;
@@ -30,9 +32,9 @@ pub fn main() !void {
     PFIC.SCTLR.raw |= (1 << 5);
 
     while (true) {
-        microzig.hal.gpio.write(GPIOC, pin, 1);
+        gpio.write(.C, pin, 1);
         delay(10_000);
-        microzig.hal.gpio.write(GPIOC, pin, 0);
+        gpio.write(.C, pin, 0);
         delay(10_000);
     }
 }
