@@ -8,7 +8,7 @@
                 .fields = .{
                     .{ .value = 0x0, .name = "disabled" },
                     .{ .value = 0x1, .name = "down" },
-                    .{ .value = 0x2, .name = "up" },
+                    .{ .value = 0x3, .name = "up" },
                 },
             },
         },
