@@ -7,7 +7,7 @@ const time = hal.time;
 const usb = microzig.core.usb;
 const USB_Serial = usb.drivers.CDC;
 
-const uart_cfg: hal.usart.UartConfig = if (@hasDecl(board, "uart_config")) board.uart_config else .{};
+const uart = board.uart_setup;
 
 pub const std_options = microzig.std_options(.{
     .logFn = hal.usart.log,
@@ -49,8 +49,8 @@ pub fn main() !void {
     microzig.board.init();
     microzig.hal.init();
 
-    hal.usart.setup_uart(uart_cfg);
-    hal.usart.init_logger(uart_cfg.instance);
+    uart.apply(.{ .baud_rate = 115200 });
+    hal.usart.init_logger(uart.instance);
     std.log.info("UART logging initialized.", .{});
 
     std.log.info("Initializing USB device.", .{});
