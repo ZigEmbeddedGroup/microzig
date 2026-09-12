@@ -9,8 +9,8 @@ pub fn build(b: *std.Build) void {
     _ = b;
 }
 
-pub const default_v5f_image_offset: u64 = 0x10000;
-pub const total_flash_size: u64 = 960 * KiB;
+pub const v5f_image_offset: u64 = 0x10000;
+pub const flash_size: u64 = 960 * KiB;
 
 chips: struct {
     ch32h417_v3f: *const microzig.Target,
@@ -18,6 +18,8 @@ chips: struct {
 },
 
 boards: struct {},
+
+merge_exe: *std.Build.Step.Compile,
 
 fn create_core(
     dep: *std.Build.Dependency,
@@ -73,18 +75,24 @@ const cpu_common_features = std.Target.riscv.featureSet(&.{
 });
 
 pub fn init(dep: *std.Build.Dependency) ?Self {
+    const b = dep.builder;
+
     const chip_v3f = create_core(dep, "qingkev3f", dep.path("src/cpus/qingkev3f.zig"), &.{
-        .{ .name = "FLASH", .tag = .flash, .offset = 0x0000_0000, .length = default_v5f_image_offset, .access = .rx },
+        .{ .name = "FLASH", .tag = .flash, .offset = 0x0000_0000, .length = v5f_image_offset, .access = .rx },
         .{ .name = "SRAM", .tag = .ram, .offset = 0x2010_0000, .length = 512 * KiB, .access = .rwx },
     });
     const chip_v5f = create_core(dep, "qingkev5f", dep.path("src/cpus/qingkev5f.zig"), &.{
-        // V5F image lives right behind the V3F image in the merged binary.
-        .{ .name = "FLASH", .tag = .flash, .offset = default_v5f_image_offset, .length = total_flash_size - default_v5f_image_offset, .access = .rx },
-        // DTCM: 256 KB zero-wait data RAM, private to the V5F.
-        // Listed first so the default stack lands at its end.
+        .{ .name = "FLASH", .tag = .flash, .offset = v5f_image_offset, .length = flash_size - v5f_image_offset, .access = .rx },
         .{ .name = "DTCM", .tag = .ram, .offset = 0x200C_0000, .length = 256 * KiB, .access = .rw },
-        // ITCM: 128 KB zero-wait code RAM, private to the V5F.
         .{ .name = "ITCM", .tag = .ram, .offset = 0x200A_0000, .length = 128 * KiB, .access = .rwx },
+    });
+
+    const merge_exe = b.addExecutable(.{
+        .name = "ch32h417-merge",
+        .root_module = b.addModule("ch32h417-merge", .{
+            .root_source_file = dep.path("tools/merge.zig"),
+            .target = b.graph.host,
+        }),
     });
 
     return .{
@@ -93,101 +101,26 @@ pub fn init(dep: *std.Build.Dependency) ?Self {
             .ch32h417_v5f = chip_v5f,
         },
         .boards = .{},
+        .merge_exe = merge_exe,
     };
 }
 
-/// Options for building a dual-core (V3F + V5F) firmware image.
-pub const DualCoreFirmwareOptions = struct {
-    /// Base name of the firmware; the per-core executables are named
-    /// `<name>_v3f` / `<name>_v5f`, the merged image `<name>.bin`.
-    name: []const u8,
+pub fn merge(
+    self: @This(),
+    dep: *std.Build.Dependency,
+    v3f_elf: std.Build.LazyPath,
+    v5f_elf: std.Build.LazyPath,
+    merged_bin_path: []const u8,
+) std.Build.LazyPath {
+    const b = dep.builder;
 
-    /// Root source file of the V3F (boot core) application, e.g. `src/v3f.zig`.
-    v3f_root_source_file: std.Build.LazyPath,
+    const merge_step = b.addRunArtifact(self.merge_exe);
 
-    /// Root source file of the V5F (application core) application, e.g. `src/v5f.zig`.
-    v5f_root_source_file: std.Build.LazyPath,
+    merge_step.addFileArg(v3f_elf);
+    merge_step.addFileArg(v5f_elf);
+    const merged_bin = merge_step.addOutputFileArg2(merged_bin_path, .{});
 
-    /// Optimization level for both cores.
-    optimize: std.builtin.OptimizeMode,
-};
+    b.getInstallStep().dependOn(&merge_step.step);
 
-/// A pair of firmware builds plus their merged flash image.
-pub fn DualCoreFirmware(comptime mb_type: type) type {
-    const Firmware = std.meta.Child(mb_type).Firmware;
-    return struct {
-        /// Firmware's name.
-        name: []const u8,
-        /// Firmware running on the V3F boot core (CORE0).
-        v3f: *Firmware,
-        /// Firmware running on the V5F application core (CORE1).
-        v5f: *Firmware,
-        /// Merged flash image.
-        merged_bin: std.Build.LazyPath,
-    };
-}
-
-/// Builds the V3F and V5F applications as two independent firmwares and merges
-/// both ELF images into one flash image, gap padded with 0xFF.
-pub fn addDualCoreFirmware(
-    self: Self,
-    mb: anytype,
-    options: DualCoreFirmwareOptions,
-) DualCoreFirmware(@TypeOf(mb)) {
-    const b = mb.builder;
-
-    const fw_v3f = mb.add_firmware(.{
-        .name = b.fmt("{s}_v3f", .{options.name}),
-        .root_source_file = options.v3f_root_source_file,
-        .target = self.chips.ch32h417_v3f,
-        .optimize = options.optimize,
-    });
-
-    const fw_v5f = mb.add_firmware(.{
-        .name = b.fmt("{s}_v5f", .{options.name}),
-        .root_source_file = options.v5f_root_source_file,
-        .target = self.chips.ch32h417_v5f,
-        .optimize = options.optimize,
-    });
-
-    // Host tool that merges the per-core ELF images into one flash image.
-    const merge_exe = b.addExecutable(.{
-        .name = "merge_dual_core_image",
-        .root_module = b.createModule(.{
-            .root_source_file = self.chips.ch32h417_v3f.dep.path("tools/merge_dual_core_image.zig"),
-            .target = b.graph.host,
-            .optimize = .ReleaseSafe,
-        }),
-    });
-
-    const merge_run = b.addRunArtifact(merge_exe);
-    merge_run.addFileArg(fw_v3f.get_emitted_elf());
-    merge_run.addFileArg(fw_v5f.get_emitted_elf());
-    merge_run.addArg(b.fmt("0x{x}", .{default_v5f_image_offset}));
-    const merged_bin = merge_run.addOutputFileArg(b.fmt("{s}.bin", .{options.name}));
-
-    return .{
-        .name = options.name,
-        .v3f = fw_v3f,
-        .v5f = fw_v5f,
-        .merged_bin = merged_bin,
-    };
-}
-
-/// Install the merged image at `firmware/<name>.bin`.
-pub fn installFirmware(
-    self: Self,
-    mb: anytype,
-    firmware: DualCoreFirmware(@TypeOf(mb)),
-) void {
-    _ = self;
-
-    const b = mb.builder;
-
-    const install = b.addInstallFileWithDir(
-        firmware.merged_bin,
-        .{ .custom = "firmware" },
-        b.fmt("{s}.bin", .{firmware.name}),
-    );
-    b.getInstallStep().dependOn(&install.step);
+    return merged_bin;
 }

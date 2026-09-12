@@ -132,10 +132,90 @@ pub const Interrupt = enum(u8) {
     USART_WKUP = 148,
 };
 
-/// System initialization: no-op for now (both cores boot from the 25 MHz HSI).
-// TODO: port the PLL/clock bring-up from the EVT startup code.
 pub inline fn system_init(comptime chip: anytype) void {
-    _ = chip;
+    const RCC = chip.peripherals.RCC;
+
+    RCC.CTLR.modify(.{ .HSION = 0 });
+
+    // PIPEON effects SYSCLK path, so we cannot
+    // turn down that before switching to HSI.
+    RCC.CFGR0.modify(.{
+        .ADCSRC = 0,
+        .ADC_DUTY_SEL = 0,
+        .MCO = 0,
+        .UTMION = 0,
+        .RGMIION = 0,
+        .FPRE = 0,
+        .ADCPRE = 0,
+        .PPRE2 = 0,
+        .HPRE = 0,
+        .SW = 0,
+    });
+    while (RCC.CFGR0.read().SWS != 0) {}
+    RCC.CFGR0.modify(.{ .PIPEON = 0 });
+
+    RCC.PLLCFGR.modify(.{ .SYSPLL_GATE = 0 });
+
+    // HSEBYP is writable only when HSEON=0.
+    // CSS_HSE_DIS doesn't effect the SYSCLK path
+    // so we don't care. CSSON is set to 0 anyway.
+    RCC.CTLR.modify(.{
+        .SERDES_PLLON = 0,
+        .ETH_PLLON = 0,
+        .PLLON = 0,
+        .USBSS_PLLON = 0,
+        .USBHS_PLLON = 0,
+        .CSSON = 0,
+        .HSEON = 0,
+    });
+    RCC.CTLR.modify(.{ .HSEBYP = 0 });
+
+    RCC.PLLCFGR.modify(.{
+        .PLLMUL = 4,
+        .PLLSRC = 0,
+        .PLL_SRC_DIV = 0,
+        .SYSPLL_SEL = 0,
+    });
+
+    RCC.INTR.modify(.{
+        .CSSC = 1,
+        .SERDESPLLRDYC = 1,
+        .ETHPLLRDYC = 1,
+        .PLLRDYC = 1,
+        .HSERDYC = 1,
+        .HSIRDYC = 1,
+        .LSERDYC = 1,
+        .LSIRDYC = 1,
+        .SERDESPLLRDYIE = 0,
+        .ETHPLLRDYIE = 0,
+        .PLLRDYIE = 0,
+        .HSERDYIE = 0,
+        .HSIRDYIE = 0,
+        .LSERDYIE = 0,
+        .LSIRDYIE = 0,
+    });
+
+    RCC.CFGR2.modify(.{
+        .ETH1GSRC = 0,
+        .HSADCSRC = 0,
+        .I2S3SRC = 0,
+        .I2S2SRC = 0,
+        .RNGSRC = 0,
+        .USBFSSRC = 0,
+        .USBFSDIV = 0,
+        .LTDCSRC = 0,
+        .LTDCDIV = 0,
+        .UHSIFSRC = 0,
+        .UHSIFDIV = 0,
+    });
+
+    RCC.PLLCFGR2.modify(.{
+        .SERDESPLL_MUL = 0b0100,
+        .USBHSPLL_IN_DIV = 0,
+        .USBSSPLL_REFSEL = 0b010,
+        .USBHSPLL_REFSEL = 0,
+        .USBHSPLLSRC = 0,
+    });
 }
 
 /// Wait for interrupt. Clears WFITOWFE so the wfi instruction behaves as
