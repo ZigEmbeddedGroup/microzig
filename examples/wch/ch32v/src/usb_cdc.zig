@@ -64,7 +64,7 @@ pub fn main() !void {
     usart_tx_pin.set_output_mode(.alternate_function_push_pull, .max_50MHz);
 
     // Initialize USART1 at 115200 baud
-    usart.apply(.{ .baud_rate = 115200 });
+    usart.apply(.{ .baud_rate = 115200 }, .default);
 
     hal.usart.init_logger(usart);
     std.log.info("UART logging initialized.", .{});

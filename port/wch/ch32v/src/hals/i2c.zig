@@ -8,6 +8,7 @@ const microzig = @import("microzig");
 const mdf = microzig.drivers;
 const drivers = mdf.base;
 const hal = microzig.hal;
+const gpio = hal.gpio;
 const dma = hal.dma;
 
 const I2C1 = microzig.chip.peripherals.I2C1;
@@ -56,7 +57,6 @@ pub const Config = struct {
     repeated_start: bool = true,
     baud_rate: u32 = 100_000,
     duty_cycle: DutyCycle = .duty_2,
-    remap: Remap = .default,
 
     /// Optional DMA configuration - null means polling-only mode
     /// Example: .dma = .{ .tx_channel = .Ch6, .rx_channel = .Ch7 }
@@ -71,6 +71,22 @@ pub const DutyCycle = enum {
 pub const ConfigError = error{
     UnsupportedBaudRate,
     InputFreqTooLow,
+};
+
+pub const Setup = struct {
+    instance: I2C,
+    scl_pin: gpio.Pin,
+    sda_pin: gpio.Pin,
+    /// AFIO pin remap — must match the pins chosen above.
+    /// See the Remap enum doc comment for which pins each setting maps to.
+    remap: Remap = .default,
+
+    /// Apply settings: configure I2C pins and peripheral.
+    pub fn apply(comptime self: Setup, comptime config: Config) void {
+        self.scl_pin.configure_alternate_function(.open_drain, .max_50MHz);
+        self.sda_pin.configure_alternate_function(.open_drain, .max_50MHz);
+        self.instance.apply(config, self.remap);
+    }
 };
 
 pub const instance = struct {
@@ -100,7 +116,7 @@ pub const I2C = enum(u1) {
     }
 
     /// Initializes the I2C HW block per the Config provided
-    pub fn apply(comptime i2c: I2C, comptime config: Config) void {
+    pub fn apply(comptime i2c: I2C, comptime config: Config, comptime remap: Remap) void {
         const regs = i2c.get_regs();
 
         // Compile-time DMA validation
@@ -129,7 +145,7 @@ pub const I2C = enum(u1) {
         hal.clocks.enable_afio_clock();
         const AFIO = microzig.chip.peripherals.AFIO;
         switch (@backingInt(i2c)) {
-            0 => AFIO.PCFR1.modify(.{ .I2C1_RM = @backingInt(config.remap) }),
+            0 => AFIO.PCFR1.modify(.{ .I2C1_RM = @backingInt(remap) }),
             // I2C2 does not have remap support on CH32V20x
             1 => {},
         }
