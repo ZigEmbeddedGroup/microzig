@@ -6,11 +6,13 @@ const compatibility = @import("compatibility.zig");
 
 const version: enum {
     nrf51,
-    nrf5283x,
+    nrf52,
+    nrf52833,
     nrf52840,
 } = switch (compatibility.chip) {
     .nrf51 => .nrf51,
-    .nrf52, .nrf52833 => .nrf5283x,
+    .nrf52 => .nrf52,
+    .nrf52833 => .nrf52833,
     .nrf52840 => .nrf52840,
     else => compatibility.unsupported_chip("GPIO"),
 };
@@ -33,7 +35,7 @@ pub const InputBuffer = enum(u1) {
 
 const Regs = switch (version) {
     .nrf51 => microzig.chip.types.peripherals.GPIO,
-    .nrf5283x, .nrf52840 => microzig.chip.types.peripherals.P0,
+    .nrf52, .nrf52833, .nrf52840 => microzig.chip.types.peripherals.P0,
 };
 
 pub const Pull = Regs.Pull;
@@ -52,8 +54,8 @@ pub const Pin = enum(u6) {
     fn get_regs(pin: Pin) *volatile Regs {
         return switch (version) {
             .nrf51 => peripherals.GPIO,
-            .nrf5283x => peripherals.P0,
-            .nrf52840 => if (@backingInt(pin) <= 31)
+            .nrf52 => peripherals.P0,
+            .nrf52833, .nrf52840 => if (@backingInt(pin) <= 31)
                 peripherals.P0
             else
                 peripherals.P1,
@@ -95,7 +97,7 @@ pub const Pin = enum(u6) {
 
     pub inline fn set_sense(pin: Pin, sense: Sense) void {
         const regs = pin.get_regs();
-        regs.PIN_CNF[@backingInt(pin)].modify(.{
+        regs.PIN_CNF[pin.index()].modify(.{
             .SENSE = switch (sense) {
                 .disabled => .Disabled,
                 .high => .High,
@@ -106,7 +108,7 @@ pub const Pin = enum(u6) {
 
     pub inline fn set_input_buffer(pin: Pin, input_buffer: InputBuffer) void {
         const regs = pin.get_regs();
-        regs.PIN_CNF[@backingInt(pin)].modify(.{
+        regs.PIN_CNF[pin.index()].modify(.{
             .INPUT = switch (input_buffer) {
                 .connect => .Connect,
                 .disconnect => .Disconnect,
