@@ -19,7 +19,7 @@ jobs:
           do
               if ! grep -q $(cat build.zig.zon | sed -n 's/.*\.minimum_zig_version = "\(.*\)",/\1/p') $FILE
               then
-                  echo Zig version documented in \'$FILE'\ out of sync with build.zig.zon
+                  echo Zig version documented in \'$FILE\' out of sync with build.zig.zon
                   EXIT_CODE=1
               fi
           done
