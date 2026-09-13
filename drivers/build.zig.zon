@@ -8,14 +8,6 @@
     .paths = .{
         "build.zig",
         "build.zig.zon",
-        "framework.zig",
-        "base",
-        "display",
-        "input",
-        "io_expander",
-        "led",
-        "sensor",
-        "stepper",
-        "wireless",
+        "src",
     },
 }

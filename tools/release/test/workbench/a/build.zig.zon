@@ -1,0 +1,17 @@
+.{
+    .name = .a,
+    .fingerprint = 0xe8b7be4355d6e395,
+    .version = "0.0.0",
+    .dependencies = .{
+        .b = .{
+            .url = "http://localhost:8000/0.0.0/b.tar.gz",
+            .hash = "b-0.0.0-d5S70AkIAADUqdE_jE1-SIhn1B8JmmYOVkFD7ynKsBM4",
+        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "LICENSE",
+        "src",
+    },
+}

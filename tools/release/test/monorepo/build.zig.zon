@@ -1,0 +1,13 @@
+.{
+    .name = .monorepo,
+    .version = "0.0.0",
+    .fingerprint = 0x7b6bc5a951b3a10,
+    .dependencies = .{
+        .b = .{ .path = "b" },
+        .c = .{ .path = "c" },
+    },
+    .paths = .{
+        "build.zig.zon",
+        "LICENSE",
+    },
+}

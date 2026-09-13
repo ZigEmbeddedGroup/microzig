@@ -221,3 +221,21 @@ jobs:
       - name: Build Website
         run: zig build
         working-directory: website
+
+  package-dry-run:
+    name: Package Dry Run
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v2
+
+      - run: zig build -Doptimize=ReleaseSafe
+        working-directory: ./tools/release
+
+      - name: Assemble Packages
+        run: ./tools/release/zig-out/bin/release -- https://github.com/ZigEmbeddedGroup/microzig/releases/download
