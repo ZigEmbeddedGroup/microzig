@@ -1,0 +1,17 @@
+.{
+    .name = .mz_tools_release,
+    .version = "0.1.0",
+    .fingerprint = 0xa203fd280ac79711,
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "README.md",
+        "src",
+    },
+    .release_ignores = .{
+        "test/monorepo",
+        "test/monorepo/b",
+        "test/monorepo/c",
+        "test/workbench/a",
+    },
+}

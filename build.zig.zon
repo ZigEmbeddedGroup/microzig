@@ -2,7 +2,7 @@
     .name = .microzig,
     // Note: This should be changed if you fork microzig!
     .fingerprint = 0x605a83a849186d0f,
-    .version = "0.15.2",
+    .version = "0.17.0",
     .minimum_zig_version = "0.17.0-dev.1936+5a625d5f3",
     .dependencies = .{
         .@"build-internals" = .{ .path = "build-internals" },
@@ -11,24 +11,9 @@
 
         // tools
         .@"tools/esp-image" = .{ .path = "tools/esp-image" },
-        .@"tools/printer" = .{ .path = "tools/printer" },
         .@"tools/regz" = .{ .path = "tools/regz" },
         .@"tools/uf2" = .{ .path = "tools/uf2" },
         .@"tools/dfu" = .{ .path = "tools/dfu" },
-        .@"tools/flags" = .{ .path = "tools/flags" },
-
-        // modules
-        .@"modules/bounded-array" = .{ .path = "modules/bounded-array" },
-        .@"modules/foundation-libc" = .{ .path = "modules/foundation-libc" },
-        .@"modules/freertos" = .{ .path = "modules/freertos" },
-        .@"modules/lwip" = .{ .path = "modules/lwip" },
-        .@"modules/network" = .{ .path = "modules/network" },
-        .@"modules/riscv32-common" = .{ .path = "modules/riscv32-common" },
-        .@"modules/rtt" = .{ .path = "modules/rtt" },
-        .@"modules/virtual-io" = .{ .path = "modules/virtual-io" },
-
-        // simulators
-        .@"sim/aviron" = .{ .path = "sim/aviron", .lazy = true },
 
         // ports
         .@"port/espressif/esp" = .{ .path = "port/espressif/esp", .lazy = true },
@@ -45,20 +30,15 @@
         .@"port/texasinstruments/mspm0" = .{ .path = "port/texasinstruments/mspm0", .lazy = true },
         .@"port/texasinstruments/tm4c" = .{ .path = "port/texasinstruments/tm4c", .lazy = true },
         .@"port/wch/ch32v" = .{ .path = "port/wch/ch32v", .lazy = true },
+
+        .@"modules/riscv32-common" = .{ .path = "modules/riscv32-common" },
+        .@"modules/rtt" = .{ .path = "modules/rtt" },
     },
     .paths = .{
         "README.md",
         "build.zig",
         "build.zig.zon",
         "LICENSE",
-        "design",
         "tools/generate_linker_script.zig",
-        "tools",
-        "port",
-        "examples",
-        "build-internals",
-        "core",
-        "drivers",
-        "modules",
     },
 }

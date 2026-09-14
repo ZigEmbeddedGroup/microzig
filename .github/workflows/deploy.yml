@@ -22,14 +22,15 @@ jobs:
 
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
-        with:
-          version: master
+
+      - run: zig build -Doptimize=ReleaseSafe
+        working-directory: ./tools/release
 
       - name: Extract version
-        run: echo "MICROZIG_VERSION=$(zig build package -- get-version)" >> $GITHUB_ENV
+        run: echo "MICROZIG_VERSION=$(./tools/release/zig-out/bin/release get-version)" >> $GITHUB_ENV
 
       - name: Assemble Packages
-        run: zig build package -- https://github.com/ZigEmbeddedGroup/microzig/releases/download
+        run: ./tools/release/zig-out/bin/release -- https://github.com/ZigEmbeddedGroup/microzig/releases/download
 
       - name: Create Release Draft
         uses: ncipollo/release-action@v1
@@ -39,4 +40,4 @@ jobs:
           artifactErrorsFailBuild: true
           draft: true
           generateReleaseNotes: true
-          artifacts: boxzer-out/${{ env.MICROZIG_VERSION }}/*
+          artifacts: release-out/${{ env.MICROZIG_VERSION }}/*
