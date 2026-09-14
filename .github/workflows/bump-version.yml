@@ -68,9 +68,11 @@ jobs:
             echo "No file changes to commit (files may already be up to date)"
           fi
 
+      - name: Configure Git remote with app token
+        run: |
+          git remote set-url origin "https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/ZigEmbeddedGroup/microzig.git"
+
       - name: Create and push version tag
         run: |
           git tag "${{ steps.next.outputs.version }}"
           git push origin HEAD:main --follow-tags
-        env:
-          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
