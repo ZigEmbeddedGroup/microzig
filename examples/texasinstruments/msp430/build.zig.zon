@@ -1,7 +1,7 @@
 .{
-    .name = .msp430,
+    .name = .mz_examples_ti_msp430,
     .version = "0.0.1",
-    .fingerprint = 0x21359f74332f7448,
+    .fingerprint = 0x61fb36b73556d6a9,
     .dependencies = .{
         .microzig = .{ .path = "../../.." },
     },

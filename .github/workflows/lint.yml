@@ -15,9 +15,10 @@ jobs:
       - run: |
           DOC_FILES="README.md website/content/docs/getting-started.smd"
           EXIT_CODE=0
+          CURRENT_VERSION=$(cat build.zig.zon | sed -n 's/.*\.minimum_zig_version = "\(.*\)",/\1/p')
           for FILE in $DOC_FILES
           do
-              if ! grep -q $(cat build.zig.zon | sed -n 's/.*\.minimum_zig_version = "\(.*\)",/\1/p') $FILE
+              if ! grep -q $CURRENT_VERSION $FILE
               then
                   echo Zig version documented in \'$FILE\' out of sync with build.zig.zon
                   EXIT_CODE=1
