@@ -817,7 +817,7 @@ pub fn gpio_toggle(self: *Self, pin: u2) void {
 
 pub fn gpio_put(self: *Self, pin: u2, value: u1) void {
     var reg = self.bus.read_int(u32, .backplane, chip.gpio.output);
-    reg = reg | @as(u32, value) << pin;
+    reg = (reg & ~(@as(u32, 1) << pin)) | (@as(u32, value) << pin);
     self.bus.write_int(u32, .backplane, chip.gpio.output, reg);
 }
 
