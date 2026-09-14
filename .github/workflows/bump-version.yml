@@ -55,7 +55,7 @@ jobs:
           set -euo pipefail
           OLD_ESC="${OLD//./\\.}"
           sed -i "s/\.version = \"${OLD_ESC}\"/.version = \"${NEW}\"/" build.zig.zon
-          sed -i "s/${OLD_ESC}/${NEW}/g" website/content/docs/getting-started.smd
+          sed -i "s/download\/${OLD_ESC}/download\/${NEW}/g" website/content/docs/getting-started.smd
           echo "Bumped $OLD -> $NEW"
 
       - name: Commit version bump
