@@ -61,12 +61,7 @@ jobs:
       - name: Commit version bump
         run: |
           git add -A
-          # Only commit if there are actual changes (avoids empty-commit errors)
-          if ! git diff --cached --quiet; then
-            git commit -m "Release MicroZig ${{ steps.next.outputs.version }}"
-          else
-            echo "No file changes to commit (files may already be up to date)"
-          fi
+          git commit -m "Release MicroZig ${{ steps.next.outputs.version }}"
 
       - name: Configure Git remote with app token
         run: |
@@ -75,4 +70,4 @@ jobs:
       - name: Create and push version tag
         run: |
           git tag "${{ steps.next.outputs.version }}"
-          git push origin HEAD:main --follow-tags
+          git push origin HEAD:main "${{ steps.next.outputs.version }}"
