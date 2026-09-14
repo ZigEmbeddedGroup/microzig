@@ -28,8 +28,8 @@ jobs:
       - name: Resolve current version
         id: current
         run: |
-          TAG=$(git tag --list '[0-9]*.[0-9]*.[0-9]*' --sort=-version:refname | head -n 1)
-          VERSION=${TAG:-0.0.0}
+          set -euo pipefail
+          VERSION=$(sed -n 's/.*\.version = "\([^"]*\)".*/\1/p' build.zig.zon)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Compute next patch version
@@ -45,8 +45,10 @@ jobs:
           OLD: ${{ steps.current.outputs.version }}
           NEW: ${{ steps.next.outputs.version }}
         run: |
-          sed -i "s/.version = \"${OLD}\"/.version = \"${NEW}\"/" build.zig.zon
-          sed -i "s/${OLD}\/microzig.tar.gz/${NEW}\/microzig.tar.gz/" website/content/docs/getting-started.smd
+          set -euo pipefail
+          OLD_ESC="${OLD//./\\.}"
+          sed -i "s/\.version = \"${OLD_ESC}\"/.version = \"${NEW}\"/" build.zig.zon
+          sed -i "s/${OLD_ESC}/${NEW}/g" website/content/docs/getting-started.smd
           echo "Bumped $OLD -> $NEW"
 
       - name: Commit version bump
