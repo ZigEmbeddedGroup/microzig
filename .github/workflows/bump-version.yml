@@ -14,16 +14,23 @@ jobs:
       contents: write  # needed to push commits and tags
 
     steps:
+      - name: Generate app token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0          # full history so we can see all tags
-          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
 
-      - name: Configure Git identity
-        run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+            - name: Configure Git identity
+              run: |
+                git config user.name  "github-actions[bot]"
+                git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Resolve current version
         id: current
@@ -64,4 +71,6 @@ jobs:
       - name: Create and push version tag
         run: |
           git tag "${{ steps.next.outputs.version }}"
-          git push origin main --follow-tags
+          git push origin HEAD:main --follow-tags
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
