@@ -16,7 +16,8 @@ jobs:
 
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
-        working-directory: website
+        with:
+          version: 0.17.0-dev.1471+ff10b90bc
 
       - name: Download and install GitHub CLI
         run: |
