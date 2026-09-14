@@ -161,7 +161,7 @@ pub const Header = extern struct {
         try ret.setPath(path);
         try ret.setSize(stat.size);
         try ret.setMtime(0);
-        try ret.setMode(ret.typeflag, @intCast(@intFromEnum(stat.permissions)));
+        try ret.setMode(ret.typeflag, @intCast(@backingInt(stat.permissions)));
 
         try ret.setUid(0);
         try ret.setGid(0);

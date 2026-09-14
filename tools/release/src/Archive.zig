@@ -55,7 +55,6 @@ fn strip_components(path: []const u8, count: u32) ![]const u8 {
     return path[i..];
 }
 
-
 fn path_to_components(allocator: Allocator, path: []const u8) ![]const []const u8 {
     var list: std.ArrayList([]const u8) = .empty;
     defer list.deinit(allocator);
