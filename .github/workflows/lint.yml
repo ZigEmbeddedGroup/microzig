@@ -16,6 +16,7 @@ jobs:
           DOC_FILES="README.md website/content/docs/getting-started.smd"
           EXIT_CODE=0
           CURRENT_VERSION=$(cat build.zig.zon | sed -n 's/.*\.minimum_zig_version = "\(.*\)",/\1/p')
+          echo current version: $CURRENT_VERSION
           for FILE in $DOC_FILES
           do
               if ! grep -q $CURRENT_VERSION $FILE
