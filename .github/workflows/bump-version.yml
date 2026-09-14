@@ -27,10 +27,10 @@ jobs:
           fetch-depth: 0
           token: ${{ steps.app-token.outputs.token }}
 
-            - name: Configure Git identity
-              run: |
-                git config user.name  "github-actions[bot]"
-                git config user.email "github-actions[bot]@users.noreply.github.com"
+      - name: Configure Git identity
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Resolve current version
         id: current
