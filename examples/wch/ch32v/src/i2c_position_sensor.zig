@@ -1,14 +1,14 @@
 const std = @import("std");
 const microzig = @import("microzig");
 const hal = microzig.hal;
+const board = microzig.board;
 
-const gpio = hal.gpio;
 const i2c = hal.i2c;
 
 const AS5600 = microzig.drivers.sensor.AS5600;
 
-const usart = hal.usart.instance.USART2;
-const usart_tx_pin = gpio.Pin.init(0, 2); // PA2
+const uart = board.uart_setup;
+const i2c_hw = board.i2c_setup;
 
 pub const panic = microzig.panic;
 
@@ -23,28 +23,13 @@ comptime {
 
 pub fn main() !void {
     // Board brings up clocks and time
-    microzig.board.init();
+    board.init();
 
-    // Configure USART2 TX pin (PA2) for alternate function (disable GPIO)
-    usart_tx_pin.configure_alternate_function(.push_pull, .max_50MHz);
+    // Initialize UART for logging
+    uart.apply(.{ .baud_rate = 115200 });
+    hal.usart.init_logger(uart.instance);
 
-    // Initialize USART2 at 115200 baud (uses default pins PA2/PA3)
-    usart.apply(.{
-        .baud_rate = 115200,
-        .remap = .default,
-    });
-
-    hal.usart.init_logger(usart);
-
-    // I2C1 is on PB6 (SCL) and PB7 (SDA)
-    const scl_pin = hal.gpio.Pin.init(1, 6); // GPIOB pin 6
-    const sda_pin = hal.gpio.Pin.init(1, 7); // GPIOB pin 7
-
-    // Configure I2C pins for alternate function (open-drain required for I2C)
-    scl_pin.configure_alternate_function(.open_drain, .max_50MHz);
-    sda_pin.configure_alternate_function(.open_drain, .max_50MHz);
-
-    const instance = i2c.instance.I2C1;
+    // Initialize I2C with DMA
     const i2c_config = i2c.Config{
         .baud_rate = 100_000, // 100 kHz
         .dma = .{
@@ -54,13 +39,13 @@ pub fn main() !void {
             .threshold = 4, // Threshold for DMA transfers
         },
     };
-    instance.apply(i2c_config);
+    i2c_hw.apply(i2c_config);
 
     // Get the specialized I2C_Device type for this config
     const I2C_DeviceType = hal.drivers.I2C_Device(i2c_config);
 
     // Create i2c device
-    var i2c_device = I2C_DeviceType.init(instance, null);
+    var i2c_device = I2C_DeviceType.init(i2c_hw.instance, null);
     // Pass device to driver to create sensor instance
     std.log.info("Creating AS5600 driver instance", .{});
     var dev = AS5600.init(i2c_device.i2c_device());

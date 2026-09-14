@@ -32,6 +32,7 @@
 const microzig = @import("microzig");
 const mdf = microzig.drivers;
 const hal = microzig.hal;
+const gpio = hal.gpio;
 const dma = hal.dma;
 
 const SPI1 = microzig.chip.peripherals.SPI1;
@@ -104,7 +105,6 @@ pub const Config = struct {
     phase: Phase = .first_edge,
     bit_order: BitOrder = .msb_first,
     data_size: DataSize = .eight_bit,
-    remap: Remap = .default,
 
     /// Optional DMA configuration - null means polling-only mode
     /// Example: .dma = .{ .tx_channel = .Ch3, .rx_channel = .Ch2 }
@@ -113,6 +113,28 @@ pub const Config = struct {
     // NOTE: Chip select (CS) must be managed manually by the caller.
     // This SPI HAL is stateless and does not manage CS pins.
     // See SPI_DatagramDevice in drivers.zig for automatic CS management.
+};
+
+pub const Setup = struct {
+    instance: SPI,
+    sck_pin: gpio.Pin,
+    mosi_pin: ?gpio.Pin = null,
+    miso_pin: ?gpio.Pin = null,
+    /// AFIO pin remap — must match the pins chosen above.
+    /// See the Remap enum doc comment for which pins each setting maps to.
+    remap: Remap = .default,
+
+    /// Apply settings: configure whichever pins are present, then apply
+    /// the SPI peripheral config (clock, baud rate, etc.).
+    pub fn apply(comptime self: Setup, comptime config: Config) void {
+        self.sck_pin.configure_alternate_function(.push_pull, .max_50MHz);
+        if (self.mosi_pin) |mosi| mosi.configure_alternate_function(.push_pull, .max_50MHz);
+        if (self.miso_pin) |miso| {
+            miso.enable_clock();
+            miso.set_input_mode(.floating);
+        }
+        self.instance.apply(config, self.remap);
+    }
 };
 
 pub const instance = struct {
@@ -165,7 +187,7 @@ pub const SPI = enum(u1) {
     }
 
     /// Initializes the SPI HW block per the Config provided
-    pub fn apply(comptime spi: SPI, comptime config: Config) void {
+    pub fn apply(comptime spi: SPI, comptime config: Config, comptime remap: Remap) void {
         const regs = spi.get_regs();
 
         // Compile-time DMA validation
@@ -194,7 +216,7 @@ pub const SPI = enum(u1) {
         hal.clocks.enable_afio_clock();
         const AFIO = microzig.chip.peripherals.AFIO;
         switch (@backingInt(spi)) {
-            0 => AFIO.PCFR1.modify(.{ .SPI1_RM = @backingInt(config.remap) }),
+            0 => AFIO.PCFR1.modify(.{ .SPI1_RM = @backingInt(remap) }),
             // SPI2 does not have remap support on CH32V20x
             1 => {},
         }

@@ -1,11 +1,10 @@
 const std = @import("std");
 const microzig = @import("microzig");
 const hal = microzig.hal;
-const gpio = hal.gpio;
+const board = microzig.board;
 const dma = hal.dma;
 
-const usart = hal.usart.instance.USART2;
-const usart_tx_pin = gpio.Pin.init(0, 2); // PA2
+const uart = board.uart_setup;
 
 pub const panic = microzig.panic;
 
@@ -40,18 +39,11 @@ inline fn read_stk_cnt() u64 {
 
 pub fn main() !void {
     // Board brings up clocks and time
-    microzig.board.init();
+    board.init();
 
-    // Configure USART2 TX pin (PA2) for alternate function (disable GPIO)
-    usart_tx_pin.configure_alternate_function(.push_pull, .max_50MHz);
-
-    // Initialize USART2 at 115200 baud (uses default pins PA2/PA3)
-    usart.apply(.{
-        .baud_rate = 115200,
-        .remap = .default,
-    });
-
-    hal.usart.init_logger(usart);
+    // Initialize UART for logging
+    uart.apply(.{ .baud_rate = 115200 });
+    hal.usart.init_logger(uart.instance);
 
     const chan = dma.Channel.Ch7;
 

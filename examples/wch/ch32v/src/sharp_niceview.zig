@@ -32,11 +32,12 @@ const std = @import("std");
 const microzig = @import("microzig");
 const mdf = microzig.drivers;
 const hal = microzig.hal;
+const board = microzig.board;
 const gpio = hal.gpio;
 const spi = hal.spi;
 
-const usart = hal.usart.instance.USART2;
-const usart_tx_pin = gpio.Pin.init(0, 2); // PA2
+const uart = board.uart_setup;
+const spi_hw = board.spi_setup;
 
 pub const panic = microzig.panic;
 
@@ -49,25 +50,16 @@ comptime {
     _ = microzig.export_startup();
 }
 
-// Pin definitions
-const sck_pin = gpio.Pin.init(0, 5); // PA5
-const mosi_pin = gpio.Pin.init(0, 7); // PA7
+// CS pin (device-specific, not part of board SPI setup)
 const cs_pin = gpio.Pin.init(0, 3); // PA3
 
 pub fn main() !void {
     // Board brings up clocks and time
-    microzig.board.init();
+    board.init();
 
-    // Configure USART2 TX pin (PA2) for logging
-    usart_tx_pin.configure_alternate_function(.push_pull, .max_50MHz);
-
-    // Initialize USART2 at 115200 baud
-    usart.apply(.{
-        .baud_rate = 115200,
-        .remap = .default,
-    });
-
-    hal.usart.init_logger(usart);
+    // Initialize UART for logging
+    uart.apply(.{ .baud_rate = 115200 });
+    hal.usart.init_logger(uart.instance);
 
     std.log.info("Sharp Memory LCD (nice!view) Test", .{});
     std.log.info("===================================", .{});
@@ -76,25 +68,15 @@ pub fn main() !void {
     std.log.info("Protocol: 3-wire SPI, LSB-first, CS active-high", .{});
     std.log.info("", .{});
 
-    // Configure SPI pins
-    std.log.info("Configuring SPI pins...", .{});
-    sck_pin.configure_alternate_function(.push_pull, .max_50MHz);
-    mosi_pin.configure_alternate_function(.push_pull, .max_50MHz);
-
-    // Configure control pins
+    // Configure CS pin (device-specific)
     cs_pin.enable_clock();
     cs_pin.set_output_mode(.general_purpose_push_pull, .max_50MHz);
-
-    // Initialize pins to safe states
     cs_pin.put(0); // CS low (idle state for Sharp - inverted logic)
-
-    // Initialize SPI1 with DMA support
-    const spi1 = spi.instance.SPI1;
 
     // SPI configuration for Sharp Memory LCD
     // CRITICAL: LSB-first bit order, CS active-high!
     // Mode 0 (CPOL=0, CPHA=0), up to 2 MHz
-    std.log.info("Configuring SPI1...", .{});
+    std.log.info("Configuring SPI...", .{});
     std.log.info("  Baud rate: 1 MHz (matching ZMK device tree)", .{});
     std.log.info("  Bit order: LSB-first (CRITICAL for Sharp!)", .{});
     std.log.info("  CS polarity: Active-HIGH (CRITICAL for Sharp!)", .{});
@@ -109,13 +91,12 @@ pub fn main() !void {
         },
     };
 
-    // Note: spi.apply() automatically enables SPI1 clock
-    spi1.apply(spi_config);
+    spi_hw.apply(spi_config);
 
     // Create SPI Datagram Device wrapper
     const SPI_DD = hal.drivers.SPI_DatagramDevice(spi_config);
     var spi_dev = SPI_DD.init(
-        spi1,
+        spi_hw.instance,
         cs_pin,
         true, // Sharp needs CS HIGH during transmission (active-high)
         mdf.time.Duration.from_ms(100),
