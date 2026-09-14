@@ -30,7 +30,7 @@ jobs:
         run: echo "MICROZIG_VERSION=$(./tools/release/zig-out/bin/release get-version)" >> $GITHUB_ENV
 
       - name: Assemble Packages
-        run: ./tools/release/zig-out/bin/release -- https://github.com/ZigEmbeddedGroup/microzig/releases/download
+        run: ./tools/release/zig-out/bin/release https://github.com/ZigEmbeddedGroup/microzig/releases/download
 
       - name: Create Release Draft
         uses: ncipollo/release-action@v1
@@ -38,6 +38,6 @@ jobs:
         with:
           tag: ${{ env.TAG_NAME }}
           artifactErrorsFailBuild: true
-          draft: true
+          draft: false
           generateReleaseNotes: true
           artifacts: release-out/${{ env.MICROZIG_VERSION }}/*

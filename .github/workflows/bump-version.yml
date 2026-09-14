@@ -1,0 +1,65 @@
+name: Bump Version and Tag
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  bump-version:
+    # Prevent the action from triggering itself in an infinite loop
+    if: "!contains(github.event.head_commit.message, 'Release MicroZig')"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # needed to push commits and tags
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # full history so we can see all tags
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git identity
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Resolve current version
+        id: current
+        run: |
+          TAG=$(git tag --list '[0-9]*.[0-9]*.[0-9]*' --sort=-version:refname | head -n 1)
+          VERSION=${TAG:-0.0.0}
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Compute next patch version
+        id: next
+        run: |
+          IFS='.' read -r MAJOR MINOR PATCH <<< "${{ steps.current.outputs.version }}"
+          NEW_PATCH=$(( PATCH + 1 ))
+          NEW_VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}"
+          echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Bump version in files
+        env:
+          OLD: ${{ steps.current.outputs.version }}
+          NEW: ${{ steps.next.outputs.version }}
+        run: |
+          sed -i "s/.version = \"${OLD}\"/.version = \"${NEW}\"/" build.zig.zon
+          sed -i "s/${OLD}\/microzig.tar.gz/${NEW}\/microzig.tar.gz/" website/content/docs/getting-started.smd
+          echo "Bumped $OLD -> $NEW"
+
+      - name: Commit version bump
+        run: |
+          git add -A
+          # Only commit if there are actual changes (avoids empty-commit errors)
+          if ! git diff --cached --quiet; then
+            git commit -m "Release MicroZig ${{ steps.next.outputs.version }}"
+          else
+            echo "No file changes to commit (files may already be up to date)"
+          fi
+
+      - name: Create and push version tag
+        run: |
+          git tag "${{ steps.next.outputs.version }}"
+          git push origin main --follow-tags
