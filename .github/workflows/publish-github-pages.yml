@@ -1,8 +1,6 @@
 name: Publish Github Pages
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
   release:
     types:
       - published
