@@ -207,7 +207,12 @@ fn parse_dependencies(
 
     for (struct_init.ast.fields) |field_init| {
         const name_token = ast.firstToken(field_init) - 2;
-        const dep_name = try allocator.dupe(u8, ast.tokenSlice(name_token));
+        const dep_name_raw = ast.tokenSlice(name_token);
+        const dep_name = try allocator.dupe(u8, if (std.mem.startsWith(u8, dep_name_raw, "@\""))
+            dep_name_raw[2 .. dep_name_raw.len - 1]
+        else
+            dep_name_raw);
+
         errdefer allocator.free(dep_name);
 
         var dep_buf: [2]Ast.Node.Index = undefined;
@@ -222,6 +227,7 @@ fn parse_dependencies(
         for (dep_struct.ast.fields) |dep_field| {
             const dep_field_name_token = ast.firstToken(dep_field) - 2;
             const dep_field_name = ast.tokenSlice(dep_field_name_token);
+
             if (std.mem.eql(u8, dep_field_name, "path")) {
                 has_path = true;
                 path = try parse_string_literal(allocator, ast, dep_field);
