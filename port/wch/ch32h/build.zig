@@ -107,13 +107,11 @@ pub fn init(dep: *std.Build.Dependency) ?Self {
 
 pub fn merge(
     self: @This(),
-    dep: *std.Build.Dependency,
+    b: *std.Build,
     v3f_elf: std.Build.LazyPath,
     v5f_elf: std.Build.LazyPath,
     merged_bin_path: []const u8,
 ) std.Build.LazyPath {
-    const b = dep.builder;
-
     const merge_step = b.addRunArtifact(self.merge_exe);
 
     merge_step.addFileArg(v3f_elf);

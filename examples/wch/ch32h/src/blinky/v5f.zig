@@ -8,13 +8,8 @@ comptime {
     _ = microzig.export_startup();
 }
 
-const RCC = microzig.chip.peripherals.RCC;
-const GPIOC = microzig.chip.peripherals.GPIOC;
-
 const gpio = microzig.hal.gpio;
 const clock = microzig.hal.clock;
-
-const pin: u4 = 3;
 
 fn delay(cycles: u32) void {
     for (0..cycles) |_| {
@@ -23,14 +18,20 @@ fn delay(cycles: u32) void {
 }
 
 pub fn main() !void {
-    clock.enable_gpio(.C);
+    clock.enable_gpio(.c);
 
-    GPIOC.CFGLR.modify(.{ .MODE3 = 0b11, .CNF3 = 0b01 });
+    const pc3 = gpio.Pin.init(.{
+        .port = .c,
+        .number = 3,
+        .mode = .{ .output = .general_purpose_open_drain },
+        .speed = .max_50MHz,
+        .pull = .disabled,
+    });
 
     while (true) {
-        gpio.write(.C, pin, 1);
-        delay(20_000);
-        gpio.write(.C, pin, 0);
-        delay(20_000);
+        pc3.write(1);
+        delay(200_000);
+        pc3.write(0);
+        delay(200_000);
     }
 }
