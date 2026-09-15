@@ -358,9 +358,9 @@ pub const ClockDevice = struct {
 ///
 /// Implementation of a `ClockDevice` that uses the HAL's `time` module.
 ///
-pub fn clock_device() ClockDevice {
+pub fn clock_device() drivers.ClockDevice {
     const S = struct {
-        const vtable: ClockDevice.VTable = .{
+        const vtable: drivers.ClockDevice.VTable = .{
             .get_time_since_boot = get_time_since_boot_fn,
         };
 
