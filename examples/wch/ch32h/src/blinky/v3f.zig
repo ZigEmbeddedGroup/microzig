@@ -13,6 +13,7 @@ pub const microzig_options: microzig.Options = .{
     .interrupts = .{ .SW = sw_handler },
 };
 
+const cpu = microzig.cpu;
 const clock = microzig.hal.clock;
 const gpio = microzig.hal.gpio;
 
@@ -21,8 +22,8 @@ const PFIC = microzig.chip.peripherals.PFIC;
 var pc2: gpio.Pin = undefined;
 var level: u1 = 0;
 
-fn sw_handler() callconv(microzig.cpu.riscv_calling_convention) void {
-    microzig.cpu.interrupt.clear_pending(.SW);
+fn sw_handler() callconv(cpu.riscv_calling_convention) void {
+    cpu.interrupt.clear_pending(.SW);
 
     level ^= 1;
     pc2.write(level);
@@ -48,14 +49,28 @@ pub fn main() !void {
 
     // `interrupt.enable` verifies at compile time that a handler for this
     // interrupt was registered in `microzig_options.interrupts` above.
-    microzig.cpu.interrupt.enable(.SW);
+    cpu.interrupt.enable(.SW);
+
+    // TODO: move this into a dedicated example.
+    cpu.interrupt.set_priority(.SW, 0b1000);
+    if (cpu.interrupt.get_priority(.SW) != 0b1000)
+        @panic("SW interrupt priority readback failed");
+
+    if (cpu.interrupt.current_core() != .v3f)
+        @panic("unexpected current core");
+
+    cpu.interrupt.set_allocation(.UHSIF, .v5f);
+    if (cpu.interrupt.get_allocation(.UHSIF) != .v5f)
+        @panic("UHSIF interrupt allocation readback failed");
+    if (cpu.interrupt.owned_by_current_core(.UHSIF))
+        @panic("UHSIF interrupt should not be owned by V3F");
 
     // Wakeup V5F
     PFIC.WAKEIP1.raw = 0x10000 & ~@as(u32, 0x3FF);
     PFIC.SCTLR.raw |= (1 << 5);
 
     while (true) {
-        microzig.cpu.interrupt.set_pending(.SW);
+        cpu.interrupt.set_pending(.SW);
         delay(50_000); // 500ms at 100MHz
     }
 }

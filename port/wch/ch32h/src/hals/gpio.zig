@@ -69,9 +69,9 @@ pub const Pin = struct {
         const port = cfg.port.to_mem();
         const number = cfg.number & 0b111;
         const offset = number << 2;
+        // const speed = cfg.speed;
 
         // Configure mode.
-
         const cfg_bits = switch (cfg.mode) {
             .input => |input| (@as(u32, @backingInt(input)) << 2),
             .output => |output| (@as(u32, @backingInt(output)) << 2) | 1,
@@ -85,9 +85,9 @@ pub const Pin = struct {
             port.CFGHR.raw |= cfg_bits << offset;
         }
 
-        // port.SPEED.raw = 0xFF;
-
         // TODO: Configure speed & pull (SPEED & OUTDR)
+        // port.SPEED.raw &= ~(@as(u32, 0b11) << (number * 2));
+        // port.SPEED.raw |= @as(u32, @backingInt(speed)) << (number * 2);
 
         return .{
             .port = cfg.port,
