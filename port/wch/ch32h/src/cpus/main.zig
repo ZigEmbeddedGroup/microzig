@@ -51,6 +51,9 @@ pub const interrupt = struct {
 
     pub inline fn disable_interrupts() void {
         csr.mstatus.clear(.{ .mie = 1 });
+        // The WCH EVT `__disable_irq` additionally executes `fence.i` after
+        // clearing MIE. Uncomment if a pipeline flush turns out to be required here.
+        // asm volatile ("fence.i");
     }
 
     pub inline fn is_enabled(irq: Interrupt) bool {
@@ -62,6 +65,7 @@ pub const interrupt = struct {
             1 => get_bit(PFIC.ISR2, pos),
             2 => get_bit(PFIC.ISR3, pos),
             3 => get_bit(PFIC.ISR4, pos),
+            4 => get_bit(PFIC.ISR5, pos),
             else => @compileError("Invalid interrupt number!"),
         };
         return v != 0;
@@ -96,6 +100,7 @@ pub const interrupt = struct {
             1 => PFIC.IENR2.raw |= @as(u32, 1) << pos,
             2 => PFIC.IENR3.raw |= @as(u32, 1) << pos,
             3 => PFIC.IENR4.raw |= @as(u32, 1) << pos,
+            4 => PFIC.IENR5.raw |= @as(u32, 1) << pos,
             else => @compileError("Invalid interrupt number!"),
         }
     }
@@ -109,6 +114,7 @@ pub const interrupt = struct {
             1 => PFIC.IRER2.raw |= @as(u32, 1) << pos,
             2 => PFIC.IRER3.raw |= @as(u32, 1) << pos,
             3 => PFIC.IRER4.raw |= @as(u32, 1) << pos,
+            4 => PFIC.IRER5.raw |= @as(u32, 1) << pos,
             else => @compileError("Invalid interrupt number!"),
         }
     }
@@ -122,6 +128,7 @@ pub const interrupt = struct {
             1 => get_bit(PFIC.IPR2, pos),
             2 => get_bit(PFIC.IPR3, pos),
             3 => get_bit(PFIC.IPR4, pos),
+            4 => get_bit(PFIC.IPR5, pos),
             else => @compileError("Invalid interrupt number!"),
         };
         return v != 0;
@@ -136,6 +143,7 @@ pub const interrupt = struct {
             1 => PFIC.IPSR2.raw |= @as(u32, 1) << pos,
             2 => PFIC.IPSR3.raw |= @as(u32, 1) << pos,
             3 => PFIC.IPSR4.raw |= @as(u32, 1) << pos,
+            4 => PFIC.IPSR5.raw |= @as(u32, 1) << pos,
             else => @compileError("Invalid interrupt number!"),
         }
     }
@@ -149,6 +157,7 @@ pub const interrupt = struct {
             1 => PFIC.IPRR2.raw |= @as(u32, 1) << pos,
             2 => PFIC.IPRR3.raw |= @as(u32, 1) << pos,
             3 => PFIC.IPRR4.raw |= @as(u32, 1) << pos,
+            4 => PFIC.IPRR5.raw |= @as(u32, 1) << pos,
             else => @compileError("Invalid interrupt number!"),
         }
     }
@@ -162,6 +171,7 @@ pub const interrupt = struct {
             1 => get_bit(PFIC.IACTR2, pos),
             2 => get_bit(PFIC.IACTR3, pos),
             3 => get_bit(PFIC.IACTR4, pos),
+            4 => get_bit(PFIC.IACTR5, pos),
             else => @compileError("Invalid interrupt number!"),
         };
         return v != 0;
@@ -172,12 +182,22 @@ pub const interrupt = struct {
     ///   bit7 - pre-emption priority
     ///   bit6~bit4 - subpriority
     ///   bit3~bit0 - reserved (must be 0)
+    ///
+    /// NOTE: this layout corresponds to INTSYSCR.pmtcfg = 0b01 (2 nesting levels,
+    /// currently configured on V3F). On V5F pmtcfg = 0b11, so pre-emption is
+    /// bits 7:5 and subpriority is bit 4.
+    ///
+    /// TODO: the SVD currently describes only IPRIOR0..63 and with the wrong width
+    /// (32-bit registers at a 4-byte stride instead of the 8-bit array at a 1-byte
+    /// stride documented by the official core header), so priorities for IRQ 64..159
+    /// are not available yet. Fix the SVD before using priorities on those IRQs.
     pub inline fn set_priority(comptime irq: Interrupt, priority: u8) void {
         const irq_num = @backingInt(irq);
         const irq_num_str = std.fmt.comptimePrint("{}", .{irq_num});
         @field(PFIC, "IPRIOR" ++ irq_num_str) = @backingInt(priority) & 0b1111_0000;
     }
 
+    /// See `set_priority` for the limitations imposed by the current SVD.
     pub inline fn get_priority(comptime irq: Interrupt) u8 {
         const irq_num = @backingInt(irq);
         const irq_num_str = std.fmt.comptimePrint("{}", .{irq_num});
@@ -238,14 +258,34 @@ pub const startup_logic = struct {
         startup_logic.initialize_system_memories();
 
         // Configure the CPU.
+        //
+        // NOTE: the EVT startup code additionally writes CSR 0xBC1, which configures
+        // the hardware prologue/epilogue nesting depth (V3F: 0x01, V5F: 0x07). It is
+        // deliberately left untouched here because HPE is disabled below.
+        //
+        // HPE (hardware prologue/epilogue, INTSYSCR.HWSTKEN) is kept disabled on
+        // purpose: Zig emits the standard software register save/restore sequence for
+        // `callconv(.riscv32_interrupt)` handlers and has no equivalent of
+        // `__attribute__((interrupt("WCH-Interrupt-fast")))`, which is what HPE
+        // requires. Interrupt nesting is still enabled via INTSYSCR.INESTEN.
+        //
+        // TODO: does LLVM support WCH's HPE?
         switch (cpu_name) {
-            .qingkev3f, .qingkev5f => {
-                // Configure pipelining and instruction prediction.
-                csr.corecfgr.write_raw(0x1f);
-                // Enable interrupt nesting and hardware stack.
-                // TODO: V5F supports 8-level nesting, V3F 2-level; need to verify pmtcfg
-                // values against the CH32H417 reference manual.
-                csr.intsyscr.write(.{ .hwstken = 1, .inesten = 1, .pmtcfg = 0b10 });
+            .qingkev3f => {
+                // Configure pipelining, instruction prediction and prefetching.
+                // Value taken from the WCH EVT startup code (startup_ch32h417_v3f.S).
+                csr.corecfgr.write_raw(0x123703E1);
+                // pmtcfg = 0b01: 2 nesting levels
+                // (bit 7 pre-emption priority, bits 6:4 sub priority).
+                csr.intsyscr.write(.{ .hwstken = 0, .inesten = 1, .pmtcfg = 0b01 });
+            },
+            .qingkev5f => {
+                // Configure pipelining, instruction prediction and prefetching.
+                // Value taken from the WCH EVT startup code (startup_ch32h417_v5f.S).
+                csr.corecfgr.write_raw(0x1237B3E0);
+                // pmtcfg = 0b11: 5-8 nesting levels
+                // (bits 7:5 pre-emption priority, bit 4 sub priority).
+                csr.intsyscr.write(.{ .hwstken = 0, .inesten = 1, .pmtcfg = 0b11 });
             },
         }
 
@@ -264,6 +304,12 @@ pub const startup_logic = struct {
         // firmware to manage interrupts and change privilege as needed.
         // To change execution to User mode set mpp to 0x0 and execute mret.
         // Enable machine-level interrupts (mie) and set floating-point status (fs) if applicable.
+        //
+        // NOTE: the WCH EVT startup writes 0x6088 here, which per the reference
+        // manual (mpp: 00 = User, 11 = Machine, 01/10 reserved) means mpp = 0
+        // (User mode); its comment claiming "privileged mode" is misleading. This
+        // port deliberately runs in Machine mode.
+        // NOTE: will this affect rtos like Zephyr?
         csr.mstatus.write(.{
             .mie = 1,
             .mpie = 1,
@@ -397,6 +443,8 @@ pub fn export_startup_logic() void {
 }
 
 // CSR
+// TODO: This table is almost a copy of ch32v's port.
+// Need to eliminate redundant code.
 
 pub const csr = struct {
     pub const Csr = riscv32_common.csr.Csr;
@@ -424,8 +472,8 @@ pub const csr = struct {
         reserved31: u1 = 0,
     });
 
-    /// Machine Mode Status Register
-    pub const mstatus = Csr(0x300, packed struct(u32) {
+    /// Layout shared by `mstatus` and its user-accessible alias `uacces_mstatus`.
+    pub const MStatus = packed struct(u32) {
         pub const FS = enum(u2) {
             /// Floating-point unit status
             off = 0b00,
@@ -452,7 +500,10 @@ pub const csr = struct {
         fs: FS = .off,
         /// [31:15] Reserved
         reserved15: u17 = 0,
-    });
+    };
+
+    /// Machine Mode Status Register
+    pub const mstatus = Csr(0x300, MStatus);
     pub const misa = Csr(0x301, packed struct(u32) {
         extensions: u26 = 0,
         reserved26: u4 = 0,
@@ -515,7 +566,10 @@ pub const csr = struct {
     pub const dscratch0 = riscv32_common.csr.dscratch0;
     pub const dscratch1 = riscv32_common.csr.dscratch1;
 
-    pub const gintenr = Csr(0x800, u32);
+    /// UACCES_MSTATUS: user-accessible alias of `mstatus` (CSR 0x800).
+    /// This port runs in Machine mode and uses `mstatus` directly, so the alias is
+    /// only kept for parity with the WCH EVT code.
+    pub const uacces_mstatus = Csr(0x800, MStatus);
     pub const intsyscr = Csr(0x804, cpu_impl.csr_types.intsyscr);
     pub const corecfgr = Csr(0xBC0, u32);
     pub const cstrcr = Csr(0xBC2, packed struct(u32) {
