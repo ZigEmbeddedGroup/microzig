@@ -2,7 +2,7 @@
     .name = .microzig,
     // Note: This should be changed if you fork microzig!
     .fingerprint = 0x605a83a849186d0f,
-    .version = "0.17.6",
+    .version = "0.17.7",
     .minimum_zig_version = "0.17.0-dev.1936+5a625d5f3",
     .dependencies = .{
         .@"build-internals" = .{ .path = "build-internals" },
