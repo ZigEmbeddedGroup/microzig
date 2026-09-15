@@ -82,15 +82,15 @@ pub fn init(dep: *std.Build.Dependency) ?Self {
             .cpu_arch = .thumb,
             .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
             .os_tag = .freestanding,
-            .abi = .eabihf,
+            .abi = .eabi,
         },
         .chip = .{
             .name = "MCXA156",
             .register_definition = .{ .svd = mcux_soc_svd.path("MCXA156/MCXA156.xml") },
             .memory_regions = &.{
                 .{ .tag = .flash, .offset = 0x00000000, .length = 1024 * 1024, .access = .rx },
-                .{ .tag = .ram, .offset = 0x20000000, .length = 64 * 1024, .access = .rw },
-                //.{ .tag = .ram, .offset = 0x2001E000, .length = 8 * 1024, .access = .rw, .name = "ECC" },
+                .{ .tag = .ram, .offset = 0x20000000, .length = 120 * 1024, .access = .rw },
+                .{ .tag = .ram, .offset = 0x2001E000, .length = 8 * 1024, .access = .rw, .name = "ECC" },
             },
         },
         .hal = .{ .root_source_file = b.path("src/mcxa_15x/hal.zig") },

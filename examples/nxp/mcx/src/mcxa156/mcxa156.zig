@@ -20,4 +20,5 @@ pub fn main() !void {
         .frohf = .{ .freq = .@"96Mhz", .fro_hf_div = 1 },
         .ahb_div = 4,
     });
+    while (true) {}
 }

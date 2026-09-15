@@ -13,11 +13,12 @@ pub fn build(b: *std.Build) void {
     const mb = MicroBuild.init(b, mz_dep) orelse return;
 
     const frdm_mcxa153 = mb.ports.mcx.chips.mcxa153;
-    const frdm_mcxa156 = mb.ports.mcx.chips.mcxa156;
     const frdm_mcxn947 = mb.ports.mcx.chips.mcxn947;
 
+    const frdm_mcxa156 = mb.ports.mcx.boards.frdm_mcxa156;
+
     const available_examples = [_]Example{
-        .{ .name = "mcxa156", .target = frdm_mcxa156, .file = "src/mcxa156.zig" },
+        .{ .name = "mcxa156_blinky", .target = frdm_mcxa156, .file = "src/mcxa156/blinky.zig" },
         .{ .name = "mcxa153_blinky", .target = frdm_mcxa153, .file = "src/mcxa153_blinky.zig" },
         .{ .name = "mcxn947_blinky", .target = frdm_mcxn947, .file = "src/mcxn947_blinky.zig" },
         .{ .name = "gpio_input", .target = frdm_mcxa153, .file = "src/gpio_input.zig" },

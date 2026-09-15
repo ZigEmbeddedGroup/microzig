@@ -182,8 +182,8 @@ pub const Peripheral = enum {
 
     fn mask(comptime peripheral: Peripheral) u32 {
         return switch (peripheral) {
-            .INPUTMUX0 => 0,
-            .I3C0 => 1,
+            .INPUTMUX0 => 1,
+            .I3C0 => 1 << 1,
             .CTIMER0 => 1 << 2,
             .CTIMER1 => 1 << 3,
             .CTIMER2 => 1 << 4,
@@ -212,8 +212,8 @@ pub const Peripheral = enum {
             .QDC1 => 1 << 29,
             .FLEXPWM0 => 1 << 30,
             .FLEXPWM1 => 1 << 31,
-            .OSTIMER0 => 0,
-            .ADC0 => 1,
+            .OSTIMER0 => 1,
+            .ADC0 => 1 << 1,
             .ADC1 => 1 << 2,
             .CMP1 => 1 << 4,
             .DAC0 => 1 << 5,
