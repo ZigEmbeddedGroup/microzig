@@ -7,7 +7,7 @@ const gpio = nrf.gpio;
 const i2c = nrf.i2c;
 
 const I2C_Device = nrf.drivers.I2C_Device;
-const ICM_20948 = microzig.drivers.sensor.ICM_20948;
+const ICM_20948 = microzig.drivers.sensor.ICM_20948(.{});
 
 const uart = nrf.uart.num(0);
 const i2c0 = i2c.num(0);
