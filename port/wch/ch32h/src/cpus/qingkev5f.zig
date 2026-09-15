@@ -1,8 +1,6 @@
-///
 /// Processor-specific configuration for WCH QingKe V5F processor (CH32H417 CORE1).
 /// Interrupt vector table extracted from openwch/ch32h417 EVT startup_ch32h417_v5f.S.
-///
-pub const cpu_frequency = 400_000_000; // 400 MHz
+pub const cpu_frequency = 400_000_000;
 
 pub const Interrupt = enum(u8) {
     NMI = 2,
@@ -132,8 +130,7 @@ pub const Interrupt = enum(u8) {
     USART_WKUP = 148,
 };
 
-/// System initialization: no-op for now (both cores boot from the 25 MHz HSI).
-// TODO: port the PLL/clock bring-up from the EVT startup code.
+// The system is initialized by V3F, so there's nothing we need to do.
 pub inline fn system_init(comptime chip: anytype) void {
     _ = chip;
 }
@@ -159,8 +156,6 @@ pub inline fn wfe(comptime chip: anytype) void {
 pub const csr_types = struct {
     pub const intsyscr = packed struct(u32) {
         /// [0] Hardware Prologue/Epilogue (HPE) enable
-        /// NOTE: Probably not supported by the Zig compiler. Would require
-        /// __attribute__((interrupt("WCH-Interrupt-fast"))).
         hwstken: u1,
         /// [1] Interrupt nesting enable
         inesten: u1,

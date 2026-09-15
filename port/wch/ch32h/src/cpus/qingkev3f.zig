@@ -1,8 +1,6 @@
-///
 /// Processor-specific configuration for WCH QingKe V3F processor (CH32H417 CORE0).
 /// Interrupt vector table extracted from openwch/ch32h417 EVT startup_ch32h417_v3f.S.
-///
-pub const cpu_frequency = 150_000_000; // 150 MHz
+pub const cpu_frequency = 150_000_000;
 
 pub const Interrupt = enum(u8) {
     NMI = 2,
