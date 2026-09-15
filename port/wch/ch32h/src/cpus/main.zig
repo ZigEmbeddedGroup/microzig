@@ -41,6 +41,13 @@ pub const InterruptOptions = microzig.utilities.GenerateInterruptOptions(&.{
 const VectorTable = [vector_table_size()]InterruptHandler;
 
 pub const interrupt = struct {
+    /// Core identifier used by the dual-core interrupt allocator.
+    /// Values match WCH's `Core_ID_V3F` / `Core_ID_V5F`.
+    pub const Core = enum(u8) {
+        v3f = 0,
+        v5f = 1,
+    };
+
     pub inline fn globally_enabled() bool {
         return csr.mstatus.read().mie == 1;
     }
@@ -51,8 +58,8 @@ pub const interrupt = struct {
 
     pub inline fn disable_interrupts() void {
         csr.mstatus.clear(.{ .mie = 1 });
-        // The WCH EVT `__disable_irq` additionally executes `fence.i` after
-        // clearing MIE. Uncomment if a pipeline flush turns out to be required here.
+        // TODO: The WCH EVT `__disable_irq` additionally executes `fence.i` after
+        // clearing MIE. Should check if it's required here.
         // asm volatile ("fence.i");
     }
 
@@ -162,7 +169,7 @@ pub const interrupt = struct {
         }
     }
 
-    pub inline fn is_active(irq: Interrupt) void {
+    pub inline fn is_active(irq: Interrupt) bool {
         const irq_num = @backingInt(irq);
         const num = irq_num >> 5;
         const pos = irq_num & 0x1F;
@@ -178,30 +185,43 @@ pub const interrupt = struct {
     }
 
     /// Interrupt priority configuration.
-    /// priority:
-    ///   bit7 - pre-emption priority
-    ///   bit6~bit4 - subpriority
-    ///   bit3~bit0 - reserved (must be 0)
+    /// V3F:
+    ///     [3] - pre-emption priority
+    ///   [2:0] - subpriority
+    /// V5F:
+    ///   [3:1] - pre-emption priority
+    ///     [0] - subpriority
     ///
-    /// NOTE: this layout corresponds to INTSYSCR.pmtcfg = 0b01 (2 nesting levels,
-    /// currently configured on V3F). On V5F pmtcfg = 0b11, so pre-emption is
-    /// bits 7:5 and subpriority is bit 4.
-    ///
-    /// TODO: the SVD currently describes only IPRIOR0..63 and with the wrong width
-    /// (32-bit registers at a 4-byte stride instead of the 8-bit array at a 1-byte
-    /// stride documented by the official core header), so priorities for IRQ 64..159
-    /// are not available yet. Fix the SVD before using priorities on those IRQs.
-    pub inline fn set_priority(comptime irq: Interrupt, priority: u8) void {
-        const irq_num = @backingInt(irq);
-        const irq_num_str = std.fmt.comptimePrint("{}", .{irq_num});
-        @field(PFIC, "IPRIOR" ++ irq_num_str) = @backingInt(priority) & 0b1111_0000;
+    /// TODO: maybe make it a packed struct?
+    pub inline fn set_priority(irq: Interrupt, priority: u4) void {
+        PFIC.IPRIOR[@backingInt(irq)] = @as(u8, priority) << 4;
     }
 
-    /// See `set_priority` for the limitations imposed by the current SVD.
-    pub inline fn get_priority(comptime irq: Interrupt) u8 {
+    pub inline fn get_priority(irq: Interrupt) u4 {
+        return @intCast(PFIC.IPRIOR[@backingInt(irq)] >> 4);
+    }
+
+    /// Allocate an interrupt to a core. Note that only IRQs > 31 can be
+    /// allocated, lower IRQs have a fixed core.
+    pub inline fn set_allocation(irq: Interrupt, core: Core) void {
+        if (@backingInt(irq) > 31)
+            PFIC.IALLOCR[@backingInt(irq)] = @backingInt(core);
+    }
+
+    /// Get the core an interrupt is allocated to.
+    pub inline fn get_allocation(irq: Interrupt) Core {
+        return @fromBackingInt(@intCast(PFIC.IALLOCR[@backingInt(irq)] & 1));
+    }
+
+    /// Whether the given interrupt is allocated to the currently running core.
+    pub inline fn owned_by_current_core(irq: Interrupt) bool {
         const irq_num = @backingInt(irq);
-        const irq_num_str = std.fmt.comptimePrint("{}", .{irq_num});
-        return @field(PFIC, "IPRIOR" ++ irq_num_str);
+        return (PFIC.IAUTR[irq_num >> 5] & (@as(u32, 1) << @truncate(irq_num))) != 0;
+    }
+
+    /// The core the current code is running on.
+    pub inline fn current_core() Core {
+        return @fromBackingInt(@intCast(PFIC.SCTLR.read().HART_ID & 1));
     }
 
     inline fn get_bit(self: anytype, pos: u5) u1 {
