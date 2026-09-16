@@ -94,7 +94,7 @@ pub const Options = struct {
     /// be included in the executable.
     simple_panic_if_main_errors: bool = false,
 
-    panic_stack_trace: bool = builtin.optimize.runtimeSafety(),
+    panic_stack_trace: bool = builtin.optimize == .debug,
 };
 
 pub const options: Options = if (@hasDecl(root, "microzig_options")) root.microzig_options else .{};
