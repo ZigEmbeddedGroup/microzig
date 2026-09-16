@@ -456,6 +456,10 @@ pub const MemoryProtectionUnit = extern struct {
 
 pub const DebugControlBlock = extern struct {
     /// Debug Halting Control and Status Register
+    ///
+    /// Careful when using .modify() on this register, you should always write
+    /// the DBGKEY to the upper half of the register, otherwise the write will
+    /// be ignored.
     DHCSR: mmio.Mmio(packed struct(u32) {
         /// Debug enable.
         C_DEBUGEN: u1,
@@ -468,7 +472,9 @@ pub const DebugControlBlock = extern struct {
         reserved0: u1 = 0,
         /// Snap stall control.
         C_SNAPSTALL: u1,
-        reserved1: u10 = 0,
+        /// Halt on PMU overflow control.
+        C_PMOV: u1,
+        reserved1: u9 = 0,
 
         /// Upper 16 bits: write DBGKEY or read status flags
         upper: packed union(u16) {
@@ -486,20 +492,27 @@ pub const DebugControlBlock = extern struct {
                 S_LOCKUP: u1,
                 /// Secure Debug Enabled status.
                 S_SDE: u1,
-                reserved2: u3 = 0,
-                /// Core retired status.
+                /// Non-secure Unprivileged Halting Debug Enabled status.
+                S_NSUIDE: u1,
+                /// Secure Unprivileged Halting Debug Enabled status.
+                S_SUIDE: u1,
+                /// Floating-point registers Debuggable status.
+                S_FPD: u1,
+                /// Retire sticky status.
                 S_RETIRE_ST: u1,
-                /// Core reset status.
+                /// Reset sticky status.
                 S_RESET_ST: u1,
-                reserved3: u6 = 0,
+                /// Restart sticky status.
+                S_RESTART_ST: u1,
+                reserved2: u5 = 0,
             },
-        } = .{ .DBGKEY = 0xA05F },
+        },
     }),
     /// Debug Core Register Selector Register
     DCRSR: mmio.Mmio(packed struct(u32) {
         /// Register selector.
-        REGSEL: u7,
-        reserved0: u9 = 0,
+        REGSEL: u8,
+        reserved0: u8 = 0,
         /// Write / not Read access to the selected core register.
         /// 0 = Read
         /// 1 = Write
@@ -527,7 +540,7 @@ pub const DebugControlBlock = extern struct {
         VC_INTERR: u1,
         /// Vector catch on Hard Fault.
         VC_HARDERR: u1,
-        /// Vector catch on Secure Fault (ARMv8-M specific).
+        /// Vector catch on Secure Fault.
         VC_SFERR: u1,
         reserved1: u4 = 0,
         /// Debug Monitor Enable.
@@ -538,36 +551,47 @@ pub const DebugControlBlock = extern struct {
         MON_STEP: u1,
         /// Debug Monitor request.
         MON_REQ: u1,
-        /// Secure Debug Monitor Enable (ARMv8-M specific).
+        /// Secure Debug Monitor Enable.
         SDME: u1,
-        reserved2: u3 = 0,
+        /// Unprivileged Debug Monitor Enable.
+        UMON_EN: u1,
+        reserved2: u1 = 0,
+        /// Monitor pend request key.
+        MONPRKEY: u1,
         /// Trace enable. Enables DWT and ITM features.
         TRCENA: u1,
         reserved3: u7 = 0,
     }),
-    /// Debug Authentication Control Register (ARMv8-M specific)
-    DAUTHCTRL: mmio.Mmio(packed struct(u32) {
-        /// Non-secure invasive debug enable.
-        SPIDEN: u1,
-        /// Non-secure non-invasive debug enable.
-        SPNIDEN: u1,
-        /// Secure invasive debug enable.
-        SIDEN: u1,
-        /// Secure non-invasive debug enable.
-        SNIDEN: u1,
-        reserved0: u28 = 0,
+    /// Debug Set Clear Exception and Monitor Control Register
+    DSCMECR: mmio.Mmio(packed struct(u32) {
+        reserved0: u1 = 0,
+        /// Set monitor pend.
+        SET_MON_PEND: u1,
+        reserved1: u1 = 0,
+        /// Set monitor request.
+        SET_MON_REQ: u1,
+        reserved2: u13 = 0,
+        /// Clear monitor pend.
+        CLR_MON_PEND: u1,
+        reserved3: u1 = 0,
+        /// Clear monitor request.
+        CLR_MON_REQ: u1,
+        reserved4: u12 = 0,
     }),
-    /// Debug Security Control and Status Register (ARMv8-M specific)
+    /// Debug Authentication Control Register
+    DAUTHCTRL: u32,
+    /// Debug Security Control and Status Register
     DSCSR: mmio.Mmio(packed struct(u32) {
-        /// Secure Debug Enabled status (Read-Only).
-        SBRSEL: u1,
-        /// Secure Debug Enable status.
+        /// Secure banked register select enable.
         SBRSELEN: u1,
+        /// Secure banked register select.
+        SBRSEL: u1,
         reserved0: u14 = 0,
-        /// Secure Banked Register Select (Read-Only).
+        /// Current domain Secure.
         CDS: u1,
-        /// Secure Banked Register Select Enable.
-        CDSKEY: u15, // Must be written with 0x2A1C to modify SBRSELEN
+        /// CDS write-enable key.
+        CDSKEY: u1,
+        reserved1: u14 = 0,
     }),
 };
 
@@ -601,16 +625,17 @@ pub const DataWatchpointAndTrace = extern struct {
         FOLDEVTENA: u1,
         /// Enables Cycle count event trace.
         CYCEVTENA: u1,
-        reserved1: u1 = 0,
-        /// Profiling not supported (Read Only).
-        NOPROF: u1,
-        /// Cycle counter not supported (Read Only).
+        /// Cycle counter disable secure.
+        CYCDISS: u1 = 0,
+        /// Profiling counter not supported.
+        NOPRFCNT: u1,
+        /// Cycle counter not supported.
         NOCYCCNT: u1,
-        /// External triggers not supported (Read Only).
+        /// External triggers not supported.
         NOEXTTRIG: u1,
-        /// Trace packet generation not supported (Read Only).
+        /// Trace packet generation not supported.
         NOTRCPKT: u1,
-        /// Number of comparators implemented (Read Only).
+        /// Number of comparators implemented.
         NUMCOMP: u4,
     }),
     /// Cycle Count Register
@@ -628,18 +653,13 @@ pub const DataWatchpointAndTrace = extern struct {
     /// Program Counter Sample Register
     PCSR: u32,
 
-    /// DWT Comparators (Typically 4 on Cortex-M devices, dynamically specified by NUMCOMP)
-    COMPARATORS: [4]Comparator,
+    /// DWT Comparators
+    COMPARATORS: [15]Comparator,
 
     pub const Comparator = extern struct {
         /// Comparator Value Register
         COMP: u32,
-        /// Comparator Mask Register
-        MASK: mmio.Mmio(packed struct(u32) {
-            /// Mask value. Size of the mask applied to the comparator.
-            MASK: u5,
-            reserved0: u27 = 0,
-        }),
+        reserved: u32 = 0,
         /// Comparator Function Register
         FUNCTION: mmio.Mmio(packed struct(u32) {
             /// Comparator function (e.g., PC value, data address, data value).
@@ -659,6 +679,6 @@ pub const DataWatchpointAndTrace = extern struct {
             MATCHED: u1,
             reserved3: u7 = 0,
         }),
-        reserved: u32 = 0,
+        VMASK: u32,
     };
 };
