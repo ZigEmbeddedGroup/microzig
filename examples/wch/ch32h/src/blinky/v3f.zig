@@ -47,23 +47,10 @@ pub fn main() !void {
         .pull = .disabled,
     });
 
-    // `interrupt.enable` verifies at compile time that a handler for this
-    // interrupt was registered in `microzig_options.interrupts` above.
     cpu.interrupt.enable(.SW);
-
-    // TODO: move this into a dedicated example.
-    cpu.interrupt.set_priority(.SW, 0b1000);
-    if (cpu.interrupt.get_priority(.SW) != 0b1000)
-        @panic("SW interrupt priority readback failed");
 
     if (cpu.interrupt.current_core() != .v3f)
         @panic("unexpected current core");
-
-    cpu.interrupt.set_allocation(.UHSIF, .v5f);
-    if (cpu.interrupt.get_allocation(.UHSIF) != .v5f)
-        @panic("UHSIF interrupt allocation readback failed");
-    if (cpu.interrupt.owned_by_current_core(.UHSIF))
-        @panic("UHSIF interrupt should not be owned by V3F");
 
     // Wakeup V5F
     PFIC.WAKEIP1.raw = 0x10000 & ~@as(u32, 0x3FF);
@@ -71,6 +58,6 @@ pub fn main() !void {
 
     while (true) {
         cpu.interrupt.set_pending(.SW);
-        delay(50_000); // 500ms at 100MHz
+        delay(20_000_000);
     }
 }

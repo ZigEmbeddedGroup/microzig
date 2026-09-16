@@ -34,8 +34,8 @@ pub fn main() !void {
 
     while (true) {
         pc3.write(1);
-        delay(200_000);
+        delay(120_000_000);
         pc3.write(0);
-        delay(200_000);
+        delay(120_000_000);
     }
 }

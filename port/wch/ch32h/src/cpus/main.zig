@@ -254,7 +254,7 @@ pub fn unhandled() callconv(riscv_calling_convention) void {
 pub const startup_logic = struct {
     extern fn microzig_main() noreturn;
 
-    pub fn _start() callconv(.naked) void {
+    export fn microzig_start() callconv(.naked) void {
         asm volatile (
             \\
             // Set global pointer.
@@ -306,11 +306,25 @@ pub const startup_logic = struct {
                 // pmtcfg = 0b11: 5-8 nesting levels
                 // (bits 7:5 pre-emption priority, bit 4 sub priority).
                 csr.intsyscr.write(.{ .hwstken = 0, .inesten = 1, .pmtcfg = 0b11 });
+
+                // Enable the instruction cache for flash-resident `.cache` code.
+                // Sequence taken from WCH's EXAM/CPU/ICache startup.
+                const cache_beg = @intFromPtr(@extern(*const u8, .{ .name = "_cache_beg" }));
+                const cache_end = @intFromPtr(@extern(*const u8, .{ .name = "_cache_end" }));
+                csr.pmpaddr0.write_raw(@intCast(cache_beg >> 2));
+                csr.pmpaddr1.write_raw(@intCast(cache_end >> 2));
+                // PMP entry 1: TOR, R+X, locked.
+                csr.pmpcfg0.write_raw(0xAD00);
+                // Select PMP channel 1 for the cache.
+                csr.cpmpocr.write_raw(0x10);
+                // Flush then enable the instruction cache.
+                csr.cmcr.write_raw(0x4);
+                csr.cstrcr.clear_raw(0x03000002);
             },
         }
 
         // Set mtvec.base to (vector_table_address - 4) >> 2 so that interrupt N
-        // jumps to the correct handler regardless of any padding between _reset_vector
+        // jumps to the correct handler regardless of any padding between _start
         // and vector_table.
         const vtable_addr = @intFromPtr(&vector_table);
         csr.mtvec.write(.{
@@ -384,14 +398,34 @@ pub const startup_logic = struct {
             ::: .{ .x10 = true, .x11 = true, .x12 = true, .x13 = true });
     }
 
-    export fn _reset_vector() linksection("microzig_flash_start") callconv(.naked) void {
-        asm volatile ("j _start");
+    // Runs from flash before `.text` is available in RAM: copies the `.text`
+    // output section (VMA in RAM, LMA in flash) and jumps to `microzig_start`.
+    export fn _load_text() linksection(".init") callconv(.naked) void {
+        asm volatile (
+            \\    la a0, microzig_text_load_start
+            \\    la a1, microzig_text_start
+            \\    la a2, microzig_text_end
+            \\1:
+            \\    beq a1, a2, 2f
+            \\    lw a3, 0(a0)
+            \\    sw a3, 0(a1)
+            \\    addi a0, a0, 4
+            \\    addi a1, a1, 4
+            \\    j 1b
+            \\2:
+            \\    la t0, microzig_start
+            \\    jr t0
+        );
+    }
+
+    export fn _start() linksection("microzig_flash_start") callconv(.naked) void {
+        asm volatile ("j _load_text");
     }
 };
 
 // Vector table
 
-const vector_table_offset = 1; // First entry is reserved for the _reset_vector.
+const vector_table_offset = 1; // First entry is reserved for the _start.
 
 fn vector_table_size() usize {
     const type_info = @typeInfo(Interrupt);
@@ -455,7 +489,14 @@ fn get_hal_default_handler(comptime handler_name: []const u8) ?InterruptHandler 
 const vector_table: VectorTable = generate_vector_table();
 
 pub fn export_startup_logic() void {
-    @export(&startup_logic._start, .{ .name = "_start" });
+    // These entry points are only referenced by inline assembly and the
+    // hardware, so Zig cannot see them: referencing them here forces their
+    // analysis and emission.
+    //
+    // TODO: better solutions?
+    _ = &startup_logic._start;
+    _ = &startup_logic.microzig_start;
+
     @export(&vector_table, .{
         .name = "vector_table",
         .section = "microzig_flash_start",
