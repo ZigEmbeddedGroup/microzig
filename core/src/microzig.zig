@@ -3,6 +3,7 @@
 //!
 //! But microzig employs a proxy tactic
 
+const builtin = @import("builtin");
 const std = @import("std");
 const root = @import("root");
 
@@ -49,10 +50,17 @@ pub fn assert(expr: bool, opts: AssertOptions) void {
 pub const panic = std.debug.FullPanic(struct {
     pub fn panic_fn(message: []const u8, first_trace_address: ?usize) noreturn {
         std.log.err("panic: {s}", .{message});
-        _ = first_trace_address;
 
-        // TODO: we no longer have StackIterator available to us, so we need to
-        // create our own.
+        var trace_index: usize = 0;
+        if (@errorReturnTrace()) |trace| trace_index = utilities.dump_error_trace(trace);
+
+        // Skip if we can't use fp based stack tracing.
+        if (options.panic_stack_trace) {
+            var it: utilities.StackIterator = .init(first_trace_address orelse @returnAddress(), null);
+            while (it.next()) |address| : (trace_index += 1) {
+                utilities.dump_trace_line(trace_index, address);
+            }
+        }
 
         // Attach a breakpoint. this might trigger another panic internally, so
         // only do that if requested.
@@ -85,6 +93,8 @@ pub const Options = struct {
     /// reduce code size as the string literals for error names no longer have to
     /// be included in the executable.
     simple_panic_if_main_errors: bool = false,
+
+    panic_stack_trace: bool = builtin.optimize.runtimeSafety(),
 };
 
 pub const options: Options = if (@hasDecl(root, "microzig_options")) root.microzig_options else .{};
