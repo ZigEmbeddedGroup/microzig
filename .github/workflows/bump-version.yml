@@ -1,9 +1,9 @@
 name: Bump Version and Tag
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+  schedule:
+    - cron: "0 12 * * *"
 
 jobs:
   bump-version:
@@ -27,12 +27,29 @@ jobs:
           fetch-depth: 0
           token: ${{ steps.app-token.outputs.token }}
 
+      - name: Check for new commits since last tag
+        id: changes
+        run: |
+          set -euo pipefail
+          LAST_TAG=$(git tag --sort=-creatordate | head -n1)
+          if [ -z "$LAST_TAG" ]; then
+            echo "No tags yet, treating as changed."
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          elif [ "$(git rev-list "${LAST_TAG}..HEAD" --count)" -gt 0 ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No commits since $LAST_TAG, skipping."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Configure Git identity
+        if: steps.changes.outputs.changed == 'true'
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Resolve current version
+        if: steps.changes.outputs.changed == 'true'
         id: current
         run: |
           set -euo pipefail
@@ -40,6 +57,7 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Compute next patch version
+        if: steps.changes.outputs.changed == 'true'
         id: next
         run: |
           IFS='.' read -r MAJOR MINOR PATCH <<< "${{ steps.current.outputs.version }}"
@@ -48,6 +66,7 @@ jobs:
           echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Bump version in files
+        if: steps.changes.outputs.changed == 'true'
         env:
           OLD: ${{ steps.current.outputs.version }}
           NEW: ${{ steps.next.outputs.version }}
@@ -59,15 +78,18 @@ jobs:
           echo "Bumped $OLD -> $NEW"
 
       - name: Commit version bump
+        if: steps.changes.outputs.changed == 'true'
         run: |
           git add -A
           git commit -m "Release MicroZig ${{ steps.next.outputs.version }}"
 
       - name: Configure Git remote with app token
+        if: steps.changes.outputs.changed == 'true'
         run: |
           git remote set-url origin "https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/ZigEmbeddedGroup/microzig.git"
 
       - name: Create and push version tag
+        if: steps.changes.outputs.changed == 'true'
         run: |
           git tag "${{ steps.next.outputs.version }}"
           git push origin HEAD:main "${{ steps.next.outputs.version }}"
