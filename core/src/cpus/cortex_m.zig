@@ -218,24 +218,22 @@ pub const interrupt = struct {
     const priority_shift = 8 - priority_bits;
     const PriorityBackingInt = @Int(.unsigned, priority_bits);
 
-    /// The priority of an interrupt.
-    /// Note: Some platforms may only use the most significant bits of the priority register.
+    /// The priority of an interrupt. Lower means higher priority (zero is the
+    /// highest priority).
     pub const Priority = enum(PriorityBackingInt) {
-        lowest = (1 << priority_bits) - 1,
         highest = 0,
+        lowest = std.math.maxInt(PriorityBackingInt),
         _,
     };
 
-    pub fn set_priority(comptime int: Interrupt, comptime priority: Priority) void {
+    pub fn set_priority(comptime int: Interrupt, priority: Priority) void {
         assert_not_exception(int);
-
         nvic.IPR[@backingInt(int)] = @as(u8, @backingInt(priority)) << priority_shift;
     }
 
     pub fn get_priority(comptime int: Interrupt) Priority {
         assert_not_exception(int);
-
-        return @fromBackingInt(peripherals.nvic.IPR[@backingInt(int)] >> priority_shift);
+        return @fromBackingInt(@truncate(peripherals.nvic.IPR[@backingInt(int)] >> priority_shift));
     }
 };
 
