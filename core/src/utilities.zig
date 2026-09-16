@@ -1,3 +1,4 @@
+const builtin = @import("builtin");
 const std = @import("std");
 const assert = std.debug.assert;
 
@@ -280,7 +281,7 @@ pub fn GenerateInterruptOptions(sources: []const Source) type {
 
     var field_names: [count][]const u8 = undefined;
     var field_types: [count]type = undefined;
-    var field_attrs: [count]std.builtin.Type.Struct.FieldAttributes = undefined;
+    var field_attrs: [count]std.lang.Type.Struct.FieldAttributes = undefined;
 
     var i: usize = 0;
     for (sources) |source| {
@@ -472,7 +473,7 @@ test "SliceVector.Iterator.next_chunk" {
     }
 }
 
-pub fn dump_stack_trace(trace: *std.builtin.StackTrace) usize {
+pub fn dump_stack_trace(trace: *std.lang.StackTrace) usize {
     const frame_count = @min(trace.index, trace.instruction_addresses.len);
 
     var frame_index: usize = 0;
@@ -704,3 +705,119 @@ pub fn IntFracDiv(int_bits: comptime_int, frac_bits: comptime_int) type {
         }
     };
 }
+
+pub fn dump_error_trace(trace: *std.lang.StackTrace) usize {
+    const frame_count = @min(trace.index, trace.instruction_addresses.len);
+
+    var frame_index: usize = 0;
+    var frames_left: usize = frame_count;
+    while (frames_left != 0) : ({
+        frames_left -= 1;
+        frame_index = (frame_index + 1) % trace.instruction_addresses.len;
+    }) {
+        const address = trace.instruction_addresses[frame_index];
+        dump_trace_line(frame_index, address);
+    }
+
+    return frame_count;
+}
+
+pub fn dump_trace_line(index: usize, address: usize) void {
+    std.log.err("{d: >3}: 0x{X:0>8}", .{ index, address });
+}
+
+pub const StackIterator = struct {
+    const native_arch = builtin.cpu.arch;
+
+    // Last known value of the frame pointer register.
+    fp: usize,
+    first_address: ?usize,
+
+    pub fn init(first_address: ?usize, fp: ?usize) StackIterator {
+        if (native_arch.isSPARC()) {
+            // Flush all the register windows on stack.
+            asm volatile (if (builtin.cpu.has(.sparc, .v9))
+                    "flushw"
+                else
+                    "ta 3" // ST_FLUSH_WINDOWS
+                ::: .{ .memory = true });
+        }
+
+        return .{
+            .first_address = first_address,
+            // TODO: this is a workaround for #16876
+            //.fp = fp orelse @frameAddress(),
+            .fp = fp orelse blk: {
+                const fa = @frameAddress();
+                break :blk fa;
+            },
+        };
+    }
+
+    // Offset of the saved BP wrt the frame pointer.
+    const fp_offset = if (native_arch.isRISCV())
+        // On RISC-V the frame pointer points to the top of the saved register
+        // area, on pretty much every other architecture it points to the stack
+        // slot where the previous frame pointer is saved.
+        2 * @sizeOf(usize)
+    else if (native_arch.isSPARC())
+        // On SPARC the previous frame pointer is stored at 14 slots past %fp+BIAS.
+        14 * @sizeOf(usize)
+    else
+        0;
+
+    const fp_bias = if (native_arch.isSPARC())
+        // On SPARC frame pointers are biased by a constant.
+        2047
+    else
+        0;
+
+    // Positive offset of the saved PC wrt the frame pointer.
+    const pc_offset = if (native_arch == .powerpc64le)
+        2 * @sizeOf(usize)
+    else
+        @sizeOf(usize);
+
+    pub fn next(it: *StackIterator) ?usize {
+        var address = it.next_internal() orelse return null;
+
+        if (it.first_address) |first_address| {
+            while (address != first_address) {
+                address = it.next_internal() orelse return null;
+            }
+            it.first_address = null;
+        }
+
+        return address;
+    }
+
+    pub fn next_internal(it: *StackIterator) ?usize {
+        if (builtin.omit_frame_pointer) return null;
+
+        const fp = if (comptime native_arch.isSPARC())
+            // On SPARC the offset is positive. (!)
+            std.math.add(usize, it.fp, fp_offset) catch return null
+        else
+            std.math.sub(usize, it.fp, fp_offset) catch return null;
+
+        // Sanity check.
+        if (fp == 0 or !std.mem.isAligned(fp, @alignOf(usize))) return null;
+        const new_fp = std.math.add(usize, load(usize, fp), fp_bias) catch
+            return null;
+
+        // Sanity check: the stack grows down thus all the parent frames must be
+        // be at addresses that are greater (or equal) than the previous one.
+        // A zero frame pointer often signals this is the last frame, that case
+        // is gracefully handled by the next call to next_internal.
+        if (new_fp != 0 and new_fp < it.fp) return null;
+        const new_pc = load(usize, std.math.add(usize, fp, pc_offset) catch return null);
+
+        it.fp = new_fp;
+
+        return new_pc;
+    }
+
+    fn load(T: type, address: usize) T {
+        return @as(*const T, @ptrFromInt(address)).*;
+    }
+};
