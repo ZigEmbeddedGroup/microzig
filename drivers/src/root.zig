@@ -13,6 +13,8 @@ pub fn assert(ok: bool) void {
     if (!ok) @panic("Assertion failed");
 }
 
+pub const storage = @import("storage.zig");
+
 pub const display = struct {
     pub const sh1106 = @import("display/sh1106.zig");
     pub const ssd1306 = @import("display/ssd1306.zig");
