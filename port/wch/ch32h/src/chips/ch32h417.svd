@@ -62191,7 +62191,6 @@ When the I3C is acting as slave</description>
               <bitOffset>2</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            <enumeratedValues><name>NO_RTC_0</name><usage>read-write</usage><enumeratedValue><name>HCLK_DIV8</name><description>HCLK/8</description><value>0</value></enumeratedValue><enumeratedValue><name>HCLK</name><description>HCLK</description><value>1</value></enumeratedValue></enumeratedValues>
             </field>		
             <field>
               <name>AUTO_RELOAD_0</name>
@@ -62206,7 +62205,6 @@ When the I3C is acting as slave</description>
               <bitOffset>4</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            <enumeratedValues><name>DOWN_MODE_0</name><usage>read-write</usage><enumeratedValue><name>Upcount</name><description>Upcount</description><value>0</value></enumeratedValue><enumeratedValue><name>Downcount</name><description>Downcount</description><value>1</value></enumeratedValue></enumeratedValues>
             </field>		
             <field>
               <name>CID_0</name>
@@ -62305,7 +62303,6 @@ When the I3C is acting as slave</description>
               <bitOffset>2</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            <enumeratedValues><name>NO_RTC_1</name><usage>read-write</usage><enumeratedValue><name>HCLK_DIV8</name><description>HCLK/8</description><value>0</value></enumeratedValue><enumeratedValue><name>HCLK</name><description>HCLK</description><value>1</value></enumeratedValue></enumeratedValues>
             </field>		
             <field>
               <name>AUTO_RELOAD_1</name>
@@ -62320,7 +62317,6 @@ When the I3C is acting as slave</description>
               <bitOffset>4</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            <enumeratedValues><name>DOWN_MODE_1</name><usage>read-write</usage><enumeratedValue><name>Upcount</name><description>Upcount</description><value>0</value></enumeratedValue><enumeratedValue><name>Downcount</name><description>Downcount</description><value>1</value></enumeratedValue></enumeratedValues>
             </field>		
             <field>
               <name>CID_1</name>

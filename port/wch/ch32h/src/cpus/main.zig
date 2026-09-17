@@ -40,14 +40,27 @@ pub const InterruptOptions = microzig.utilities.GenerateInterruptOptions(&.{
 });
 const VectorTable = [vector_table_size()]InterruptHandler;
 
-pub const interrupt = struct {
-    /// Core identifier used by the dual-core interrupt allocator.
-    /// Values match WCH's `Core_ID_V3F` / `Core_ID_V5F`.
-    pub const Core = enum(u8) {
-        v3f = 0,
-        v5f = 1,
-    };
+pub const Core = enum(u1) {
+    v3f = 0,
+    v5f = 1,
+};
 
+/// The core the current code is running on.
+pub inline fn current_core() Core {
+    return @fromBackingInt(@intCast(PFIC.SCTLR.read().HART_ID & 1));
+}
+
+pub inline fn wakeup_v5f() void {
+    PFIC.WAKEIP1.modify(.{
+        // The hardware seems to treat the entire 32 bits as the offset,
+        // so we have to manually right shift 1 bit.
+        .IP_RELOAD1 = 0x10000 >> 1,
+        .SHUTDOWN1 = 0,
+    });
+    PFIC.SCTLR.modify(.{ .SETEVENT = 1 }); // ??? RM says it's SENDEVENT
+}
+
+pub const interrupt = struct {
     pub inline fn globally_enabled() bool {
         return csr.mstatus.read().mie == 1;
     }
@@ -217,11 +230,6 @@ pub const interrupt = struct {
     pub inline fn owned_by_current_core(irq: Interrupt) bool {
         const irq_num = @backingInt(irq);
         return (PFIC.IAUTR[irq_num >> 5] & (@as(u32, 1) << @truncate(irq_num))) != 0;
-    }
-
-    /// The core the current code is running on.
-    pub inline fn current_core() Core {
-        return @fromBackingInt(@intCast(PFIC.SCTLR.read().HART_ID & 1));
     }
 
     inline fn get_bit(self: anytype, pos: u5) u1 {

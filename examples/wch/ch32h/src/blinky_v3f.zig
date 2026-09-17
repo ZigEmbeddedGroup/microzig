@@ -8,6 +8,7 @@ comptime {
     _ = microzig.export_startup();
 }
 
+const cpu = microzig.cpu;
 const clock = microzig.hal.clock;
 const gpio = microzig.hal.gpio;
 
@@ -30,9 +31,7 @@ pub fn main() !void {
         .pull = .disabled,
     });
 
-    // Wakeup V5F
-    PFIC.WAKEIP1.raw = 0x10000 & ~@as(u32, 0x3FF);
-    PFIC.SCTLR.raw |= (1 << 5);
+    cpu.wakeup_v5f();
 
     while (true) {
         pc2.toggle();

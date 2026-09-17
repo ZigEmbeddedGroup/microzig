@@ -29,6 +29,7 @@ fn add_example(b: *std.Build, mb: anytype, comptime name: []const u8, optimize: 
 const examples = [_][]const u8{
     "blinky",
     "interrupts",
+    "systick",
 };
 
 pub fn build(b: *std.Build) void {

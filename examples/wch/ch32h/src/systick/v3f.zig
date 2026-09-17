@@ -11,46 +11,47 @@ comptime {
 const cpu = microzig.cpu;
 const clock = microzig.hal.clock;
 const gpio = microzig.hal.gpio;
+const time = microzig.hal.time;
 
 const PFIC = microzig.chip.peripherals.PFIC;
 
 pub const microzig_options: microzig.Options = .{
-    .interrupts = .{ .SW = sw_handler },
+    .interrupts = .{
+        .SysTick1 = systick_handler,
+    },
 };
 
-const pc2: gpio.Pin = .{ .port = .c, .number = 2 };
+var pc2: gpio.Pin = undefined;
+const stk = time.systick1;
 
-fn sw_handler() callconv(cpu.riscv_calling_convention) void {
-    cpu.interrupt.clear_pending(.SW);
-
+fn systick_handler() callconv(cpu.riscv_calling_convention) void {
+    stk.clear_pending();
     pc2.toggle();
-}
-
-fn delay(cycles: u32) void {
-    for (0..cycles) |_| {
-        asm volatile ("nop");
-    }
 }
 
 pub fn main() !void {
     clock.init();
     clock.enable_gpio(.c);
 
-    pc2.apply(.{
+    pc2 = gpio.Pin.init(.{
+        .port = .c,
+        .number = 2,
         .mode = .{ .output = .general_purpose_open_drain },
         .speed = .max_50MHz,
         .pull = .disabled,
     });
 
-    cpu.interrupt.enable(.SW);
-
-    if (cpu.current_core() != .v3f)
-        @panic("unexpected current core");
+    stk.apply(.{
+        .core = .v3f,
+        .mode = .up,
+        .clock_source = .hclk,
+        .auto_reload = true,
+        .compare_value = 100_000_000,
+    });
+    stk.enable_interrupt();
+    stk.enable();
 
     cpu.wakeup_v5f();
 
-    while (true) {
-        cpu.interrupt.set_pending(.SW);
-        delay(20_000_000);
-    }
+    while (true) {}
 }

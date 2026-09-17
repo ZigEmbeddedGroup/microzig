@@ -19,7 +19,7 @@ fn delay(cycles: u32) void {
 }
 
 pub fn main() !void {
-    if (cpu.interrupt.current_core() != .v5f)
+    if (cpu.current_core() != .v5f)
         @panic("unexpected current core");
 
     const pc3 = gpio.Pin{ .port = .c, .number = 2 };
