@@ -82,7 +82,7 @@ const cpu_common_features = std.Target.riscv.featureSet(&.{
 pub fn init(dep: *std.Build.Dependency) ?Self {
     const b = dep.builder;
 
-    // TODO: these two .ld files have a lot in common.
+    // TODO: Combine loader files. These two .ld files have a lot in common.
     const chip_v3f = create_core(dep, "qingkev3f", dep.path("src/cpus/qingkev3f.zig"), dep.path("src/chips/ch32h417_v3f.ld"), &.{
         .{ .name = "FLASH", .tag = .flash, .offset = 0x0000_0000, .length = v5f_image_offset, .access = .rx },
         .{ .name = "SRAM", .tag = .ram, .offset = 0x2010_0000, .length = 512 * KiB, .access = .rwx },

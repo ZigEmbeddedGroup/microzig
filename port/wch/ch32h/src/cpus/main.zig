@@ -87,15 +87,15 @@ pub const interrupt = struct {
             else
                 false;
             if (!app_has and !hal_has) {
-                @compileError(
-                    irq_name ++ " interrupt handler should be defined.\n" ++
-                        "Add to your main file:\n" ++
-                        "    pub const microzig_options: microzig.Options = .{\n" ++
-                        "        .interrupts = .{\n" ++
-                        "            ." ++ irq_name ++ " = your_handler_for_" ++ irq_name ++ ",\n" ++
-                        "        },\n" ++
-                        "    };\n",
-                );
+                @compileError(irq_name ++ std.fmt.comptimePrint(
+                    \\ interrupt handler should be defined.
+                    \\ Add to your main file:
+                    \\     pub const microzig_options: microzig.Options = .{{
+                    \\         .interrupts = .{{
+                    \\             .{s} = your_handler_for_{s},
+                    \\         }},
+                    \\     }};
+                , .{ irq_name, irq_name }));
             }
         }
 

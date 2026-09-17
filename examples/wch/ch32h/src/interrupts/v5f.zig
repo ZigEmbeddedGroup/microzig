@@ -8,10 +8,9 @@ comptime {
     _ = microzig.export_startup();
 }
 
-const clock = microzig.hal.clock;
+const cpu = microzig.cpu;
 const gpio = microzig.hal.gpio;
-
-const PFIC = microzig.chip.peripherals.PFIC;
+const clock = microzig.hal.clock;
 
 fn delay(cycles: u32) void {
     for (0..cycles) |_| {
@@ -20,23 +19,19 @@ fn delay(cycles: u32) void {
 }
 
 pub fn main() !void {
-    clock.init();
-    clock.enable_gpio(.c);
+    if (cpu.interrupt.current_core() != .v5f)
+        @panic("unexpected current core");
 
-    const pc2 = gpio.Pin.init(.{
+    const pc3 = gpio.Pin.init(.{
         .port = .c,
-        .number = 2,
+        .number = 3,
         .mode = .{ .output = .general_purpose_open_drain },
         .speed = .max_50MHz,
         .pull = .disabled,
     });
 
-    // Wakeup V5F
-    PFIC.WAKEIP1.raw = 0x10000 & ~@as(u32, 0x3FF);
-    PFIC.SCTLR.raw |= (1 << 5);
-
     while (true) {
-        pc2.toggle();
-        delay(20_000_000);
+        pc3.toggle();
+        delay(120_000_000);
     }
 }

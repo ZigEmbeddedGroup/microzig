@@ -66,42 +66,74 @@ pub const Pin = struct {
     };
 
     pub fn init(comptime cfg: Config) Pin {
-        const port = cfg.port.to_mem();
-        const number = cfg.number & 0b111;
-        const offset = number << 2;
-        // const speed = cfg.speed;
+        const pin: Pin = .{
+            .port = cfg.port,
+            .number = cfg.number,
+        };
 
-        // Configure mode.
-        const cfg_bits = switch (cfg.mode) {
+        pin.set_mode(cfg.mode);
+        pin.set_speed(cfg.speed);
+        pin.set_pull(cfg.pull);
+
+        return pin;
+    }
+
+    inline fn mask(pin: Pin) u16 {
+        return @as(u16, 1) << pin.number;
+    }
+
+    pub inline fn set_mode(pin: Pin, mode: Mode) void {
+        const port = pin.port.to_mem();
+
+        const offset = (pin.number & 0b111) * 4;
+        const cfg_bits = switch (mode) {
             .input => |input| (@as(u32, @backingInt(input)) << 2),
             .output => |output| (@as(u32, @backingInt(output)) << 2) | 1,
         };
 
-        if (cfg.number < 8) {
+        if (pin.number < 8) {
             port.CFGLR.raw &= ~(@as(u32, 0b1111) << offset);
             port.CFGLR.raw |= cfg_bits << offset;
         } else {
             port.CFGHR.raw &= ~(@as(u32, 0b1111) << offset);
             port.CFGHR.raw |= cfg_bits << offset;
         }
-
-        // TODO: Configure speed & pull (SPEED & OUTDR)
-        // port.SPEED.raw &= ~(@as(u32, 0b11) << (number * 2));
-        // port.SPEED.raw |= @as(u32, @backingInt(speed)) << (number * 2);
-
-        return .{
-            .port = cfg.port,
-            .number = cfg.number,
-        };
     }
 
-    pub inline fn write(pin: Pin, level: u1) void {
+    pub inline fn set_speed(pin: Pin, speed: Speed) void {
+        const port = pin.port.to_mem();
+
+        port.SPEED.raw &= ~(@as(u32, 0b11) << (pin.number * 2));
+        port.SPEED.raw |= @as(u32, @backingInt(speed)) << (pin.number * 2);
+    }
+
+    pub inline fn set_pull(pin: Pin, pull: Pull) void {
+        const port = pin.port.to_mem();
+
+        switch (pull) {
+            .up => port.OUTDR.raw |= pin.mask(),
+            .down => port.OUTDR.raw &= ~pin.mask(),
+            .disabled => {},
+        }
+    }
+
+    pub inline fn read(pin: Pin) u1 {
+        const port = pin.port.to_mem();
+        return if ((port.INDR.raw & pin.mask()) == 0) 0 else 1;
+    }
+
+    pub inline fn put(pin: Pin, level: u1) void {
         const port = pin.port.to_mem();
 
         if (level == 1) {
-            port.BSHR.raw = @as(u32, 1) << pin.number;
+            port.BSHR.raw = pin.mask();
         } else {
-            port.BCR.raw = @as(u32, 1) << pin.number;
+            port.BCR.raw = pin.mask();
         }
+    }
+
+    pub inline fn toggle(pin: Pin) void {
+        const port = pin.port.to_mem();
+        port.OUTDR.raw ^= pin.mask();
     }
 };

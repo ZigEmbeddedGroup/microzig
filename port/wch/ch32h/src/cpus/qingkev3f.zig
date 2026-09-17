@@ -136,7 +136,7 @@ pub inline fn system_init(comptime chip: anytype) void {
     RCC.CTLR.modify(.{ .HSION = 0 });
 
     // PIPEON effects SYSCLK path, so we cannot
-    // turn down that before switching to HSI.
+    // turn that down before switching to HSI.
     RCC.CFGR0.modify(.{
         .ADCSRC = 0,
         .ADC_DUTY_SEL = 0,

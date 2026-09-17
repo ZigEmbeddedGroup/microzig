@@ -8,7 +8,6 @@ comptime {
     _ = microzig.export_startup();
 }
 
-const cpu = microzig.cpu;
 const gpio = microzig.hal.gpio;
 const clock = microzig.hal.clock;
 
@@ -19,11 +18,6 @@ fn delay(cycles: u32) void {
 }
 
 pub fn main() !void {
-    clock.enable_gpio(.c);
-
-    if (cpu.interrupt.current_core() != .v5f)
-        @panic("unexpected current core");
-
     const pc3 = gpio.Pin.init(.{
         .port = .c,
         .number = 3,
@@ -33,9 +27,9 @@ pub fn main() !void {
     });
 
     while (true) {
-        pc3.write(1);
+        pc3.put(1);
         delay(120_000_000);
-        pc3.write(0);
+        pc3.put(0);
         delay(120_000_000);
     }
 }
