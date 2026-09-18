@@ -8,14 +8,14 @@ const MicroBuild = microzig.MicroBuild(.{
 fn add_example(b: *std.Build, mb: anytype, comptime name: []const u8, optimize: std.builtin.OptimizeMode) void {
     const v3f = mb.add_firmware(.{
         .name = "v3f",
-        .root_source_file = b.path("src/" ++ name ++ "/v3f.zig"),
+        .root_source_file = b.path("src/" ++ name ++ "_v3f.zig"),
         .optimize = optimize,
         .target = mb.ports.ch32h.chips.ch32h417_v3f,
     });
 
     const v5f = mb.add_firmware(.{
         .name = "v5f",
-        .root_source_file = b.path("src/" ++ name ++ "/v5f.zig"),
+        .root_source_file = b.path("src/" ++ name ++ "_v5f.zig"),
         .optimize = optimize,
         .target = mb.ports.ch32h.chips.ch32h417_v5f,
     });
