@@ -62164,50 +62164,50 @@ When the I3C is acting as slave</description>
       </addressBlock>
       <registers>
         <register>
-          <name>STK_CTLR_0</name>
-          <displayName>STK_CTLR_0</displayName>
+          <name>CTLR0</name>
+          <displayName>CTLR0</displayName>
           <description>System count control register 0</description>
           <addressOffset>0x00</addressOffset>
           <size>0x20</size>
           <resetValue>0x00000000</resetValue>
           <fields>
             <field>
-              <name>EN_0</name>
+              <name>EN</name>
               <description>System counter 0 enable control bit</description>
               <bitOffset>0</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
             </field>		
             <field>
-              <name>IE_0</name>
+              <name>IE</name>
               <description>Counter 0 interrupt enable control bit</description>
               <bitOffset>1</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
             </field>
             <field>
-              <name>NO_RTC_0</name>
+              <name>NO_RTC</name>
               <description>Counter Clock Source Selection Bit</description>
               <bitOffset>2</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
             </field>		
             <field>
-              <name>AUTO_RELOAD_0</name>
+              <name>AUTO_RELOAD</name>
               <description>Auto Reload Count Enable Bit</description>
               <bitOffset>3</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
             </field>		
             <field>
-              <name>DOWN_MODE_0</name>
+              <name>DOWN_MODE</name>
               <description>Counting Mode</description>
               <bitOffset>4</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
             </field>		
             <field>
-              <name>CID_0</name>
+              <name>CID</name>
               <description>Counter 0 allocates a kernel register</description>
               <bitOffset>6</bitOffset>
               <bitWidth>1</bitWidth>
@@ -62216,22 +62216,22 @@ When the I3C is acting as slave</description>
           </fields>
         </register>
         <register>
-          <name>STK_ISR</name>
-          <displayName>STK_ISR</displayName>
+          <name>ISR</name>
+          <displayName>ISR</displayName>
           <description>System counter interrupt status register</description>
           <addressOffset>0x04</addressOffset>
           <size>0x20</size>
           <resetValue>0x00000000</resetValue>
           <fields>
             <field>
-              <name>STK_ISR0</name>
+              <name>ISR0</name>
               <description>Systick0 Interrupt Flag</description>
               <bitOffset>0</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
             </field>		
             <field>
-              <name>STK_ISR1</name>
+              <name>ISR1</name>
               <description>Systick1 Interrupt Flag</description>
               <bitOffset>1</bitOffset>
               <bitWidth>1</bitWidth>
@@ -62240,15 +62240,15 @@ When the I3C is acting as slave</description>
           </fields>
         </register>
         <register>
-          <name>STK_CNT_0</name>
-          <displayName>STK_CNT_0</displayName>
+          <name>CNT0</name>
+          <displayName>CNT0</displayName>
           <description>System counter 0 count register</description>
           <addressOffset>0x08</addressOffset>
           <size>0x20</size>
           <resetValue>0x00000000</resetValue>
           <fields>		
             <field>
-              <name>CNT_0</name>
+              <name>CNT</name>
               <description>Systick0 counter register, counts are enabled and accumulate/subtract and 
 			  automatically reload according to configuration</description>
               <bitOffset>0</bitOffset>
@@ -62258,15 +62258,15 @@ When the I3C is acting as slave</description>
           </fields>
         </register>
         <register>
-          <name>STK_CMP_0</name>
-          <displayName>STK_CMP_0</displayName>
+          <name>CMP0</name>
+          <displayName>CMP0</displayName>
           <description>System counter 0 comparison register</description>
           <addressOffset>0x10</addressOffset>
           <size>0x20</size>
           <resetValue>0x00000000</resetValue>
           <fields>
             <field>
-              <name>CMP_0</name>
+              <name>CMP</name>
               <description>Systick0 comparison register for automatic reloading
 			  when counting up and comparing when counting down</description>
               <bitOffset>0</bitOffset>
@@ -62276,50 +62276,50 @@ When the I3C is acting as slave</description>
           </fields>
         </register>
         <register>
-          <name>STK_CTLR_1</name>
-          <displayName>STK_CTLR_1</displayName>
+          <name>CTLR1</name>
+          <displayName>CTLR1</displayName>
           <description>System count control register 1</description>
           <addressOffset>0x80</addressOffset>
           <size>0x20</size>
           <resetValue>0x00000000</resetValue>
           <fields>
             <field>
-              <name>EN_1</name>
+              <name>EN</name>
               <description>System counter 1 enable control bit</description>
               <bitOffset>0</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
             </field>		
             <field>
-              <name>IE_1</name>
+              <name>IE</name>
               <description>Counter 1 interrupt enable control bit</description>
               <bitOffset>1</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
             </field>
             <field>
-              <name>NO_RTC_1</name>
+              <name>NO_RTC</name>
               <description>Counter Clock Source Selection Bit</description>
               <bitOffset>2</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
             </field>		
             <field>
-              <name>AUTO_RELOAD_1</name>
+              <name>AUTO_RELOAD</name>
               <description>Auto Reload Count Enable Bit</description>
               <bitOffset>3</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
             </field>		
             <field>
-              <name>DOWN_MODE_1</name>
+              <name>DOWN_MODE</name>
               <description>Counting Mode</description>
               <bitOffset>4</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
             </field>		
             <field>
-              <name>CID_1</name>
+              <name>CID</name>
               <description>Counter 1 allocates a kernel register</description>
               <bitOffset>6</bitOffset>
               <bitWidth>1</bitWidth>
@@ -62328,15 +62328,15 @@ When the I3C is acting as slave</description>
           </fields>
         </register>
         <register>
-          <name>STK_CNT_1</name>
-          <displayName>STK_CNT_1</displayName>
+          <name>CNT1</name>
+          <displayName>CNT1</displayName>
           <description>System counter 1 count register</description>
           <addressOffset>0x88</addressOffset>
           <size>0x20</size>
           <resetValue>0x00000000</resetValue>
           <fields>		
             <field>
-              <name>CNT_1</name>
+              <name>CNT</name>
               <description>Systick1 counter register, counts are enabled and accumulate/subtract and 
 			  automatically reload according to configuration</description>
               <bitOffset>0</bitOffset>
@@ -62346,15 +62346,15 @@ When the I3C is acting as slave</description>
           </fields>
         </register>
         <register>
-          <name>STK_CMP_1</name>
-          <displayName>STK_CMP_1</displayName>
+          <name>CMP1</name>
+          <displayName>CMP1</displayName>
           <description>System counter 1 comparison register</description>
           <addressOffset>0x90</addressOffset>
           <size>0x20</size>
           <resetValue>0x00000000</resetValue>
           <fields>
             <field>
-              <name>CMP_1</name>
+              <name>CMP</name>
               <description>Systick1 comparison register for automatic reloading
 			  when counting up and comparing when counting down</description>
               <bitOffset>0</bitOffset>

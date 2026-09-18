@@ -19,7 +19,7 @@ pub const microzig_options: microzig.Options = .{
     },
 };
 
-var pc3: gpio.Pin = undefined;
+const pc3: gpio.Pin = .{ .port = .c, .number = 3 };
 const stk = time.systick0;
 
 fn systick_handler() callconv(cpu.riscv_calling_convention) void {
@@ -28,9 +28,7 @@ fn systick_handler() callconv(cpu.riscv_calling_convention) void {
 }
 
 pub fn main() !void {
-    pc3 = gpio.Pin.init(.{
-        .port = .c,
-        .number = 3,
+    pc3.apply(.{
         .mode = .{ .output = .general_purpose_open_drain },
         .speed = .max_50MHz,
         .pull = .disabled,
