@@ -18,7 +18,7 @@ pub const microzig_options: microzig.Options = .{
     .interrupts = .{ .SW = sw_handler },
 };
 
-var pc2: gpio.Pin = undefined;
+const pc2: gpio.Pin = .{ .port = .c, .number = 2 };
 
 fn sw_handler() callconv(cpu.riscv_calling_convention) void {
     cpu.interrupt.clear_pending(.SW);
@@ -36,9 +36,7 @@ pub fn main() !void {
     clock.init();
     clock.enable_gpio(.c);
 
-    pc2 = gpio.Pin.init(.{
-        .port = .c,
-        .number = 2,
+    pc2.apply(.{
         .mode = .{ .output = .general_purpose_open_drain },
         .speed = .max_50MHz,
         .pull = .disabled,

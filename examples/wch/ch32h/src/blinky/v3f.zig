@@ -23,9 +23,8 @@ pub fn main() !void {
     clock.init();
     clock.enable_gpio(.c);
 
-    const pc2 = gpio.Pin.init(.{
-        .port = .c,
-        .number = 2,
+    const pc2: gpio.Pin = .{ .port = .c, .number = 2 };
+    pc2.apply(.{
         .mode = .{ .output = .general_purpose_open_drain },
         .speed = .max_50MHz,
         .pull = .disabled,

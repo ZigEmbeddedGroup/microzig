@@ -6,8 +6,6 @@ pub const Pin = struct {
     number: u4,
 
     pub const Config = struct {
-        port: Port,
-        number: u4,
         mode: Mode,
         speed: Speed,
         pull: Pull,
@@ -65,17 +63,10 @@ pub const Pin = struct {
         disabled,
     };
 
-    pub fn init(comptime cfg: Config) Pin {
-        const pin: Pin = .{
-            .port = cfg.port,
-            .number = cfg.number,
-        };
-
+    pub fn apply(pin: Pin, comptime cfg: Config) void {
         pin.set_mode(cfg.mode);
         pin.set_speed(cfg.speed);
         pin.set_pull(cfg.pull);
-
-        return pin;
     }
 
     inline fn mask(pin: Pin) u16 {
