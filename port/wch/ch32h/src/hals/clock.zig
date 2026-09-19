@@ -15,10 +15,14 @@ pub fn enable_gpio(port: gpio.Pin.Port) void {
     }
 }
 
+pub fn enable_afio() void {
+    RCC.HB2PCENR.modify(.{ .AFIOEN = 1 });
+}
+
 // Initialize system clock. Currently set to HSE:
-//   - SYSTICK 400MHz
 //   - V5F     400MHz
 //   - V3F     100MHz
+//   - SYSTICK 100MHz
 // TODO: make this accept a config struct
 pub fn init() void {
     RCC.CTLR.modify(.{ .HSEON = 1 });

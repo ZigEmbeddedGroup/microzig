@@ -26,9 +26,7 @@ pub fn main() !void {
     });
 
     while (true) {
-        pc3.put(1);
-        delay(120_000_000);
-        pc3.put(0);
+        pc3.toggle();
         delay(120_000_000);
     }
 }
