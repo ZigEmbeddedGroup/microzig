@@ -523,7 +523,6 @@ pub const I2C = enum(u1) {
         try i2c.wait_flag_star2("BUSY", 0, deadline);
     }
 
-    /// Read using DMA (only available if DMA configured)
     pub fn read_dma(
         i2c: I2C,
         comptime config: Config,
@@ -593,6 +592,10 @@ pub const I2C = enum(u1) {
     ///
     /// Automatically selects between DMA and polling based on transfer size. DMA is used for
     /// transfers over configured threshold, polling for smaller transfers.
+    ///
+    /// NOTE: The 16-byte default threshold is a heuristic based on typical DMA setup overhead vs
+    /// polling cost. It has not been benchmarked specifically for CH32V and may not be optimal for
+    /// all use cases. For explicit control, use write_dma() or write_blocking() directly.
     pub fn write_auto(
         i2c: I2C,
         comptime config: Config,
@@ -612,6 +615,10 @@ pub const I2C = enum(u1) {
     ///
     /// Automatically selects between DMA and polling based on transfer size. DMA is used for
     /// transfers over configured threshold, polling for smaller transfers.
+    ///
+    /// NOTE: The 16-byte default threshold is a heuristic based on typical DMA setup overhead vs
+    /// polling cost. It has not been benchmarked specifically for CH32V and may not be optimal for
+    /// all use cases. For explicit control, use read_dma() or read_blocking() directly.
     pub fn read_auto(
         i2c: I2C,
         comptime config: Config,
