@@ -55,6 +55,7 @@ const peripheral = enum {
     TIM2,
     TIM3,
     TIM4,
+    USBD,
 };
 
 pub fn enable_peripheral_clock(p: peripheral) void {
@@ -81,6 +82,7 @@ pub fn enable_peripheral_clock(p: peripheral) void {
         .TIM2 => RCC.APB1PCENR.modify(.{ .TIM2EN = 1 }),
         .TIM3 => RCC.APB1PCENR.modify(.{ .TIM3EN = 1 }),
         .TIM4 => RCC.APB1PCENR.modify(.{ .TIM4EN = 1 }),
+        .USBD => RCC.APB1PCENR.modify(.{ .USBDEN = 1 }),
     }
 }
 
@@ -432,6 +434,22 @@ pub fn enable_usbfs_clock() void {
     // Enable the AHB clock gate for the USBFS peripheral block.
     enable_peripheral_clock(.USBOTG);
 }
+// ============================================================================
+// Enable + configure USBD clocks (PMA-based USB device, APB1).
+// ============================================================================
+pub fn enable_usbd_clock() void {
+    const sys_clock = get_sysclk();
+    switch (sys_clock) {
+        48_000_000 => RCC.CFGR0.modify(.{ .USBPRE = 0 }),
+        96_000_000 => RCC.CFGR0.modify(.{ .USBPRE = 1 }),
+        144_000_000 => RCC.CFGR0.modify(.{ .USBPRE = 2 }),
+        else => @panic("Unsupported sysclock for USBD"),
+    }
+
+    // Enable the APB1 clock gate for the USBD peripheral.
+    enable_peripheral_clock(.USBD);
+}
+
 // ============================================================================
 // Enable + configure USBHS clocks.
 // ============================================================================
