@@ -28,6 +28,17 @@ pub const max_packet_size: u11 = 64;
 
 pub const USB_MAX_ENDPOINTS_COUNT = 8;
 
+const gpio = @import("gpio.zig");
+
+/// Physical-layer USB setup: which pins to use for D-/D+.
+/// Boards export a `usb_setup` const of this type.
+pub const Setup = struct {
+    /// USB D- pin (default PA11 for CH32V203).
+    dm_pin: gpio.Pin = gpio.Pin.init(0, 11),
+    /// USB D+ pin (default PA12 for CH32V203).
+    dp_pin: gpio.Pin = gpio.Pin.init(0, 12),
+};
+
 pub const Config = struct {
     max_endpoints_count: comptime_int = USB_MAX_ENDPOINTS_COUNT,
     prefer_high_speed: bool = false,
@@ -300,8 +311,8 @@ fn epn(ep: types.Endpoint.Num) u4 {
     return @backingInt(ep);
 }
 
-/// Polled USBFS device backend for the MicroZig core USB controller.
-pub fn Polled(comptime cfg: Config) type {
+/// Polled USBD (PMA-based) device backend for the MicroZig core USB controller.
+pub fn Polled(comptime setup: Setup, comptime cfg: Config) type {
     comptime {
         if (cfg.max_endpoints_count < 1)
             @compileError("USBD max_endpoints_count must include endpoint 0");
@@ -328,10 +339,12 @@ pub fn Polled(comptime cfg: Config) type {
 
         // Temporary CPU-side buffer for PMA read/write (PMA cannot be
         // accessed byte-by-byte, so we stage through this).
+        // NOTE: Shared across all endpoints. Safe for polled (non-ISR) use only.
+        // TODO: If ISR-driven polling is added, each endpoint will need its own buffer.
         staging_buf: [64]u8 = undefined,
 
         pub fn init(self: *Self) void {
-            log.warn("USBD init starting", .{});
+            log.info("USBD init starting", .{});
             self.interface = .{ .vtable = &vtable };
             self.endpoints = @splat(@splat(.{}));
             self.pma_next = Btable.size;
@@ -425,6 +438,7 @@ pub fn Polled(comptime cfg: Config) type {
 
         // --- Poll loop ---
 
+        // TODO: ISR-driven polling is not yet supported; in_isr is ignored.
         pub fn poll(self: *Self, in_isr: bool, controller: anytype) void {
             _ = in_isr;
             const istr = USB_PERIPH.ISTR.read();
@@ -463,6 +477,7 @@ pub fn Polled(comptime cfg: Config) type {
             // Read ISTR to get EP_ID and DIR
             const istr = USB_PERIPH.ISTR.read();
             const ep: u4 = istr.EP_ID;
+            // DIR is not needed: we check CTR_TX/CTR_RX in the EPR directly.
             _ = istr.DIR;
 
             if (ep >= cfg.max_endpoints_count) return;
@@ -730,25 +745,21 @@ pub fn Polled(comptime cfg: Config) type {
 
         // --- USB port control (matches WCH EVT USB_Port_Set) ---
 
-        const gpio = @import("gpio.zig");
-        const pa11 = gpio.Pin.init(0, 11); // PA11 = USB D-
-        const pa12 = gpio.Pin.init(0, 12); // PA12 = USB D+
-
         fn usb_port_set(enable: bool) void {
             if (enable) {
-                // Set PA11/PA12 to floating input so USB peripheral drives them
-                pa11.set_input_mode(.floating);
-                pa12.set_input_mode(.floating);
+                // Set D-/D+ to floating input so USB peripheral drives them
+                setup.dm_pin.set_input_mode(.floating);
+                setup.dp_pin.set_input_mode(.floating);
                 // Enable D+ internal 1.5K pull-up
                 EXTEND.EXTEND_CTR.modify(.{ .USBDPU = 1 });
             } else {
                 // Disable D+ pull-up
                 EXTEND.EXTEND_CTR.modify(.{ .USBDPU = 0 });
-                // Drive PA11/PA12 low as push-pull outputs → SE0 = disconnect
-                pa11.set_output_mode(.general_purpose_push_pull, .max_2MHz);
-                pa12.set_output_mode(.general_purpose_push_pull, .max_2MHz);
-                pa11.put(0);
-                pa12.put(0);
+                // Drive D-/D+ low as push-pull outputs → SE0 = disconnect
+                setup.dm_pin.set_output_mode(.general_purpose_push_pull, .max_2MHz);
+                setup.dp_pin.set_output_mode(.general_purpose_push_pull, .max_2MHz);
+                setup.dm_pin.put(0);
+                setup.dp_pin.put(0);
             }
         }
 

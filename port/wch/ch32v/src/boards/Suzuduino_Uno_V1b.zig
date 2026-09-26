@@ -7,6 +7,9 @@ const ch32v = microzig.hal;
 
 pub const product_string = "Suzuduino Uno";
 
+/// Default USB pins (USBFS — pins fixed by peripheral, setup kept for API uniformity)
+pub const usb_setup: ch32v.usb.Setup = .{};
+
 /// Clock configuration for this board
 pub const clock_config: ch32v.clocks.Config = .{
     .source = .hsi,

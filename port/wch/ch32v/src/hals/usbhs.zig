@@ -17,6 +17,10 @@ pub const USBHD_MAX_ENDPOINTS_COUNT = 16;
 
 const max_buffer_pool_size = USBHD_MAX_ENDPOINTS_COUNT * 2 * 512 + 64;
 
+/// Physical-layer USB setup (placeholder for API compatibility with USBD).
+/// USBHS pins are fixed by the peripheral and not configurable.
+pub const Setup = struct {};
+
 pub const Config = struct {
     max_endpoints_count: comptime_int = USBHD_MAX_ENDPOINTS_COUNT,
 
@@ -46,7 +50,7 @@ fn PerEndpointArray(comptime N: comptime_int) type {
 }
 
 fn epn(ep: types.Endpoint.Num) u4 {
-    return @as(u4, @intCast(@backingInt(ep)));
+    return @backingInt(ep);
 }
 fn speed_type(comptime cfg: Config) u2 {
     if (!cfg.prefer_high_speed) return 0; // FS
@@ -122,7 +126,7 @@ fn current_tx_tog(ep: u4) u2 {
 }
 
 /// Polled USBHS device backend for the MicroZig core USB controller.
-pub fn Polled(comptime cfg: Config) type {
+pub fn Polled(comptime _: Setup, comptime cfg: Config) type {
     comptime {
         if (cfg.max_endpoints_count < 1)
             @compileError("USBHD max_endpoints_count must include endpoint 0");
@@ -154,7 +158,7 @@ pub fn Polled(comptime cfg: Config) type {
         interface: usb.DeviceInterface,
 
         pub fn init(self: *Self) void {
-            log.warn("USBHS init starting", .{});
+            log.info("USBHS init starting", .{});
             self.interface = .{ .vtable = &vtable };
             self.endpoints = @splat(@splat(.{}));
             @memset(self.pool[0..64], 0x7e);
@@ -621,7 +625,7 @@ pub fn Polled(comptime cfg: Config) type {
         // ---- HW init ---------------------------------------------------------
 
         fn usbhs_hw_init() void {
-            log.warn("USBHS hw_init starting", .{});
+            log.info("USBHS hw_init starting", .{});
 
             // Reset SIE and clear FIFO
             Regs.UHOST_CTRL.raw = 0;

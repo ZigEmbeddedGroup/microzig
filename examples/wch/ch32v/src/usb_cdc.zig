@@ -40,7 +40,7 @@ const USB_Controller = usb.DeviceController(.{
     .serial = .{ .itf_notifi = "Board CDC", .itf_data = "Board CDC Data" },
 }});
 
-pub var usb_dev: hal.usb.Polled(.{}) = undefined;
+pub var usb_dev: hal.usb.Polled(board.usb_setup, .{}) = undefined;
 
 var usb_controller: USB_Controller = .init;
 

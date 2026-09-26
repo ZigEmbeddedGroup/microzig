@@ -434,6 +434,7 @@ pub fn enable_usbfs_clock() void {
     // Enable the AHB clock gate for the USBFS peripheral block.
     enable_peripheral_clock(.USBOTG);
 }
+
 // ============================================================================
 // Enable + configure USBD clocks (PMA-based USB device, APB1).
 // ============================================================================

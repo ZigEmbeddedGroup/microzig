@@ -10,6 +10,9 @@ pub const product_string = "LANA TNY";
 /// CH32V203G6U6 has USBD (PMA-based), not USBFS/OTG
 pub const usb_driver: ch32v.UsbDriver = .usbd;
 
+/// Default USB pins: PA11 (D-) / PA12 (D+)
+pub const usb_setup: ch32v.usb.Setup = .{};
+
 /// Clock configuration for this board
 pub const clock_config: ch32v.clocks.Config = .{
     .source = .hsi,
