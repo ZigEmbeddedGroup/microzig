@@ -8,7 +8,7 @@ const xml = @import("xml");
 const Allocator = std.mem.Allocator;
 
 pub const std_options = std.Options{
-    .log_level = .warn,
+    .log_level = .err,
 };
 
 pub fn main(init: std.process.Init) !void {
