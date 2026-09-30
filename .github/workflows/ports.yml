@@ -75,6 +75,10 @@ jobs:
       run: zig build test
       working-directory: port/wch/ch32v
 
+    - name: wch/ch32h
+      run: zig build test
+      working-directory: port/wch/ch32h
+
   build:
     name: "Build"
     runs-on: ${{ matrix.os }}
