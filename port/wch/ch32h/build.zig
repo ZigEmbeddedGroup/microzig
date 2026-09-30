@@ -6,7 +6,7 @@ const Self = @This();
 const KiB = 1024;
 
 pub fn build(b: *std.Build) void {
-    _ = b;
+    _ = b.step("test", "");
 }
 
 pub const v5f_image_offset: u64 = 0x10000;
