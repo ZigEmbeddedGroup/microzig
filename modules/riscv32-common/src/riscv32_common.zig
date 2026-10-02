@@ -457,7 +457,7 @@ pub const csr = struct {
                 switch (@typeInfo(T)) {
                     .@"struct" => {
                         var value = read();
-                        inline for (@typeInfo(@TypeOf(modifier)).Struct.field_names) |field_name| {
+                        inline for (@typeInfo(@TypeOf(modifier)).@"struct".field_names) |field_name| {
                             @field(value, field_name) = @field(modifier, field_name);
                         }
                         write(value);
