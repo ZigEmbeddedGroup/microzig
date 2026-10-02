@@ -84,8 +84,8 @@ pub fn init(dep: *std.Build.Dependency) ?Self {
                 }),
                 .uno_rev3 = chip_atmega328p.derive(.{
                     .board = .{
-                        .name = "Arduino Nano",
-                        .url = "https://docs.arduino.cc/hardware/nano",
+                        .name = "Arduino Uno Rev3",
+                        .url = "https://docs.arduino.cc/hardware/uno-rev3",
                         .root_source_file = b.path("src/boards/arduino_uno.zig"),
                     },
                 }),
@@ -93,8 +93,8 @@ pub fn init(dep: *std.Build.Dependency) ?Self {
             .adafruit = .{
                 .itsybitsy_32u4 = chip_atmega32u4.derive(.{
                     .board = .{
-                        .name = "Arduino Nano",
-                        .url = "https://docs.arduino.cc/hardware/nano",
+                        .name = "Adafruit ItsyBitsy 32u4",
+                        .url = "https://www.adafruit.com/product/3677",
                         .root_source_file = b.path("src/boards/itsybitsy_32u4.zig"),
                     },
                 }),
