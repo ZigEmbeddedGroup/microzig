@@ -27,7 +27,7 @@ pub const CoreInterrupt = enum(u5) {
 
 // supports a maximum of 128 interrupts (actually supports 512 but for some reason priorities
 // only support 128)
-pub const ExternalInterrupt = microzig.utilities.GenerateInterruptEnum(u7);
+pub const Interrupt = microzig.utilities.GenerateInterruptEnum(u7);
 
 // NOTE: there is no way to use a custom incoming_stack_alignment with this way of doing things
 const riscv_calling_convention: std.builtin.CallingConvention = .{ .riscv32_interrupt = .{ .mode = .machine } };
@@ -42,7 +42,7 @@ pub const Handler = microzig.interrupt.Handler;
 pub const InterruptOptions = microzig.utilities.GenerateInterruptOptions(&.{
     .{ .InterruptEnum = enum { Exception }, .HandlerFn = InterruptHandler },
     .{ .InterruptEnum = CoreInterrupt, .HandlerFn = InterruptHandler },
-    .{ .InterruptEnum = ExternalInterrupt, .HandlerFn = Handler },
+    .{ .InterruptEnum = Interrupt, .HandlerFn = Handler },
 });
 
 pub const interrupt = struct {
@@ -53,14 +53,14 @@ pub const interrupt = struct {
     // use a custom `CoreInterrupt` enum specifically for hazard3
     pub const core = riscv32_common.utilities.interrupt.CoreImpl(CoreInterrupt);
 
-    pub fn is_enabled(int: ExternalInterrupt) bool {
+    pub fn is_enabled(int: Interrupt) bool {
         const num: u7 = @backingInt(int);
         const index: u3 = @intCast(num >> 4);
         const mask: u16 = @as(u16, 1) << @as(u4, @intCast(num & 0xf));
         return csr.meiea.read_set(.{ .index = index }).window & mask != 0;
     }
 
-    pub fn enable(int: ExternalInterrupt) void {
+    pub fn enable(int: Interrupt) void {
         const num: u7 = @backingInt(int);
         const index: u3 = @intCast(num >> 4);
         const mask: u16 = @as(u16, 1) << @as(u4, @intCast(num & 0xf));
@@ -70,7 +70,7 @@ pub const interrupt = struct {
         });
     }
 
-    pub fn disable(int: ExternalInterrupt) void {
+    pub fn disable(int: Interrupt) void {
         const num: u7 = @backingInt(int);
         const index: u3 = @intCast(num >> 4);
         const mask: u16 = @as(u16, 1) << @as(u4, @intCast(num & 0xf));
@@ -80,21 +80,21 @@ pub const interrupt = struct {
         });
     }
 
-    pub fn is_pending(int: ExternalInterrupt) bool {
+    pub fn is_pending(int: Interrupt) bool {
         const num: u7 = @backingInt(int);
         const index: u3 = @intCast(num >> 4);
         const mask: u16 = @as(u16, 1) << @as(u4, @intCast(num & 0xf));
         return csr.meipa.read_set(.{ .index = index }).window & mask != 0;
     }
 
-    pub fn set_pending(int: ExternalInterrupt) void {
+    pub fn set_pending(int: Interrupt) void {
         const num: u7 = @backingInt(int);
         const index: u3 = @intCast(num >> 4);
         const mask: u16 = @as(u16, 1) << @as(u4, @intCast(num & 0xf));
         csr.meifa.set(.{ .index = index, .window = mask });
     }
 
-    pub fn clear_pending(int: ExternalInterrupt) void {
+    pub fn clear_pending(int: Interrupt) void {
         const num: u7 = @backingInt(int);
         const index: u3 = @intCast(num >> 4);
         const mask: u16 = @as(u16, 1) << @as(u4, @intCast(num & 0xf));
@@ -107,7 +107,7 @@ pub const interrupt = struct {
         _,
     };
 
-    pub fn set_priority(int: ExternalInterrupt, priority: Priority) void {
+    pub fn set_priority(int: Interrupt, priority: Priority) void {
         const num: u7 = @backingInt(int);
         const index: u5 = @intCast(num >> 2);
         const shift: u4 = @intCast(4 * (num & 0x4));
@@ -117,7 +117,7 @@ pub const interrupt = struct {
         csr.meipra.set(.{ .index = index, .window = set_mask });
     }
 
-    pub fn get_priority(int: ExternalInterrupt) Priority {
+    pub fn get_priority(int: Interrupt) Priority {
         const num: u7 = @backingInt(int);
         const index: u5 = @intCast(num >> 2);
         const shift: u4 = @intCast(4 * (num & 0x4));
@@ -231,7 +231,7 @@ pub const startup_logic = struct {
         const vector_count = @sizeOf(microzig.chip.VectorTable) / @sizeOf(usize);
         var temp: [vector_count]Handler = @splat(microzig.interrupt.unhandled);
 
-        const info = @typeInfo(ExternalInterrupt).@"enum";
+        const info = @typeInfo(Interrupt).@"enum";
         for (info.field_names, info.field_values) |field_name, field_value| {
             if (@field(microzig.options.interrupts, field_name)) |handler| {
                 temp[field_value] = handler;
