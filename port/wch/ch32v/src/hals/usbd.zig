@@ -339,10 +339,12 @@ pub fn Polled(comptime setup: Setup, comptime cfg: Config) type {
         pma_next: u16, // next free PMA offset
         interface: usb.DeviceInterface,
 
-        // Temporary CPU-side buffer for PMA read/write (PMA cannot be
-        // accessed byte-by-byte, so we stage through this).
-        // NOTE: Shared across all endpoints. Safe for polled (non-ISR) use only.
-        // TODO: If ISR-driven polling is added, each endpoint will need its own buffer.
+        // Temporary CPU-side buffer for PMA access (PMA cannot be accessed
+        // byte-by-byte, so we stage through this).
+        // Used for: EP0 OUT reads (re-armed before on_buffer, so PMA may be
+        // overwritten), EP0 SETUP reads, and TX writes (ep_writev).
+        // Non-EP0 OUT data is read lazily from PMA in ep_readv (the endpoint
+        // is NAKed so the PMA buffer remains valid until re-armed).
         staging_buf: [64]u8 = undefined,
 
         pub fn init(self: *Self) void {
@@ -382,9 +384,11 @@ pub fn Polled(comptime setup: Setup, comptime cfg: Config) type {
         }
 
         fn pma_alloc(self: *Self, alloc_size: u16) u16 {
+            // PMA is word-addressed (u16); round up to even to keep alignment.
+            const aligned = (alloc_size + 1) & ~@as(u16, 1);
             const addr = self.pma_next;
-            assert(addr + alloc_size <= Pma.size);
-            self.pma_next += alloc_size;
+            assert(addr + aligned <= Pma.size);
+            self.pma_next += aligned;
             return addr;
         }
 
@@ -550,10 +554,9 @@ pub fn Polled(comptime setup: Setup, comptime cfg: Config) type {
 
             if (!st_out.rx_armed) return;
 
-            // Read data from PMA into staging buffer
-            const rx_addr = Pma.read16(Btable.rx_addr_offset(ep));
+            // Don't copy from PMA here — leave data in PMA until ep_readv.
+            // The endpoint is NAKed below, so hardware won't overwrite it.
             const n: usize = @min(@as(usize, len), @as(usize, st_out.max_size));
-            Pma.read_bytes(rx_addr, &self.staging_buf, n);
 
             st_out.rx_armed = false;
             st_out.rx_last_len = @intCast(n);
@@ -695,12 +698,21 @@ pub fn Polled(comptime setup: Setup, comptime cfg: Config) type {
 
         fn ep_readv(itf: *usb.DeviceInterface, ep_num: types.Endpoint.Num, data: []const []u8) types.Len {
             const self: *Self = @fieldParentPtr("interface", itf);
+            const ep_i: u4 = epn(ep_num);
             const st_out = self.st(ep_num, .out);
 
             const want: usize = @as(usize, st_out.rx_last_len);
             defer st_out.rx_last_len = 0;
 
-            // Data was already read from PMA into staging_buf during handle_out/handle_setup
+            if (ep_i != 0) {
+                // Non-EP0: data is still in PMA (endpoint is NAKed, so safe).
+                // Read from PMA into staging_buf now.
+                const rx_addr = Pma.read16(Btable.rx_addr_offset(ep_i));
+                Pma.read_bytes(rx_addr, &self.staging_buf, want);
+            }
+            // EP0: data was already copied into staging_buf in handle_out
+            // (EP0 is re-armed before on_buffer, so PMA may be overwritten).
+
             var remaining: []const u8 = self.staging_buf[0..want];
             var copied: usize = 0;
 
