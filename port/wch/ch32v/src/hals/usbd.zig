@@ -273,14 +273,16 @@ const Btable = struct {
     }
 
     /// Set RX_COUNT with block size encoding for max receivable bytes.
-    /// For sizes <= 62: BL_SIZE=0, NUM_BLOCK = size/2
-    /// For sizes > 62:  BL_SIZE=1, NUM_BLOCK = size/32 - 1
+    /// Uses ceiling division to ensure the hardware allocates at least
+    /// `max_size` bytes.
+    /// For sizes <= 62: BL_SIZE=0, NUM_BLOCK = ceil(size/2)
+    /// For sizes > 62:  BL_SIZE=1, NUM_BLOCK = ceil(size/32) - 1
     fn set_rx_count(ep: u4, max_size: u16) void {
         var val: u16 = 0;
         if (max_size <= 62) {
-            val = (max_size / 2) << 10;
+            val = ((max_size + 1) / 2) << 10;
         } else {
-            val = (1 << 15) | (((max_size / 32) - 1) << 10);
+            val = (1 << 15) | ((((max_size + 31) / 32) - 1) << 10);
         }
         Pma.write16(rx_count_offset(ep), val);
     }
@@ -490,7 +492,14 @@ pub fn Polled(comptime setup: Setup, comptime cfg: Config) type {
                 Epr.clear_ctr_rx(ep);
 
                 if (is_setup) {
+                    // After SETUP, hardware forces STAT_TX=NAK and may leave
+                    // CTR_TX set from a previous IN. Clear it so we don't
+                    // dispatch a spurious IN completion.
+                    if (val & Epr.ctr_tx != 0) {
+                        Epr.clear_ctr_tx(ep);
+                    }
                     self.handle_setup(ep, controller);
+                    return;
                 } else {
                     self.handle_out(ep, controller);
                 }
@@ -746,6 +755,10 @@ pub fn Polled(comptime setup: Setup, comptime cfg: Config) type {
         // --- USB port control (matches WCH EVT USB_Port_Set) ---
 
         fn usb_port_set(enable: bool) void {
+            // Ensure GPIO port clocks are enabled before configuring pins
+            setup.dm_pin.enable_clock();
+            setup.dp_pin.enable_clock();
+
             if (enable) {
                 // Set D-/D+ to floating input so USB peripheral drives them
                 setup.dm_pin.set_input_mode(.floating);
