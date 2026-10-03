@@ -9,6 +9,7 @@ var buf: [1024]u8 = undefined;
 pub fn main(init: std.process.Init) !void {
     const gpa = init.gpa;
     const io = init.io;
+    const arena = init.arena.allocator();
 
     const args = try init.minimal.args.toSlice(init.arena.allocator());
     if (args.len != 3)
@@ -29,8 +30,16 @@ pub fn main(init: std.process.Init) !void {
     const test_data_raw = try std.Io.Dir.cwd().readFileAllocOptions(io, test_data_path, gpa, .limited(1_000_000), .@"1", 0);
     defer gpa.free(test_data_raw);
 
-    const test_data = try std.zon.parse.fromSliceAlloc(common.Data, gpa, test_data_raw, null, .{});
-    defer std.zon.parse.free(gpa, test_data);
+    var diags: std.zon.parse.Diagnostics = undefined;
+    const test_data = std.zon.parse.fromSlice(common.Data, .{
+        .gpa = gpa,
+        .arena = arena,
+        .source = test_data_raw,
+        .diagnostics = &diags,
+    }) catch |err| switch (err) {
+        error.ParseZon => diags.fatal(test_data_path),
+        else => |e| return e,
+    };
 
     var debug_info = try printer.DebugInfo.init(gpa, elf);
     defer debug_info.deinit(gpa);
