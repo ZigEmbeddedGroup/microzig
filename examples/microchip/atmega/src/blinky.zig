@@ -16,7 +16,7 @@ pub fn main() void {
     led_pin.set_direction(.output);
 
     while (true) {
-        busy_sleep(20_000);
+        for (0..50) |_| busy_sleep(20_000);
         led_pin.toggle();
     }
 }
