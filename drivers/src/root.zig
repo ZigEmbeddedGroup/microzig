@@ -268,4 +268,6 @@ test {
     _ = base.I2C_Device;
 
     _ = wireless.nrf24l01;
+
+    _ = storage;
 }
