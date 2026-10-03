@@ -2098,9 +2098,20 @@ fn cleanup_unused_enums(db: *Database) !void {
     , .{});
 }
 
-pub fn apply_patch(db: *Database, zon_text: [:0]const u8, diags: *std.zon.parse.Diagnostics) !void {
-    const patches = try std.zon.parse.fromSliceAlloc([]const Patch, db.gpa, zon_text, diags, .{});
-    defer std.zon.parse.free(db.gpa, patches);
+pub fn apply_patch(db: *Database, zon_text: [:0]const u8, arena: std.mem.Allocator) !void {
+    var diags: std.zon.parse.Diagnostics = undefined;
+    const patches = std.zon.parse.fromSlice([]const Patch, .{
+        .gpa = db.gpa,
+        .arena = arena,
+        .diagnostics = &diags,
+        .source = zon_text,
+    }) catch |err| switch (err) {
+        error.ParseZon => {
+            diags.log("in-memory");
+            return error.Explained;
+        },
+        else => |e| return e,
+    };
 
     for (patches) |patch| {
         switch (patch) {
@@ -2289,14 +2300,12 @@ test "add_enum_and_apply patch creates enum and applies to fields" {
         \\}
     ;
 
-    var diags: std.zon.parse.Diagnostics = .{};
-    defer diags.deinit(allocator);
-
-    try db.apply_patch(patch_zon, &diags);
-
-    // Verify the enum was created
     var arena = std.heap.ArenaAllocator.init(allocator);
     defer arena.deinit();
+
+    try db.apply_patch(patch_zon, arena.allocator());
+
+    // Verify the enum was created
     const enum_info = try db.get_enum_by_name(arena.allocator(), struct_id, "TestMode");
     try std.testing.expectEqual(@as(u8, 2), enum_info.size_bits);
 
@@ -2349,20 +2358,21 @@ test "add_enum_and_apply patch with empty apply_to list" {
         \\}
     ;
 
-    var diags: std.zon.parse.Diagnostics = .{};
-    defer diags.deinit(allocator);
-
-    try db.apply_patch(patch_zon, &diags);
-
-    // Verify the enum was created
     var arena = std.heap.ArenaAllocator.init(allocator);
     defer arena.deinit();
+
+    try db.apply_patch(patch_zon, arena.allocator());
+
+    // Verify the enum was created
+
     const enum_info = try db.get_enum_by_name(arena.allocator(), struct_id, "UnusedEnum");
     try std.testing.expectEqual(@as(u8, 4), enum_info.size_bits);
 }
 
 test "add_enum_and_apply patch with invalid field reference" {
     const allocator = std.testing.allocator;
+    var arena: std.heap.ArenaAllocator = .init(allocator);
+    defer arena.deinit();
 
     var db = try Database.create(allocator);
     defer db.destroy();
@@ -2393,9 +2403,6 @@ test "add_enum_and_apply patch with invalid field reference" {
         \\}
     ;
 
-    var diags: std.zon.parse.Diagnostics = .{};
-    defer diags.deinit(allocator);
-
-    const result = db.apply_patch(patch_zon, &diags);
+    const result = db.apply_patch(patch_zon, arena.allocator());
     try std.testing.expectError(error.MissingEntity, result);
 }
