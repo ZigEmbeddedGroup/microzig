@@ -16,23 +16,21 @@ pub fn main() void {
     led_pin.set_direction(.output);
 
     while (true) {
-        for (0..50) |_| busy_sleep(20_000);
+        busy_sleep(1_000_000);
         led_pin.toggle();
     }
 }
 
 pub fn busy_sleep(comptime limit: comptime_int) void {
-    if (limit <= 0) @compileError("limit must be non-negative!");
+    if (limit <= 0) @compileError("limit must be positive!");
 
-    comptime var bits = 0;
-    inline while ((1 << bits) <= limit) {
-        bits += 1;
-    }
+    const outer = std.math.divCeil(comptime_int, limit, std.math.maxInt(u16)) catch unreachable;
+    const inner = limit / outer;
 
-    const I = @Int(.unsigned, bits);
-
-    var i: I = 0;
-    while (i < limit) : (i += 1) {
-        std.mem.doNotOptimizeAway(i);
+    for (0..outer) |_| {
+        var i: std.math.IntFittingRange(0, inner) = 0;
+        while (i < inner) : (i += 1) {
+            std.mem.doNotOptimizeAway(i);
+        }
     }
 }
