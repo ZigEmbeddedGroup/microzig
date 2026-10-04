@@ -52,4 +52,8 @@ pub const pin_map = .{
     .SCK = "PB5",
     .HODI = "PB3",
     .HIDO = "PB4",
+
+    // I2C (TWI)
+    .SDA = "PC4",
+    .SCL = "PC5",
 };
