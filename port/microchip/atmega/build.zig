@@ -47,6 +47,9 @@ pub fn init(dep: *std.Build.Dependency) ?Self {
         .hal = .{
             .root_source_file = b.path("src/hals/ATmega328P.zig"),
         },
+        .linker_script = .{
+            .generate = .{ .memory_regions_and_sections = .{ .rodata_location = .ram } },
+        },
         .bundle_compiler_rt = false,
     };
 
@@ -64,6 +67,9 @@ pub fn init(dep: *std.Build.Dependency) ?Self {
                 .{ .tag = .flash, .offset = 0x000000, .length = 32 * 1024, .access = .rx },
                 .{ .tag = .ram, .offset = 0x800100, .length = 2560, .access = .rw },
             },
+        },
+        .linker_script = .{
+            .generate = .{ .memory_regions_and_sections = .{ .rodata_location = .ram } },
         },
         .bundle_compiler_rt = false,
     };
