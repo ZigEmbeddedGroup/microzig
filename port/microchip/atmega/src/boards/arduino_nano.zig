@@ -8,6 +8,10 @@ pub const clock_frequencies = .{
 /// USART0 on PD0 (RX) / PD1 (TX), wired to the USB serial chip.
 pub const uart_setup: hal.uart.Setup = .{ .cpu_frequency = clock_frequencies.cpu };
 
+/// SPI on PB5 (SCK), PB3 (HODI) and PB4 (HIDO). PB2 (D10) is set as an
+/// output to keep the SPI in host mode.
+pub const spi_setup: hal.spi.Setup = .{ .cpu_frequency = clock_frequencies.cpu };
+
 pub const pin_map = .{
     // Port A
     .D0 = "PD0",
