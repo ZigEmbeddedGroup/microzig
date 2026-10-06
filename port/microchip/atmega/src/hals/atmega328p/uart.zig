@@ -47,9 +47,16 @@ pub const Setup = struct {
             },
             .UMSEL0 = .ASYNCHRONOUS_USART,
         });
-        USART0.UCSR0B.modify(.{
+
+        USART0.UCSR0B.write(.{
+            .RXCIE0 = 0,
+            .TXCIE0 = 0,
+            .UDRIE0 = 0,
             .RXEN0 = 1,
             .TXEN0 = 1,
+            .UCSZ02 = 0, // 8 data bits, with UCSZ0 = 0b11
+            .RXB80 = 0,
+            .TXB80 = 0,
         });
     }
 };
@@ -103,6 +110,7 @@ test compute_baud {
     try std.testing.expect(compute_baud(16_000_000, 242).ubrr == 4095);
 }
 
+/// Waits for room in the transmit buffer and queues `byte`.
 pub fn write_byte_blocking(byte: u8) void {
     while (USART0.UCSR0A.read().UDRE0 == 0) {}
     USART0.UDR0 = byte;
