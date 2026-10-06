@@ -52,7 +52,7 @@ pub const gpio = struct {
         }
 
         pub inline fn read(p: Pin) u1 {
-            const pin_addr: *volatile u8 = &p.port.get_regs().PIN;
+            const pin_addr: *volatile u8 = @ptrFromInt(@intFromPtr(&p.port.get_regs().PIN) + 0x20);
             return @truncate(pin_addr.* >> p.num & 0x01);
         }
 
