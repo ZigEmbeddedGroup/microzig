@@ -14,10 +14,7 @@ comptime {
 }
 
 pub fn main() void {
-    uart.apply(.{
-        .cpu_frequency = microzig.board.clock_frequencies.cpu,
-        .baud_rate = 115_200,
-    });
+    microzig.board.uart_setup.apply(.{ .baud_rate = 115_200 });
 
     uart.write_blocking("Hello from MicroZig! Type something:\r\n");
 

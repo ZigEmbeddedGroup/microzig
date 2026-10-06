@@ -20,8 +20,41 @@ const max_baud_error = 0.025;
 pub const Parity = enum { none, even, odd };
 pub const StopBits = enum { one, two };
 
-pub const Config = struct {
+/// Board-level UART setup. Boards export a `uart_setup` const of this type;
+/// the application passes its own settings (baud rate, etc.) to `apply`.
+pub const Setup = struct {
+    /// CPU clock in Hz.
     cpu_frequency: u32,
+
+    /// Configures USART0 and enables the receiver and transmitter.
+    pub fn apply(comptime setup: Setup, comptime config: Config) void {
+        const baud = comptime compute_baud(setup.cpu_frequency, config.baud_rate);
+
+        USART0.UBRR0 = baud.ubrr;
+        // Single write: FE0, DOR0 and UPE0 must be written as zero.
+        USART0.UCSR0A.write_raw(if (baud.double_speed) 0b10 else 0); // U2X0
+        USART0.UCSR0C.write(.{
+            .UCPOL0 = 0,
+            .UCSZ0 = 0b11, // 8 data bits (with UCSZ02 = 0)
+            .USBS0 = switch (config.stop_bits) {
+                .one => .@"1_BIT",
+                .two => .@"2_BIT",
+            },
+            .UPM0 = switch (config.parity) {
+                .none => .DISABLED,
+                .even => .ENABLED_EVEN_PARITY,
+                .odd => .ENABLED_ODD_PARITY,
+            },
+            .UMSEL0 = .ASYNCHRONOUS_USART,
+        });
+        USART0.UCSR0B.modify(.{
+            .RXEN0 = 1,
+            .TXEN0 = 1,
+        });
+    }
+};
+
+pub const Config = struct {
     baud_rate: u32 = 115_200,
     parity: Parity = .none,
     stop_bits: StopBits = .one,
@@ -29,7 +62,7 @@ pub const Config = struct {
 
 pub const ReceiveError = error{
     FramingError,
-    Overrun,
+    OverrunError,
     ParityError,
 };
 
@@ -39,7 +72,7 @@ const Baud = struct {
     @"error": comptime_float,
 };
 
-fn compute_baud(comptime cpu_frequency: comptime_float, comptime baud_rate: comptime_float) Baud {
+fn compute_baud(cpu_frequency: comptime_float, baud_rate: comptime_float) Baud {
     var best: ?Baud = null;
     for ([_]bool{ false, true }) |double_speed| {
         const divisor: comptime_float = if (double_speed) 8 else 16;
@@ -62,38 +95,12 @@ fn compute_baud(comptime cpu_frequency: comptime_float, comptime baud_rate: comp
     return best.?;
 }
 
-comptime {
-    std.debug.assert(compute_baud(16_000_000, 115_200).ubrr == 16);
-    std.debug.assert(compute_baud(16_000_000, 115_200).double_speed);
-    std.debug.assert(compute_baud(16_000_000, 9_600).ubrr == 103);
-    std.debug.assert(compute_baud(16_000_000, 97_600).ubrr == 20);
-    std.debug.assert(compute_baud(16_000_000, 242).ubrr == 4095);
-}
-
-pub fn apply(comptime config: Config) void {
-    const baud = comptime compute_baud(config.cpu_frequency, config.baud_rate);
-
-    USART0.UBRR0 = baud.ubrr;
-    // Single write: FE0, DOR0 and UPE0 must be written as zero.
-    USART0.UCSR0A.write_raw(if (baud.double_speed) 0b10 else 0); // U2X0
-    USART0.UCSR0C.write(.{
-        .UCPOL0 = 0,
-        .UCSZ0 = 0b11, // 8 data bits (with UCSZ02 = 0)
-        .USBS0 = switch (config.stop_bits) {
-            .one => .@"1_BIT",
-            .two => .@"2_BIT",
-        },
-        .UPM0 = switch (config.parity) {
-            .none => .DISABLED,
-            .even => .ENABLED_EVEN_PARITY,
-            .odd => .ENABLED_ODD_PARITY,
-        },
-        .UMSEL0 = .ASYNCHRONOUS_USART,
-    });
-    USART0.UCSR0B.modify(.{
-        .RXEN0 = 1,
-        .TXEN0 = 1,
-    });
+test compute_baud {
+    try std.testing.expect(compute_baud(16_000_000, 115_200).ubrr == 16);
+    try std.testing.expect(compute_baud(16_000_000, 115_200).double_speed);
+    try std.testing.expect(compute_baud(16_000_000, 9_600).ubrr == 103);
+    try std.testing.expect(compute_baud(16_000_000, 97_600).ubrr == 20);
+    try std.testing.expect(compute_baud(16_000_000, 242).ubrr == 4095);
 }
 
 pub fn write_byte_blocking(byte: u8) void {
@@ -120,6 +127,12 @@ pub fn read_byte_blocking(byte: *u8) ReceiveError!void {
     byte.* = USART0.UDR0;
 
     if (status.FE0 == 1) return error.FramingError;
-    if (status.DOR0 == 1) return error.Overrun;
+    if (status.DOR0 == 1) return error.OverrunError;
     if (status.UPE0 == 1) return error.ParityError;
+}
+
+/// Fills `buffer`. On error, `buffer` holds the bytes read so far, including
+/// the one that failed.
+pub fn read_blocking(buffer: []u8) ReceiveError!void {
+    for (buffer) |*byte| try read_byte_blocking(byte);
 }
