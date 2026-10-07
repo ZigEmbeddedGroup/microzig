@@ -21,7 +21,7 @@ pub const gpio = struct {
         };
 
         // These addresses are IO addresses. These are used instead of the data
-        // addresses so that we can use SBI and CBI instructiosn
+        // addresses so that we can use SBI and CBI instructions
         pub inline fn get_regs(port: Port) *volatile Regs {
             return switch (port) {
                 .b => @ptrFromInt(0x3),
