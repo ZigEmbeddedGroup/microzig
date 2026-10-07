@@ -489,13 +489,13 @@ pub fn dump_stack_trace(trace: *std.lang.StackTrace) usize {
     return frame_count;
 }
 
-pub fn get_end_of_stack() *const anyopaque {
-    const EndOfStack = union(enum) {
+pub const end_of_stack: *const anyopaque = find_end_of_stack: {
+    const EndOfStackKind = union(enum) {
         address: usize,
         symbol_name: []const u8,
     };
 
-    const end_of_stack: EndOfStack = comptime switch (microzig.config.stack) {
+    const kind: EndOfStackKind = switch (microzig.config.stack) {
         .address => |address| .{ .address = address },
         .ram_region_index => |index| blk: {
             var i: usize = 0;
@@ -521,11 +521,11 @@ pub fn get_end_of_stack() *const anyopaque {
         .symbol_name => |name| .{ .symbol_name = name },
     };
 
-    return switch (end_of_stack) {
+    break :find_end_of_stack switch (kind) {
         .address => |address| @ptrFromInt(address),
         .symbol_name => |name| @extern(*const anyopaque, .{ .name = name }),
     };
-}
+};
 
 /// A naive circular buffer implementation. At time of writing, it's intended
 /// to fill in where the deleted std.fifo.LinearFifo was used, so the API might

@@ -21,7 +21,7 @@ pub const image_def_block = if (microzig.config.ram_image and arch == .arm) Bloc
         // the vector table at the start of the image.
         .entry_point = .{
             .entry = &microzig.cpu.startup_logic.ram_image_start,
-            .sp = microzig.utilities.get_end_of_stack(),
+            .sp = microzig.utilities.end_of_stack,
         },
     },
 } else Block(extern struct {

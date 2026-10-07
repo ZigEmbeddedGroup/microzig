@@ -684,7 +684,6 @@ pub const startup_logic = struct {
     extern fn microzig_main() noreturn;
 
     pub fn ram_image_start() linksection("microzig_ram_start") callconv(.naked) noreturn {
-        const eos = comptime microzig.utilities.get_end_of_stack();
         asm volatile (
             \\
             // Set up stack and jump to _start
@@ -692,7 +691,7 @@ pub const startup_logic = struct {
             // using bx instead of b because the _start function might be too far away
             \\bx %[start_fn]
             :
-            : [eos] "r" (@as(u32, @intFromPtr(eos))),
+            : [eos] "r" (@as(u32, @intFromPtr(microzig.utilities.end_of_stack))),
               [start_fn] "r" (@as(u32, @intFromPtr(&_start))),
         );
     }
@@ -778,7 +777,7 @@ pub const startup_logic = struct {
 
     fn generate_vector_table() VectorTable {
         var tmp: VectorTable = .{
-            .initial_stack_pointer = microzig.utilities.get_end_of_stack(),
+            .initial_stack_pointer = microzig.utilities.end_of_stack,
             .Reset = .{ .c = microzig.cpu.startup_logic._start },
         };
 
