@@ -7,7 +7,6 @@ on:
 
 jobs:
   build:
-    if: false # avr is broken on master
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:

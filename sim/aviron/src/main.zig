@@ -92,21 +92,21 @@ fn run_with_mcu(
                     if (phdr.type != std.elf.PT.LOAD)
                         continue; // Header isn't loaded
 
-                    if (phdr.p_memsz == 0)
+                    if (phdr.memsz == 0)
                         continue; // Empty segment, nothing to load
 
                     // Use vaddr to determine if this is data or code
                     // AVR uses 0x800000 flag in vaddr to indicate data memory
-                    const is_data = phdr.p_vaddr >= 0x0080_0000;
-                    const target_addr: u24 = @intCast(phdr.p_vaddr & 0x007F_FFFF);
+                    const is_data = phdr.vaddr >= 0x0080_0000;
+                    const target_addr: u24 = @intCast(phdr.vaddr & 0x007F_FFFF);
 
-                    try reader.seekTo(phdr.p_offset);
+                    try reader.seekTo(phdr.offset);
 
                     if (is_data) {
                         // Load data segment via Bus interface
                         // Use a stack buffer to read and write through the bus
                         var read_buf: [256]u8 = undefined;
-                        var remaining = phdr.p_filesz;
+                        var remaining = phdr.filesz;
                         var offset: usize = 0;
                         while (remaining > 0) {
                             const to_read = @min(remaining, read_buf.len);
@@ -119,14 +119,14 @@ fn run_with_mcu(
                         }
 
                         // Zero-fill the remaining memory
-                        var i: usize = phdr.p_filesz;
-                        while (i < phdr.p_memsz) : (i += 1) {
+                        var i: usize = phdr.filesz;
+                        while (i < phdr.memsz) : (i += 1) {
                             try data_bus.write(@intCast(target_addr + i), 0);
                         }
                     } else {
                         // Flash can be loaded directly
-                        try reader.interface.readSliceAll(flash_storage.data[target_addr..][0..phdr.p_filesz]);
-                        @memset(flash_storage.data[target_addr + phdr.p_filesz ..][0 .. phdr.p_memsz - phdr.p_filesz], 0);
+                        try reader.interface.readSliceAll(flash_storage.data[target_addr..][0..phdr.filesz]);
+                        @memset(flash_storage.data[target_addr + phdr.filesz ..][0 .. phdr.memsz - phdr.filesz], 0);
                     }
                 }
             },
@@ -360,7 +360,7 @@ const IO = struct {
             .sp_l => @truncate(bus_io.sp >> 0),
             .sp_h => @truncate(bus_io.sp >> 8),
 
-            _ => std.debug.panic("illegal i/o read from undefined register 0x{X:0>2}", .{addr}),
+            _ => 0, // unimplemented peripheral register, return 0
         };
     }
 
@@ -412,10 +412,7 @@ const IO = struct {
             .ramp_d => write_masked(&bus_io.ramp_d, mask, value),
             .e_ind => write_masked(&bus_io.e_ind, mask, value),
 
-            _ => std.debug.panic(
-                "illegal i/o write to undefined register 0x{X:0>2} with value=0x{X:0>2}, mask=0x{X:0>2}",
-                .{ addr, value, mask },
-            ),
+            _ => {}, // unimplemented peripheral register, ignore write
         }
     }
 
