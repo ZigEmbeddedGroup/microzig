@@ -11,6 +11,7 @@ chips: struct {
 boards: struct {
     arduino: struct {
         nano: *const microzig.Target,
+        pro_mini: *const microzig.Target,
         uno_rev3: *const microzig.Target,
     },
     adafruit: struct {
@@ -89,6 +90,13 @@ pub fn init(dep: *std.Build.Dependency) ?Self {
                         .name = "Arduino Nano",
                         .url = "https://docs.arduino.cc/hardware/nano",
                         .root_source_file = b.path("src/boards/arduino_nano.zig"),
+                    },
+                }),
+                .pro_mini = chip_atmega328p.derive(.{
+                    .board = .{
+                        .name = "Arduino Pro Mini",
+                        .url = "https://docs.arduino.cc/retired/boards/arduino-pro-mini/",
+                        .root_source_file = b.path("src/boards/arduino_pro_mini.zig"),
                     },
                 }),
                 .uno_rev3 = chip_atmega328p.derive(.{
