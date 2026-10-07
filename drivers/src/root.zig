@@ -13,7 +13,7 @@ pub fn assert(ok: bool) void {
     if (!ok) @panic("Assertion failed");
 }
 
-pub const storage = @import("storage.zig");
+pub const kv_store = @import("kv_store.zig");
 
 pub const display = struct {
     pub const sh1106 = @import("display/sh1106.zig");
@@ -269,5 +269,5 @@ test {
 
     _ = wireless.nrf24l01;
 
-    _ = storage;
+    _ = kv_store;
 }

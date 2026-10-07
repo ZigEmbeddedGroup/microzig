@@ -10,7 +10,7 @@ const log = std.log.scoped(.drivers_storage);
 // TODO: error sets
 // TODO: caching
 
-pub const StorageGenericOptions = struct {
+pub const Options = struct {
     max_write_attempts: usize = 2,
     max_erase_attempts: usize = 2,
     max_read_attempts: usize = 2,
@@ -18,8 +18,9 @@ pub const StorageGenericOptions = struct {
 
 /// A generic storage implementation that can be used with any flash device.
 /// Items are stored sequentially in sectors (inspired by the rust crate
-/// sequential storage). It should be resilient to power loss and flash
-/// corruption, but if any sector becomes bad it is game over.
+/// [sequential storage](https://crates.io/crates/sequential-storage)). It
+/// should be resilient to power loss and flash corruption, but if any sector
+/// becomes bad it is game over.
 ///
 /// Storage layout:
 ///
@@ -32,7 +33,7 @@ pub const StorageGenericOptions = struct {
 ///
 /// * padded to a write page
 ///
-pub fn StorageGeneric(Flash: type, Key: type, options: StorageGenericOptions) type {
+pub fn Generic(Flash: type, Key: type, options: Options) type {
     if (!is_type_allowed(Key)) @compileError("invalid key type " ++ @typeName(Key));
 
     return struct {
@@ -40,6 +41,11 @@ pub fn StorageGeneric(Flash: type, Key: type, options: StorageGenericOptions) ty
 
         const WRITE_SIZE = Flash.WRITE_SIZE;
         const ERASE_SIZE = Flash.ERASE_SIZE;
+
+        comptime {
+            assert(std.math.isPowerOfTwo(WRITE_SIZE));
+            assert(std.math.isPowerOfTwo(ERASE_SIZE));
+        }
 
         const TAG_OFFSET = 0;
         const HEADER_OFFSET = TAG_OFFSET + WRITE_SIZE;
@@ -251,8 +257,8 @@ pub fn StorageGeneric(Flash: type, Key: type, options: StorageGenericOptions) ty
                                 src_offset += @truncate(data.len);
                                 dst_offset += @truncate(data.len);
                             }) {
-                                // if this fails it is something seriosly wrong
-                                // with the page, so we can't proceed
+                                // if this fails there is something seriously
+                                // wrong with the page, so we can't proceed
                                 try storage.write_retrying_aligned(dst_offset, data);
                             }
 
@@ -737,7 +743,7 @@ comptime {
 pub fn GenerateTests(comptime flash_options: MockFlashOptions) type {
     return struct {
         const TestFlash = MockFlash(flash_options);
-        const TestStorage = StorageGeneric(TestFlash, u32, .{});
+        const TestStorage = Generic(TestFlash, u32, .{});
         const FLASH_SIZE = 4 * 1024; // 4 sectors
 
         test "store then fetch roundtrip" {
@@ -754,7 +760,7 @@ pub fn GenerateTests(comptime flash_options: MockFlashOptions) type {
             try testing.expectEqual(@as(?u32, null), try s.fetch(3, u32));
         }
 
-        test "overwrite frees the old item" {
+        test "overwrite an existing item" {
             const buf: []u8 = try testing.allocator.alloc(u8, FLASH_SIZE);
             defer testing.allocator.free(buf);
             @memset(buf, 0xFF);
@@ -767,10 +773,6 @@ pub fn GenerateTests(comptime flash_options: MockFlashOptions) type {
         }
 
         test "sector wraparound and reinit" {
-            // NOTE: this test takes a while because every read from the
-            // MockFlash does an expensive corruption check. If we add caching
-            // it should be faster.
-
             const buf: []u8 = try testing.allocator.alloc(u8, FLASH_SIZE);
             defer testing.allocator.free(buf);
             @memset(buf, 0xFF);

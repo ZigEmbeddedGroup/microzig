@@ -466,13 +466,20 @@ pub fn clock_device() ClockDevice {
 }
 
 pub const Flash = struct {
-    // TODO: We must also wait for flash dma transfers to finish in addition to
-    // critical sections
-    // TODO: Maybe instead of asserts we should return errors?
+    // TODO: We must also wait for flash dma transfers to finish and pause
+    // core1 in addition to critical sections
 
     const BASE = hal.flash.XIP_BASE;
-    // We should get this from the memory map because it might be smaller.
     const SIZE = 16 * 1024 * 1024;
+    // const SIZE = blk: {
+    //     for (microzig.config.memory_regions) |region| {
+    //         if (region.tag == .flash) {
+    //             break :blk region.length;
+    //         }
+    //     } else {
+    //         @compileError("no flash memory region found in memory map");
+    //     }
+    // };
 
     pub const Config = struct {
         size: u32,
@@ -483,33 +490,36 @@ pub const Flash = struct {
     pub const WRITE_SIZE = 1;
     pub const ERASE_SIZE = hal.flash.SECTOR_SIZE;
 
-    pub fn erase(_: Flash, offset: u32, size: u32) error{EraseFailed}!void {
-        assert(std.mem.isAlignedGeneric(u32, offset, ERASE_SIZE));
-        assert(std.mem.isAlignedGeneric(u32, size, ERASE_SIZE));
-        assert(offset + size <= SIZE);
+    pub fn erase(_: Flash, offset: u32, size: u32) error{ EraseFailed, InvalidRange }!void {
+        if (!std.mem.isAlignedGeneric(u32, offset, ERASE_SIZE)) return error.InvalidRange;
+        if (!std.mem.isAlignedGeneric(u32, size, ERASE_SIZE)) return error.InvalidRange;
+        if (offset + size > SIZE) return error.InvalidRange;
 
         const cs = microzig.interrupt.enter_critical_section();
         defer cs.leave();
         hal.flash.range_erase(BASE + offset, size);
     }
 
-    pub fn read_buf(_: Flash, start: u32, end: u32) error{ ReadFailed, Corrupted }!?[]const u8 {
-        assert(start <= SIZE);
-        assert(end <= SIZE);
+    pub fn read_buf(_: Flash, start: u32, end: u32) error{ ReadFailed, Corrupted, InvalidRange }!?[]const u8 {
+        if (start > SIZE) return error.InvalidRange;
+        if (end > SIZE) return error.InvalidRange;
+
         if (start != end) {
-            return @as([*]u8, @ptrFromInt(BASE))[start..end];
+            // TODO: Should we return a volatile slice?
+            return @as([*]const u8, @ptrFromInt(BASE))[start..end];
         } else {
             return null;
         }
     }
 
-    pub fn read(_: Flash, offset: u32, data: []u8) error{ ReadFailed, Corrupted }!void {
-        assert(offset + @as(u32, @truncate(data.len)) <= SIZE);
+    pub fn read(_: Flash, offset: u32, data: []u8) error{ ReadFailed, Corrupted, InvalidRange }!void {
+        if (offset + @as(u32, @truncate(data.len)) > SIZE) return error.InvalidRange;
+
         std.mem.copyForwards(u8, data, @as([*]u8, @ptrFromInt(BASE + offset))[0..data.len]);
     }
 
-    pub fn write(_: Flash, offset: u32, data: []const u8) error{ WriteFailed, PageAlreadyProgrammed }!void {
-        assert(offset + @as(u32, @truncate(data.len)) <= SIZE);
+    pub fn write(_: Flash, offset: u32, data: []const u8) error{ WriteFailed, PageAlreadyProgrammed, InvalidRange }!void {
+        if (offset + @as(u32, @truncate(data.len)) > SIZE) return error.InvalidRange;
 
         const PAGE_SIZE = hal.flash.PAGE_SIZE;
 
