@@ -80,6 +80,9 @@ pub const wireless = struct {
     pub const CYW43_Runner = cyw43_runner.CYW43_Runner;
 
     pub const Cyw43439 = @import("wireless/cyw43439.zig");
+
+    pub const nrf24l01 = @import("wireless/nrf24l01.zig");
+    pub const NRF24L01 = nrf24l01.NRF24L01;
 };
 
 pub const time = struct {
@@ -251,4 +254,6 @@ test {
     _ = base.BlockMemory;
     _ = base.ClockDevice;
     _ = base.I2C_Device;
+
+    _ = wireless.nrf24l01;
 }
