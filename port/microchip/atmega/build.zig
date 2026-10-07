@@ -16,6 +16,9 @@ boards: struct {
     adafruit: struct {
         itsybitsy_32u4: *const microzig.Target,
     },
+    emakefun: struct {
+        rf_nano_v3: *const microzig.Target,
+    },
 },
 
 pub fn init(dep: *std.Build.Dependency) ?Self {
@@ -102,6 +105,15 @@ pub fn init(dep: *std.Build.Dependency) ?Self {
                         .name = "Adafruit ItsyBitsy 32u4",
                         .url = "https://www.adafruit.com/product/3677",
                         .root_source_file = b.path("src/boards/itsybitsy_32u4.zig"),
+                    },
+                }),
+            },
+            .emakefun = .{
+                .rf_nano_v3 = chip_atmega328p.derive(.{
+                    .board = .{
+                        .name = "Emakefun RF-Nano V3.0",
+                        .url = "https://github.com/emakefun/rf-nano",
+                        .root_source_file = b.path("src/boards/rf_nano_v3.zig"),
                     },
                 }),
             },
