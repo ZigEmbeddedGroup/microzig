@@ -79,7 +79,9 @@ const Baud = struct {
     @"error": comptime_float,
 };
 
-fn compute_baud(cpu_frequency: comptime_float, baud_rate: comptime_float) Baud {
+/// Picks the UBRR0 value and mode (normal or U2X0) with the lowest baud rate
+/// error, without checking that error.
+fn best_baud(cpu_frequency: comptime_float, baud_rate: comptime_float) Baud {
     var best: ?Baud = null;
     for ([_]bool{ false, true }) |double_speed| {
         const divisor: comptime_float = if (double_speed) 8 else 16;
@@ -93,13 +95,26 @@ fn compute_baud(cpu_frequency: comptime_float, baud_rate: comptime_float) Baud {
         }
     }
 
-    if (@abs(best.?.@"error") > max_baud_error)
+    return best.?;
+}
+
+fn compute_baud(cpu_frequency: comptime_float, baud_rate: comptime_float) Baud {
+    const baud = best_baud(cpu_frequency, baud_rate);
+
+    if (@abs(baud.@"error") > max_baud_error)
         @compileError(std.fmt.comptimePrint(
-            "baud rate {d} can't be generated from {d} Hz (error {d:.2} %)",
-            .{ baud_rate, cpu_frequency, best.?.@"error" * 100 },
+            "baud rate {d} can't be generated from {d} Hz (error {d:2} %)",
+            .{ baud_rate, cpu_frequency, baud.@"error" * 100 },
         ));
 
-    return best.?;
+    return baud;
+}
+
+test best_baud {
+    // At 8 MHz the closest to 115200 baud is 111111 (-3.5 %), so
+    // `compute_baud` rejects it.
+    // TODO: test the compile error itself (https://github.com/ziglang/zig/issues/513).
+    try std.testing.expect(@abs(best_baud(8_000_000, 115_200).@"error") > max_baud_error);
 }
 
 test compute_baud {
