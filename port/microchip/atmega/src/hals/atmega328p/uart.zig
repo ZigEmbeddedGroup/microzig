@@ -103,7 +103,7 @@ fn compute_baud(cpu_frequency: comptime_float, baud_rate: comptime_float) Baud {
 
     if (@abs(baud.@"error") > max_baud_error)
         @compileError(std.fmt.comptimePrint(
-            "baud rate {d} can't be generated from {d} Hz (error {d:2} %)",
+            "baud rate {d} can't be generated from {d} Hz (error {d:.2} %)",
             .{ baud_rate, cpu_frequency, baud.@"error" * 100 },
         ));
 
