@@ -336,7 +336,7 @@ pub const MemoryRegion = struct {
     };
 };
 
-pub const BuildConfig = struct {
+pub const Config = struct {
     has_hal: bool,
     has_board: bool,
 

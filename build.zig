@@ -305,7 +305,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
             const maybe_hal = options.hal orelse target.hal;
             const maybe_board = options.board orelse target.board;
 
-            const config: internals.BuildConfig = .{
+            const config: internals.Config = .{
                 .has_hal = maybe_hal != null,
                 .has_board = maybe_board != null,
 
