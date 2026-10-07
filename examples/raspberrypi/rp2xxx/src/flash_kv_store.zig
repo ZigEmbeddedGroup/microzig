@@ -31,16 +31,10 @@ pub fn main() !void {
     const flash_storage_end: u32 = flash_storage_start + 4 * flash.SECTOR_SIZE;
 
     // Erase the flash storage region
-    {
-        var current_offset: u32 = flash_storage_start;
-        while (current_offset < flash_storage_end) : (current_offset += flash.SECTOR_SIZE) {
-            std.log.info("Erasing sector at offset {x}", .{current_offset});
-            flash.range_erase(current_offset, flash.SECTOR_SIZE);
-        }
-    }
+    flash.range_erase(flash_storage_start, flash_storage_end);
 
     const flash_instance: rp2xxx.drivers.Flash = .{};
-    var storage: microzig.drivers.storage.StorageGeneric(
+    var storage: microzig.drivers.kv_store.Generic(
         rp2xxx.drivers.Flash,
         u32,
         .{},

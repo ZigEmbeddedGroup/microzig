@@ -3,7 +3,7 @@
 //!
 const std = @import("std");
 
-pub const storage = @import("storage.zig");
+pub const kv_store = @import("kv_store.zig");
 
 pub const display = struct {
     pub const sh1106 = @import("display/sh1106.zig");
@@ -254,5 +254,5 @@ test {
     _ = base.ClockDevice;
     _ = base.I2C_Device;
 
-    _ = storage;
+    _ = kv_store;
 }
