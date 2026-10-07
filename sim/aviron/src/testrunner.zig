@@ -31,34 +31,35 @@ const ExitMode = union(testconfig.ExitType) {
 
 fn run_test_with_mcu(
     gpa: std.mem.Allocator,
+    io: std.Io,
     mcu_name: []const u8,
     test_config: testconfig.TestSuiteConfig,
     options: RunTestOptions,
     elf_paths: []const []const u8,
 ) !void {
-    const mcu = if (std.ascii.eqlIgnoreCase(mcu_name, "ATmega328P"))
-        aviron.mcu.atmega328p
+    if (std.ascii.eqlIgnoreCase(mcu_name, "ATmega328P"))
+        try run_test(gpa, io, aviron.mcu.atmega328p, test_config, options, elf_paths)
     else if (std.ascii.eqlIgnoreCase(mcu_name, "ATtiny816"))
-        aviron.mcu.attiny816
+        try run_test(gpa, io, aviron.mcu.attiny816, test_config, options, elf_paths)
     else if (std.ascii.eqlIgnoreCase(mcu_name, "ATmega2560"))
-        aviron.mcu.atmega2560
+        try run_test(gpa, io, aviron.mcu.atmega2560, test_config, options, elf_paths)
     else if (std.ascii.eqlIgnoreCase(mcu_name, "ATxmega128A4U"))
-        aviron.mcu.xmega128a4u
+        try run_test(gpa, io, aviron.mcu.xmega128a4u, test_config, options, elf_paths)
     else {
         std.debug.print("MCU '{s}' not yet supported in test runner\n", .{mcu_name});
         return error.UnsupportedMCU;
-    };
-
-    try run_test(gpa, mcu, test_config, options, elf_paths);
+    }
 }
 
 const RunTestOptions = struct {
     trace: bool = false,
+    name: []const u8 = "",
 };
 
 fn run_test(
     gpa: std.mem.Allocator,
-    mcu_config: aviron.mcu.Config,
+    sys_io: std.Io,
+    comptime mcu_config: aviron.mcu.Config,
     test_config: testconfig.TestSuiteConfig,
     options: RunTestOptions,
     elf_paths: []const []const u8,
@@ -111,19 +112,19 @@ fn run_test(
             @field(cpu.sreg, field_name) = init_value;
         }
     }
-    inline for (@typeInfo(aviron.Register).@"enum".field_values) |field_value| {
-        if (@field(test_config.precondition, @tagName(field_value))) |init_value| {
-            cpu.regs[field_value] = init_value;
+    inline for (@typeInfo(aviron.Register).@"enum".field_names) |field_name| {
+        if (@field(test_config.precondition, field_name)) |init_value| {
+            cpu.regs[@backingInt(@field(aviron.Register, field_name))] = init_value;
         }
     }
 
     // Load ELF files
     for (elf_paths) |file_path| {
-        var elf_file = try std.fs.cwd().openFile(file_path, .{});
-        defer elf_file.close();
+        var elf_file = try std.Io.Dir.cwd().openFile(sys_io, file_path, .{});
+        defer elf_file.close(sys_io);
 
         var file_buf: [4096]u8 = undefined;
-        var reader = elf_file.reader(&file_buf);
+        var reader = elf_file.reader(sys_io, &file_buf);
 
         var header = try std.elf.Header.read(&reader.interface);
 
@@ -138,21 +139,21 @@ fn run_test(
             if (phdr.type != std.elf.PT.LOAD)
                 continue; // Header isn't loaded
 
-            if (phdr.p_memsz == 0)
+            if (phdr.memsz == 0)
                 continue; // Empty segment, nothing to load
 
             // Use vaddr to determine if this is data or code
             // AVR uses 0x800000 flag in vaddr to indicate data memory
-            const is_data = phdr.p_vaddr >= 0x0080_0000;
-            const target_addr: u24 = @intCast(phdr.p_vaddr & 0x007F_FFFF);
+            const is_data = phdr.vaddr >= 0x0080_0000;
+            const target_addr: u24 = @intCast(phdr.vaddr & 0x007F_FFFF);
 
-            try reader.seekTo(phdr.p_offset);
+            try reader.seekTo(phdr.offset);
 
             if (is_data) {
                 // Load data segment via Bus interface
                 // Use a stack buffer to read and write through the bus
                 var read_buf: [256]u8 = undefined;
-                var remaining = phdr.p_filesz;
+                var remaining = phdr.filesz;
                 var offset: usize = 0;
                 while (remaining > 0) {
                     const to_read = @min(remaining, read_buf.len);
@@ -165,14 +166,14 @@ fn run_test(
                 }
 
                 // Zero-fill the remaining memory
-                var i: usize = phdr.p_filesz;
-                while (i < phdr.p_memsz) : (i += 1) {
+                var i: usize = phdr.filesz;
+                while (i < phdr.memsz) : (i += 1) {
                     try data_bus.write(@intCast(target_addr + i), 0);
                 }
             } else {
                 // Flash can be loaded directly
-                try reader.interface.readSliceAll(flash_storage.data[target_addr..][0..phdr.p_filesz]);
-                @memset(flash_storage.data[target_addr + phdr.p_filesz ..][0 .. phdr.p_memsz - phdr.p_filesz], 0);
+                try reader.interface.readSliceAll(flash_storage.data[target_addr..][0..phdr.filesz]);
+                @memset(flash_storage.data[target_addr + phdr.filesz ..][0 .. phdr.memsz - phdr.filesz], 0);
             }
         }
     }
@@ -242,12 +243,12 @@ fn run_test(
         }
     }
 
-    inline for (comptime std.meta.fields(aviron.Cpu.SREG)) |fld| {
-        if (@field(test_config.postcondition.sreg, fld.name)) |expected_value| {
-            const actual_value = @field(cpu.sreg, fld.name);
+    inline for (@typeInfo(aviron.Cpu.SREG).@"struct".field_names) |field_name| {
+        if (@field(test_config.postcondition.sreg, field_name)) |expected_value| {
+            const actual_value = @field(cpu.sreg, field_name);
             if (actual_value != expected_value) {
                 std.debug.print("Invalid register value for SREG.{s}: Expected {}, but got {}.\n", .{
-                    fld.name,
+                    field_name,
                     expected_value,
                     actual_value,
                 });
@@ -268,21 +269,21 @@ pub fn main(init: std.process.Init) !u8 {
     const gpa = init.gpa;
     const args = try init.minimal.args.toSlice(arena.allocator());
     const cli_args, const positionals = try flags.parse(CLI_Args, arena.allocator(), args);
-    var write_buf: [64]u8 = undefined;
 
+    const io = init.io;
     if (cli_args.help) {
-        const stdout = std.Io.File.stdout().writer(init.io, &write_buf);
-        var writer = stdout.interface;
-        try writer.print("{s}", .{CLI_Args.usage});
+        var stdout = std.Io.File.stdout().writer(io, &.{});
+        try stdout.interface.print("{s}", .{CLI_Args.usage});
+        try stdout.interface.flush();
         return 0;
     }
 
     const config_path = cli_args.config orelse @panic("missing configuration path!");
     const config = blk: {
-        var file = try std.Io.Dir.cwd().openFile(init.io, config_path, .{});
-        defer file.close(init.io);
+        var file = try std.Io.Dir.cwd().openFile(io, config_path, .{});
+        defer file.close(io);
 
-        break :blk try testconfig.TestSuiteConfig.load(arena.allocator(), init.io, file);
+        break :blk try testconfig.TestSuiteConfig.load(arena.allocator(), io, file);
     };
 
     if (positionals.len == 0)
@@ -290,6 +291,7 @@ pub fn main(init: std.process.Init) !u8 {
 
     const options: RunTestOptions = .{
         .trace = cli_args.trace,
+        .name = cli_args.name,
     };
 
     // Determine which MCU(s) to test with
@@ -297,12 +299,12 @@ pub fn main(init: std.process.Init) !u8 {
         // Run test against multiple MCUs
         for (cpus) |mcu_name| {
             std.debug.print("Running test with MCU: {s}\n", .{mcu_name});
-            try run_test_with_mcu(gpa, mcu_name, config, options, positionals);
+            try run_test_with_mcu(gpa, io, mcu_name, config, options, positionals);
         }
     } else {
         // Run test against a single MCU (default to ATmega328P if not specified)
         const mcu_name = config.cpu orelse "ATmega328P";
-        try run_test_with_mcu(gpa, mcu_name, config, positionals, options);
+        try run_test_with_mcu(gpa, io, mcu_name, config, options, positionals);
     }
 
     return 0;

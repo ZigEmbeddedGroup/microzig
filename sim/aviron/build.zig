@@ -313,13 +313,11 @@ fn add_test_suite(
         );
 
         const test_run = b.addRunArtifact(testrunner_exe);
-        test_run.addArg("--config");
-        test_run.addFileArg(write_file.getDirectory().path(b, b.fmt(
+        test_run.addPrefixedFileArg("--config=", write_file.getDirectory().path(b, b.fmt(
             "test-config-{s}.json",
             .{std.fs.path.stem(entry.basename)},
         )));
-        test_run.addArg("--name");
-        test_run.addArg(entry.path);
+        test_run.addArg(b.fmt("--name={s}", .{entry.path}));
 
         test_run.addFileArg(cae.binary);
 
