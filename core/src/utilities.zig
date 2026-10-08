@@ -489,42 +489,31 @@ pub fn dump_stack_trace(trace: *std.lang.StackTrace) usize {
     return frame_count;
 }
 
-pub const end_of_stack: *const anyopaque = find_end_of_stack: {
-    const EndOfStackKind = union(enum) {
-        address: usize,
-        symbol_name: []const u8,
-    };
-
-    const kind: EndOfStackKind = switch (microzig.config.stack) {
-        .address => |address| .{ .address = address },
-        .ram_region_index => |index| blk: {
-            var i: usize = 0;
-            for (microzig.config.memory_regions) |region| {
-                if (region.tag == .ram) {
-                    if (i == index)
-                        break :blk .{ .address = region.offset + region.length };
-                    i += 1;
+pub const end_of_stack: *const anyopaque = blk: switch (microzig.config.stack) {
+    .address => |address| break :blk @ptrFromInt(address),
+    .ram_region_index => |index| {
+        var i: usize = 0;
+        for (microzig.config.memory_regions) |region| {
+            if (region.tag == .ram) {
+                if (i == index) {
+                    break :blk @ptrFromInt(region.offset + region.length);
                 }
-            } else @compileError("no ram memory region found for setting the end-of-stack address");
-        },
-        .ram_region_name => |name| blk: {
-            for (microzig.config.memory_regions) |region| {
-                if (region.name) |region_name| {
-                    if (std.mem.eql(u8, region_name, name)) {
-                        if (region.tag == .ram) {
-                            break :blk .{ .address = region.offset + region.length };
-                        } else @panic("Named region found is not a ram region");
-                    }
+                i += 1;
+            }
+        } else @compileError("no ram memory region found for setting the end-of-stack address");
+    },
+    .ram_region_name => |name| {
+        for (microzig.config.memory_regions) |region| {
+            if (region.name) |region_name| {
+                if (std.mem.eql(u8, region_name, name)) {
+                    if (region.tag == .ram) {
+                        break :blk @ptrFromInt(region.offset + region.length);
+                    } else @compileError("named region found is not a ram region");
                 }
-            } else @compileError("no ram memory named region found for setting the end-of-stack address");
-        },
-        .symbol_name => |name| .{ .symbol_name = name },
-    };
-
-    break :find_end_of_stack switch (kind) {
-        .address => |address| @ptrFromInt(address),
-        .symbol_name => |name| @extern(*const anyopaque, .{ .name = name }),
-    };
+            }
+        } else @compileError("no ram memory named region found for setting the end-of-stack address");
+    },
+    .symbol_name => |name| @extern(*const anyopaque, .{ .name = name }),
 };
 
 /// A naive circular buffer implementation. At time of writing, it's intended
