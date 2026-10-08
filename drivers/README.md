@@ -113,6 +113,11 @@ pub const DatagramDevice = struct {
             write_chunks: []const []const u8,
             read_chunks: []const []u8,
         ) (WriteError || ReadError)!void = null,
+        transceivev_fn: ?*const fn (
+            *anyopaque,
+            write_chunks: []const []const u8,
+            read_chunks: []const []u8,
+        ) (WriteError || ReadError)!void = null,
     };
 };
 ```
@@ -129,6 +134,9 @@ pub const DatagramDevice = struct {
 - `read(buffer)` / `readv(buffers)` - Read datagrams, returns bytes read
 - `write_then_read(src, dst)` - Atomic write-then-read in single transaction
 - `writev_then_readv(write_chunks, read_chunks)` - Vectored write-then-read
+- `transceive(src, dst)` / `transceivev(write_chunks, read_chunks)` - Full-duplex write and read in
+  a single transaction; only the total lengths must match. Optional: returns `error.Unsupported` if
+  the device doesn't implement it. Drivers using concrete types can check for it with `@hasDecl`.
 
 **Usage Example**:
 ```zig
