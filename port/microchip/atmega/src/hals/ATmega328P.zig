@@ -2,6 +2,10 @@ const microzig = @import("microzig");
 const cpu = microzig.cpu;
 
 pub const gpio = struct {
+    /// The I/O registers start at this address in the data space. SBI/CBI
+    /// take I/O addresses, regular loads and stores take data addresses.
+    const IO_OFFSET = 0x20;
+
     pub const Port = enum(u2) {
         b = 1,
         c = 2,
@@ -17,7 +21,7 @@ pub const gpio = struct {
         };
 
         // These addresses are IO addresses. These are used instead of the data
-        // addresses so that we can use SBI and CBI instructiosn
+        // addresses so that we can use SBI and CBI instructions
         pub inline fn get_regs(port: Port) *volatile Regs {
             return switch (port) {
                 .b => @ptrFromInt(0x3),
@@ -52,7 +56,7 @@ pub const gpio = struct {
         }
 
         pub inline fn read(p: Pin) u1 {
-            const pin_addr: *volatile u8 = &p.port.get_regs().PIN;
+            const pin_addr: *volatile u8 = @ptrFromInt(@intFromPtr(&p.port.get_regs().PIN) + IO_OFFSET);
             return @truncate(pin_addr.* >> p.num & 0x01);
         }
 
