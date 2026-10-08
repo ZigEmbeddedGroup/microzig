@@ -32,12 +32,12 @@ pub const Resolution = struct {
     height: u16,
 };
 
-const ColorOrder = enum(u1) {
+pub const ColorOrder = enum(u1) {
     rgb = 0,
     bgr = 1,
 };
 
-const Rotation = enum(u2) {
+pub const Rotation = enum(u2) {
     deg0,
     deg90,
     deg180,
@@ -45,7 +45,7 @@ const Rotation = enum(u2) {
 };
 
 pub const DriverConfig = struct {
-    /// Which SST77xx device does the driver target?
+    /// Which ST77xx device does the driver target?
     device: Device,
 
     /// Which datagram device interface should be used.
@@ -118,6 +118,16 @@ pub fn ST77xx_Generic(driver_cfg: DriverConfig, display_cfg: DisplayConfig) type
         const Digital_IO = driver_cfg.Digital_IO;
         pub const Color = driver_cfg.Color;
 
+        // COLMOD is configured for 16 bits per pixel.
+        comptime {
+            if (@sizeOf(Color) != 2) {
+                @compileError(std.fmt.comptimePrint(
+                    "ST77xx driver requires a 16-bit Color type, got {s} ({} bytes)",
+                    .{ @typeName(Color), @sizeOf(Color) },
+                ));
+            }
+        }
+
         dd: DatagramDevice,
         dev_rst: Digital_IO,
         dev_datcmd: Digital_IO,
@@ -138,8 +148,9 @@ pub fn ST77xx_Generic(driver_cfg: DriverConfig, display_cfg: DisplayConfig) type
                 .dev_rst = rst,
                 .dev_datcmd = data_cmd,
 
-                .madctl = .{ .rgb = display_cfg.color_order, .addr = MemoryDataAccessControl.AddressOrder.from_rotation(display_cfg.rotation) },
+                .madctl = .{ .rgb = display_cfg.color_order },
             };
+            dri.apply_rotation(display_cfg.rotation);
 
             try dri.set_spi_mode(.data);
 
@@ -206,9 +217,9 @@ pub fn ST77xx_Generic(driver_cfg: DriverConfig, display_cfg: DisplayConfig) type
             try dri.write_command(.madctl, &.{@bitCast(dri.madctl)});
             try dri.write_command(.colmod, &.{0x05});
 
-            // Expose the full configured panel area as the initial drawing window.
-            try dri.write_command(.caset, &range_to_bigendian_bytes(0, display_cfg.resolution.width - 1));
-            try dri.write_command(.raset, &range_to_bigendian_bytes(0, display_cfg.resolution.height - 1));
+            // Expose the full panel area (in the current rotation) as the initial drawing window.
+            try dri.write_command(.caset, &range_to_bigendian_bytes(0, dri.resolution.width - 1));
+            try dri.write_command(.raset, &range_to_bigendian_bytes(0, dri.resolution.height - 1));
 
             // Some modules require display inversion for correct colours / contrast.
             if (comptime display_cfg.display_inversion) {
@@ -245,9 +256,9 @@ pub fn ST77xx_Generic(driver_cfg: DriverConfig, display_cfg: DisplayConfig) type
             delay_ms(10);
             try dri.write_command(.madctl, &.{@bitCast(dri.madctl)});
 
-            // Expose the full configured panel area as the initial drawing window.
-            try dri.write_command(.caset, &range_to_bigendian_bytes(0, display_cfg.resolution.width - 1));
-            try dri.write_command(.raset, &range_to_bigendian_bytes(0, display_cfg.resolution.height - 1));
+            // Expose the full panel area (in the current rotation) as the initial drawing window.
+            try dri.write_command(.caset, &range_to_bigendian_bytes(0, dri.resolution.width - 1));
+            try dri.write_command(.raset, &range_to_bigendian_bytes(0, dri.resolution.height - 1));
 
             // Some modules require display inversion for correct colours / contrast.
             if (comptime display_cfg.display_inversion) {
@@ -262,11 +273,18 @@ pub fn ST77xx_Generic(driver_cfg: DriverConfig, display_cfg: DisplayConfig) type
             delay_ms(10);
         }
 
+        /// Sets the RAM window for the following pixel data and issues `RAMWR`.
+        /// Returns `error.InvalidWindow` if the window is empty or does not fit
+        /// the active resolution.
         pub fn set_address_window(dri: *Self, x: u16, y: u16, w: u16, h: u16) !void {
-            const xstart = x + dri.x_offset;
-            const ystart = y + dri.y_offset;
-            const xend = xstart + (w - 1);
-            const yend = ystart + (h - 1);
+            if (w == 0 or h == 0) return error.InvalidWindow;
+            if (@as(u32, x) + w > dri.resolution.width) return error.InvalidWindow;
+            if (@as(u32, y) + h > dri.resolution.height) return error.InvalidWindow;
+
+            const xstart = std.math.add(u16, x, dri.x_offset) catch return error.InvalidWindow;
+            const ystart = std.math.add(u16, y, dri.y_offset) catch return error.InvalidWindow;
+            const xend = std.math.add(u16, xstart, w - 1) catch return error.InvalidWindow;
+            const yend = std.math.add(u16, ystart, h - 1) catch return error.InvalidWindow;
 
             try dri.write_command(.caset, &range_to_bigendian_bytes(xstart, xend));
             try dri.write_command(.raset, &range_to_bigendian_bytes(ystart, yend));
@@ -287,40 +305,37 @@ pub fn ST77xx_Generic(driver_cfg: DriverConfig, display_cfg: DisplayConfig) type
         }
 
         pub fn set_rotation(dri: *Self, rotation: Rotation) !void {
+            dri.apply_rotation(rotation);
+            try dri.write_command(.madctl, &.{@bitCast(dri.madctl)});
+        }
+
+        /// Updates the cached MADCTL value, resolution and offsets for `rotation`
+        /// without touching the hardware.
+        fn apply_rotation(dri: *Self, rotation: Rotation) void {
+            dri.madctl.addr = MemoryDataAccessControl.AddressOrder.from_rotation(rotation);
             switch (rotation) {
                 .deg0 => {
-                    dri.madctl.addr = MemoryDataAccessControl.AddressOrder.from_rotation(rotation);
-                    dri.resolution.width = display_cfg.resolution.width;
-                    dri.resolution.height = display_cfg.resolution.height;
+                    dri.resolution = display_cfg.resolution;
                     dri.x_offset = display_cfg.x_offset;
                     dri.y_offset = display_cfg.y_offset;
                 },
                 .deg90 => {
-                    dri.madctl.addr = MemoryDataAccessControl.AddressOrder.from_rotation(rotation);
-                    dri.resolution.width = display_cfg.resolution.height;
-                    dri.resolution.height = display_cfg.resolution.width;
+                    dri.resolution = .{ .width = display_cfg.resolution.height, .height = display_cfg.resolution.width };
                     dri.x_offset = display_cfg.y_offset;
                     dri.y_offset = display_cfg.x_offset2;
                 },
                 .deg180 => {
-                    dri.madctl.addr = MemoryDataAccessControl.AddressOrder.from_rotation(rotation);
-                    dri.resolution.width = display_cfg.resolution.width;
-                    dri.resolution.height = display_cfg.resolution.height;
+                    dri.resolution = display_cfg.resolution;
                     dri.x_offset = display_cfg.x_offset2;
                     dri.y_offset = display_cfg.y_offset2;
                 },
                 .deg270 => {
-                    dri.madctl.addr = MemoryDataAccessControl.AddressOrder.from_rotation(rotation);
-                    dri.resolution.width = display_cfg.resolution.height;
-                    dri.resolution.height = display_cfg.resolution.width;
+                    dri.resolution = .{ .width = display_cfg.resolution.height, .height = display_cfg.resolution.width };
                     dri.x_offset = display_cfg.y_offset2;
                     dri.y_offset = display_cfg.x_offset;
                 },
             }
-
-            try dri.write_command(.madctl, &.{@bitCast(dri.madctl)});
         }
-
         fn write_command(dri: *Self, cmd: Command, params: []const u8) !void {
             try dri.set_spi_mode(.command);
             try dri.dd.connect();
