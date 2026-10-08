@@ -20,8 +20,12 @@ pub fn main() void {
 
     while (true) {
         var byte: u8 = undefined;
-        uart.read_byte_blocking(&byte) catch {
-            uart.write_blocking("\r\n[receive error]\r\n");
+        uart.read_byte_blocking(&byte) catch |err| {
+            uart.write_blocking(switch (err) {
+                error.FramingError => "\r\n[framing error]\r\n",
+                error.OverrunError => "\r\n[overrun]\r\n",
+                error.ParityError => "\r\n[parity error]\r\n",
+            });
             continue;
         };
         uart.write_byte_blocking(byte);

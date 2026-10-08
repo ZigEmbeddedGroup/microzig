@@ -1,8 +1,9 @@
 //! USART0 for the ATmega328P (asynchronous mode, polling).
 //!
 //! RXD is PD0 and TXD is PD1. On Arduino Nano-style boards they are wired to
-//! the USB-to-serial chip. Enabling the receiver and transmitter overrides the
-//! GPIO configuration of both pins, so no pin setup is needed.
+//! the USB-to-serial chip. Enabling the receiver and transmitter takes over the
+//! direction of both pins; `apply` also sets PD0 as an input with its pull-up
+//! (effective while PUD is clear), so an unconnected RX line idles high.
 //!
 //! Functions that return an error with a payload (`E!u8`) don't compile for
 //! AVR yet (https://codeberg.org/ziglang/zig/issues/37099), so reads use an
@@ -12,6 +13,8 @@ const std = @import("std");
 const microzig = @import("microzig");
 
 const USART0 = microzig.chip.peripherals.USART0;
+const rxd = microzig.hal.gpio.pin(.d, 0);
+
 /// Largest accepted baud rate error. This is above the datasheet's
 /// recommendation, so that 115200 baud at 16 MHz (+2.1 %) is accepted, as
 /// in Arduino.
@@ -47,6 +50,11 @@ pub const Setup = struct {
             },
             .UMSEL0 = .ASYNCHRONOUS_USART,
         });
+
+        // With the receiver enabled, PORTD0 still controls the RXD pull-up
+        // (datasheet table 13-11, effective while PUD is clear).
+        rxd.set_direction(.input);
+        rxd.put(1);
 
         USART0.UCSR0B.write(.{
             .RXCIE0 = 0,
