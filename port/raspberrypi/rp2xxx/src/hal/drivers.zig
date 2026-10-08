@@ -3,7 +3,6 @@
 //!
 
 const std = @import("std");
-const assert = std.debug.assert;
 const microzig = @import("microzig");
 const hal = @import("../hal.zig");
 const mdf = microzig.drivers;
