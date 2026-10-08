@@ -517,7 +517,7 @@ pub const Flash = struct {
         std.mem.copyForwards(u8, data, @as([*]u8, @ptrFromInt(BASE + offset))[0..data.len]);
     }
 
-    pub fn write(_: Flash, offset: u32, data: []const u8) error{ WriteFailed, PageAlreadyProgrammed, InvalidRange }!void {
+    pub fn write(_: Flash, offset: u32, data: []const u8) error{ WriteFailed, InvalidRange }!void {
         if (offset + @as(u32, @truncate(data.len)) > SIZE) return error.InvalidRange;
 
         const PAGE_SIZE = hal.flash.PAGE_SIZE;

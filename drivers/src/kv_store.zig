@@ -7,13 +7,22 @@ const isAligned = std.mem.isAlignedGeneric;
 const log = std.log.scoped(.drivers_storage);
 
 // TODO: support huge items that don't fit in a sector
-// TODO: error sets
 // TODO: caching
 
 pub const Options = struct {
     max_write_attempts: usize = 2,
     max_erase_attempts: usize = 2,
     max_read_attempts: usize = 2,
+};
+
+pub const Error = error{
+    InvalidRange,
+    EraseFailed,
+    WriteFailed,
+    InvalidWrite,
+    ReadFailed,
+    Corrupted,
+    OutOfMemory,
 };
 
 /// A generic storage implementation that can be used with any flash device.
@@ -60,7 +69,10 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
         active_sector_offset: u32,
         last_sector_offset: u32,
 
-        pub fn init(flash: Flash, range_start: u32, range_end: u32) !Storage {
+        /// Initialize the storage with the given flash device and range. The
+        /// range must be aligned to the erase size and must contain at least
+        /// two sectors.
+        pub fn init(flash: Flash, range_start: u32, range_end: u32) Error!Storage {
             if (range_start >= range_end) {
                 return error.InvalidRange;
             }
@@ -138,7 +150,9 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
             return storage;
         }
 
-        pub fn fetch(storage: *Storage, key: Key, comptime T: type) !?T {
+        /// Fetch the value for the given key. Asserts the item has type T.
+        /// Returns null if the key is not found.
+        pub fn fetch(storage: *Storage, key: Key, comptime T: type) Error!?T {
             if (comptime !is_type_allowed(T)) @compileError("invalid value type " ++ @typeName(T));
 
             if (try storage.fetch_item_internal(key, storage.last_sector_offset)) |item| {
@@ -148,7 +162,9 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
             } else return null;
         }
 
-        pub fn store(storage: *Storage, key: Key, value: anytype) !void {
+        /// Store the given key and value. If the key already exists, it will
+        /// be overwritten.
+        pub fn store(storage: *Storage, key: Key, value: anytype) Error!void {
             if (comptime !is_type_allowed(@TypeOf(value))) @compileError("invalid value type " ++ @typeName(@TypeOf(value)));
 
             const item_len: u16 = comptime VALUE_OFFSET + @sizeOf(@TypeOf(value));
@@ -190,7 +206,7 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
 
                     // because we call it before updating current_offset, we
                     // skip the last added item
-                    storage.try_to_mark_all_items_free(key) catch {};
+                    storage.remove(key) catch {};
 
                     storage.current_offset += item_stride;
 
@@ -199,7 +215,8 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
             } else return error.OutOfMemory;
         }
 
-        fn try_to_mark_all_items_free(storage: *Storage, key: Key) !void {
+        /// Remove the given key from storage.
+        pub fn remove(storage: *Storage, key: Key) Error!void {
             var current_sector_offset = storage.active_sector_offset;
             while (true) : (current_sector_offset = storage.get_prev_sector(current_sector_offset)) {
                 var item_it: ItemIterator = .init(storage, current_sector_offset);
@@ -831,4 +848,57 @@ pub fn GenerateTests(comptime flash_options: MockFlashOptions) type {
             }
         }
     };
+}
+
+test "fuzz" {
+    try testing.fuzz({}, do_fuzz, .{});
+}
+
+fn do_fuzz(_: void, smith: *testing.Smith) !void {
+    const TestFlash = MockFlash(.{
+        .write_size = 4,
+        .erase_size = 1024,
+    });
+    const Storage = Generic(TestFlash, u32, .{});
+    const Value = u32;
+
+    const FLASH_SIZE = 4 * 1024;
+
+    const buf: []u8 = try testing.allocator.alloc(u8, FLASH_SIZE);
+    defer testing.allocator.free(buf);
+    @memset(buf, 0xFF);
+
+    var storage: Storage = try .init(TestFlash.init(buf), 0, FLASH_SIZE);
+
+    var oracle: std.array_hash_map.Auto(u32, Value) = .empty;
+    defer oracle.deinit(testing.allocator);
+
+    const Action = enum {
+        store,
+        fetch,
+    };
+
+    for (0..10000) |_| {
+        switch (smith.value(Action)) {
+            .store => {
+                const key = smith.value(u32);
+                const value = smith.value(Value);
+                try oracle.put(testing.allocator, key, value);
+                storage.store(key, value) catch |err| switch (err) {
+                    error.OutOfMemory => break,
+                    else => return err,
+                };
+            },
+            .fetch => {
+                const key_index = smith.index(oracle.keys().len + 1);
+                const key = if (key_index < oracle.keys().len)
+                    oracle.keys()[key_index]
+                else
+                    smith.value(u32);
+                const expected = oracle.get(key);
+                const actual = try storage.fetch(key, Value);
+                try testing.expectEqual(expected, actual);
+            },
+        }
+    }
 }
