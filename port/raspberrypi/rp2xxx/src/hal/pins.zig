@@ -804,12 +804,12 @@ pub const GlobalConfiguration = struct {
                 if (@hasField(T, cname)) {
                     if (pin_config.function == .SIO) {
                         @field(ret, cname) = gpio.num(@backingInt(@field(Pin, field_name)));
-                    } else if (pin_config.function.is_pwm()) {
+                    } else if (comptime pin_config.function.is_pwm()) {
                         @field(ret, cname) = pwm.Pwm{
                             .slice_number = pin_config.function.pwm_slice(),
                             .channel = pin_config.function.pwm_channel(),
                         };
-                    } else if (pin_config.function.is_adc()) {
+                    } else if (comptime pin_config.function.is_adc()) {
                         @field(ret, cname) = @as(adc.Input, @fromBackingInt(@intCast(switch (pin_config.function) {
                             .ADC0 => 0,
                             .ADC1 => 1,
