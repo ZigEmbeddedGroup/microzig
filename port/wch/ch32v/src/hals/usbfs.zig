@@ -17,6 +17,10 @@ pub const USB_MAX_ENDPOINTS_COUNT = 8;
 
 const max_buffer_pool_size = USB_MAX_ENDPOINTS_COUNT * 2 * 64 + 64;
 
+/// Physical-layer USB setup (placeholder for API compatibility with USBD).
+/// USBFS pins are fixed by the peripheral and not configurable.
+pub const Setup = struct {};
+
 pub const Config = struct {
     max_endpoints_count: comptime_int = USB_MAX_ENDPOINTS_COUNT,
 
@@ -45,7 +49,7 @@ fn PerEndpointArray(comptime N: comptime_int) type {
 }
 
 fn epn(ep: types.Endpoint.Num) u4 {
-    return @as(u4, @intCast(@backingInt(ep)));
+    return @backingInt(ep);
 }
 // --- USBHD token encodings ---
 const TOKEN_OUT: u2 = 0;
@@ -137,12 +141,12 @@ fn enable_endpoint(ep: u4) void {
 }
 
 /// Polled USBFS device backend for the MicroZig core USB controller.
-pub fn Polled(comptime cfg: Config) type {
+pub fn Polled(comptime _: Setup, comptime cfg: Config) type {
     comptime {
         if (cfg.max_endpoints_count < 1)
             @compileError("USBFS max_endpoints_count must include endpoint 0");
         if (cfg.prefer_high_speed)
-            @compileError("This peripheral only supports Full Speed, not High Speed");
+            @compileError("USBFS only supports Full Speed, not High Speed");
         if (cfg.max_endpoints_count > USB_MAX_ENDPOINTS_COUNT)
             @compileError("USBFS max_endpoints_count cannot exceed 8");
         if (cfg.buffer_bytes < 128)
@@ -169,6 +173,7 @@ pub fn Polled(comptime cfg: Config) type {
         interface: usb.DeviceInterface,
 
         pub fn init(self: *Self) void {
+            log.info("USBFS init starting", .{});
             self.interface = .{ .vtable = &vtable };
             self.endpoints = @splat(@splat(.{}));
             @memset(self.pool[0..64], 0x7e);
@@ -396,7 +401,6 @@ pub fn Polled(comptime cfg: Config) type {
         fn ep_open(itf: *usb.DeviceInterface, desc_ptr: *const descriptor.Endpoint) void {
             const self: *Self = @fieldParentPtr("interface", itf);
             const desc = desc_ptr.*;
-
             const e = desc.endpoint;
             const ep_i: u4 = epn(e.num);
             assert(ep_i < cfg.max_endpoints_count);
@@ -551,6 +555,8 @@ pub fn Polled(comptime cfg: Config) type {
         // ---- HW init ---------------------------------------------------------
 
         fn usbfs_hw_init() void {
+            log.info("USBFS hw_init starting", .{});
+
             // 1. SIE reset + FIFO clear
             Regs.R8_USB_CTRL.write(.{
                 .RB_UC_RST_SIE = 1,
