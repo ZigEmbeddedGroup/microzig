@@ -1,9 +1,6 @@
 pub const chip = @import("chip");
 const hal = @import("microzig").hal;
 
-// NOTE: This depends on the version.
-// This is 8MHz on the 3.3V version.
-// This is 16MHz on the 5V version.
 pub const clock_frequencies = .{
     .cpu = 8_000_000,
 };
