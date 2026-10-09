@@ -16,6 +16,9 @@ pub fn build(b: *std.Build) void {
         .{ .target = mb.ports.atmega.boards.arduino.nano, .name = "arduino-nano_blinky", .file = "src/blinky.zig" },
         .{ .target = mb.ports.atmega.boards.arduino.uno_rev3, .name = "arduino-uno_blinky", .file = "src/blinky.zig" },
         .{ .target = mb.ports.atmega.boards.emakefun.rf_nano_v3, .name = "rf-nano-v3_blinky", .file = "src/blinky.zig" },
+        .{ .target = mb.ports.atmega.boards.arduino.nano, .name = "arduino-nano_uart_echo", .file = "src/uart_echo.zig" },
+        .{ .target = mb.ports.atmega.boards.arduino.uno_rev3, .name = "arduino-uno_uart_echo", .file = "src/uart_echo.zig" },
+        .{ .target = mb.ports.atmega.boards.emakefun.rf_nano_v3, .name = "rf-nano-v3_uart_echo", .file = "src/uart_echo.zig" },
     };
 
     for (available_examples) |example| {

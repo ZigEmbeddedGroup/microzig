@@ -1,6 +1,8 @@
 const microzig = @import("microzig");
 const cpu = microzig.cpu;
 
+pub const uart = @import("atmega328p/uart.zig");
+
 pub const gpio = struct {
     /// The I/O registers start at this address in the data space. SBI/CBI
     /// take I/O addresses, regular loads and stores take data addresses.

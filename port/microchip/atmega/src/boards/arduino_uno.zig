@@ -1,8 +1,12 @@
 pub const chip = @import("chip");
+const hal = @import("microzig").hal;
 
 pub const clock_frequencies = .{
     .cpu = 16_000_000,
 };
+
+/// USART0 on PD0 (RX) / PD1 (TX), wired to the USB serial chip.
+pub const uart_setup: hal.uart.Setup = .{ .cpu_frequency = clock_frequencies.cpu };
 
 pub const pin_map = .{
     // Port D
