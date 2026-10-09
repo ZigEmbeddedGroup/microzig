@@ -16,7 +16,7 @@ comptime {
     _ = microzig.export_startup();
 }
 
-const cs = hal.gpio.pin(.b, 0);
+const cs_pin = hal.gpio.pin(.b, 0);
 
 // nRF24L01+ command and register read here (datasheet §8.3.1 and §9).
 const r_register = 0x00;
@@ -26,8 +26,8 @@ const config_register = 0x00;
 const dummy_byte = 0xFF;
 
 pub fn main() void {
-    cs.put(1); // deselect the radio before CS becomes an output
-    cs.set_direction(.output);
+    cs_pin.put(1); // deselect the radio before CS becomes an output
+    cs_pin.set_direction(.output);
 
     board.uart_setup.apply(.{ .baud_rate = 115_200 });
     board.spi_setup.apply(.{ .baud_rate = 1_000_000 });
@@ -43,9 +43,9 @@ pub fn main() void {
         // R_REGISTER for CONFIG (0x00). The radio shifts out STATUS while it
         // receives the command byte, then CONFIG.
         var rx: [2]u8 = undefined;
-        cs.put(0);
+        cs_pin.put(0);
         hal.spi.transceive_blocking(&.{ r_register | config_register, dummy_byte }, &rx);
-        cs.put(1);
+        cs_pin.put(1);
 
         hal.uart.write_blocking("STATUS=");
         write_hex(rx[0]);
