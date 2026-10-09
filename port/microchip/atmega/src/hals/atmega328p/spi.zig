@@ -1,6 +1,6 @@
 //! SPI host for the ATmega328P (polling).
 //!
-//! SCK is PB5, HODI is PB3 and HIDO is PB4. PB2 is the peripheral's own SS
+//! SCK is PB5, MOSI is PB3 and MISO is PB4. PB2 is the peripheral's own SS
 //! pin: it is set as an output, because an SS input pulled low would switch
 //! the SPI into device mode. Chip select is not handled here; the caller
 //! drives its own CS pin.
@@ -18,7 +18,7 @@ const SPSR: *volatile @FieldType(SPI_Regs, "SPSR") = @ptrFromInt(@offsetOf(SPI_R
 const SPDR: *volatile u8 = @ptrFromInt(@offsetOf(SPI_Regs, "SPDR"));
 
 const ss = gpio.pin(.b, 2);
-const hodi = gpio.pin(.b, 3);
+const mosi = gpio.pin(.b, 3);
 const sck = gpio.pin(.b, 5);
 
 pub const Polarity = enum(u1) {
@@ -46,9 +46,9 @@ pub const Setup = struct {
     pub fn apply(comptime setup: Setup, comptime config: Config) void {
         const clock = comptime compute_clock(setup.cpu_frequency, config.baud_rate);
 
-        // HIDO (PB4) needs no setup: host mode forces it to be an input.
+        // MISO (PB4) needs no setup: host mode forces it to be an input.
         ss.set_direction(.output); // see the file comment
-        hodi.set_direction(.output);
+        mosi.set_direction(.output);
         sck.set_direction(.output);
 
         SPSR.write_raw(@intFromBool(clock.double_speed)); // SPI2X
