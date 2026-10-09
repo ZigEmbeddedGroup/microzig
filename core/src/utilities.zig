@@ -489,15 +489,32 @@ pub fn dump_stack_trace(trace: *std.lang.StackTrace) usize {
     return frame_count;
 }
 
-pub fn get_end_of_stack() *const anyopaque {
-    if (microzig.config.end_of_stack.address) |address| {
-        return @ptrFromInt(address);
-    } else if (microzig.config.end_of_stack.symbol_name) |sym_name| {
-        return @extern(*const anyopaque, .{ .name = sym_name });
-    } else {
-        @panic("expected at least one of end_of_stack.address or end_of_stack.symbol_name to be set");
-    }
-}
+pub const end_of_stack: *const anyopaque = blk: switch (microzig.config.stack) {
+    .address => |address| break :blk @ptrFromInt(address),
+    .ram_region_index => |index| {
+        var i: usize = 0;
+        for (microzig.config.memory_regions) |region| {
+            if (region.tag == .ram) {
+                if (i == index) {
+                    break :blk @ptrFromInt(region.offset + region.length);
+                }
+                i += 1;
+            }
+        } else @compileError("no ram memory region found for setting the end-of-stack address");
+    },
+    .ram_region_name => |name| {
+        for (microzig.config.memory_regions) |region| {
+            if (region.name) |region_name| {
+                if (std.mem.eql(u8, region_name, name)) {
+                    if (region.tag == .ram) {
+                        break :blk @ptrFromInt(region.offset + region.length);
+                    } else @compileError("named region found is not a ram region");
+                }
+            }
+        } else @compileError("no ram memory named region found for setting the end-of-stack address");
+    },
+    .symbol_name => |name| @extern(*const anyopaque, .{ .name = name }),
+};
 
 /// A naive circular buffer implementation. At time of writing, it's intended
 /// to fill in where the deleted std.fifo.LinearFifo was used, so the API might
