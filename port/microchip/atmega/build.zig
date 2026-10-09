@@ -11,6 +11,8 @@ chips: struct {
 boards: struct {
     arduino: struct {
         nano: *const microzig.Target,
+        pro_mini_3v3: *const microzig.Target,
+        pro_mini_5v: *const microzig.Target,
         uno_rev3: *const microzig.Target,
     },
     adafruit: struct {
@@ -89,6 +91,20 @@ pub fn init(dep: *std.Build.Dependency) ?Self {
                         .name = "Arduino Nano",
                         .url = "https://docs.arduino.cc/hardware/nano",
                         .root_source_file = b.path("src/boards/arduino_nano.zig"),
+                    },
+                }),
+                .pro_mini_3v3 = chip_atmega328p.derive(.{
+                    .board = .{
+                        .name = "Arduino Pro Mini (3.3V, 8MHz)",
+                        .url = "https://docs.arduino.cc/retired/boards/arduino-pro-mini/",
+                        .root_source_file = b.path("src/boards/arduino_pro_mini_3v3.zig"),
+                    },
+                }),
+                .pro_mini_5v = chip_atmega328p.derive(.{
+                    .board = .{
+                        .name = "Arduino Pro Mini (5V, 16MHz)",
+                        .url = "https://docs.arduino.cc/retired/boards/arduino-pro-mini/",
+                        .root_source_file = b.path("src/boards/arduino_pro_mini_5v.zig"),
                     },
                 }),
                 .uno_rev3 = chip_atmega328p.derive(.{
