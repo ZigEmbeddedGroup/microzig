@@ -15,6 +15,7 @@ comptime {
 }
 
 pub fn main() void {
+    // At 8 MHz, 115200 exceeds the HAL's 2.5% baud error limit; 57600 fits.
     const baud_rate = if (microzig.board.clock_frequencies.cpu < 16_000_000) 57_600 else 115_200;
     microzig.board.uart_setup.apply(.{ .baud_rate = baud_rate });
 
