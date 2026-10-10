@@ -1,6 +1,7 @@
 const microzig = @import("microzig");
 const cpu = microzig.cpu;
 
+pub const spi = @import("atmega328p/spi.zig");
 pub const uart = @import("atmega328p/uart.zig");
 
 pub const gpio = struct {
