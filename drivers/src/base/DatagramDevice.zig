@@ -70,6 +70,30 @@ pub fn writev_then_readv(
     return writev_then_readv_fn(dd.ptr, write_chunks, read_chunks);
 }
 
+/// Writes `src` while reading into `dst`, in a single full-duplex transaction.
+/// Both must have the same length.
+///
+/// Returns `error.Unsupported` if the device can't transfer in both directions
+/// at the same time.
+pub fn transceive(dd: DatagramDevice, src: []const u8, dst: []u8) (WriteError || ReadError)!void {
+    return try dd.transceivev(&.{src}, &.{dst});
+}
+
+/// Writes `write_chunks` while reading into `read_chunks`, in a single
+/// full-duplex transaction. Each side is the concatenation of its chunks, so
+/// only the total lengths have to match, not the chunk boundaries.
+///
+/// Returns `error.Unsupported` if the device can't transfer in both directions
+/// at the same time.
+pub fn transceivev(
+    dd: DatagramDevice,
+    write_chunks: []const []const u8,
+    read_chunks: []const []u8,
+) (WriteError || ReadError)!void {
+    const transceivev_fn = dd.vtable.transceivev_fn orelse return error.Unsupported;
+    return transceivev_fn(dd.ptr, write_chunks, read_chunks);
+}
+
 /// Reads a single `datagram` from the device.
 /// Function returns the number of bytes written in `datagram`.
 ///
@@ -95,6 +119,11 @@ pub const VTable = struct {
     writev_fn: ?*const fn (*anyopaque, datagrams: []const []const u8) WriteError!void,
     readv_fn: ?*const fn (*anyopaque, datagrams: []const []u8) ReadError!usize,
     writev_then_readv_fn: ?*const fn (
+        *anyopaque,
+        write_chunks: []const []const u8,
+        read_chunks: []const []u8,
+    ) (WriteError || ReadError)!void = null,
+    transceivev_fn: ?*const fn (
         *anyopaque,
         write_chunks: []const []const u8,
         read_chunks: []const []u8,
@@ -257,12 +286,29 @@ pub const TestDevice = struct {
         _ = try TestDevice.readv(ctx, read_chunks);
     }
 
+    fn transceivev(ctx: *anyopaque, write_chunks: []const []const u8, read_chunks: []const []u8) (WriteError || ReadError)!void {
+        const read_len = chunks_len(read_chunks);
+        if (chunks_len(write_chunks) != read_len) return error.IoError;
+
+        try TestDevice.writev(ctx, write_chunks);
+        // A full-duplex transfer fills the whole read buffer.
+        if (try TestDevice.readv(ctx, read_chunks) != read_len)
+            return error.IoError;
+    }
+
+    fn chunks_len(chunks: anytype) usize {
+        var len: usize = 0;
+        for (chunks) |chunk| len += chunk.len;
+        return len;
+    }
+
     const vtable = VTable{
         .connect_fn = TestDevice.connect,
         .disconnect_fn = TestDevice.disconnect,
         .writev_fn = TestDevice.writev,
         .readv_fn = TestDevice.readv,
         .writev_then_readv_fn = TestDevice.writev_then_readv,
+        .transceivev_fn = TestDevice.transceivev,
     };
 };
 
@@ -332,4 +378,68 @@ test TestDevice {
         "Hello, World!",
         "See you soon!",
     });
+}
+
+test transceive {
+    const reply = "abc";
+    var td = TestDevice.init(&.{ reply, reply }, true);
+    defer td.deinit();
+
+    const dd = td.datagram_device();
+    try dd.connect();
+    defer dd.disconnect();
+
+    var buffer: [reply.len]u8 = undefined;
+    try dd.transceive("xyz", &buffer);
+    try std.testing.expectEqualStrings(reply, &buffer);
+
+    // Only the total lengths have to match, not the chunk boundaries.
+    var head: [1]u8 = undefined;
+    var tail: [reply.len - head.len]u8 = undefined;
+    try dd.transceivev(&.{ "x", "y", "z" }, &.{ &head, &tail });
+    try std.testing.expectEqualStrings(reply[0..head.len], &head);
+    try std.testing.expectEqualStrings(reply[head.len..], &tail);
+
+    try td.expect_sent(&.{ "xyz", "xyz" });
+}
+
+test "transceive fails if the reply doesn't fill the buffer" {
+    var td = TestDevice.init(&.{"ab"}, true);
+    defer td.deinit();
+
+    const dd = td.datagram_device();
+    try dd.connect();
+    defer dd.disconnect();
+
+    var buffer: [3]u8 = undefined;
+    try std.testing.expectError(error.IoError, dd.transceive("xyz", &buffer));
+}
+
+test "transceive fails if the lengths differ" {
+    var td = TestDevice.init(&.{"abc"}, true);
+    defer td.deinit();
+
+    const dd = td.datagram_device();
+    try dd.connect();
+    defer dd.disconnect();
+
+    var buffer: [2]u8 = undefined;
+    try std.testing.expectError(error.IoError, dd.transceive("xyz", &buffer));
+    try td.expect_sent(&.{});
+}
+
+test "transceive is unsupported without transceivev_fn" {
+    const dd: DatagramDevice = .{
+        .ptr = undefined,
+        .vtable = &.{
+            .connect_fn = null,
+            .disconnect_fn = null,
+            .writev_fn = null,
+            .readv_fn = null,
+        },
+    };
+
+    var buffer: [1]u8 = undefined;
+    try std.testing.expectError(error.Unsupported, dd.transceive("x", &buffer));
+    try std.testing.expectError(error.Unsupported, dd.transceivev(&.{"x"}, &.{&buffer}));
 }
