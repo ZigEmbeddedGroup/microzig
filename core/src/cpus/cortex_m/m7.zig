@@ -237,7 +237,7 @@ pub const MemoryProtectionUnit = extern struct {
     });
 };
 
-pub const DebugRegisters = extern struct {
+pub const DebugControlBlock = extern struct {
     /// Debyg Halting Control and Status Register
     DHCSR: mmio.Mmio(packed struct {
         reserved0: u6 = 0,
