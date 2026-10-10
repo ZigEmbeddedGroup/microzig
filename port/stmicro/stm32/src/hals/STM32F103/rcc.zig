@@ -472,7 +472,7 @@ pub fn get_clock(comptime source: Peripherals) u32 {
         "AFIO",
         "GPIO",
         "SPI1",
-        "UUSART1",
+        "USART1",
     })) current_clocks.APB2Prescaler else if (util.match_name(peri_name, &.{
         "ADC",
     })) current_clocks.ADCoutput else if (util.match_name(peri_name, &.{
