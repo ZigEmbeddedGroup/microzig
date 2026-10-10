@@ -39,12 +39,25 @@ pub const BitOrder = enum(u1) {
 /// Board-level SPI setup. Boards export a `spi_setup` const of this type;
 /// the application passes its own settings (clock, mode, etc.) to `apply`.
 pub const Setup = struct {
+    /// The ATmega328P has a single SPI peripheral.
+    instance: SPI = .spi0,
     /// CPU clock in Hz.
     cpu_frequency: u32,
 
     /// Configures the pins and enables the SPI in host mode.
     pub fn apply(comptime setup: Setup, comptime config: Config) void {
-        const clock = comptime compute_clock(setup.cpu_frequency, config.baud_rate);
+        setup.instance.apply(setup.cpu_frequency, config);
+    }
+};
+
+/// The transfers poll the peripheral without a timeout: the SPI must be set
+/// up with `apply`, and nothing else may use it at the same time.
+pub const SPI = enum {
+    spi0,
+
+    /// Configures the pins and enables the SPI in host mode.
+    pub fn apply(comptime _: SPI, comptime cpu_frequency: u32, comptime config: Config) void {
+        const clock = comptime compute_clock(cpu_frequency, config.baud_rate);
 
         // MISO (PB4) needs no setup: host mode forces it to be an input.
         ss.set_direction(.output); // see the file comment
@@ -62,6 +75,31 @@ pub const Setup = struct {
             .SPIE = 0,
         });
     }
+    /// Sends `data`, discarding what is received.
+    pub fn write_blocking(_: SPI, data: []const u8) void {
+        for (data) |byte| _ = transfer_byte(byte);
+    }
+    /// Sends each chunk in order, as one transfer.
+    pub fn writev_blocking(spi: SPI, chunks: []const []const u8) void {
+        for (chunks) |chunk| spi.write_blocking(chunk);
+    }
+    /// Fills `data`, sending 0xFF.
+    pub fn read_blocking(_: SPI, data: []u8) void {
+        for (data) |*byte| byte.* = transfer_byte(0xFF);
+    }
+    /// Fills each chunk in order, as one transfer.
+    pub fn readv_blocking(spi: SPI, chunks: []const []u8) void {
+        for (chunks) |chunk| spi.read_blocking(chunk);
+    }
+    /// Sends `tx_data` and receives into `rx_data` at the same time. Both must
+    /// have the same length.
+    pub fn transceive_blocking(_: SPI, tx_data: []const u8, rx_data: []u8) void {
+        for (tx_data, rx_data) |tx_byte, *rx_byte| rx_byte.* = transfer_byte(tx_byte);
+    }
+};
+
+pub const instance = struct {
+    pub const SPI0: SPI = .spi0;
 };
 
 pub const Config = struct {
@@ -134,20 +172,4 @@ fn transfer_byte(byte: u8) u8 {
     SPDR.* = byte;
     while (SPSR.read().SPIF == 0) {}
     return SPDR.*;
-}
-
-/// Sends `data`, discarding what is received.
-pub fn write_blocking(data: []const u8) void {
-    for (data) |byte| _ = transfer_byte(byte);
-}
-
-/// Fills `data`, sending 0xFF.
-pub fn read_blocking(data: []u8) void {
-    for (data) |*byte| byte.* = transfer_byte(0xFF);
-}
-
-/// Sends `tx_data` and receives into `rx_data` at the same time. Both must
-/// have the same length.
-pub fn transceive_blocking(tx_data: []const u8, rx_data: []u8) void {
-    for (tx_data, rx_data) |tx_byte, *rx_byte| rx_byte.* = transfer_byte(tx_byte);
 }

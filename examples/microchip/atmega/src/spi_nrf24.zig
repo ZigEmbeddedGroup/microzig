@@ -17,6 +17,7 @@ comptime {
 }
 
 const cs_pin = hal.gpio.pin(.b, 0);
+const spi = hal.spi.instance.SPI0;
 
 // nRF24L01+ command and register read here (datasheet §8.3.1 and §9).
 const r_register = 0x00;
@@ -44,7 +45,7 @@ pub fn main() void {
         // receives the command byte, then CONFIG.
         var rx: [2]u8 = undefined;
         cs_pin.put(0);
-        hal.spi.transceive_blocking(&.{ r_register | config_register, dummy_byte }, &rx);
+        spi.transceive_blocking(&.{ r_register | config_register, dummy_byte }, &rx);
         cs_pin.put(1);
 
         hal.uart.write_blocking("STATUS=");
