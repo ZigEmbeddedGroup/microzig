@@ -1,6 +1,6 @@
-//! Prints a greeting over USART0 (115200 8N1) and echoes back every byte it
+//! Prints a greeting over USART0 (57600 8N1) and echoes back every byte it
 //! receives. On Nano-style boards it shows up on the USB serial port, e.g.:
-//!   picocom -b 115200 /dev/ttyUSB0
+//!   picocom -b 57600 /dev/ttyUSB0
 
 const microzig = @import("microzig");
 const uart = microzig.hal.uart;
@@ -14,7 +14,7 @@ comptime {
 }
 
 pub fn main() void {
-    microzig.board.uart_setup.apply(.{ .baud_rate = 115_200 });
+    microzig.board.uart_setup.apply(.{ .baud_rate = 57_600 });
 
     uart.write_blocking("Hello from MicroZig! Type something:\r\n");
 
