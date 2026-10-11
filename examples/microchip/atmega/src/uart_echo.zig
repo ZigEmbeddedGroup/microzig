@@ -1,7 +1,6 @@
-//! Prints a greeting over USART0 (8N1) and echoes back every byte it receives.
-//! It runs at 115200 baud, or 57600 on 8 MHz boards, where 115200 is out of
-//! reach. On Nano-style boards it shows up on the USB serial port, e.g.:
-//!   picocom -b 115200 /dev/ttyUSB0
+//! Prints a greeting over USART0 (57600 8N1) and echoes back every byte it
+//! receives. On Nano-style boards it shows up on the USB serial port, e.g.:
+//!   picocom -b 57600 /dev/ttyUSB0
 
 const microzig = @import("microzig");
 const uart = microzig.hal.uart;
@@ -15,9 +14,7 @@ comptime {
 }
 
 pub fn main() void {
-    // At 8 MHz, 115200 exceeds the HAL's 2.5% baud error limit; 57600 fits.
-    const baud_rate = if (microzig.board.clock_frequencies.cpu < 16_000_000) 57_600 else 115_200;
-    microzig.board.uart_setup.apply(.{ .baud_rate = baud_rate });
+    microzig.board.uart_setup.apply(.{ .baud_rate = 57_600 });
 
     uart.write_blocking("Hello from MicroZig! Type something:\r\n");
 
