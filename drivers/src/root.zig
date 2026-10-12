@@ -2,6 +2,16 @@
 //! The driver framework provides device-independent drivers for peripherials supported by MicroZig.
 //!
 const std = @import("std");
+const config = @import("config");
+
+/// Panics if `ok` is false, in any optimize mode, but only when asserts are
+/// enabled: by the `asserts` option of MicroBuild's `add_firmware` (the same
+/// flag as `microzig.assert`), or with `-Dasserts=true` when building the
+/// drivers alone. Otherwise it does nothing.
+pub fn assert(ok: bool) void {
+    if (!config.asserts) return;
+    if (!ok) @panic("Assertion failed");
+}
 
 pub const display = struct {
     pub const sh1106 = @import("display/sh1106.zig");

@@ -7,6 +7,7 @@
 //!
 
 const std = @import("std");
+const assert = @import("../root.zig").assert;
 
 const DatagramDevice = @This();
 
@@ -288,7 +289,7 @@ pub const TestDevice = struct {
 
     fn transceivev(ctx: *anyopaque, write_chunks: []const []const u8, read_chunks: []const []u8) (WriteError || ReadError)!void {
         const read_len = chunks_len(read_chunks);
-        if (chunks_len(write_chunks) != read_len) return error.IoError;
+        assert(chunks_len(write_chunks) == read_len);
 
         try TestDevice.writev(ctx, write_chunks);
         // A full-duplex transfer fills the whole read buffer.
@@ -413,19 +414,6 @@ test "transceive fails if the reply doesn't fill the buffer" {
 
     var buffer: [3]u8 = undefined;
     try std.testing.expectError(error.IoError, dd.transceive("xyz", &buffer));
-}
-
-test "transceive fails if the lengths differ" {
-    var td = TestDevice.init(&.{"abc"}, true);
-    defer td.deinit();
-
-    const dd = td.datagram_device();
-    try dd.connect();
-    defer dd.disconnect();
-
-    var buffer: [2]u8 = undefined;
-    try std.testing.expectError(error.IoError, dd.transceive("xyz", &buffer));
-    try td.expect_sent(&.{});
 }
 
 test "transceive is unsupported without transceivev_fn" {
