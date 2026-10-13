@@ -1,6 +1,7 @@
 const microzig = @import("microzig");
 const cpu = microzig.cpu;
 
+pub const interrupts = @import("atmega328p/interrupts.zig");
 pub const spi = @import("atmega328p/spi.zig");
 pub const time = @import("atmega328p/time.zig");
 pub const uart = @import("atmega328p/uart.zig");

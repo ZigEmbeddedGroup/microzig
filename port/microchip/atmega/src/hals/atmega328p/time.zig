@@ -28,14 +28,21 @@ const std = @import("std");
 const microzig = @import("microzig");
 const mdf = microzig.drivers;
 
+const interrupts = @import("interrupts.zig");
+
 const TC0 = microzig.chip.peripherals.TC0;
 
-// The generated `peripherals.CPU` is a pointer to address 0, so SREG gets its
-// own pointer at its offset (see `spi.zig`).
-const CPU_Regs = microzig.chip.types.peripherals.CPU;
-const SREG: *volatile u8 = @ptrFromInt(@offsetOf(CPU_Regs, "SREG"));
-
+/// Timer0 counts every 64 CPU cycles. The overflow interrupt then runs every
+/// 16384 cycles, so its cost (about 90 cycles) stays under 1 %.
 const prescaler = 64;
+const clock_select = switch (prescaler) {
+    1 => .RUNNING_NO_PRESCALING,
+    8 => .RUNNING_CLK_8,
+    64 => .RUNNING_CLK_64,
+    256 => .RUNNING_CLK_256,
+    1024 => .RUNNING_CLK_1024,
+    else => @compileError(std.fmt.comptimePrint("Timer0 has no /{} prescaler", .{prescaler})),
+};
 
 /// Microseconds per Timer0 tick. A power of two, so that converting ticks
 /// to microseconds is a shift (AVR has no 64-bit multiply).
@@ -43,7 +50,8 @@ const us_per_tick = blk: {
     if (!microzig.config.has_board)
         @compileError("hal.time takes the CPU frequency from the board");
     break :blk find_us_per_tick(microzig.board.clock_frequencies.cpu) orelse
-        @compileError("hal.time needs a CPU frequency where 64 cycles take a power-of-two number of microseconds, such as 8 or 16 MHz");
+        @compileError(std.fmt.comptimePrint("hal.time needs a CPU frequency where {} cycles take " ++
+            "a power-of-two number of microseconds, such as 8 or 16 MHz", .{prescaler}));
 };
 
 /// Number of Timer0 overflows since `init`.
@@ -64,34 +72,28 @@ fn handler_registered() bool {
     };
 }
 
-/// Disables interrupts and returns SREG for `restore_interrupts`.
-inline fn disable_interrupts() u8 {
-    const sreg = SREG.*;
-    asm volatile ("cli" ::: .{ .memory = true });
-    return sreg;
-}
-
-/// Restores the interrupt flag saved by `disable_interrupts`.
-inline fn restore_interrupts(sreg: u8) void {
-    asm volatile ("" ::: .{ .memory = true });
-    SREG.* = sreg;
-}
-
 /// Starts counting from zero. Call it once, early; the app must also
 /// register `timer0_overflow` and enable interrupts.
 pub fn init() void {
     if (comptime !handler_registered())
-        @compileError("hal.time needs `.TIMER0_OVF = hal.time.timer0_overflow` in microzig_options.interrupts");
+        @compileError("hal.time needs `.TIMER0_OVF = hal.time.timer0_overflow` " ++
+            "in microzig_options.interrupts");
 
-    const sreg = disable_interrupts();
-    defer restore_interrupts(sreg);
+    const section = interrupts.enter_critical_section();
+    defer section.leave();
 
+    // Normal mode (count up to 255 and wrap), with OC0A/OC0B (D6/D5) left as
+    // GPIOs.
     TC0.TCCR0A.write(.{ .WGM0 = 0, .COM0B = 0, .COM0A = 0 });
+    // Start from zero.
     TC0.TCNT0 = 0;
     overflows = 0;
-    TC0.TIFR0.write(.{ .TOV0 = 1, .OCF0A = 0, .OCF0B = 0 }); // writing 1 clears it
+    // Clear a pending overflow (writing 1 clears a flag, 0 leaves it).
+    TC0.TIFR0.write(.{ .TOV0 = 1, .OCF0A = 0, .OCF0B = 0 });
+    // Interrupt on overflow only.
     TC0.TIMSK0.write(.{ .TOIE0 = 1, .OCIE0A = 0, .OCIE0B = 0 });
-    TC0.TCCR0B.write(.{ .CS0 = .RUNNING_CLK_64, .WGM02 = 0, .FOC0B = 0, .FOC0A = 0 });
+    // Start counting; WGM02 = 0 completes normal mode.
+    TC0.TCCR0B.write(.{ .CS0 = clock_select, .WGM02 = 0, .FOC0B = 0, .FOC0A = 0 });
 }
 
 /// Time since `init`.
@@ -116,7 +118,7 @@ pub fn sleep_ms(time_ms: u32) void {
 }
 
 fn read_ticks() u64 {
-    const sreg = disable_interrupts();
+    const section = interrupts.enter_critical_section();
     var count = overflows;
     var tcnt = TC0.TCNT0;
     // An overflow that is still pending isn't in `overflows` yet. TCNT0 is
@@ -125,13 +127,13 @@ fn read_ticks() u64 {
         count += 1;
         tcnt = TC0.TCNT0;
     }
-    restore_interrupts(sreg);
+    section.leave();
     return count << 8 | tcnt;
 }
 
 /// Microseconds per tick at `cpu_frequency`, or null if that isn't a whole
 /// power of two.
-fn find_us_per_tick(cpu_frequency: u32) ?u32 {
+fn find_us_per_tick(comptime cpu_frequency: u32) ?u32 {
     if (cpu_frequency == 0 or prescaler * 1_000_000 % cpu_frequency != 0) return null;
     const us = prescaler * 1_000_000 / cpu_frequency;
     return if (std.math.isPowerOfTwo(us)) us else null;
