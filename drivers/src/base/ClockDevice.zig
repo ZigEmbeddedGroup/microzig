@@ -153,7 +153,7 @@ test sleep_ms {
     var ttd = TestDevice.init();
     const td = ttd.clock_device();
 
-    for ([_]u32{ 0, 1, 4_294_967, std.math.maxInt(u32) }) |time_ms| {
+    for ([_]u32{ 0, 1, 4_294_967, 4_294_968, std.math.maxInt(u32) }) |time_ms| {
         ttd.reset_sleep_time();
         td.sleep_ms(time_ms);
         try std.testing.expectEqual(@as(u64, time_ms) * 1000, ttd.get_total_sleep_time());
