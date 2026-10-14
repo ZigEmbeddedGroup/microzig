@@ -46,8 +46,7 @@ pub fn make_timeout(td: ClockDevice, timeout: mdf.time.Duration) Timeout {
 }
 
 pub fn sleep_ms(td: ClockDevice, time_ms: u32) void {
-    // 1000 = 1024 - 16 - 8, in u64 so that it doesn't overflow. Shifts avoid
-    // the multiplication helpers that AVR doesn't link.
+    // 1000 = 1024 - 16 - 8, in u64 so that it doesn't overflow.
     const ms: u64 = time_ms;
     td.sleep_us((ms << 10) - (ms << 4) - (ms << 3));
 }
