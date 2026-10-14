@@ -46,7 +46,9 @@ pub fn make_timeout(td: ClockDevice, timeout: mdf.time.Duration) Timeout {
 }
 
 pub fn sleep_ms(td: ClockDevice, time_ms: u32) void {
-    td.sleep_us(time_ms * 1000);
+    // 1000 = 1024 - 16 - 8, in u64 so that it doesn't overflow.
+    const ms: u64 = time_ms;
+    td.sleep_us((ms << 10) - (ms << 4) - (ms << 3));
 }
 
 pub fn sleep_us(td: ClockDevice, time_us: u64) void {
@@ -144,4 +146,15 @@ test TestDevice {
     try std.testing.expectEqual(0, ttd.get_total_sleep_time());
     td.sleep_ms(1000);
     try std.testing.expectEqual(1_000_000, ttd.get_total_sleep_time());
+}
+
+test sleep_ms {
+    var ttd = TestDevice.init();
+    const td = ttd.clock_device();
+
+    for ([_]u32{ 0, 1, 4_294_967, 4_294_968, std.math.maxInt(u32) }) |time_ms| {
+        ttd.reset_sleep_time();
+        td.sleep_ms(time_ms);
+        try std.testing.expectEqual(@as(u64, time_ms) * 1000, ttd.get_total_sleep_time());
+    }
 }
