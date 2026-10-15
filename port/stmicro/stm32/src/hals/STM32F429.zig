@@ -24,7 +24,8 @@ const microzig = @import("microzig");
 const peripherals = microzig.chip.peripherals;
 const RCC = peripherals.RCC;
 
-const Digital_IO = microzig.drivers.base.Digital_IO;
+pub const pins = @import("./common/pins_v2.zig");
+pub const enums = @import("./common/enums.zig");
 
 pub const pins = @import("./common/pins_v2.zig");
 
@@ -50,9 +51,7 @@ pub const rcc = struct {
     const util = @import("common/util.zig");
 
     // Any peripheral that must be enable in RCC.
-    pub const Peripherals = util.create_peripheral_enum(&.{
-        "GPIO",
-    });
+    pub const Peripherals = enum.Peripherals;
 
     ///configure the power and clock registers before enabling the RTC
     ///this function also can be called from `rtc.enable()`
