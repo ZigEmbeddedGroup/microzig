@@ -6,6 +6,12 @@ pub const spi = @import("atmega328p/spi.zig");
 pub const time = @import("atmega328p/time.zig");
 pub const uart = @import("atmega328p/uart.zig");
 
+test {
+    _ = spi;
+    _ = time;
+    _ = uart;
+}
+
 pub const gpio = struct {
     /// The I/O registers start at this address in the data space. SBI/CBI
     /// take I/O addresses, regular loads and stores take data addresses.

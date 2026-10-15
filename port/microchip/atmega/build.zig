@@ -140,13 +140,11 @@ pub fn init(dep: *std.Build.Dependency) ?Self {
 pub fn build(b: *std.Build) void {
     const test_step = b.step("test", "Run platform agnostic unit tests");
 
-    for ([_][]const u8{ "uart", "spi", "time" }) |name| {
-        const tests = b.addTest(.{
-            .root_module = b.createModule(.{
-                .root_source_file = b.path(b.fmt("src/hals/atmega328p/{s}.zig", .{name})),
-                .target = b.graph.host,
-            }),
-        });
-        test_step.dependOn(&b.addRunArtifact(tests).step);
-    }
+    const tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/hals/ATmega328P.zig"),
+            .target = b.graph.host,
+        }),
+    });
+    test_step.dependOn(&b.addRunArtifact(tests).step);
 }
