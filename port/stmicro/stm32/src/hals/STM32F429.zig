@@ -21,7 +21,6 @@
 //! TODO: add more clock calculations when adding Uart
 
 const microzig = @import("microzig");
-const mmio = microzig.mmio;
 const peripherals = microzig.chip.peripherals;
 const RCC = peripherals.RCC;
 
