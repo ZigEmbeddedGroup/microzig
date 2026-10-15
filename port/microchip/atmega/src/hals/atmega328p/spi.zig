@@ -9,13 +9,7 @@ const std = @import("std");
 const microzig = @import("microzig");
 const gpio = microzig.hal.gpio;
 
-// The generated `peripherals.SPI` is a pointer to address 0 (not `allowzero`)
-// with absolute register offsets, so it can't be used. Each register gets its
-// own pointer instead, at its offset (which is its data-space address).
-const SPI_Regs = microzig.chip.types.peripherals.SPI;
-const SPCR: *volatile @FieldType(SPI_Regs, "SPCR") = @ptrFromInt(@offsetOf(SPI_Regs, "SPCR"));
-const SPSR: *volatile @FieldType(SPI_Regs, "SPSR") = @ptrFromInt(@offsetOf(SPI_Regs, "SPSR"));
-const SPDR: *volatile u8 = @ptrFromInt(@offsetOf(SPI_Regs, "SPDR"));
+const SPI0 = microzig.chip.peripherals.SPI;
 
 const ss = gpio.pin(.b, 2);
 const mosi = gpio.pin(.b, 3);
@@ -64,8 +58,8 @@ pub const SPI = enum {
         mosi.set_direction(.output);
         sck.set_direction(.output);
 
-        SPSR.write_raw(@intFromBool(clock.double_speed)); // SPI2X
-        SPCR.write(.{
+        SPI0.SPSR.write_raw(@intFromBool(clock.double_speed)); // SPI2X
+        SPI0.SPCR.write(.{
             .SPR = @fromBackingInt(@intCast(clock.spr)),
             .CPHA = @backingInt(config.phase),
             .CPOL = @backingInt(config.polarity),
@@ -169,7 +163,7 @@ test compute_clock {
 
 /// Sends `byte` and returns the byte received at the same time.
 fn transfer_byte(byte: u8) u8 {
-    SPDR.* = byte;
-    while (SPSR.read().SPIF == 0) {}
-    return SPDR.*;
+    SPI0.SPDR = byte;
+    while (SPI0.SPSR.read().SPIF == 0) {}
+    return SPI0.SPDR;
 }
