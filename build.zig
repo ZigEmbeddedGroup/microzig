@@ -126,7 +126,6 @@ pub fn MicroBuild(port_select: PortSelect) type {
         dep: *Build.Dependency,
         internals_dep: *Build.Dependency,
         core_dep: *Build.Dependency,
-        drivers_dep: *Build.Dependency,
 
         /// Contains all the ports you selected.
         ports: SelectedPorts,
@@ -209,7 +208,6 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 .dep = dep,
                 .internals_dep = dep.builder.dependency("build-internals", .{}),
                 .core_dep = dep.builder.dependency("core", .{}),
-                .drivers_dep = dep.builder.dependency("drivers", .{}),
                 .ports = ports,
             };
             return mb;
@@ -341,7 +339,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                     },
                     .{
                         .name = "drivers",
-                        .module = mb.drivers_dep.module("drivers"),
+                        .module = b.dependency("drivers", .{ .asserts = options.asserts }).module("drivers"),
                     },
                 },
             });
