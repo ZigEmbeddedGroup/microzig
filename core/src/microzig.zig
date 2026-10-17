@@ -10,7 +10,7 @@ const root = @import("root");
 /// Contains build-time generated configuration options for microzig.
 /// Contains a CPU target description, chip, board and cpu information
 /// and so on.
-pub const config = @import("config");
+pub const config: @import("build-internals").Config = @import("config");
 
 /// Provides access to the low level features of the CPU.
 pub const cpu = @import("cpu");

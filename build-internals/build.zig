@@ -335,3 +335,19 @@ pub const MemoryRegion = struct {
         execute: bool = false,
     };
 };
+
+pub const Config = struct {
+    has_hal: bool,
+    has_board: bool,
+
+    cpu_name: []const u8,
+    chip_name: []const u8,
+    board_name: ?[]const u8,
+
+    ram_image: bool,
+
+    asserts: bool,
+
+    stack: Stack,
+    memory_regions: []const MemoryRegion,
+};

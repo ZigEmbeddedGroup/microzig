@@ -122,12 +122,35 @@ pub fn build(b: *std.Build) void {
     freertos_lib.addCMacro("PICO_SDK_VERSION_MAJOR", "2");
 
     const t: Translator = .init(translate_c, .{
-        .c_source_file = b.path("include/freertos.h"),
+        .c_source_file = b.path("include/microzig_freertos.h"),
         .target = target,
         .optimize = optimize,
+        .link_libc = false, // libc headers come from foundation-libc, there is no system libc for freestanding
     });
     t.addConfigHeader(config_header);
     t.addIncludePath(freertos_kernel_dep.path("include"));
+
+    // Workaround for https://github.com/Vexu/arocc/issues/1071 (#ifdef inside variadic macro arguments
+    // breaks Aro's parser), hit by the RP2350 pico/platform.h. Remove once translate-c includes the fix.
+    // Must come before the Pico SDK include dirs so it shadows the SDK's pico/platform.h
+    if (port_name == .RP2350_ARM) {
+        t.addIncludePath(b.path("translate_c_shims/rp2350"));
+    }
+
+    // translate-c needs the same libc/port/Pico SDK headers and macros as freertos_lib
+    for (freertos_lib.include_dirs.items) |dir| {
+        switch (dir) {
+            .path => |p| t.addIncludePath(p),
+            .path_system => |p| t.addSystemIncludePath(p),
+            .path_after => |p| t.addAfterIncludePath(p),
+            .other_step => |lib| t.addIncludePath(lib.getEmittedIncludeTree()),
+            .config_header_step => |ch| t.addConfigHeader(ch),
+            .framework_path, .framework_path_system, .embed_path => {},
+        }
+    }
+    for (freertos_lib.c_macros.items) |m| {
+        t.run.addArg(m);
+    }
 
     const mod = b.addModule("freertos", .{
         .root_source_file = b.path("src/root.zig"),
@@ -188,7 +211,13 @@ fn addPicoSDKIncludeDirs(
     // Generate required config_autogen.h (this support custom #include directives)
     _ = wf.addCopyFile(pico_sdk.path("bazel/include/pico/config_autogen.h"), "picosdk_generated/pico/config_autogen.h");
     _ = wf.add("picosdk_generated/pico/pico_config_extra_headers.h", "");
-    _ = wf.add("picosdk_generated/pico/pico_config_platform_headers.h", "");
+    // Clang reports __sev/__wfe via __has_builtin, so the Pico SDK does not define them itself, but they
+    // are only declared by arm_acle.h (which conflicts with other SDK definitions), so provide them here.
+    _ = wf.add("picosdk_generated/pico/pico_config_platform_headers.h",
+        \\static inline __attribute__((always_inline)) void __sev(void) { __asm volatile("sev"); }
+        \\static inline __attribute__((always_inline)) void __wfe(void) { __asm volatile("wfe"); }
+        \\
+    );
 
     // Add generated files to include path
     mod.addIncludePath(wf.getDirectory().path(b, "picosdk_generated"));

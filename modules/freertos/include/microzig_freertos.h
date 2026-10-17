@@ -1,5 +1,5 @@
-#ifndef _MICROZIG_FREERTOS_H_
-#define _MICROZIG_FREERTOS_H_
+#ifndef MICROZIG_FREERTOS_WRAPPER_H
+#define MICROZIG_FREERTOS_WRAPPER_H
 
 #include "FreeRTOS.h"
 #include "task.h"

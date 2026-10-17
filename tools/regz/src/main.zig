@@ -148,16 +148,7 @@ fn main_impl(init: std.process.Init) anyerror!void {
         const patch = try std.Io.Dir.cwd().readFileAllocOptions(io, patch_path, gpa, .unlimited, .@"1", 0);
         defer gpa.free(patch);
 
-        var diags: std.zon.parse.Diagnostics = .{};
-        defer diags.deinit(db.gpa);
-
-        db.apply_patch(patch, &diags) catch |err| {
-            if (err == error.ParseZon) {
-                std.log.err("Failed to parse zon patch file '{s}': {f}", .{ patch_path, diags });
-            }
-
-            return err;
-        };
+        try db.apply_patch(patch, init.arena.allocator());
     }
 
     // arch dependent stuff
