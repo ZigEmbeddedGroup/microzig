@@ -79,6 +79,7 @@ Drivers with a checkmark are already implemented, drivers without are missing:
 
 - **Wireless**
   - [ ] CYW43 (WIP)
+  - [x] nRF24L01+ / Si24R1 (fixed payloads on pipe 0, polled; untested on hardware)
   - [ ] [SX1276, SX1278](https://github.com/ZigEmbeddedGroup/microzig/issues/248)
 
 - **Stepper Motors**
