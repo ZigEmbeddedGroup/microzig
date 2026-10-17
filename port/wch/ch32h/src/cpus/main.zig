@@ -269,7 +269,7 @@ pub const startup_logic = struct {
             // Initialize the system.
             \\j _system_init
             :
-            : [eos] "r" (comptime microzig.utilities.get_end_of_stack()),
+            : [eos] "r" (comptime microzig.utilities.end_of_stack),
         );
     }
 
