@@ -32,7 +32,7 @@ const examples = [_][]const u8{
 };
 
 pub fn build(b: *std.Build) void {
-    const optimize = b.standardOptimizeOption(.{ .preferred_optimize_mode = .small });
+    const optimize = b.standardOptimizeOption(.{});
 
     const mz_dep = b.dependency("microzig", .{});
     const mb = MicroBuild.init(b, mz_dep) orelse return;
