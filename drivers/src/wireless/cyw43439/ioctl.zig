@@ -183,6 +183,8 @@ pub const Response = struct {
         else blk: {
             _ = self.reader.discard(@fromBackingInt(self.padding())) catch unreachable;
             self.bdc_hdr = self.reader.takeStruct(BDC_Header, .little) catch unreachable;
+            // Skip the bdc padding too, data starts right after it.
+            _ = self.reader.discard(@fromBackingInt(self.bdc_hdr.?.padding())) catch 0;
             break :blk self.bdc_hdr.?;
         };
     }
@@ -414,6 +416,26 @@ test "parse response" {
     try testing.expectEqual(236, head);
     try testing.expectEqual(20, len);
     try testing.expectEqualSlices(u8, expected, rsp_bytes[head..][0..len][0..expected.len]);
+}
+
+test "parse event with bdc padding" {
+    // Event packet captured from the chip: sdp hdrlen is 178 and bdc offset is
+    // 1, so there are 4 padding bytes between the bdc header and the ethernet
+    // header.
+    var buf: [260]u8 = @splat(0);
+    const sdp = hex_to_bytes("0401fbfe1f0100b2002e0000");
+    @memcpy(buf[0..sdp.len], &sdp);
+    const body = hex_to_bytes("20000001" ++ "00010000" ++
+        "2ccf67f366942ecf67f36694886c" ++
+        "80010038" ++ "00" ++ "001018" ++ "0001" ++
+        "0002" ++ "0000" ++ "00000003" ++ "00000002");
+    @memcpy(buf[178..][0..body.len], &body);
+
+    var rsp = try Response.init(&buf);
+    try testing.expectEqual(.event, rsp.sdp.channel());
+    const evt = rsp.event().?;
+    try testing.expectEqual(EventType.auth, evt.msg.event_type);
+    try testing.expectEqual(EventStatus.timeout, evt.msg.status);
 }
 
 pub fn hex_to_bytes(comptime hex: []const u8) [hex.len / 2]u8 {

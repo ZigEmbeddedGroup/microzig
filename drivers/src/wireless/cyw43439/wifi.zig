@@ -761,7 +761,7 @@ pub fn send_zc(self: *Self, buffer: []u8) anyerror!void {
     const bytes_len = 18 + eth_frame_len;
     const words_len = ((bytes_len + 3) >> 2) + 1; // round and add 1 for bus command
 
-    self.bus.write(.wlan, 0, @intCast(bytes_len), as_words(writer.buffered(), words_len));
+    self.bus.write(.wlan, 0, @intCast(bytes_len), as_words(buffer, words_len));
 }
 
 pub fn has_credit(self: *Self) bool {
