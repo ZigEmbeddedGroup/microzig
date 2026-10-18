@@ -75,6 +75,10 @@ jobs:
       run: zig build test
       working-directory: port/wch/ch32v
 
+    - name: wch/ch32h
+      run: zig build test
+      working-directory: port/wch/ch32h
+
   build:
     name: "Build"
     runs-on: ${{ matrix.os }}
@@ -142,6 +146,10 @@ jobs:
     - name: wch/ch32v
       run: zig build -Doptimize=ReleaseSmall
       working-directory: examples/wch/ch32v
+
+    - name: wch/ch32h
+      run: zig build -Doptimize=ReleaseSmall
+      working-directory: examples/wch/ch32h
 
     - name: no_hal/stm32_l031
       run: zig build -Doptimize=ReleaseSmall
