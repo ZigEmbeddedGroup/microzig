@@ -56,14 +56,12 @@ pub fn main(init: std.process.Init) !void {
     const gpa = init.gpa;
     const io = init.io;
 
-    const args = try init.minimal.args.toSlice(gpa);
-    defer gpa.free(args);
-
-    if (args.len != 4) return error.ArgsError;
-
-    const v3f_elf_path = args[1];
-    const v5f_elf_path = args[2];
-    const merged_elf_path = args[3];
+    var args_iter = try init.minimal.args.iterateAllocator(gpa);
+    defer args_iter.deinit();
+    _ = args_iter.next(); // skip argv[0]
+    const v3f_elf_path = args_iter.next() orelse return error.ArgsError;
+    const v5f_elf_path = args_iter.next() orelse return error.ArgsError;
+    const merged_elf_path = args_iter.next() orelse return error.ArgsError;
 
     const v3f_elf = try std.Io.Dir.cwd().readFileAlloc(io, v3f_elf_path, gpa, .limited(64 * 1024 * 1024));
     const v5f_elf = try std.Io.Dir.cwd().readFileAlloc(io, v5f_elf_path, gpa, .limited(64 * 1024 * 1024));
