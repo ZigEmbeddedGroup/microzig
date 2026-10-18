@@ -183,6 +183,8 @@ pub const Response = struct {
         else blk: {
             _ = self.reader.discard(@fromBackingInt(self.padding())) catch unreachable;
             self.bdc_hdr = self.reader.takeStruct(BDC_Header, .little) catch unreachable;
+            // Skip the bdc padding too, data starts right after it.
+            _ = self.reader.discard(@fromBackingInt(self.bdc_hdr.?.padding())) catch 0;
             break :blk self.bdc_hdr.?;
         };
     }
