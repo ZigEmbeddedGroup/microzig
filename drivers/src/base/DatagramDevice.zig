@@ -82,8 +82,9 @@ pub fn transceive(dd: DatagramDevice, src: []const u8, dst: []u8) (WriteError ||
 
 /// Writes `write_chunks` while reading into `read_chunks`, in a single
 /// full-duplex transaction. Each side is the concatenation of its chunks, so
-/// only the total lengths have to match, not the chunk boundaries.
-///Panic if the total lengths differ and driver assertions are enabled
+/// only the total lengths have to match, not the chunk boundaries. Panics if
+/// the total lengths differ and driver assertions are enabled.
+///
 /// Returns `error.Unsupported` if the device can't transfer in both directions
 /// at the same time.
 pub fn transceivev(
