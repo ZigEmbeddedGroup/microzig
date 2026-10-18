@@ -1,0 +1,665 @@
+const std = @import("std");
+const microzig = @import("microzig");
+
+const riscv32_common = @import("riscv32-common");
+const cpu_impl = @import("cpu_impl");
+
+const peripherals = microzig.chip.peripherals;
+const PFIC = peripherals.PFIC;
+
+pub const cpu_frequency = cpu_impl.cpu_frequency;
+
+pub const CpuName = enum {
+    /// CH32H417 CORE0 (control-oriented, up to 150 MHz)
+    qingkev3f,
+    /// CH32H417 CORE1 (out-of-order superscalar, up to 400 MHz)
+    qingkev5f,
+};
+pub const cpu_name: CpuName = std.meta.stringToEnum(CpuName, microzig.config.cpu_name) orelse @compileError("Unknown CPU name: " ++ microzig.config.cpu_name);
+
+// Interrupt
+
+pub const Interrupt = cpu_impl.Interrupt;
+pub const riscv_calling_convention: std.builtin.CallingConvention = .{ .riscv32_interrupt = .{ .mode = .machine } };
+pub const Exception = enum(u32) {
+    InstructionMisaligned = 0x0,
+    InstructionFault = 0x1,
+    IllegalInstruction = 0x2,
+    Breakpoint = 0x3,
+    LoadMisaligned = 0x4,
+    LoadFault = 0x5,
+    StoreMisaligned = 0x6,
+    StoreFault = 0x7,
+    UserEnvCall = 0x8,
+    MachineEnvCall = 0xb,
+};
+pub const InterruptHandler = *const fn () callconv(riscv_calling_convention) void;
+pub const InterruptOptions = microzig.utilities.GenerateInterruptOptions(&.{
+    .{ .InterruptEnum = enum { Exception }, .HandlerFn = InterruptHandler },
+    .{ .InterruptEnum = Interrupt, .HandlerFn = InterruptHandler },
+});
+const VectorTable = [vector_table_size()]InterruptHandler;
+
+pub const Core = enum(u1) {
+    v3f = 0,
+    v5f = 1,
+};
+
+/// The core the current code is running on.
+pub inline fn current_core() Core {
+    return @fromBackingInt(@intCast(PFIC.SCTLR.read().HART_ID & 1));
+}
+
+pub inline fn wakeup_v5f() void {
+    PFIC.WAKEIP1.modify(.{
+        // The hardware seems to treat the entire 32 bits as the offset,
+        // so we have to manually right shift 1 bit.
+        .IP_RELOAD1 = 0x10000 >> 1,
+        .SHUTDOWN1 = 0,
+    });
+    PFIC.SCTLR.modify(.{ .SETEVENT = 1 }); // ??? RM says it's SENDEVENT
+}
+
+pub const interrupt = struct {
+    pub inline fn globally_enabled() bool {
+        return csr.mstatus.read().mie == 1;
+    }
+
+    pub inline fn enable_interrupts() void {
+        csr.mstatus.set(.{ .mie = 1 });
+    }
+
+    pub inline fn disable_interrupts() void {
+        csr.mstatus.clear(.{ .mie = 1 });
+        // TODO: The WCH EVT `__disable_irq` additionally executes `fence.i` after
+        // clearing MIE. Should check if it's required here.
+        // asm volatile ("fence.i");
+    }
+
+    pub inline fn is_enabled(irq: Interrupt) bool {
+        const irq_num = @backingInt(irq);
+        const num = irq_num >> 5;
+        const pos = irq_num & 0x1F;
+        const v = switch (num) {
+            0 => get_bit(PFIC.ISR1, pos),
+            1 => get_bit(PFIC.ISR2, pos),
+            2 => get_bit(PFIC.ISR3, pos),
+            3 => get_bit(PFIC.ISR4, pos),
+            4 => get_bit(PFIC.ISR5, pos),
+            else => @compileError("Invalid interrupt number!"),
+        };
+        return v != 0;
+    }
+
+    pub inline fn enable(irq: Interrupt) void {
+        comptime {
+            const irq_name = @tagName(irq);
+            const app_has = @field(microzig.options.interrupts, irq_name) != null;
+            const hal_has = if (microzig.config.has_hal and @hasDecl(microzig.hal, "default_interrupts"))
+                @field(microzig.hal.default_interrupts, irq_name) != null
+            else
+                false;
+            if (!app_has and !hal_has) {
+                @compileError(irq_name ++ std.fmt.comptimePrint(
+                    \\ interrupt handler should be defined.
+                    \\ Add to your main file:
+                    \\     pub const microzig_options: microzig.Options = .{{
+                    \\         .interrupts = .{{
+                    \\             .{s} = your_handler_for_{s},
+                    \\         }},
+                    \\     }};
+                , .{ irq_name, irq_name }));
+            }
+        }
+
+        const irq_num = @backingInt(irq);
+        const num = irq_num >> 5;
+        const pos = irq_num & 0x1F;
+        switch (num) {
+            0 => PFIC.IENR1.raw |= @as(u32, 1) << pos,
+            1 => PFIC.IENR2.raw |= @as(u32, 1) << pos,
+            2 => PFIC.IENR3.raw |= @as(u32, 1) << pos,
+            3 => PFIC.IENR4.raw |= @as(u32, 1) << pos,
+            4 => PFIC.IENR5.raw |= @as(u32, 1) << pos,
+            else => @compileError("Invalid interrupt number!"),
+        }
+    }
+
+    pub inline fn disable(irq: Interrupt) void {
+        const irq_num = @backingInt(irq);
+        const num = irq_num >> 5;
+        const pos = irq_num & 0x1F;
+        switch (num) {
+            0 => PFIC.IRER1.raw |= @as(u32, 1) << pos,
+            1 => PFIC.IRER2.raw |= @as(u32, 1) << pos,
+            2 => PFIC.IRER3.raw |= @as(u32, 1) << pos,
+            3 => PFIC.IRER4.raw |= @as(u32, 1) << pos,
+            4 => PFIC.IRER5.raw |= @as(u32, 1) << pos,
+            else => @compileError("Invalid interrupt number!"),
+        }
+    }
+
+    pub inline fn is_pending(irq: Interrupt) bool {
+        const irq_num = @backingInt(irq);
+        const num = irq_num >> 5;
+        const pos = irq_num & 0x1F;
+        const v = switch (num) {
+            0 => get_bit(PFIC.IPR1, pos),
+            1 => get_bit(PFIC.IPR2, pos),
+            2 => get_bit(PFIC.IPR3, pos),
+            3 => get_bit(PFIC.IPR4, pos),
+            4 => get_bit(PFIC.IPR5, pos),
+            else => @compileError("Invalid interrupt number!"),
+        };
+        return v != 0;
+    }
+
+    pub inline fn set_pending(irq: Interrupt) void {
+        const irq_num = @backingInt(irq);
+        const num = irq_num >> 5;
+        const pos = irq_num & 0x1F;
+        switch (num) {
+            0 => PFIC.IPSR1.raw |= @as(u32, 1) << pos,
+            1 => PFIC.IPSR2.raw |= @as(u32, 1) << pos,
+            2 => PFIC.IPSR3.raw |= @as(u32, 1) << pos,
+            3 => PFIC.IPSR4.raw |= @as(u32, 1) << pos,
+            4 => PFIC.IPSR5.raw |= @as(u32, 1) << pos,
+            else => @compileError("Invalid interrupt number!"),
+        }
+    }
+
+    pub inline fn clear_pending(irq: Interrupt) void {
+        const irq_num = @backingInt(irq);
+        const num = irq_num >> 5;
+        const pos = irq_num & 0x1F;
+        switch (num) {
+            0 => PFIC.IPRR1.raw |= @as(u32, 1) << pos,
+            1 => PFIC.IPRR2.raw |= @as(u32, 1) << pos,
+            2 => PFIC.IPRR3.raw |= @as(u32, 1) << pos,
+            3 => PFIC.IPRR4.raw |= @as(u32, 1) << pos,
+            4 => PFIC.IPRR5.raw |= @as(u32, 1) << pos,
+            else => @compileError("Invalid interrupt number!"),
+        }
+    }
+
+    pub inline fn is_active(irq: Interrupt) bool {
+        const irq_num = @backingInt(irq);
+        const num = irq_num >> 5;
+        const pos = irq_num & 0x1F;
+        const v = switch (num) {
+            0 => get_bit(PFIC.IACTR1, pos),
+            1 => get_bit(PFIC.IACTR2, pos),
+            2 => get_bit(PFIC.IACTR3, pos),
+            3 => get_bit(PFIC.IACTR4, pos),
+            4 => get_bit(PFIC.IACTR5, pos),
+            else => @compileError("Invalid interrupt number!"),
+        };
+        return v != 0;
+    }
+
+    /// Interrupt priority configuration.
+    /// V3F:
+    ///     [3] - pre-emption priority
+    ///   [2:0] - subpriority
+    /// V5F:
+    ///   [3:1] - pre-emption priority
+    ///     [0] - subpriority
+    ///
+    /// TODO: maybe make it a packed struct?
+    pub inline fn set_priority(irq: Interrupt, priority: u4) void {
+        PFIC.IPRIOR[@backingInt(irq)] = @as(u8, priority) << 4;
+    }
+
+    pub inline fn get_priority(irq: Interrupt) u4 {
+        return @intCast(PFIC.IPRIOR[@backingInt(irq)] >> 4);
+    }
+
+    /// Allocate an interrupt to a core. Note that only IRQs > 31 can be
+    /// allocated, lower IRQs have a fixed core.
+    pub inline fn set_allocation(irq: Interrupt, core: Core) void {
+        if (@backingInt(irq) > 31)
+            PFIC.IALLOCR[@backingInt(irq)] = @backingInt(core);
+    }
+
+    /// Get the core an interrupt is allocated to.
+    pub inline fn get_allocation(irq: Interrupt) Core {
+        return @fromBackingInt(@intCast(PFIC.IALLOCR[@backingInt(irq)] & 1));
+    }
+
+    /// Whether the given interrupt is allocated to the currently running core.
+    pub inline fn owned_by_current_core(irq: Interrupt) bool {
+        const irq_num = @backingInt(irq);
+        return (PFIC.IAUTR[irq_num >> 5] & (@as(u32, 1) << @truncate(irq_num))) != 0;
+    }
+
+    inline fn get_bit(self: anytype, pos: u5) u1 {
+        return @truncate(self.raw >> pos);
+    }
+};
+
+pub inline fn wfi() void {
+    cpu_impl.wfi(microzig.chip);
+}
+
+pub inline fn wfe() void {
+    cpu_impl.wfe(microzig.chip);
+}
+
+pub fn unhandled() callconv(riscv_calling_convention) void {
+    const mcause = csr.mcause.read();
+
+    if (mcause.is_interrupt != 0) {
+        std.log.err("unhandled interrupt {} occurred!", .{mcause.code});
+    } else {
+        std.log.err("exception 0x{x} occurred!", .{mcause.code});
+    }
+
+    @panic("unhandled interrupt");
+}
+
+// Startup
+
+pub const startup_logic = struct {
+    extern fn microzig_main() noreturn;
+
+    export fn microzig_start() callconv(.naked) void {
+        asm volatile (
+            \\
+            // Set global pointer.
+            \\.option push
+            \\.option norelax
+            \\la gp, __global_pointer$
+            \\.option pop
+            \\
+            // Set stack pointer.
+            \\mv sp, %[eos]
+
+            // Initialize the system.
+            \\j _system_init
+            :
+            : [eos] "r" (comptime microzig.utilities.get_end_of_stack()),
+        );
+    }
+
+    export fn _system_init() callconv(.c) noreturn {
+        // NOTE: this can only be called once. Otherwise, we get a linker error for duplicate symbols
+        startup_logic.initialize_system_memories();
+
+        // Configure the CPU.
+        //
+        // NOTE: the EVT startup code additionally writes CSR 0xBC1, which configures
+        // the hardware prologue/epilogue nesting depth (V3F: 0x01, V5F: 0x07). It is
+        // deliberately left untouched here because HPE is disabled below.
+        //
+        // HPE (hardware prologue/epilogue, INTSYSCR.HWSTKEN) is kept disabled on
+        // purpose: Zig emits the standard software register save/restore sequence for
+        // `callconv(.riscv32_interrupt)` handlers and has no equivalent of
+        // `__attribute__((interrupt("WCH-Interrupt-fast")))`, which is what HPE
+        // requires. Interrupt nesting is still enabled via INTSYSCR.INESTEN.
+        //
+        // TODO: does LLVM support WCH's HPE?
+        switch (cpu_name) {
+            .qingkev3f => {
+                // Configure pipelining, instruction prediction and prefetching.
+                // Value taken from the WCH EVT startup code (startup_ch32h417_v3f.S).
+                csr.corecfgr.write_raw(0x123703E1);
+                // pmtcfg = 0b01: 2 nesting levels
+                // (bit 7 pre-emption priority, bits 6:4 sub priority).
+                csr.intsyscr.write(.{ .hwstken = 0, .inesten = 1, .pmtcfg = 0b01 });
+            },
+            .qingkev5f => {
+                // Configure pipelining, instruction prediction and prefetching.
+                // Value taken from the WCH EVT startup code (startup_ch32h417_v5f.S).
+                csr.corecfgr.write_raw(0x1237B3E0);
+                // pmtcfg = 0b11: 5-8 nesting levels
+                // (bits 7:5 pre-emption priority, bit 4 sub priority).
+                csr.intsyscr.write(.{ .hwstken = 0, .inesten = 1, .pmtcfg = 0b11 });
+
+                // Enable the instruction cache for flash-resident `.cache` code.
+                // Sequence taken from WCH's EXAM/CPU/ICache startup.
+                const cache_beg = @intFromPtr(@extern(*const u8, .{ .name = "_cache_beg" }));
+                const cache_end = @intFromPtr(@extern(*const u8, .{ .name = "_cache_end" }));
+                csr.pmpaddr0.write_raw(@intCast(cache_beg >> 2));
+                csr.pmpaddr1.write_raw(@intCast(cache_end >> 2));
+                // PMP entry 1: TOR, R+X, locked.
+                csr.pmpcfg0.write_raw(0xAD00);
+                // Select PMP channel 1 for the cache.
+                csr.cpmpocr.write_raw(0x10);
+                // Flush then enable the instruction cache.
+                csr.cmcr.write_raw(0x4);
+                csr.cstrcr.clear_raw(0x03000002);
+            },
+        }
+
+        // Set mtvec.base to (vector_table_address - 4) >> 2 so that interrupt N
+        // jumps to the correct handler regardless of any padding between _start
+        // and vector_table.
+        const vtable_addr = @intFromPtr(&vector_table);
+        csr.mtvec.write(.{
+            .mode0 = 1, // Interrupt entry for each interrupt
+            .mode1 = 1, // Use absolute addresses
+            .base = @intCast((vtable_addr - 4) >> 2),
+        });
+
+        // mstatus.mpp determines the privilege level restored by mret.
+        // Set to 0x3 (Machine) so mret returns to Machine mode, allowing the
+        // firmware to manage interrupts and change privilege as needed.
+        // To change execution to User mode set mpp to 0x0 and execute mret.
+        // Enable machine-level interrupts (mie) and set floating-point status (fs) if applicable.
+        //
+        // NOTE: the WCH EVT startup writes 0x6088 here, which per the reference
+        // manual (mpp: 00 = User, 11 = Machine, 01/10 reserved) means mpp = 0
+        // (User mode); its comment claiming "privileged mode" is misleading. This
+        // port deliberately runs in Machine mode.
+        // NOTE: will this affect rtos like Zephyr?
+        csr.mstatus.write(.{
+            .mie = 1,
+            .mpie = 1,
+            // Both V3F and V5F implement the F extension (RV32IMAFBC-X).
+            .fs = .dirty,
+            .mpp = 0x3,
+        });
+
+        cpu_impl.system_init(microzig.chip);
+
+        // Load the address of the `microzig_main` function into the `mepc` register
+        // and transfer control to it using the `mret` instruction.
+        // This is necessary to ensure proper MCU startup after a power-off.
+        // Directly calling the function from an interrupt would prevent the MCU from starting correctly.
+        csr.mepc.write(@intFromPtr(&microzig_main));
+
+        // Return from the interrupt.
+        // This changes the privilege level to mstatus.mpp, set above. In this case we are in
+        // machine mode and we are switching to machine mode, but normally this could switch us to
+        // user mode.
+        asm volatile ("mret");
+        unreachable;
+    }
+
+    inline fn initialize_system_memories() void {
+        // Clear .bss section.
+        asm volatile (
+            \\    li a0, 0
+            \\    la a1, microzig_bss_start
+            \\    la a2, microzig_bss_end
+            \\    beq a1, a2, clear_bss_done
+            \\clear_bss_loop:
+            \\    sw a0, 0(a1)
+            \\    addi a1, a1, 4
+            \\    blt a1, a2, clear_bss_loop
+            \\clear_bss_done:
+            ::: .{ .x10 = true, .x11 = true, .x12 = true });
+
+        // Copy .data from FLASH to RAM.
+        asm volatile (
+            \\    la a0, microzig_data_load_start
+            \\    la a1, microzig_data_start
+            \\    la a2, microzig_data_end
+            \\copy_data_loop:
+            \\    beq a1, a2, copy_done
+            \\    lw a3, 0(a0)
+            \\    sw a3, 0(a1)
+            \\    addi a0, a0, 4
+            \\    addi a1, a1, 4
+            \\    bne a1, a2, copy_data_loop
+            \\copy_done:
+            ::: .{ .x10 = true, .x11 = true, .x12 = true, .x13 = true });
+    }
+
+    // Runs from flash before `.text` is available in RAM: copies the `.text`
+    // output section (VMA in RAM, LMA in flash) and jumps to `microzig_start`.
+    export fn _load_text() linksection(".init") callconv(.naked) void {
+        asm volatile (
+            \\    la a0, microzig_text_load_start
+            \\    la a1, microzig_text_start
+            \\    la a2, microzig_text_end
+            \\1:
+            \\    beq a1, a2, 2f
+            \\    lw a3, 0(a0)
+            \\    sw a3, 0(a1)
+            \\    addi a0, a0, 4
+            \\    addi a1, a1, 4
+            \\    j 1b
+            \\2:
+            \\    la t0, microzig_start
+            \\    jr t0
+        );
+    }
+
+    export fn _start() linksection("microzig_flash_start") callconv(.naked) void {
+        asm volatile ("j _load_text");
+    }
+};
+
+// Vector table
+
+const vector_table_offset = 1; // First entry is reserved for the _start.
+
+fn vector_table_size() usize {
+    const type_info = @typeInfo(Interrupt);
+
+    const interrupts_list = type_info.@"enum".field_values;
+    const last_interrupt = interrupts_list[interrupts_list.len - 1];
+    const last_interrupt_idx = last_interrupt;
+
+    return last_interrupt_idx + 1 - vector_table_offset;
+}
+
+pub fn generate_vector_table() VectorTable {
+    @setEvalBranchQuota(100_000);
+    var tmp: VectorTable = @splat(microzig.options.interrupts.Exception orelse unhandled);
+
+    const type_info = @typeInfo(Interrupt);
+    const interrupt_names = type_info.@"enum".field_names;
+    const interrupt_values = type_info.@"enum".field_values;
+
+    // Apply interrupts
+    for (&tmp, vector_table_offset..) |_, idx| {
+        // Find name of the interrupt by its number.
+        var name: ?[:0]const u8 = null;
+        for (interrupt_names, interrupt_values) |interrupt_name, interrupt_value| {
+            if (interrupt_value == idx) {
+                name = interrupt_name;
+                break;
+            }
+        }
+
+        if (name) |n| {
+            const maybe_handler = @field(microzig.options.interrupts, n);
+            const maybe_default = get_hal_default_handler(n);
+
+            tmp[idx - vector_table_offset] = blk: {
+                if (maybe_handler) |handler| {
+                    if (!microzig.options.overwrite_hal_interrupts and maybe_default != null)
+                        @compileError(std.fmt.comptimePrint(
+                            \\Interrupt {s} is used internally by the HAL; overriding it may cause malfunction.
+                            \\If you are sure of what you are doing, set "overwrite_hal_interrupts" to true in: "microzig_options".
+                            \\
+                        , .{n}));
+                    break :blk handler;
+                } else break :blk maybe_default orelse unhandled;
+            };
+        }
+    }
+
+    return tmp;
+}
+
+fn get_hal_default_handler(comptime handler_name: []const u8) ?InterruptHandler {
+    if (microzig.config.has_hal) {
+        if (@hasDecl(microzig.hal, "default_interrupts")) {
+            return @field(microzig.hal.default_interrupts, handler_name);
+        }
+    }
+    return null;
+}
+
+const vector_table: VectorTable = generate_vector_table();
+
+pub fn export_startup_logic() void {
+    // These entry points are only referenced by inline assembly and the
+    // hardware, so Zig cannot see them: referencing them here forces their
+    // analysis and emission.
+    //
+    // TODO: better solutions?
+    _ = &startup_logic._start;
+    _ = &startup_logic.microzig_start;
+
+    @export(&vector_table, .{
+        .name = "vector_table",
+        .section = "microzig_flash_start",
+    });
+}
+
+// CSR
+// TODO: This table is almost a copy of ch32v's port.
+// Need to eliminate redundant code.
+
+pub const csr = struct {
+    pub const Csr = riscv32_common.csr.Csr;
+
+    /// Architecture Number Register
+    /// Fields correspond to individual letters. 1=A, 2=B, etc.
+    /// Examples:
+    /// - 0xDC68D841 - WCH-V2A
+    /// - 0xDC68D886 - WCH-V4F
+    pub const marchid = Csr(0xF12, packed struct(u32) {
+        version: u4 = 0,
+        serial: u5 = 0,
+        arch: u5 = 0,
+        reserved15: u1 = 0,
+        vendor2: u5 = 0, // 'H'
+        vendor1: u5 = 0, // 'C'
+        vendor0: u5 = 0, // 'W'
+        reserved: u1 = 0,
+    });
+    pub const mimpid = Csr(0xF13, packed struct(u32) {
+        reserved0: u16 = 0,
+        vendor2: u5 = 0, // 'H'
+        vendor1: u5 = 0, // 'C'
+        vendor0: u5 = 0, // 'W'
+        reserved31: u1 = 0,
+    });
+
+    /// Layout shared by `mstatus` and its user-accessible alias `uacces_mstatus`.
+    pub const MStatus = packed struct(u32) {
+        pub const FS = enum(u2) {
+            /// Floating-point unit status
+            off = 0b00,
+            initial = 0b01,
+            clean = 0b10,
+            dirty = 0b11,
+        };
+
+        /// [2:0] Reserved
+        reserved0: u3 = 0,
+        /// [3] Machine mode interrupt enable
+        mie: u1 = 0,
+        /// [6:4] Reserved
+        reserved4: u3 = 0,
+        /// [7] Interrupt enable state before entering interrupt
+        mpie: u1 = 0,
+        /// [10:8] Reserved
+        reserved8: u3 = 0,
+        /// [12:11] Privileged mode before entering break
+        mpp: u2 = 0,
+        /// [14:13] Floating-point unit status
+        /// Valid only for WCH-V4F
+        /// NOTE: reserved on other chips
+        fs: FS = .off,
+        /// [31:15] Reserved
+        reserved15: u17 = 0,
+    };
+
+    /// Machine Mode Status Register
+    pub const mstatus = Csr(0x300, MStatus);
+    pub const misa = Csr(0x301, packed struct(u32) {
+        extensions: u26 = 0,
+        reserved26: u4 = 0,
+        // Machine work length. 1 => 32 bit
+        mxl: u2 = 1,
+    });
+    /// Machine Mode Exception Base Address Register
+    pub const mtvec = Csr(0x305, packed struct(u32) {
+        /// [0] Mode 0
+        /// Interrupt or exception entry address mode selection.
+        /// 0: Use of the uniform entry address.
+        /// 1: Address offset based on interrupt number *4.
+        mode0: u1 = 0,
+        /// [1] Mode 1
+        /// Interrupt vector table identifies patterns.
+        /// 0: Identification by jump instruction,
+        /// limited range, support for non-jump 0 instructions.
+        /// 1: Identify by absolute address, support
+        /// full range, but must jump.
+        mode1: u1 = 0,
+        /// [31:2] Base address of the interrupt vector table
+        base: u30 = 0,
+    });
+
+    pub const mscratch = riscv32_common.csr.mscratch;
+    // PC where to `mret` returns to after an interrupt or exception handler runs.
+    // - For interrupts, it's set to the next unexecuted instruction.
+    // - For exceptions, it's set to the instruction that was executing when the exception occured.
+    //   That means that `mepc` might need to be modified if we want to 'recover' from an exception.
+    pub const mepc = riscv32_common.csr.mepc;
+    // Cause of the interrupt/exception.
+    pub const mcause = riscv32_common.csr.mcause;
+    // 'Value' of an exception, e.g. the address of where a memory access exception occurred.
+    pub const mtval = riscv32_common.csr.mtval;
+
+    // Physical memory protection
+    pub const pmpcfg0 = riscv32_common.csr.pmpcfg0;
+    pub const pmpaddr0 = riscv32_common.csr.pmpaddr0;
+    pub const pmpaddr1 = riscv32_common.csr.pmpaddr1;
+    pub const pmpaddr2 = riscv32_common.csr.pmpaddr2;
+    pub const pmpaddr3 = riscv32_common.csr.pmpaddr3;
+
+    // Hardware floating point registers
+    // NOTE: QingKeV4F only
+    pub const fflags = riscv32_common.csr.fflags;
+    pub const frm = riscv32_common.csr.frm;
+    pub const fcsr = Csr(0x003, packed struct(u32) {
+        nx: u1 = 0,
+        uf: u1 = 0,
+        of: u1 = 0,
+        dz: u1 = 0,
+        nv: u1 = 0,
+        frm: u3 = 0,
+        reserved8: u24 = 0,
+    });
+
+    // Debug registers
+    pub const dcsr = riscv32_common.csr.dcsr;
+    pub const dpc = riscv32_common.csr.dpc;
+    pub const dscratch0 = riscv32_common.csr.dscratch0;
+    pub const dscratch1 = riscv32_common.csr.dscratch1;
+
+    /// UACCES_MSTATUS: user-accessible alias of `mstatus` (CSR 0x800).
+    /// This port runs in Machine mode and uses `mstatus` directly, so the alias is
+    /// only kept for parity with the WCH EVT code.
+    pub const uacces_mstatus = Csr(0x800, MStatus);
+    pub const intsyscr = Csr(0x804, cpu_impl.csr_types.intsyscr);
+    pub const corecfgr = Csr(0xBC0, u32);
+    pub const cstrcr = Csr(0xBC2, packed struct(u32) {
+        reserved0: u1 = 0,
+        icddisable: u1 = 0,
+        reserved2: u22 = 0,
+        iccodestren: u1 = 0,
+        icsramstren: u1 = 0,
+        reserved26: u6 = 0,
+    });
+    pub const cpmpocr = Csr(0xBC3, u32);
+    pub const cmcr = Csr(0xBD0, packed struct(u32) {
+        opcode: u2 = 0,
+        idxmode: u1 = 0,
+        reserved3: u2 = 0,
+        vaddr: u27 = 0,
+    });
+    pub const cinfor = Csr(0xFC0, packed struct(u32) {
+        iclinesize: u2 = 0,
+        icszie: u3 = 0,
+        icway: u2 = 0,
+        reserved7: u25 = 0,
+    });
+};
