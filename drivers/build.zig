@@ -3,7 +3,7 @@ const std = @import("std");
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
-    const asserts = b.option(bool, "asserts", "Enable driver assert in every optimize mode") orelse false;
+    const asserts = b.option(bool, "asserts", "Enable panic on driver assertion") orelse false;
 
     const options = b.addOptions();
     options.addOption(bool, "asserts", asserts);

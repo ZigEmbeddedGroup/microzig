@@ -83,7 +83,7 @@ pub fn transceive(dd: DatagramDevice, src: []const u8, dst: []u8) (WriteError ||
 /// Writes `write_chunks` while reading into `read_chunks`, in a single
 /// full-duplex transaction. Each side is the concatenation of its chunks, so
 /// only the total lengths have to match, not the chunk boundaries.
-///
+///Panic if the total lengths differ and driver assertions are enabled
 /// Returns `error.Unsupported` if the device can't transfer in both directions
 /// at the same time.
 pub fn transceivev(
@@ -91,8 +91,15 @@ pub fn transceivev(
     write_chunks: []const []const u8,
     read_chunks: []const []u8,
 ) (WriteError || ReadError)!void {
+    assert(chunks_len(write_chunks) == chunks_len(read_chunks));
     const transceivev_fn = dd.vtable.transceivev_fn orelse return error.Unsupported;
     return transceivev_fn(dd.ptr, write_chunks, read_chunks);
+}
+
+fn chunks_len(chunks: anytype) usize {
+    var len: usize = 0;
+    for (chunks) |chunk| len += chunk.len;
+    return len;
 }
 
 /// Reads a single `datagram` from the device.
@@ -288,19 +295,10 @@ pub const TestDevice = struct {
     }
 
     fn transceivev(ctx: *anyopaque, write_chunks: []const []const u8, read_chunks: []const []u8) (WriteError || ReadError)!void {
-        const read_len = chunks_len(read_chunks);
-        assert(chunks_len(write_chunks) == read_len);
-
         try TestDevice.writev(ctx, write_chunks);
         // A full-duplex transfer fills the whole read buffer.
-        if (try TestDevice.readv(ctx, read_chunks) != read_len)
+        if (try TestDevice.readv(ctx, read_chunks) != chunks_len(read_chunks))
             return error.IoError;
-    }
-
-    fn chunks_len(chunks: anytype) usize {
-        var len: usize = 0;
-        for (chunks) |chunk| len += chunk.len;
-        return len;
     }
 
     const vtable = VTable{
