@@ -52,7 +52,7 @@ pub fn load_into_db(db: *Database, doc: xml.Doc) !void {
     const root = try doc.get_root_element();
     var module_it = root.iterate(&.{"modules"}, &.{"module"});
     while (module_it.next()) |entry|
-        try load_module_type(&ctx, entry);
+        try load_module_type(&ctx, root, entry);
 
     var device_it = root.iterate(&.{"devices"}, &.{"device"});
     while (device_it.next()) |entry|
@@ -283,7 +283,7 @@ fn get_inlined_register_group(parent_node: xml.Node, parent_name: []const u8) ?x
 }
 
 // module instances are listed under atdf-tools-device-file.modules.
-fn load_module_type(ctx: *Context, node: xml.Node) !void {
+fn load_module_type(ctx: *Context, root: xml.Node, node: xml.Node) !void {
     validate_attrs(node, &.{
         "oldname",
         "name",
@@ -322,12 +322,38 @@ fn load_module_type(ctx: *Context, node: xml.Node) !void {
     // registers. This operation needs to be done in
     // `loadModuleInstance()` as well
     if (get_inlined_register_group(node, name)) |register_group_node| {
+        if (instances_at_offset_zero(root, name))
+            try infer_register_group_offset(ctx, register_group_node, struct_id);
         try load_register_group_children(ctx, register_group_node, peripheral, struct_id);
     } else {
         var register_group_it = node.iterate(&.{}, &.{"register-group"});
         while (register_group_it.next()) |register_group_node|
             try load_register_group(ctx, register_group_node, peripheral);
     }
+}
+
+/// True if every instance of the module is at offset 0, so the lowest
+/// register offset can be the instance base (SPI on the ATmega328P).
+fn instances_at_offset_zero(root: xml.Node, module_name: []const u8) bool {
+    var device_it = root.iterate(&.{"devices"}, &.{"device"});
+    while (device_it.next()) |device_node| {
+        var module_it = device_node.iterate(&.{"peripherals"}, &.{"module"});
+        while (module_it.next()) |module_node| {
+            const name = module_node.get_attribute("name") orelse continue;
+            if (!std.mem.eql(u8, name, module_name)) continue;
+
+            var instance_it = module_node.iterate(&.{}, &.{"instance"});
+            while (instance_it.next()) |instance_node| {
+                var register_group_it = instance_node.iterate(&.{}, &.{"register-group"});
+                while (register_group_it.next()) |register_group_node| {
+                    const offset = register_group_node.get_attribute_int(u64, "offset") catch return false;
+                    if (offset != 0) return false;
+                }
+            }
+        }
+    }
+
+    return true;
 }
 
 fn load_module_interrupt_group(ctx: *Context, node: xml.Node) !void {
@@ -822,10 +848,14 @@ fn load_module_instance_from_peripheral(
     const name = node.get_attribute("name") orelse return error.MissingInstanceName;
     const desc = node.get_attribute("caption");
 
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
     const offset_bytes: u64 = if (get_inlined_register_group(node, name)) |register_group_node| blk: {
         log.debug("inlining {s}", .{name});
         const offset = try register_group_node.get_attribute_int(u64, "offset") orelse return error.MissingPeripheralOffset;
-        break :blk offset;
+        break :blk if (offset == 0)
+            ctx.inferred_register_group_offsets.get(struct_id) orelse offset
+        else
+            offset;
     } else {
         return error.Todo;
         //unreachable;
@@ -836,7 +866,6 @@ fn load_module_instance_from_peripheral(
         //    };
     };
 
-    const struct_id = try db.get_peripheral_struct(peripheral_id);
     const instance_id = try db.create_device_peripheral(device_id, .{
         .struct_id = struct_id,
         .name = name,
@@ -1308,6 +1337,100 @@ test "atdf.instance of register group" {
 
     const pinb = try db.get_register_by_name(arena.allocator(), portb_instance.struct_id, "PINB");
     try expectEqual(@as(u64, 0x0), pinb.offset_bytes);
+}
+
+test "atdf.inlined register group with absolute offsets" {
+    const text =
+        \\<avr-tools-device-file>
+        \\  <devices>
+        \\    <device name="ATmega328P" architecture="AVR8" family="megaAVR">
+        \\      <peripherals>
+        \\        <module name="SPI">
+        \\          <instance name="SPI" caption="Serial Peripheral Interface">
+        \\            <register-group name="SPI"
+        \\                            name-in-module="SPI"
+        \\                            offset="0x00"
+        \\                            address-space="data"
+        \\                            caption="Serial Peripheral Interface"/>
+        \\          </instance>
+        \\        </module>
+        \\      </peripherals>
+        \\    </device>
+        \\  </devices>
+        \\  <modules>
+        \\    <module caption="Serial Peripheral Interface" name="SPI">
+        \\      <register-group caption="Serial Peripheral Interface" name="SPI">
+        \\        <register caption="SPI Data Register" name="SPDR" offset="0x4E" size="1" mask="0xFF"/>
+        \\        <register caption="SPI Status Register" name="SPSR" offset="0x4D" size="1" mask="0xC1"/>
+        \\        <register caption="SPI Control Register" name="SPCR" offset="0x4C" size="1" mask="0xFF"/>
+        \\      </register-group>
+        \\    </module>
+        \\  </modules>
+        \\</avr-tools-device-file>
+        \\
+    ;
+
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+
+    const doc = try xml.Doc.from_memory(text);
+    var db = try Database.create_from_doc(std.testing.allocator, .atdf, doc);
+    defer db.destroy();
+
+    const device_id = try db.get_device_id_by_name("ATmega328P") orelse return error.NoDevice;
+
+    const spi_instance = try db.get_device_peripheral_by_name(arena.allocator(), device_id, "SPI");
+    try expectEqual(@as(u64, 0x4C), spi_instance.offset_bytes);
+
+    const spcr = try db.get_register_by_name(arena.allocator(), spi_instance.struct_id, "SPCR");
+    try expectEqual(@as(u64, 0x0), spcr.offset_bytes);
+
+    const spdr = try db.get_register_by_name(arena.allocator(), spi_instance.struct_id, "SPDR");
+    try expectEqual(@as(u64, 0x2), spdr.offset_bytes);
+}
+
+test "atdf.inlined register group with relative offsets" {
+    const text =
+        \\<avr-tools-device-file>
+        \\  <devices>
+        \\    <device name="ATtiny1616" architecture="AVR8X" family="tinyAVR">
+        \\      <peripherals>
+        \\        <module name="SYSCFG">
+        \\          <instance name="SYSCFG">
+        \\            <register-group name="SYSCFG"
+        \\                            name-in-module="SYSCFG"
+        \\                            offset="0x0F00"
+        \\                            address-space="data"/>
+        \\          </instance>
+        \\        </module>
+        \\      </peripherals>
+        \\    </device>
+        \\  </devices>
+        \\  <modules>
+        \\    <module caption="System Configuration Registers" name="SYSCFG">
+        \\      <register-group caption="System Configuration Registers" name="SYSCFG" size="0x20">
+        \\        <register caption="Revision ID" name="REVID" offset="0x01" size="1" mask="0xFF"/>
+        \\      </register-group>
+        \\    </module>
+        \\  </modules>
+        \\</avr-tools-device-file>
+        \\
+    ;
+
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+
+    const doc = try xml.Doc.from_memory(text);
+    var db = try Database.create_from_doc(std.testing.allocator, .atdf, doc);
+    defer db.destroy();
+
+    const device_id = try db.get_device_id_by_name("ATtiny1616") orelse return error.NoDevice;
+
+    const syscfg_instance = try db.get_device_peripheral_by_name(arena.allocator(), device_id, "SYSCFG");
+    try expectEqual(@as(u64, 0xF00), syscfg_instance.offset_bytes);
+
+    const revid = try db.get_register_by_name(arena.allocator(), syscfg_instance.struct_id, "REVID");
+    try expectEqual(@as(u64, 0x1), revid.offset_bytes);
 }
 
 test "atdf.interrupts" {
