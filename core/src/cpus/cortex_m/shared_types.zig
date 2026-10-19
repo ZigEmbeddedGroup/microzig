@@ -183,14 +183,14 @@ pub const scb = struct {
         ///     0 = no precise data bus error
         ///     1 = a data bus error has occurred, and the PC value stacked for the exception return points to the instruction that caused the fault.
         /// When the processor sets this bit is 1, it writes the faulting address to the BFAR.
-        precice_data_bus_error: bool, // [1], RW
+        precise_data_bus_error: bool, // [1], RW
 
         /// Imprecise data bus error:
         ///     0 = no imprecise data bus error
         ///     1 = a data bus error has occurred, but the return address in the stack frame is not related to the instruction that caused the error.
         /// When the processor sets this bit to 1, it does not write a fault address to the BFAR.
         /// This is an asynchronous fault. Therefore, if it is detected when the priority of the current process is higher than the BusFault priority, the BusFault becomes pending and becomes active only when the processor returns from all higher priority processes. If a precise fault occurs before the processor enters the handler for the imprecise BusFault, the handler detects both IMPRECISERR set to 1 and one of the precise fault status bits set to 1.
-        imprecice_data_bus_error: bool, // [2], RW
+        imprecise_data_bus_error: bool, // [2], RW
 
         /// BusFault on unstacking for a return from exception:
         ///     0 = no unstacking fault

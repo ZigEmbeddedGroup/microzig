@@ -5,7 +5,7 @@ __pycache__/
 .lldbinit
 .venv
 .zig-cache/
-boxzer-out
+release-out
 microzig-deploy/
 zig-cache/
 zig-out/

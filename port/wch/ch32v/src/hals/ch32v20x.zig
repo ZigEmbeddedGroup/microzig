@@ -9,7 +9,15 @@ pub const i2c = @import("i2c.zig");
 pub const usart = @import("usart.zig");
 pub const spi = @import("spi.zig");
 pub const dma = @import("dma.zig");
-pub const usb = @import("usbfs.zig");
+pub const UsbDriver = enum { usbd, usbfs };
+
+pub const usb = if (microzig.config.has_board and @hasDecl(microzig.board, "usb_driver"))
+    switch (microzig.board.usb_driver) {
+        .usbd => @import("usbd.zig"),
+        .usbfs => @import("usbfs.zig"),
+    }
+else
+    @import("usbfs.zig");
 
 /// HSI (High Speed Internal) oscillator frequency
 /// This is the fixed internal RC oscillator frequency for CH32V20x

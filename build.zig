@@ -31,6 +31,7 @@ const port_list: []const struct {
     .{ .name = "rp2xxx", .dep_name = "port/raspberrypi/rp2xxx" },
     .{ .name = "stm32", .dep_name = "port/stmicro/stm32" },
     .{ .name = "ch32v", .dep_name = "port/wch/ch32v" },
+    .{ .name = "ch32h", .dep_name = "port/wch/ch32h" },
     .{ .name = "msp430", .dep_name = "port/texasinstruments/msp430" },
     .{ .name = "mspm0", .dep_name = "port/texasinstruments/mspm0" },
     .{ .name = "tm4c", .dep_name = "port/texasinstruments/tm4c" },
@@ -70,6 +71,7 @@ pub const PortSelect = struct {
     rp2xxx: bool = false,
     stm32: bool = false,
     ch32v: bool = false,
+    ch32h: bool = false,
     msp430: bool = false,
     mspm0: bool = false,
     tm4c: bool = false,
@@ -124,6 +126,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
     return struct {
         builder: *Build,
         dep: *Build.Dependency,
+        internals_dep: *Build.Dependency,
         core_dep: *Build.Dependency,
         drivers_dep: *Build.Dependency,
 
@@ -206,6 +209,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
             mb.* = .{
                 .builder = b,
                 .dep = dep,
+                .internals_dep = dep.builder.dependency("build-internals", .{}),
                 .core_dep = dep.builder.dependency("core", .{}),
                 .drivers_dep = dep.builder.dependency("drivers", .{}),
                 .ports = ports,
@@ -278,6 +282,12 @@ pub fn MicroBuild(port_select: PortSelect) type {
 
             /// Dwarf format option for the firmware executable.
             dwarf_format: ?std.dwarf.Format = null,
+
+            /// On embedded systems you're likely to use release-small for the
+            /// optimization mode in order to make your code fit on hardware.
+            /// This unfortunately turns off safety checks. Enabling this allows
+            /// you to have asserts run in release builds.
+            asserts: bool = false,
         };
 
         /// Creates a new firmware for a given target.
@@ -291,60 +301,45 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 region.validate_tag();
             }
 
-            // TODO: use unions when they are supported in the build system
-            const EndOfStack = struct {
-                address: ?usize = null,
-                symbol_name: ?[]const u8 = null,
-            };
-
-            const end_of_stack: EndOfStack = switch (options.stack orelse options.target.stack) {
-                .address => |address| .{ .address = address },
-                .ram_region_index => |index| blk: {
-                    var i: usize = 0;
-                    for (target.chip.memory_regions) |region| {
-                        if (region.tag == .ram) {
-                            if (i == index)
-                                break :blk .{ .address = region.offset + region.length };
-                            i += 1;
-                        }
-                    } else @panic("no ram memory region found for setting the end-of-stack address");
-                },
-                .ram_region_name => |name| blk: {
-                    for (target.chip.memory_regions) |region| {
-                        if (region.name) |region_name| {
-                            if (std.mem.eql(u8, region_name, name)) {
-                                if (region.tag == .ram) {
-                                    break :blk .{ .address = region.offset + region.length };
-                                } else @panic("Named region found is not a ram region");
-                            }
-                        }
-                    } else @panic("no ram memory named region found for setting the end-of-stack address");
-                },
-                .symbol_name => |name| .{ .symbol_name = name },
-            };
-
             const zig_resolved_target = b.resolveTargetQuery(options.zig_target orelse target.zig_target);
 
             const cpu = options.cpu orelse target.cpu orelse mb.get_default_cpu(zig_resolved_target.result);
             const maybe_hal = options.hal orelse target.hal;
             const maybe_board = options.board orelse target.board;
 
-            const config = b.addOptions();
-            config.addOption(bool, "has_hal", maybe_hal != null);
-            config.addOption(bool, "has_board", maybe_board != null);
+            const config: internals.Config = .{
+                .has_hal = maybe_hal != null,
+                .has_board = maybe_board != null,
 
-            config.addOption([]const u8, "cpu_name", cpu.name);
-            config.addOption([]const u8, "chip_name", target.chip.name);
-            config.addOption(?[]const u8, "board_name", if (maybe_board) |board| board.name else null);
-            config.addOption(EndOfStack, "end_of_stack", end_of_stack);
-            config.addOption(bool, "ram_image", target.ram_image);
+                .cpu_name = cpu.name,
+                .chip_name = target.chip.name,
+                .board_name = if (maybe_board) |board| board.name else null,
+
+                .ram_image = target.ram_image,
+                .asserts = options.asserts,
+
+                .stack = options.stack orelse options.target.stack,
+                .memory_regions = target.chip.memory_regions,
+            };
+
+            const config_file = b.addWriteFiles().add(
+                "config.zon",
+                b.fmt("{f}", .{std.zon.fmt(config, .{})}),
+            );
+            const config_mod = b.createModule(.{
+                .root_source_file = config_file,
+            });
 
             const core_mod = b.createModule(.{
                 .root_source_file = mb.core_dep.path("src/microzig.zig"),
                 .imports = &.{
                     .{
+                        .name = "build-internals",
+                        .module = mb.internals_dep.module("build-internals"),
+                    },
+                    .{
                         .name = "config",
-                        .module = config.createModule(),
+                        .module = config_mod,
                     },
                     .{
                         .name = "drivers",

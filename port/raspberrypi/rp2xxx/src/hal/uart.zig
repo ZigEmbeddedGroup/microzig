@@ -135,6 +135,13 @@ pub const instance = struct {
     }
 };
 
+pub const TimeFrontier = union(enum) {
+    timeout_us: u64,
+    deadline: mdf.time.Deadline,
+
+    pub const no_deadline: TimeFrontier = .{ .deadline = .no_deadline };
+};
+
 /// An API for interacting with the RP2040's UART driver.
 ///
 /// Note: Assumes proper GPIO configuration, does NOT configure GPIO pins.
@@ -148,20 +155,28 @@ pub const UART = enum(u1) {
 
     pub const Writer = struct {
         uart: UART,
-        deadline: mdf.time.Deadline,
+        time_frontier: TimeFrontier,
         interface: std.Io.Writer,
+
+        pub fn set_deadline(self: *Writer, deadline: mdf.time.Deadline) void {
+            self.time_frontier = TimeFrontier{ .deadline = deadline };
+        }
     };
 
     pub const Reader = struct {
         uart: UART,
-        deadline: mdf.time.Deadline,
+        time_frontier: TimeFrontier,
         interface: std.Io.Reader,
+
+        pub fn set_deadline(self: *Reader, deadline: mdf.time.Deadline) void {
+            self.time_frontier = TimeFrontier{ .deadline = deadline };
+        }
     };
 
-    pub fn writer(uart: UART, deadline: mdf.time.Deadline, buffer: []u8) Writer {
+    pub fn writer(uart: UART, time_frontier: TimeFrontier, buffer: []u8) Writer {
         return .{
             .uart = uart,
-            .deadline = deadline,
+            .time_frontier = time_frontier,
             .interface = .{
                 .buffer = buffer,
                 .vtable = &.{
@@ -171,10 +186,10 @@ pub const UART = enum(u1) {
         };
     }
 
-    pub fn reader(uart: UART, deadline: mdf.time.Deadline, buffer: []u8) Reader {
+    pub fn reader(uart: UART, time_frontier: TimeFrontier, buffer: []u8) Reader {
         return .{
             .uart = uart,
-            .deadline = deadline,
+            .time_frontier = time_frontier,
             .interface = .{
                 .buffer = buffer,
                 .seek = 0,
@@ -190,18 +205,23 @@ pub const UART = enum(u1) {
         const uart_writer: *Writer = @alignCast(@fieldParentPtr("interface", w));
         const uart = uart_writer.uart;
 
+        const deadline: mdf.time.Deadline = switch (uart_writer.time_frontier) {
+            .deadline => |d| d,
+            .timeout_us => |t| time.deadline_in_us(t),
+        };
+
         // bytes from buffer are not included in count.
-        w.end -= uart.write_blocking(w.buffer[0..w.end], uart_writer.deadline) catch |err| switch (err) {
+        w.end -= uart.write_blocking(w.buffer[0..w.end], deadline) catch |err| switch (err) {
             error.Timeout => unreachable,
         };
         assert(w.end == 0);
 
         var n: usize = 0;
-        n += uart.writev_blocking(data[0 .. data.len - 1], uart_writer.deadline) catch |err| switch (err) {
+        n += uart.writev_blocking(data[0 .. data.len - 1], deadline) catch |err| switch (err) {
             error.Timeout => unreachable,
         };
         for (0..splat) |_|
-            n += uart.write_blocking(data[data.len - 1], uart_writer.deadline) catch |err| switch (err) {
+            n += uart.write_blocking(data[data.len - 1], deadline) catch |err| switch (err) {
                 error.Timeout => unreachable,
             };
 
@@ -211,10 +231,16 @@ pub const UART = enum(u1) {
     fn stream(r: *std.Io.Reader, w: *std.Io.Writer, limit: std.Io.Limit) std.Io.Reader.StreamError!usize {
         const uart_reader: *Reader = @alignCast(@fieldParentPtr("interface", r));
         const uart = uart_reader.uart;
+
+        const deadline: mdf.time.Deadline = switch (uart_reader.time_frontier) {
+            .deadline => |d| d,
+            .timeout_us => |t| time.deadline_in_us(t),
+        };
+
         return switch (limit) {
             .nothing => 0,
             else => {
-                const b = uart.read_word_blocking(uart_reader.deadline) catch return error.ReadFailed;
+                const b = uart.read_word_blocking(deadline) catch return error.ReadFailed;
                 try w.writeByte(b);
                 return 1;
             },

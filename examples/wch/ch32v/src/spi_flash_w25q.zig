@@ -22,11 +22,12 @@ const std = @import("std");
 const microzig = @import("microzig");
 const mdf = microzig.drivers;
 const hal = microzig.hal;
+const board = microzig.board;
 const gpio = hal.gpio;
 const spi = hal.spi;
 
-const usart = hal.usart.instance.USART2;
-const usart_tx_pin = gpio.Pin.init(0, 2); // PA2
+const uart = board.uart_setup;
+const spi_hw = board.spi_setup;
 
 pub const panic = microzig.panic;
 
@@ -67,48 +68,24 @@ const cs_pin = gpio.Pin.init(0, 3); // PA3
 
 pub fn main() !void {
     // Board brings up clocks and time
-    microzig.board.init();
+    board.init();
 
-    // Configure USART2 TX pin (PA2) for logging
-    usart_tx_pin.configure_alternate_function(.push_pull, .max_50MHz);
-
-    // Initialize USART2 at 115200 baud
-    usart.apply(.{
-        .baud_rate = 115200,
-        .remap = .default,
-    });
-
-    hal.usart.init_logger(usart);
+    // Initialize UART for logging
+    uart.apply(.{ .baud_rate = 115200 });
+    hal.usart.init_logger(uart.instance);
 
     std.log.info("W25Q128 SPI Flash Test", .{});
     std.log.info("======================", .{});
     std.log.info("", .{});
 
-    // Configure SPI1 pins
-    // PA5: SCK  (Alternate Function Push-Pull, 50MHz)
-    // PA6: MISO (Input Floating)
-    // PA7: MOSI (Alternate Function Push-Pull, 50MHz)
-    // PA4: CS   (Output Push-Pull, 50MHz)
-    const sck_pin = gpio.Pin.init(0, 5); // PA5
-    const miso_pin = gpio.Pin.init(0, 6); // PA6
-    const mosi_pin = gpio.Pin.init(0, 7); // PA7
-
-    sck_pin.configure_alternate_function(.push_pull, .max_50MHz);
-    miso_pin.enable_clock();
-    miso_pin.set_input_mode(.floating);
-    mosi_pin.configure_alternate_function(.push_pull, .max_50MHz);
-
-    // Configure CS pin (manual control)
+    // Configure CS pin (manual control, device-specific)
     cs_pin.enable_clock();
     cs_pin.set_output_mode(.general_purpose_push_pull, .max_50MHz);
     cs_pin.put(1); // Deselect (CS is active low)
 
-    // Initialize SPI1
-    const spi1 = spi.instance.SPI1;
-
-    // Test with DMA enabled
+    // Initialize SPI with DMA support
     std.log.info("Initializing SPI with DMA support...", .{});
-    spi1.apply(.{
+    spi_hw.apply(.{
         .baud_rate = 4_000_000, // 4 MHz
         .polarity = .idle_low,
         .phase = .first_edge,
@@ -124,7 +101,7 @@ pub fn main() !void {
 
     // Test 1: Read JEDEC ID
     std.log.info("Test 1: Reading JEDEC ID...", .{});
-    const jedec_id = try read_jedec_id(spi1);
+    const jedec_id = try read_jedec_id(spi_hw.instance);
     std.log.info("  JEDEC ID: 0x{X:0>6}", .{jedec_id});
 
     if (jedec_id == JEDEC_ID_EXPECTED) {
@@ -136,7 +113,7 @@ pub fn main() !void {
 
     // Test 2: Read Status Register (small transfer - should use polling)
     std.log.info("Test 2: Reading Status Register (polling)...", .{});
-    const status = try read_status_reg(spi1);
+    const status = try read_status_reg(spi_hw.instance);
     std.log.info("  Status: 0x{X:0>2}", .{status});
     std.log.info("  BUSY: {}", .{status & W25Q_STATUS.BUSY != 0});
     std.log.info("  WEL:  {}", .{status & W25Q_STATUS.WEL != 0});
@@ -155,16 +132,16 @@ pub fn main() !void {
     }
 
     std.log.info("  Erasing sector at 0x{X:0>6}...", .{test_address});
-    try erase_sector(spi1, test_address);
+    try erase_sector(spi_hw.instance, test_address);
     std.log.info("  Sector erased", .{});
 
     std.log.info("  Writing {} bytes...", .{test_data_len});
-    try write_page(spi1, test_address, write_buffer[0..test_data_len]);
+    try write_page(spi_hw.instance, test_address, write_buffer[0..test_data_len]);
     std.log.info("  Page written", .{});
 
     std.log.info("  Reading {} bytes (DMA)...", .{test_data_len});
     var read_buffer: [PAGE_SIZE]u8 = undefined;
-    try read_data(spi1, test_address, read_buffer[0..test_data_len]);
+    try read_data(spi_hw.instance, test_address, read_buffer[0..test_data_len]);
     std.log.info("  Page read", .{});
 
     // Verify

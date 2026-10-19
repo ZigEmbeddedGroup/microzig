@@ -122,11 +122,11 @@ pub fn main(init: std.process.Init) !void {
         if (cli_args.segments) {
             var it = elf_header.iterateProgramHeaders(&elf_file_reader);
             while (try it.next()) |hdr| {
-                if (hdr.p_type == std.elf.PT_LOAD and hdr.p_memsz > 0 and hdr.p_filesz > 0) {
+                if (hdr.type == std.elf.PT.LOAD and hdr.memsz > 0 and hdr.filesz > 0) {
                     try info_list.append(gpa, .{
-                        .addr = @as(u32, @intCast(hdr.p_paddr)),
-                        .file_offset = @as(u32, @intCast(hdr.p_offset)),
-                        .size = @as(u32, @intCast(hdr.p_filesz)),
+                        .addr = @as(u32, @intCast(hdr.paddr)),
+                        .file_offset = @as(u32, @intCast(hdr.offset)),
+                        .size = @as(u32, @intCast(hdr.filesz)),
                     });
                 }
             }

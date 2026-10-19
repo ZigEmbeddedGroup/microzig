@@ -26,7 +26,7 @@ pub const SectionTypes = enum {
 pub const Region = struct {
     start_address: u64,
     end_address: u64,
-    flags: Flags,
+    flags: std.elf.PF,
 
     pub const Flags = packed struct {
         read: bool,
@@ -100,16 +100,12 @@ pub fn init(allocator: std.mem.Allocator, file_reader: *std.Io.File.Reader) !Elf
 
     var program_header_iterator = elf_header.iterateProgramHeaders(file_reader);
     while (try program_header_iterator.next()) |phdr| {
-        if (phdr.p_type != std.elf.PT_LOAD) continue;
+        if (phdr.type != std.elf.PT.LOAD) continue;
 
         try loaded_regions.append(allocator, .{
-            .start_address = phdr.p_vaddr,
-            .end_address = phdr.p_vaddr + phdr.p_memsz,
-            .flags = .{
-                .read = phdr.p_flags & std.elf.PF_R != 0,
-                .write = phdr.p_flags & std.elf.PF_W != 0,
-                .exec = phdr.p_flags & std.elf.PF_X != 0,
-            },
+            .start_address = phdr.vaddr,
+            .end_address = phdr.vaddr + phdr.memsz,
+            .flags = phdr.flags,
         });
     }
 
@@ -133,7 +129,7 @@ pub fn deinit(self: *Elf, allocator: std.mem.Allocator) void {
 pub fn is_address_executable(self: Elf, address: u64) bool {
     var inside_memory_map = false;
     for (self.loaded_regions) |region| {
-        if (!region.flags.exec) {
+        if (!region.flags.X) {
             continue;
         }
 

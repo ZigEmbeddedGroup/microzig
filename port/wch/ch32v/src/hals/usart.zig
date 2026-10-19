@@ -75,7 +75,6 @@ pub const Config = struct {
     stop_bits: StopBits = .one,
     parity: Parity = .none,
     flow_control: FlowControl = .none,
-    remap: Remap = .default,
 };
 
 pub const TransmitError = error{
@@ -92,23 +91,28 @@ pub const ReceiveError = error{
 
 const gpio = hal.gpio;
 
-/// Configuration for board-level UART defaults.
-/// Boards export a `uart_config` const of this type with their preferred
-/// USART instance, TX pin, and serial settings. Examples can use these
-/// defaults directly or construct their own `UartConfig`.
-pub const UartConfig = struct {
-    instance: USART = .USART1,
-    tx_pin: gpio.Pin = gpio.Pin.init(0, 9), // PA9 (USART1 default TX)
-    config: Config = .{ .baud_rate = 115200 },
-};
+/// Physical-layer UART setup: which USART instance and pins to use.
+/// Boards export a `uart_setup` const of this type. Application-level
+/// settings (baud rate, parity, etc.) are passed separately via `Config`.
+pub const Setup = struct {
+    instance: USART,
+    tx_pin: ?gpio.Pin = null,
+    rx_pin: ?gpio.Pin = null,
+    /// AFIO pin remap — must match the pins chosen above.
+    /// See the Remap enum doc comment for which pins each setting maps to.
+    remap: Remap = .default,
 
-/// Configure a UART from a `UartConfig`: sets up the TX pin as alternate
-/// function push-pull, then applies the USART peripheral configuration
-/// (clock enable, AFIO remap, baud rate, etc.).
-pub fn setup_uart(comptime cfg: UartConfig) void {
-    cfg.tx_pin.configure_alternate_function(.push_pull, .max_50MHz);
-    cfg.instance.apply(cfg.config);
-}
+    /// Apply settings: configure whichever pins are present, then apply
+    /// the USART peripheral config (clock, baud rate, etc.).
+    pub fn apply(comptime self: Setup, comptime config: Config) void {
+        if (self.tx_pin) |tx| tx.configure_alternate_function(.push_pull, .max_50MHz);
+        if (self.rx_pin) |rx| {
+            rx.enable_clock();
+            rx.set_input_mode(.floating);
+        }
+        self.instance.apply(config, self.remap);
+    }
+};
 
 pub const instance = struct {
     pub const USART1: USART = .USART1;
@@ -228,7 +232,7 @@ pub const USART = enum(u2) {
     }
 
     /// Apply configuration to the USART peripheral
-    pub fn apply(comptime usart: USART, comptime config: Config) void {
+    pub fn apply(comptime usart: USART, comptime config: Config, comptime remap: Remap) void {
         const regs = usart.get_regs();
 
         // Enable peripheral clock
@@ -243,7 +247,7 @@ pub const USART = enum(u2) {
         // Configure AFIO remap
         hal.clocks.enable_afio_clock();
         const AFIO = microzig.chip.peripherals.AFIO;
-        const remap_bits = @backingInt(config.remap);
+        const remap_bits = @backingInt(remap);
 
         switch (usart) {
             .USART1 => {

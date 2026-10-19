@@ -38,7 +38,7 @@ pub fn main() !void {
             continue;
         };
 
-        //tries to write one byte with 100ms timeout
+        // Try to write one byte with 100ms timeout
         _ = uart.write_blocking(&data, time.deadline_in_ms(100)) catch {
             uart.clear_errors();
         };

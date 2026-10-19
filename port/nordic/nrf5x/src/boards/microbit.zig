@@ -49,7 +49,7 @@ pub const pins = switch (revision) {
                 gpio.num(0, 28),
                 gpio.num(0, 11),
                 gpio.num(0, 31),
-                gpio.num(0, 5),
+                gpio.num(1, 5),
                 gpio.num(0, 30),
             };
 

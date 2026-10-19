@@ -17,11 +17,11 @@ const std = @import("std");
 const microzig = @import("microzig");
 const mdf = microzig.drivers;
 const hal = microzig.hal;
-const gpio = hal.gpio;
+const board = microzig.board;
 const spi = hal.spi;
 
-const usart = hal.usart.instance.USART2;
-const usart_tx_pin = gpio.Pin.init(0, 2); // PA2
+const uart = board.uart_setup;
+const spi_hw = board.spi_setup;
 
 pub const panic = microzig.panic;
 
@@ -36,18 +36,11 @@ comptime {
 
 pub fn main() !void {
     // Board brings up clocks and time
-    microzig.board.init();
+    board.init();
 
-    // Configure USART2 TX pin (PA2) for logging
-    usart_tx_pin.configure_alternate_function(.push_pull, .max_50MHz);
-
-    // Initialize USART2 at 115200 baud
-    usart.apply(.{
-        .baud_rate = 115200,
-        .remap = .default,
-    });
-
-    hal.usart.init_logger(usart);
+    // Initialize UART for logging
+    uart.apply(.{ .baud_rate = 115200 });
+    hal.usart.init_logger(uart.instance);
 
     std.log.info("SPI Loopback Test", .{});
     std.log.info("==================", .{});
@@ -55,19 +48,6 @@ pub fn main() !void {
     std.log.info("Hardware setup:", .{});
     std.log.info("  Connect PA7 (MOSI) to PA6 (MISO) with jumper wire", .{});
     std.log.info("", .{});
-
-    // Configure SPI1 pins
-    // PA5: SCK  (Alternate Function Push-Pull, 50MHz)
-    // PA6: MISO (Input Floating)
-    // PA7: MOSI (Alternate Function Push-Pull, 50MHz)
-    const sck_pin = gpio.Pin.init(0, 5); // PA5
-    const miso_pin = gpio.Pin.init(0, 6); // PA6
-    const mosi_pin = gpio.Pin.init(0, 7); // PA7
-
-    sck_pin.configure_alternate_function(.push_pull, .max_50MHz);
-    miso_pin.enable_clock();
-    miso_pin.set_input_mode(.floating);
-    mosi_pin.configure_alternate_function(.push_pull, .max_50MHz);
 
     // Test patterns - mix of short (polling) and long (DMA) transfers
     const test_patterns = [_][]const u8{
@@ -91,7 +71,6 @@ pub fn main() !void {
         },
     };
 
-    const spi1 = spi.instance.SPI1;
     var rx_buffer: [64]u8 = undefined; // Increased to handle 32-byte pattern
 
     // SPI modes to test (all 4 combinations of CPOL and CPHA)
@@ -111,7 +90,7 @@ pub fn main() !void {
     // Test each SPI mode (comptime inline loop for compile-time config)
     inline for (spi_modes) |mode| {
         std.log.info("Testing {s} at 1 MHz with DMA...", .{mode.name});
-        spi1.apply(.{
+        spi_hw.apply(.{
             .baud_rate = 1_000_000,
             .polarity = mode.polarity,
             .phase = mode.phase,
@@ -128,7 +107,7 @@ pub fn main() !void {
             @memset(&rx_buffer, 0);
 
             // Perform loopback
-            spi1.transceive_blocking(pattern, rx_buffer[0..pattern.len], mdf.time.Duration.from_ms(100)) catch |err| {
+            spi_hw.instance.transceive_blocking(pattern, rx_buffer[0..pattern.len], mdf.time.Duration.from_ms(100)) catch |err| {
                 std.log.err("  Pattern {} failed: {}", .{ i, err });
                 continue;
             };
@@ -152,7 +131,7 @@ pub fn main() !void {
     std.log.info("", .{});
     std.log.info("Testing vectored I/O with DMA (writev)...", .{});
 
-    spi1.apply(.{
+    spi_hw.apply(.{
         .baud_rate = 1_000_000,
         .polarity = .idle_low,
         .phase = .first_edge,
@@ -165,7 +144,7 @@ pub fn main() !void {
 
     const chunks = [_][]const u8{ &.{ 1, 2 }, &.{ 3, 4 }, &.{ 5, 6 } };
 
-    spi1.writev_blocking(&chunks, mdf.time.Duration.from_ms(100)) catch |err|
+    spi_hw.instance.writev_blocking(&chunks, mdf.time.Duration.from_ms(100)) catch |err|
         std.log.err("  writev failed: {}", .{err});
 
     std.log.info("  writev: PASS (if no errors above)", .{});

@@ -32,11 +32,11 @@ pub fn main(init: std.process.Init) !u8 {
 
     var iter = header.iterateProgramHeaders(&file_reader);
     while (try iter.next()) |phdr| {
-        if (phdr.p_type != std.elf.PT_LOAD) {
+        if (phdr.type != std.elf.PT.LOAD) {
             continue;
         }
 
-        if (phdr.p_paddr != 0) {
+        if (phdr.paddr != 0) {
             // std.log.warn("LOAD program header is not located at address 0x00000000!", .{});
             break;
         }
@@ -44,15 +44,15 @@ pub fn main(init: std.process.Init) !u8 {
         const boot_sector_items = 8;
         const boot_sector_size = @sizeOf([boot_sector_items]u32);
 
-        if (phdr.p_filesz < boot_sector_size) {
+        if (phdr.filesz < boot_sector_size) {
             std.log.warn("boot header is too small! Expected {} bytes, but sector only has {} bytes!", .{
                 boot_sector_size,
-                phdr.p_filesz,
+                phdr.filesz,
             });
             continue;
         }
 
-        try file_reader.seekTo(phdr.p_offset);
+        try file_reader.seekTo(phdr.offset);
 
         var checksum: u32 = 0;
 

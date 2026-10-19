@@ -1,0 +1,11 @@
+.{
+    .name = .c,
+    .fingerprint = 0x6b9df6fb0f093fc,
+    .version = "0.0.0",
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "LICENSE",
+        "src",
+    },
+}

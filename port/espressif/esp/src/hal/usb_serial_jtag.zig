@@ -2,6 +2,7 @@ const std = @import("std");
 const assert = std.debug.assert;
 const microzig = @import("microzig");
 const USB_SERIAL_JTAG = microzig.chip.peripherals.USB_DEVICE;
+const time = @import("time.zig");
 
 /// Returns `false` if data can be sent.
 pub fn tx_fifo_full() bool {
@@ -25,7 +26,7 @@ pub fn tx_fifo_write(byte: u8) void {
 /// `microzig_options`.
 pub const logger = struct {
     var timed_out: bool = false;
-    var buffer: [256]u8 = undefined;
+    var buffer: [64]u8 = undefined;
     var writer = std.Io.Writer{
         .buffer = &buffer,
         .vtable = &.{
@@ -109,13 +110,17 @@ pub const logger = struct {
         comptime format: []const u8,
         args: anytype,
     ) void {
-        const level_prefix = comptime level.asText();
+        const level_prefix = comptime "[{}.{:0>6}] " ++ level.asText();
         const prefix = comptime level_prefix ++ switch (scope) {
             .default => ": ",
             else => " (" ++ @tagName(scope) ++ "): ",
         };
 
-        // TODO: add timestamp to log message
-        writer.print(prefix ++ format ++ "\r\n", args) catch {};
+        const current_time = time.get_time_since_boot();
+        const seconds = current_time.to_us() / std.time.us_per_s;
+        const microseconds = current_time.to_us() % std.time.us_per_s;
+
+        writer.print(prefix ++ format ++ "\r\n", .{ seconds, microseconds } ++ args) catch {};
+        writer.flush() catch {};
     }
 };

@@ -173,6 +173,8 @@ const VTable = struct {
             .device_io_control => unreachable,
             .net_receive => .{ .net_receive = .{ error.NetworkDown, 0 } },
             .net_read => .{ .net_read = error.NetworkDown },
+            .net_send => .{ .net_send = .{ error.NetworkDown, 0 } },
+            .net_write => .{ .net_write = error.NetworkDown },
         };
     }
 

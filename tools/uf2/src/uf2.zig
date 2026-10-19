@@ -104,12 +104,12 @@ pub const Archive = struct {
         const header = try std.elf.Header.read(&reader.interface);
         var it = header.iterateProgramHeaders(reader);
         while (try it.next()) |prog_hdr|
-            if (prog_hdr.p_type == std.elf.PT_LOAD and prog_hdr.p_memsz > 0 and prog_hdr.p_filesz > 0) {
+            if (prog_hdr.type == std.elf.PT.LOAD and prog_hdr.memsz > 0 and prog_hdr.filesz > 0) {
                 std.log.debug("segment: {}", .{prog_hdr});
                 try segments.append(self.allocator, .{
-                    .addr = @as(u32, @intCast(prog_hdr.p_paddr)),
-                    .file_offset = @as(u32, @intCast(prog_hdr.p_offset)),
-                    .size = @as(u32, @intCast(prog_hdr.p_memsz)),
+                    .addr = @as(u32, @intCast(prog_hdr.paddr)),
+                    .file_offset = @as(u32, @intCast(prog_hdr.offset)),
+                    .size = @as(u32, @intCast(prog_hdr.memsz)),
                 });
             };
 

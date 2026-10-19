@@ -1,0 +1,16 @@
+.{
+    .name = .mz_port_wch_ch32h,
+    .version = "0.0.0",
+    .fingerprint = 0x731af18d92d6c086,
+    .dependencies = .{
+        .@"microzig/build-internals" = .{ .path = "../../../build-internals" },
+        .@"microzig/modules/riscv32-common" = .{ .path = "../../../modules/riscv32-common" },
+    },
+    .paths = .{
+        "README.md",
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        "tools",
+    },
+}

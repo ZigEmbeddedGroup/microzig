@@ -107,11 +107,10 @@ pub const startup_logic = struct {
     extern fn microzig_main() noreturn;
 
     pub fn _start() callconv(.c) noreturn {
-        const stack_init = comptime microzig.utilities.get_end_of_stack();
         asm volatile (
             \\MOV %[stack_init], SP
             :
-            : [stack_init] "i" (@as(u32, @intFromPtr(stack_init))),
+            : [stack_init] "i" (@as(u32, @intFromPtr(microzig.utilities.end_of_stack))),
         );
 
         microzig.utilities.initialize_system_memories(.auto);

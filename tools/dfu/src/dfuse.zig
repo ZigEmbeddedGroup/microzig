@@ -163,7 +163,7 @@ fn collect_segments(
 
     var it = header.iterateProgramHeaders(reader);
     while (try it.next()) |prog_hdr| {
-        if (prog_hdr.p_type != std.elf.PT_LOAD or prog_hdr.p_filesz == 0) continue;
+        if (prog_hdr.type != std.elf.PT.LOAD or prog_hdr.p_filesz == 0) continue;
 
         const address = std.math.cast(u32, prog_hdr.p_paddr) orelse return error.AddressOverflow;
         const size = std.math.cast(u32, prog_hdr.p_filesz) orelse return error.SegmentTooLarge;

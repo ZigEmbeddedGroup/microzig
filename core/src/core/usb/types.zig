@@ -1,4 +1,5 @@
 const std = @import("std");
+const EndianInt = @import("../mem.zig").EndianInt;
 
 pub const ClassSubclassProtocol = extern struct {
     /// Class of device, giving a broad functional area.
@@ -292,14 +293,14 @@ pub const TransferType = enum(u2) {
 
 /// The types of USB SETUP requests that we understand.
 pub const SetupRequest = enum(u8) {
-    GetStatus = 0x00,
-    ClearFeature = 0x02,
-    SetFeature = 0x03,
-    SetAddress = 0x05,
-    GetDescriptor = 0x06,
-    SetDescriptor = 0x07,
-    GetConfiguration = 0x08,
-    SetConfiguration = 0x09,
+    get_status = 0x00,
+    clear_feature = 0x01,
+    set_feature = 0x03,
+    set_address = 0x05,
+    get_descriptor = 0x06,
+    set_descriptor = 0x07,
+    get_configuration = 0x08,
+    set_configuration = 0x09,
     _,
 };
 
@@ -330,8 +331,8 @@ pub const FeatureSelector = enum(u8) {
 /// and IN (device-to-host). In the vast majority of cases, OUT is represented
 /// by a 0 byte, and IN by an `0x80` byte.
 pub const Dir = enum(u1) {
-    Out = 0,
-    In = 1,
+    out = 0,
+    in = 1,
 };
 
 pub const Endpoint = packed struct(u8) {
@@ -360,11 +361,11 @@ pub const Endpoint = packed struct(u8) {
     dir: Dir,
 
     pub inline fn out(num: Num) @This() {
-        return .{ .num = num, .dir = .Out };
+        return .{ .num = num, .dir = .out };
     }
 
     pub inline fn in(num: Num) @This() {
-        return .{ .num = num, .dir = .In };
+        return .{ .num = num, .dir = .in };
     }
 };
 
@@ -373,20 +374,23 @@ pub const RequestType = packed struct(u8) {
     type: Type,
     direction: Dir,
 
-    const Type = enum(u2) {
-        Standard,
-        Class,
-        Vendor,
-        Other,
+    pub const Type = enum(u2) {
+        standard,
+        class,
+        vendor,
+        other,
     };
 
-    const Recipient = enum(u5) {
-        Device,
-        Interface,
-        Endpoint,
-        Other,
+    pub const Recipient = enum(u5) {
+        device,
+        interface,
+        endpoint,
+        other,
         _, // Reserved
     };
+
+    // The standard requests
+    pub const set_address: RequestType = .{};
 };
 
 /// Layout of an 8-byte USB SETUP packet.
@@ -398,12 +402,54 @@ pub const SetupPacket = packed struct(u64) {
     /// conflict.
     request: u8,
     /// A simple argument of up to 16 bits, specific to the request.
-    value: U16_Le,
-    index: U16_Le,
+    value: EndianInt(u16, .little),
+    index: EndianInt(u16, .little),
     /// If data will be transferred after this request (in the direction given
     /// by `request_type`), this gives the number of bytes (OUT) or maximum
     /// number of bytes (IN).
-    length: U16_Le,
+    length: EndianInt(u16, .little),
+
+    pub fn format(self: SetupPacket, writer: *std.Io.Writer) !void {
+        try writer.print("request_type={} request={} value={} index={} length={}", .{
+            self.request_type,
+            self.request,
+            self.value.native(),
+            self.index.native(),
+            self.length.native(),
+        });
+    }
+
+    pub fn to_standard_request(pkt: *const SetupPacket) *const StandardRequest {
+        return @ptrCast(pkt);
+    }
+
+    /// A grouping of the first two fields so we can switch on them.
+    pub const StandardRequest = packed struct(u16) {
+        recipient: RequestType.Recipient,
+        type: RequestType.Type = .standard,
+        direction: Dir,
+        request: SetupRequest,
+
+        // zig fmt: off
+        pub const clear_feature_device:    StandardRequest = .{ .direction = .out, .recipient = .device,    .request = .clear_feature     };
+        pub const clear_feature_interface: StandardRequest = .{ .direction = .out, .recipient = .interface, .request = .clear_feature     };
+        pub const clear_feature_endpoint:  StandardRequest = .{ .direction = .out, .recipient = .endpoint,  .request = .clear_feature     };
+        pub const set_address:             StandardRequest = .{ .direction = .out, .recipient = .device,    .request = .set_address       };
+        pub const set_configuration:       StandardRequest = .{ .direction = .out, .recipient = .device,    .request = .set_configuration };
+        pub const set_descriptor:          StandardRequest = .{ .direction = .out, .recipient = .device,    .request = .set_descriptor    };
+        pub const set_feature_device:      StandardRequest = .{ .direction = .out, .recipient = .device,    .request = .set_feature       };
+        pub const set_feature_interface:   StandardRequest = .{ .direction = .out, .recipient = .interface, .request = .set_feature       };
+        pub const set_feature_endpoint:    StandardRequest = .{ .direction = .out, .recipient = .endpoint,  .request = .set_feature       };
+        pub const set_interface:           StandardRequest = .{ .direction = .out, .recipient = .interface, .request = .set_interface     };
+        pub const get_configuration:       StandardRequest = .{ .direction = .in,  .recipient = .device,    .request = .get_configuration };
+        pub const get_descriptor:          StandardRequest = .{ .direction = .in,  .recipient = .device,    .request = .get_descriptor    };
+        pub const get_interface:           StandardRequest = .{ .direction = .in,  .recipient = .interface, .request = .get_interface     };
+        pub const get_status_device:       StandardRequest = .{ .direction = .in,  .recipient = .device,    .request = .get_status        };
+        pub const get_status_interface:    StandardRequest = .{ .direction = .in,  .recipient = .interface, .request = .get_status        };
+        pub const get_status_endpoint:     StandardRequest = .{ .direction = .in,  .recipient = .endpoint,  .request = .get_status        };
+        pub const synch_frame:             StandardRequest = .{ .direction = .in,  .recipient = .endpoint,  .request = .synch_frame       };
+        // zig fmt: on
+    };
 };
 
 /// Represents USB or device version, in binary coded decimal.
@@ -436,29 +482,3 @@ pub const Version = extern struct {
 
 /// Represents packet length.
 pub const Len = u11;
-
-/// u16 value, little endian regardless of native endianness.
-pub const U16_Le = packed struct(u16) {
-    value_le: u16,
-
-    pub fn from(val: u16) @This() {
-        return .{ .value_le = std.mem.nativeToLittle(u16, val) };
-    }
-
-    pub fn into(self: @This()) u16 {
-        return std.mem.littleToNative(u16, self.value_le);
-    }
-};
-
-/// u32 value, little endian regardless of native endianness.
-pub const U32_Le = packed struct(u32) {
-    value_le: u32,
-
-    pub fn from(val: u32) @This() {
-        return .{ .value_le = std.mem.nativeToLittle(u32, val) };
-    }
-
-    pub fn into(self: @This()) u32 {
-        return std.mem.littleToNative(u32, self.value_le);
-    }
-};

@@ -6,7 +6,7 @@ const gpio = rp2xxx.gpio;
 const i2c = rp2xxx.i2c;
 
 const I2C_Device = rp2xxx.drivers.I2C_Device;
-const ICM_20948 = microzig.drivers.sensor.ICM_20948;
+const ICM_20948 = microzig.drivers.sensor.ICM_20948(.{});
 
 const uart = rp2xxx.uart.instance.num(0);
 const uart_tx_pin = gpio.num(0);

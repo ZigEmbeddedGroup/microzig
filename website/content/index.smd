@@ -13,7 +13,7 @@ _MicroZig is a toolbox for building embedded applications in Zig._
 
 [Get Started](/docs/getting-started)
 
-## Why Zig?
+# Why Zig?
 
 Zig is an excellent programming language for embedded systems.
 
@@ -30,7 +30,7 @@ Zig is an excellent programming language for embedded systems.
 
 To learn more: [The Zig Language Reference](https://ziglang.org/documentation/master/)
 
-## Why MicroZig?
+# Why MicroZig?
 
 - **Tooling**: MicroZig extends the Zig build system for Microcontrollers. This
   includes:
