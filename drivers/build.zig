@@ -3,6 +3,10 @@ const std = @import("std");
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
+    const asserts = b.option(bool, "asserts", "Enable panic on driver assertion") orelse false;
+
+    const options = b.addOptions();
+    options.addOption(bool, "asserts", asserts);
 
     const drivers_mod = b.addModule("drivers", .{
         .root_source_file = b.path("src/root.zig"),
@@ -13,6 +17,8 @@ pub fn build(b: *std.Build) void {
             .module = b.dependency("link", .{}).module("link"),
         }},
     });
+
+    drivers_mod.addOptions("config", options);
 
     const test_suite = b.addTest(.{
         .root_module = drivers_mod,
