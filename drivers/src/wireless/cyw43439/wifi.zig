@@ -21,6 +21,9 @@ scan_result: ?ScanResult = null,
 err: ?anyerror = null,
 
 const ioctl_request_bytes_len = 1024;
+// Control/join polling can also receive full Ethernet frames. Reserve the
+// maximum u11 packet length rounded to a word, plus the trailing SPI status.
+const ioctl_response_bytes_len = 2048 + @sizeOf(u32);
 
 pub const InitOptions = struct {
     country: Country = .{},
@@ -329,7 +332,7 @@ fn request(self: *Self, cmd: ioctl.Cmd, name: []const u8, data: []const u8) !voi
 }
 
 fn response_poll(self: *Self, cmd: ioctl.Cmd, data: ?[]u8) !usize {
-    var bytes: [ioctl_request_bytes_len]u8 align(4) = undefined;
+    var bytes: [ioctl_response_bytes_len]u8 align(4) = undefined;
     var delay: usize = 0;
     while (delay < ioctl.response_wait) {
         var rsp, _ = try self.read(&bytes) orelse {
@@ -512,7 +515,7 @@ pub const JoinPoller = struct {
 };
 
 pub fn poll(self: *Self) !void {
-    var bytes: [ioctl_request_bytes_len]u8 align(4) = undefined;
+    var bytes: [ioctl_response_bytes_len]u8 align(4) = undefined;
     var rsp, _ = try self.read(&bytes) orelse return;
     switch (rsp.sdp.channel()) {
         .event => self.handle_event(&rsp),
@@ -781,6 +784,8 @@ fn read(self: *Self, buffer: []u8) !?struct { ioctl.Response, bool } {
     }
     if (status.f2_packet_available and status.packet_length > 0) {
         const words_len: usize = ((status.packet_length + 3) >> 2) + 1; // add one word for the status
+        // as_words constructs a slice from a pointer and cannot check capacity.
+        if (words_len > buffer.len / @sizeOf(u32)) return error.Cyw43ReceiveBufferTooSmall;
         const words = as_words(buffer, words_len);
         self.bus.read(.wlan, 0, status.packet_length, words);
         // parse response
@@ -1029,3 +1034,40 @@ const SharedMemLog = extern struct {
     idx: u32,
     out_idx: u32,
 };
+
+test "receive capacity rejects oversized packets and polls full Ethernet frames" {
+    const Mock = struct {
+        packet_reads: usize = 0,
+        fn read(ptr: *anyopaque, words: []u32) void {
+            const self: *@This() = @ptrCast(@alignCast(ptr));
+            if (words.len == 2) {
+                words[0] = @as(u32, 1) << 8 | @as(u32, 1500) << 9;
+                words[1] = 0;
+                return;
+            }
+            self.packet_reads += 1;
+            @memset(words, 0);
+            const bytes = mem.sliceAsBytes(words);
+            std.mem.writeInt(u16, bytes[0..2], 1500, .little);
+            std.mem.writeInt(u16, bytes[2..4], ~@as(u16, 1500), .little);
+            bytes[5] = 2; // data channel
+            bytes[7] = 12; // SDPCM header length
+        }
+        fn write(_: *anyopaque, _: []u32) void {
+            unreachable;
+        }
+        fn irq(_: *anyopaque) void {}
+        fn sleep(_: u32) void {}
+    };
+    var mock: Mock = .{};
+    var bus: Bus = .{
+        .spi = .{ .ptr = &mock, .vtable = &.{ .read = Mock.read, .write = Mock.write, .irq_cleared = Mock.irq } },
+        .sleep_ms = Mock.sleep,
+    };
+    var wifi: Self = .{ .bus = &bus, .join_state = .joining };
+    var small: [1024]u8 align(4) = undefined;
+    try testing.expectError(error.Cyw43ReceiveBufferTooSmall, wifi.read(&small));
+    try testing.expectEqual(@as(usize, 0), mock.packet_reads);
+    try wifi.poll();
+    try testing.expectEqual(@as(usize, 1), mock.packet_reads);
+}
