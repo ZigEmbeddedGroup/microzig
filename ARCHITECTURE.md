@@ -3,9 +3,8 @@
 This document gives a high-level overview of MicroZig's codebase. If you want to contribute or understand how things fit
 together, start here.
 
-MicroZig is a Zig framework for programming microcontrollers. It provides a unified build system, hardware abstraction
-layers, and device drivers across 14+ microcontroller families (ARM Cortex-M, RISC-V, AVR, MSP430). The core idea: write
-portable embedded code in Zig, with platform details handled by ports and a code-generating build system.
+MicroZig is a framework for programming microcontrollers using Zig. It provides a unified build system, hardware
+abstraction layers, and device drivers across 14+ microcontroller families (ARM Cortex-M, RISC-V, AVR, MSP430).
 
 ## Codemap
 
@@ -31,12 +30,13 @@ microzig/
 The foundational library that every firmware links against. Key files in `core/src/`:
 
 - _microzig.zig_: Root API. Exposes `cpu`, `chip`, `hal`, `board`, `drivers` namespaces. Implements the default panic
-  handler, `export_startup()` for entry point generation, and `std_options()` for logging integration.
+  handler, `export_startup()` for entry point generation, and `std_options()` overriding defaults (currently only
+  logging-related).
 - _mmio.zig_: `Mmio` generic type that wraps a packed struct into a volatile MMIO register interface with `read()`,
-  `write()`, `modify()`, `toggle()` methods. Validates register sizes at comptime.
+  `write()`, `modify()`, `toggle()` methods. Add register access should go through the generated `Mmio` types.
 - _interrupt.zig_: `enable()`, `disable()`, critical sections, `Mutex` (HAL-provided or fallback
   `CriticalSectionMutex`), `Handler` union type.
-- _allocator.zig_: Multi-tier free-list allocator.
+- _allocator.zig_: Fixed-buffer allocator.
 - _cpus/_: CPU architecture implementations:
   - _cortex_m.zig_ (+ subdirectory with variants): interrupt vector tables, exception handling, FPU support, RAM
     vector tables.
@@ -174,8 +174,9 @@ copies the result to _zig-out/firmware/_.
 - **Ports are self-contained**.
 - **Core is port-agnostic.** It receives chip/HAL/board configuration through comptime module imports injected by the
   build system.
-- **Register definitions are generated, not hand-written.** The source of truth is the vendor SVD/ATDF file plus
-  patches. Don't edit generated register code in your local build, and don't edit the _svd_ files.
+- **Register definitions are generated.** The source of truth is the vendor SVD/ATDF file plus patches. Don't edit
+  generated register code in your local build, and don't edit the _svd_ files. Add patches in the port's _patches/_
+  directory to make corrections.
 - **No global mutable state in libraries.** Embedded code uses explicit initialization and passed handles.
 - **Memory regions are the port's responsibility.** Core and drivers don't assume any particular memory layout.
 
@@ -188,9 +189,7 @@ etc.
 **Startup sequence**: Each CPU architecture in _core/src/cpus/_ provides a `_start` entry point. The typical sequence
 is: set stack pointer → zero BSS → copy `.data` from flash to RAM → call `microzig_main`.
 
-**Naming conventions**: The codebase uses _snake_case_ (C-style), not the typical Zig camelCase. Run `zig fmt` for
-formatting.
+**Naming conventions**: The codebase uses _snake_case_ (C-style), not the typical Zig camelCase for function names.
+Types are in _PascalCase_.
 
-**MMIO access**: All register access should go through `Mmio`. The packed struct defines the register layout, the `Mmio`
-wrapper prevents the compiler from optimizing away or reordering accesses. If a register is incorrect in the SVD, add a
-patch. If a register is missing, you might have to use `@ptrFromInt` on its raw address.
+**Styling**: We follow standard zig formatting. Run `zig fmt` for formatting.
