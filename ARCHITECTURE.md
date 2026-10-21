@@ -11,18 +11,17 @@ Cortex-M, RISC-V, AVR, MSP430).
 
 ```
 microzig/
-├── build.zig            # MicroBuild entry point (see "Build System" below)
+├── build.zig
 ├── build-internals/     # Target/Chip/HAL/Board type system, build-time tools
 ├── core/                # Foundational library: CPU, MMIO, interrupts, startup
 ├── port/                # Platform-specific HALs and chip definitions
 ├── drivers/             # HAL-agnostic device drivers
 ├── tools/               # Standalone CLI tools (regz, uf2, dfu, etc.)
-├── modules/             # Shared libraries (libc, lwIP, FreeRTOS, RTT, etc.)
+├── modules/             # Packages maintained by ZigEmbeddedGroup, but not depended on by microzig
 ├── examples/            # Per-platform example applications
-├── sim/                 # AVR simulator (aviron)
+├── sim/                 # Simulators (Currently only our AVR simulator _aviron_)
 ├── vendor/              # Vendored third-party code
-├── website/             # Documentation site
-├── design/              # Logos and design assets
+├── website/             # Documentation site (microzig.tech)
 └── scripts/             # Utility scripts
 ```
 
@@ -58,11 +57,12 @@ port/<vendor>/<family>/
 ├── build.zig            # Chip/board/target definitions, memory regions, SVD paths
 ├── src/
 │   ├── hal.zig          # HAL root: re-exports gpio, uart, i2c, spi, dma, etc.
-│   ├── hal/             # Individual HAL modules (one file per peripheral)
-│   ├── boards/          # Board configs (pin mappings, oscillator freq, LED pin)
+│   │                    # A port may have more than one, such as in the case for rp2xxx
+│   ├── hal/             # Individual HAL peripheral namespaces
+│   ├── boards/          # Board definitions (pin mappings, oscillator freq, etc.)
 │   └── cpus/            # CPU variants if the family has multiple cores
 ├── patches/             # Corrections to vendor SVD/ATDF files
-└── ld/                  # Custom linker scripts (when auto-generation isn't enough)
+└── ld/                  # Custom linker scripts, when needed
 ```
 
 The _build.zig_ in each port defines `Chip` values (SVD path, memory regions, patches) and `Board`
@@ -97,9 +97,9 @@ never import port-specific code.
 
 ### _build-internals/_
 
-The type system that ties everything together at build time. The key types in `build-internals/build.zig`:
+The key types in `build-internals/build.zig`:
 
-- `Target`: A complete firmware compilation target. Bundles a `zig_target` query, `Chip`, optional
+- `Target`: A complete firmware compilation target. Bundles a `zig_target` query, `Chip`,
   `HardwareAbstractionLayer`, optional `Board`, `LinkerScript`, `Stack` placement, and preferred
   `BinaryFormat`. Supports `derive()` for creating variants.
 - `Chip`: MCU definition: name, `register_definition` (SVD, ATDF, Zig, Embassy, or TargetDB source),
@@ -107,7 +107,8 @@ The type system that ties everything together at build time. The key types in `b
 - `HardwareAbstractionLayer`: Root source file + imports for the HAL.
 - `Board`: Root source file + imports for board-specific config.
 - `MemoryRegion`: Describes a memory region (flash/RAM) with offset, length, and access permissions.
-- `BinaryFormat`: Output format: `.elf`, `.binary`, `.hex`, `.uf2`, `.dfu`, `.esp`, or `.custom`.
+- `BinaryFormat`: Default output format: `.elf`, `.binary`, `.hex`, `.uf2`, `.dfu`, `.esp`, or
+  `.custom`.
 - `LinkerScript`: Auto-generated or custom, controls section placement and rodata location (flash vs
   RAM).
 
@@ -147,7 +148,7 @@ The path from a vendor hardware description to running firmware:
    `Target` values.
 3. `regz` (at build time) processes the SVD (applying patches) and generates a Zig module with
    type-safe MMIO register definitions.
-4. **_generate_linker_script.zig_** emits a linker script from the `Target`'s memory regions.
+4. **_generate_linker_script.zig_** generates a linker script using the `Target`'s memory regions.
 5. **MicroBuild's `add_firmware()`** wires everything: it creates Zig modules for `microzig` (core),
    `chip` (generated registers), `cpu`, `hal`, `board`, and `drivers`, then compiles the user's
    `root_source_file` against them.
