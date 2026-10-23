@@ -7,6 +7,142 @@ pub const FreeRTOS_Port = enum {
     RP2350_RISCV,
 };
 
+const Chip = enum {
+    RP2040,
+    RP2350,
+};
+
+/// A set of files and include directories located under a root directory, which
+/// is either the root of a dependency from build.zig.zon or this package itself.
+const SourceSet = struct {
+    /// Name of the dependency in build.zig.zon, or null for this package.
+    dependency: ?[]const u8 = null,
+    /// Root directory, relative to the dependency (or this package) root.
+    root: []const u8 = ".",
+    /// C source files, relative to `root`.
+    files: []const []const u8 = &.{},
+    /// Include directories, relative to `root`.
+    include_dirs: []const []const u8 = &.{},
+};
+
+const CMacro = struct {
+    name: []const u8,
+    value: []const u8,
+};
+
+/// Everything needed to build one FreeRTOS port.
+const Port = struct {
+    id: FreeRTOS_Port,
+    description: []const u8,
+    chip: Chip,
+    /// FreeRTOS port implementation (e.g. from FreeRTOS-Kernel or a community-supported port repo).
+    port_sources: SourceSet,
+    /// Compatibility shims that provide symbols the port expects from its SDK/platform.
+    shims: SourceSet = .{},
+    /// Local include directories that must shadow others when running translate-c.
+    translate_c_include_dirs: []const []const u8 = &.{},
+    c_macros: []const CMacro = &.{},
+    /// Hook for adding external dependencies (SDKs, vendor headers, ...) required by the port.
+    /// It is called with the module that all port sources are compiled into.
+    configure_external: ?*const fn (b: *std.Build, mod: *std.Build.Module, port: Port) void = null,
+};
+
+const pico_c_macros = [_]CMacro{
+    // TODO: USE addConfigHeader instead?
+    .{ .name = "configSMP_SPINLOCK_0", .value = "PICO_SPINLOCK_ID_OS1" },
+    .{ .name = "configSMP_SPINLOCK_1", .value = "PICO_SPINLOCK_ID_OS2" },
+    // Even if we use just one core we must define this so RP2350 port will compile.
+    // It looks like lack of #ifdef LIB_PICO_MULTICORE in RP2350 ARM FreeRTOS port
+    // in place where multicore_doorbell_claim_unused is called
+    .{ .name = "LIB_PICO_MULTICORE", .value = "1" },
+    // Had problems when this was enabled.
+    // Microzig but also Pico SDK? dont set VTOR to 0x10000100 for RP2040 at boot even when ram_vector_table is set to false
+    .{ .name = "PICO_NO_RAM_VECTOR_TABLE", .value = "0" },
+    .{ .name = "PICO_SDK_VERSION_MAJOR", .value = "2" },
+};
+
+const ports = [_]Port{
+    .{
+        .id = .RP2040,
+        .description = "FreeRTOS-Kernel RP2040 (Cortex-M0+) port, single core",
+        .chip = .RP2040,
+        .port_sources = .{
+            .dependency = "freertos_kernel",
+            .root = "portable/ThirdParty/GCC/RP2040",
+            .files = &.{"port.c"},
+            .include_dirs = &.{"include"},
+        },
+        .shims = .{
+            .root = "port_shims/raspberrypi",
+            .files = &.{
+                "picosdk/picosdk_irq.c",
+                "picosdk/picosdk_exception.c",
+                "rp2040/rp2040_arm/port_shim.c",
+            },
+        },
+        .c_macros = &pico_c_macros,
+        .configure_external = configurePicoSDK,
+    },
+    .{
+        .id = .RP2350_ARM,
+        .description = "FreeRTOS community RP2350 ARM non-secure (Cortex-M33) port, single core",
+        .chip = .RP2350,
+        .port_sources = .{
+            .dependency = "freertos_kernel_community",
+            .root = "GCC/RP2350_ARM_NTZ/non_secure",
+            .files = &.{ "port.c", "portasm.c" },
+            .include_dirs = &.{"."},
+        },
+        .shims = .{
+            .root = "port_shims/raspberrypi",
+            .files = &.{
+                "picosdk/picosdk_irq.c",
+                "picosdk/picosdk_exception.c",
+                "rp2350/rp2350_arm_ntz/port_shim.c",
+            },
+        },
+        // Workaround for https://github.com/Vexu/arocc/issues/1071 (#ifdef inside variadic macro arguments
+        // breaks Aro's parser), hit by the RP2350 pico/platform.h. Remove once translate-c includes the fix.
+        // Must come before the Pico SDK include dirs so it shadows the SDK's pico/platform.h
+        .translate_c_include_dirs = &.{"translate_c_shims/rp2350"},
+        .c_macros = &pico_c_macros,
+        .configure_external = configurePicoSDK,
+    },
+};
+
+fn findPort(id: FreeRTOS_Port) Port {
+    for (ports) |port| {
+        if (port.id == id) return port;
+    }
+    @panic("Right now only RP2040 and RP2350_ARM ports are supported");
+}
+
+fn sourceSetRoot(b: *std.Build, set: SourceSet) std.Build.LazyPath {
+    const base = if (set.dependency) |name| b.dependency(name, .{}).path(".") else b.path(".");
+    return base.path(b, set.root);
+}
+
+fn addSourceSet(b: *std.Build, mod: *std.Build.Module, set: SourceSet) void {
+    const root = sourceSetRoot(b, set);
+
+    if (set.files.len > 0) {
+        mod.addCSourceFiles(.{
+            .root = root,
+            .files = set.files,
+            .flags = &flags,
+        });
+    }
+
+    for (set.include_dirs) |dir| {
+        mod.addIncludePath(root.path(b, dir));
+    }
+}
+
+fn configurePicoSDK(b: *std.Build, mod: *std.Build.Module, port: Port) void {
+    const picosdk_dep = b.dependency("picosdk", .{});
+    addPicoSDKIncludeDirs(b, mod, picosdk_dep, port.chip);
+}
+
 const FreeRTOS_Config = struct {
     // Scheduler related
     configUSE_IDLE_HOOK: bool = false,
@@ -26,12 +162,10 @@ pub fn build(b: *std.Build) void {
         "FreeRTOS port to use",
     ) orelse .RP2040;
 
+    const port = findPort(port_name);
+
     const cfg_idle_hook = b.option(bool, "idle_hook", "Enable FreeRTOS idle hook") orelse false;
     const cfg_tick_hook = b.option(bool, "tick_hook", "Enable FreeRTOS tick hook") orelse false;
-
-    if (port_name != .RP2040 and port_name != .RP2350_ARM) {
-        @panic("Right now only RP2040 and RP2350_ARM ports are supported");
-    }
 
     // In future this config might be validated against port-specific capabilities
     const config = FreeRTOS_Config{
@@ -61,7 +195,6 @@ pub fn build(b: *std.Build) void {
     freertos_lib.addConfigHeader(config_header);
 
     const freertos_kernel_dep = b.dependency("freertos_kernel", .{});
-    const freertos_kernel_community_dep = b.dependency("freertos_kernel_community", .{});
 
     // Add FreeRTOS kernel source files
     freertos_lib.addCSourceFiles(.{
@@ -74,52 +207,20 @@ pub fn build(b: *std.Build) void {
     freertos_lib.addIncludePath(freertos_kernel_dep.path("include"));
 
     // FreeRTOS port-specific files and include paths
-    if (port_name == .RP2040) {
-        freertos_lib.addCSourceFiles(.{
-            .root = freertos_kernel_dep.path("./portable/ThirdParty/GCC/RP2040/"),
-            .files = &[_][]const u8{"port.c"},
-            .flags = &flags,
-        });
+    addSourceSet(b, freertos_lib, port.port_sources);
 
-        freertos_lib.addIncludePath(freertos_kernel_dep.path("./portable/ThirdParty/GCC/RP2040/include/"));
-    } else if (port_name == .RP2350_ARM) {
-        freertos_lib.addCSourceFiles(.{
-            .root = freertos_kernel_community_dep.path("./GCC/RP2350_ARM_NTZ/non_secure/"),
-            .files = &[_][]const u8{ "port.c", "portasm.c" },
-            .flags = &flags,
-        });
+    // Port shims: partial re-implementations of SDK/platform functions that the
+    // FreeRTOS port references but MicroZig does not provide.
+    addSourceSet(b, freertos_lib, port.shims);
 
-        freertos_lib.addIncludePath(freertos_kernel_community_dep.path("./GCC/RP2350_ARM_NTZ/non_secure/"));
+    // External dependencies required by the port (e.g. Pico SDK)
+    if (port.configure_external) |configure| {
+        configure(b, freertos_lib, port);
     }
 
-    // Pico SDK glue code: partial re-implementations of SDK functions that
-    // the FreeRTOS port references but MicroZig does not provide.
-    freertos_lib.addCSourceFiles(.{
-        .root = b.path("."),
-        .files = &[_][]const u8{ "src/picosdk_irq.c", "src/picosdk_exception.c", "src/picosdk_stubs.c" },
-        .flags = &flags,
-    });
-
-    // Pico SDK include paths
-    const picosdk_dep = b.dependency("picosdk", .{});
-    switch (port_name) {
-        .RP2040 => addPicoSDKIncludeDirs(b, freertos_lib, picosdk_dep, .RP2040),
-        .RP2350_ARM, .RP2350_RISCV => addPicoSDKIncludeDirs(b, freertos_lib, picosdk_dep, .RP2350),
+    for (port.c_macros) |macro| {
+        freertos_lib.addCMacro(macro.name, macro.value);
     }
-
-    // TODO: USE addConfigHeader instead?
-    freertos_lib.addCMacro("configSMP_SPINLOCK_0", "PICO_SPINLOCK_ID_OS1");
-    freertos_lib.addCMacro("configSMP_SPINLOCK_1", "PICO_SPINLOCK_ID_OS2");
-
-    // Even if we use just one core we must define this so RP2350 port will compile.
-    // It looks like lack of #ifdef LIB_PICO_MULTICORE in RP2350 ARM FreeRTOS port
-    // in place where multicore_doorbell_claim_unused is called
-    freertos_lib.addCMacro("LIB_PICO_MULTICORE", "1");
-
-    // Had problems when this was enabled.
-    // Microzig but also Pico SDK? dont set VTOR to 0x10000100 for RP2040 at boot even when ram_vector_table is set to false
-    freertos_lib.addCMacro("PICO_NO_RAM_VECTOR_TABLE", "0");
-    freertos_lib.addCMacro("PICO_SDK_VERSION_MAJOR", "2");
 
     const t: Translator = .init(translate_c, .{
         .c_source_file = b.path("include/microzig_freertos.h"),
@@ -130,14 +231,11 @@ pub fn build(b: *std.Build) void {
     t.addConfigHeader(config_header);
     t.addIncludePath(freertos_kernel_dep.path("include"));
 
-    // Workaround for https://github.com/Vexu/arocc/issues/1071 (#ifdef inside variadic macro arguments
-    // breaks Aro's parser), hit by the RP2350 pico/platform.h. Remove once translate-c includes the fix.
-    // Must come before the Pico SDK include dirs so it shadows the SDK's pico/platform.h
-    if (port_name == .RP2350_ARM) {
-        t.addIncludePath(b.path("translate_c_shims/rp2350"));
+    for (port.translate_c_include_dirs) |dir| {
+        t.addIncludePath(b.path(dir));
     }
 
-    // translate-c needs the same libc/port/Pico SDK headers and macros as freertos_lib
+    // translate-c needs the same libc/port/SDK headers and macros as freertos_lib
     for (freertos_lib.include_dirs.items) |dir| {
         switch (dir) {
             .path => |p| t.addIncludePath(p),
@@ -183,11 +281,6 @@ const files = [_][]const u8{
     "tasks.c",
     "timers.c",
     "portable/MemMang/heap_1.c",
-};
-
-const Chip = enum {
-    RP2040,
-    RP2350,
 };
 
 fn addPicoSDKIncludeDirs(

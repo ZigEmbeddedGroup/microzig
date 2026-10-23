@@ -4,12 +4,12 @@
     .fingerprint = 0xb81d2ef66274e984,
     .dependencies = .{
         .freertos_kernel = .{
-            .url = "git+https://github.com/FreeRTOS/FreeRTOS-Kernel.git#52822473466cfa5cdd2146d02dae5f924b8552e4",
-            .hash = "N-V-__8AAMb4CQGTaQBhmyNrZe5AydR8ZY3met6pGoXDe1MC",
+            .url = "git+https://github.com/FreeRTOS/FreeRTOS-Kernel.git#640d0c43705e64cd53f46b31d882de6cd8433933",
+            .hash = "N-V-__8AAJ_4JAH4j3__eiwupXnjlog8BUQjnISt6Ms0O6Tz",
         },
         .freertos_kernel_community = .{
-            .url = "git+https://github.com/FreeRTOS/FreeRTOS-Kernel-Community-Supported-Ports.git#9ab3b5fb235838b3fc03d4f1cdcfab22007413d2",
-            .hash = "N-V-__8AAPdlHQB-Q5duFJp5D3hmNoJsOsWXr84CsPai1Pk9",
+            .url = "git+https://github.com/FreeRTOS/FreeRTOS-Kernel-Community-Supported-Ports.git#fa8a1ce2ef8b242eaf8fe0ea0915d94f88e4f3e8",
+            .hash = "N-V-__8AABQbHgBicVuWFzNE4fJPgQ1l5RGM1OkMmT8ZGBcz",
         },
         .picosdk = .{
             .url = "https://github.com/raspberrypi/pico-sdk/releases/download/2.2.0/pico-sdk-2.2.0.tar.gz",
@@ -23,5 +23,5 @@
             .hash = "translate_c-0.0.0-Q_BUWoROBwAyokT5SJSw4YIrwdLd1w53i-pEYwBDqXZt",
         },
     },
-    .paths = .{ "build.zig", "build.zig.zon", "src", "config", "include", "translate_c_shims" },
+    .paths = .{ "build.zig", "build.zig.zon", "src", "config", "include", "translate_c_shims", "port_shims" },
 }
