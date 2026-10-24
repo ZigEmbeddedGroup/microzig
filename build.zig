@@ -341,7 +341,10 @@ pub fn MicroBuild(port_select: PortSelect) type {
                     },
                     .{
                         .name = "drivers",
-                        .module = b.dependency("drivers", .{ .asserts = options.asserts }).module("drivers"),
+                        .module = b.dependency("drivers", .{
+                            .asserts = options.asserts,
+                            .optimize = options.optimize,
+                        }).module("drivers"),
                     },
                 },
             });
