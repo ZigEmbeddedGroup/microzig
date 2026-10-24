@@ -293,10 +293,10 @@ fn addPicoSDKIncludeDirs(
 
     // Generate version.h
     const cmake_version_file = b.addConfigHeader(.{ .style = .{ .cmake = pico_sdk.path("src/common/pico_base_headers/include/pico/version.h.in") } }, .{
-        .PICO_SDK_VERSION_STRING = "2.2.0",
+        .PICO_SDK_VERSION_STRING = "2.3.1",
         .PICO_SDK_VERSION_MAJOR = "2",
-        .PICO_SDK_VERSION_MINOR = "2",
-        .PICO_SDK_VERSION_REVISION = "0",
+        .PICO_SDK_VERSION_MINOR = "3",
+        .PICO_SDK_VERSION_REVISION = "1",
     });
 
     _ = wf.addCopyFile(cmake_version_file.getOutputFile(), "picosdk_generated/pico/version.h");

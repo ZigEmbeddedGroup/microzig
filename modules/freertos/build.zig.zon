@@ -12,8 +12,8 @@
             .hash = "N-V-__8AABQbHgBicVuWFzNE4fJPgQ1l5RGM1OkMmT8ZGBcz",
         },
         .picosdk = .{
-            .url = "https://github.com/raspberrypi/pico-sdk/releases/download/2.2.0/pico-sdk-2.2.0.tar.gz",
-            .hash = "N-V-__8AAJZDcwFLNdIEF1wutjiH14f8fSET5jNORZIZKCaM",
+            .url = "https://github.com/raspberrypi/pico-sdk/releases/download/2.3.1/pico-sdk-2.3.1.tar.gz",
+            .hash = "N-V-__8AAIlShwFis5GAkdON-gT084KtV6SolvIcT_dKyUZX",
         },
         .foundationlibc = .{
             .path = "../foundation-libc/",
