@@ -60,8 +60,8 @@ pub extern fn isr_systick() callconv(.c) void;
 
 // ── Pico SDK Stubs ──────────────────────────────────────────────────────
 // Platform-specific stubs (IRQ handler, multicore, clocks, spinlocks) are
-// provided by picosdk_stubs.c, compiled as part of the freertos_lib module.
-// See: src/picosdk_stubs.c
+// provided by the per-port port_shim.c, compiled as part of the freertos_lib module.
+// See: port_shims/raspberrypi/*/*/port_shim.c
 
 // ── FreeRTOS Hooks ──────────────────────────────────────────────────────
 
