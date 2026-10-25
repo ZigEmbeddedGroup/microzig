@@ -10,7 +10,6 @@ const gpio = microzig.hal.gpio;
 const spi = @import("spi.zig");
 const time = @import("time.zig");
 
-const ClockDevice = mdf.base.ClockDevice;
 const DatagramDevice = mdf.base.DatagramDevice;
 const Digital_IO = mdf.base.Digital_IO;
 
@@ -164,25 +163,59 @@ pub fn SPI_DatagramDevice(comptime cs_pin: gpio.Pin) type {
     };
 }
 
-/// `ClockDevice` on `hal.time`. Sleeps use `time.sleep_us`, which waits at
-/// least the requested time.
+/// `ClockDevice` on `hal.time`. Pass it as is for static dispatch, or use
+/// `clock_device()` for the interface. Sleeps use `time.sleep_us`, which
+/// waits at least the requested time.
 ///
 /// `hal.time` must be set up (handler registered, `init` called, interrupts
 /// enabled), and the sleeps can't be used in an interrupt handler.
-pub fn clock_device() ClockDevice {
-    const S = struct {
-        const vtable: ClockDevice.VTable = .{
-            .get_time_since_boot = get_time_since_boot_fn,
-            .sleep = sleep_fn,
-        };
+pub const ClockDevice = struct {
+    pub const Timeout = struct {
+        deadline: mdf.time.Absolute,
 
-        fn get_time_since_boot_fn(_: *anyopaque) mdf.time.Absolute {
-            return time.get_time_since_boot();
+        pub fn is_reached(timeout: Timeout) bool {
+            return timeout.deadline.is_reached_by(time.get_time_since_boot());
         }
 
-        fn sleep_fn(_: *anyopaque, time_us: u64) void {
-            time.sleep_us(time_us);
+        pub fn diff(timeout: Timeout) mdf.time.Duration {
+            return timeout.deadline.diff(time.get_time_since_boot());
         }
     };
-    return .{ .ptr = undefined, .vtable = &S.vtable };
-}
+
+    pub fn clock_device(_: ClockDevice) mdf.base.ClockDevice {
+        return .{ .ptr = undefined, .vtable = &vtable };
+    }
+
+    pub fn get_time_since_boot(_: ClockDevice) mdf.time.Absolute {
+        return time.get_time_since_boot();
+    }
+
+    pub fn is_reached(_: ClockDevice, deadline: mdf.time.Absolute) bool {
+        return deadline.is_reached_by(time.get_time_since_boot());
+    }
+
+    pub fn make_timeout(_: ClockDevice, duration: mdf.time.Duration) Timeout {
+        return .{ .deadline = time.get_time_since_boot().add_duration(duration) };
+    }
+
+    pub fn sleep_us(_: ClockDevice, time_us: u64) void {
+        time.sleep_us(time_us);
+    }
+
+    pub fn sleep_ms(_: ClockDevice, time_ms: u32) void {
+        time.sleep_ms(time_ms);
+    }
+
+    const vtable: mdf.base.ClockDevice.VTable = .{
+        .get_time_since_boot = get_time_since_boot_fn,
+        .sleep = sleep_fn,
+    };
+
+    fn get_time_since_boot_fn(_: *anyopaque) mdf.time.Absolute {
+        return time.get_time_since_boot();
+    }
+
+    fn sleep_fn(_: *anyopaque, time_us: u64) void {
+        time.sleep_us(time_us);
+    }
+};

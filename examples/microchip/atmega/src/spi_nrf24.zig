@@ -44,7 +44,7 @@ fn run() !void {
     var radio = nrf24l01.init(
         hal.drivers.SPI_DatagramDevice(hal.gpio.pin(.b, 0)).init(),
         hal.drivers.GPIO_Device(hal.gpio.pin(.d, 7)){},
-        hal.drivers.clock_device(),
+        hal.drivers.ClockDevice{},
     );
 
     // The radio needs up to 100 ms after power-up before it can be set up.
