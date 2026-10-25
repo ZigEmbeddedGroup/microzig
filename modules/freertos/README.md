@@ -48,7 +48,7 @@ fn hello_task(_: ?*anyopaque) callconv(.c) void {
 
 ## API Reference
 
-**Allocation and deletion:** The default build uses `heap_1`, which supports allocation but cannot free memory. Keep created objects for the lifetime of the application. The deletion APIs listed below require a heap implementation that supports freeing, such as `heap_4`. With `heap_1`, freeing a non-null allocation triggers `configASSERT`; task and timer deletion can reach this assertion later during cleanup. Examples using `defer` to destroy objects assume a heap that supports freeing.
+**Allocation and deletion:** The default build uses `heap_1`, which supports allocation but cannot free memory.
 
 ### Tasks (`freertos.task`)
 
