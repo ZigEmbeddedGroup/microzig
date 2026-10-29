@@ -205,7 +205,7 @@ pub fn NRF24L01_Generic(comptime options: NRF24L01_Options) type {
         /// The radio must be in standby with CE low, as `apply` and
         /// `stop_listening` leave it. If this fails, CONFIG and CE may be
         /// partly changed.
-        pub fn start_listening(self: Self) !void {
+        pub fn start_listening(self: *const Self) !void {
             try self.write_register(.config, config_rx);
             try self.ce.write(.high);
             self.clock.sleep_us(rx_settling_us);
@@ -215,7 +215,7 @@ pub fn NRF24L01_Generic(comptime options: NRF24L01_Options) type {
         /// already in the RX FIFO are kept.
         ///
         /// If this fails, CONFIG and CE may be partly changed.
-        pub fn stop_listening(self: Self) !void {
+        pub fn stop_listening(self: *const Self) !void {
             try self.ce.write(.low);
             self.clock.sleep_us(stop_listening_delay_us);
             try self.write_register(.config, config_tx);
@@ -230,7 +230,7 @@ pub fn NRF24L01_Generic(comptime options: NRF24L01_Options) type {
         /// the radio is ready for the next `send`; after any other error
         /// (including `error.Timeout`, which can also come from the bus) its
         /// state is unknown: call `apply` again.
-        pub fn send(self: Self, payload: []const u8) !void {
+        pub fn send(self: *const Self, payload: []const u8) !void {
             if (self.payload_size == 0 or payload.len != self.payload_size)
                 return error.InvalidPayloadSize;
 
@@ -265,7 +265,7 @@ pub fn NRF24L01_Generic(comptime options: NRF24L01_Options) type {
         /// none. Works both while listening and in standby.
         ///
         /// It checks the RX FIFO, not RX_DR, so RX_DR is left set.
-        pub fn receive(self: Self, buffer: []u8, received: *bool) !void {
+        pub fn receive(self: *const Self, buffer: []u8, received: *bool) !void {
             if (self.payload_size == 0 or buffer.len != self.payload_size)
                 return error.InvalidPayloadSize;
 
@@ -282,24 +282,24 @@ pub fn NRF24L01_Generic(comptime options: NRF24L01_Options) type {
         }
 
         /// Sends a command byte followed by `data`.
-        fn write_command(self: Self, cmd: u8, data: []const u8) !void {
+        fn write_command(self: *const Self, cmd: u8, data: []const u8) !void {
             try self.dev.connect();
             defer self.dev.disconnect();
             try self.dev.writev(&.{ &.{cmd}, data });
         }
 
         /// Sends a command byte and reads the reply into `buffer`.
-        fn read_command(self: Self, cmd: u8, buffer: []u8) !void {
+        fn read_command(self: *const Self, cmd: u8, buffer: []u8) !void {
             try self.dev.connect();
             defer self.dev.disconnect();
             try self.dev.writev_then_readv(&.{&.{cmd}}, &.{buffer});
         }
 
-        fn read_register(self: Self, register: Register, value: *u8) !void {
+        fn read_register(self: *const Self, register: Register, value: *u8) !void {
             try self.read_command(command.r_register | @backingInt(register), value[0..1]);
         }
 
-        fn write_register(self: Self, register: Register, value: u8) !void {
+        fn write_register(self: *const Self, register: Register, value: u8) !void {
             try self.write_command(command.w_register | @backingInt(register), &.{value});
         }
     };
