@@ -3,9 +3,8 @@
 //! prints the result; packets received in between are printed too. With no
 //! other radio listening, sends end with "no ACK".
 //!
-//! The port has no timer-based clock or driver adapters yet, so this file has
-//! minimal ones: the SPI with CS on D8 (PB0), CE on D7 (PD7), and a clock
-//! that only advances while sleeping.
+//! The radio is on the SPI with CS on D8 (PB0) and CE on D7 (PD7), through the
+//! HAL's driver adapters; the clock is `hal.time` (Timer0).
 
 const microzig = @import("microzig");
 const nrf24l01 = microzig.drivers.wireless.nrf24l01;
@@ -20,84 +19,8 @@ comptime {
     _ = microzig.export_startup();
 }
 
-/// SPI transport for the radio: CS is held low for each transaction.
-const Radio_SPI = struct {
-    const cs_pin = hal.gpio.pin(.b, 0);
-    const spi = board.spi_setup.instance;
-
-    fn init() Radio_SPI {
-        cs_pin.put(1); // deselect the radio before CS becomes an output
-        cs_pin.set_direction(.output);
-        return .{};
-    }
-
-    pub fn connect(_: Radio_SPI) !void {
-        cs_pin.put(0);
-    }
-
-    pub fn disconnect(_: Radio_SPI) void {
-        cs_pin.put(1);
-    }
-
-    pub fn writev(_: Radio_SPI, chunks: []const []const u8) !void {
-        spi.writev_blocking(chunks);
-    }
-
-    pub fn writev_then_readv(_: Radio_SPI, write_chunks: []const []const u8, read_chunks: []const []u8) !void {
-        spi.writev_blocking(write_chunks);
-        spi.readv_blocking(read_chunks);
-    }
-};
-
-/// The radio's CE pin.
-const Radio_CE = struct {
-    const pin = hal.gpio.pin(.d, 7);
-
-    pub fn set_direction(_: Radio_CE, direction: microzig.drivers.base.Digital_IO.Direction) !void {
-        switch (direction) {
-            .input => pin.set_direction(.input),
-            .output => pin.set_direction(.output),
-        }
-    }
-
-    pub fn write(_: Radio_CE, state: microzig.drivers.base.Digital_IO.State) !void {
-        pin.put(state.value());
-    }
-};
-
-/// A clock that only advances in `sleep_us`, which busy-waits. Time spent
-/// elsewhere isn't counted, so timeouts last longer than asked. The loop
-/// overhead also makes each wait several times longer than requested.
-const SleepClock = struct {
-    var now_us: u64 = 0;
-
-    /// Busy loop iterations per microsecond. Each iteration takes at least
-    /// one cycle, so sleeps last at least as long as asked.
-    const loops_per_us = board.clock_frequencies.cpu / 1_000_000;
-
-    const Timeout = struct {
-        deadline_us: u64,
-
-        pub fn is_reached(timeout: Timeout) bool {
-            return now_us >= timeout.deadline_us;
-        }
-    };
-
-    pub fn sleep_us(_: SleepClock, time_us: u64) void {
-        var i: u64 = 0;
-        while (i < time_us) : (i += 1) {
-            for (0..loops_per_us) |_| asm volatile ("nop");
-        }
-        now_us += time_us;
-    }
-
-    pub fn sleep_ms(clock: SleepClock, time_ms: u32) void {
-        clock.sleep_us(@as(u64, time_ms) * 1_000);
-    }
-
-    pub fn make_timeout(_: SleepClock, duration: microzig.drivers.time.Duration) Timeout {
-        return .{ .deadline_us = now_us + duration.to_us() };
-    }
+pub const microzig_options: microzig.Options = .{
+    .interrupts = .{ .TIMER0_OVF = hal.time.timer0_overflow },
 };
 
 /// Same address as the Emakefun Peer2peer examples (0xF0F0F0F066). To get
@@ -106,6 +29,8 @@ const SleepClock = struct {
 const address = [_]u8{ 0x66, 0xF0, 0xF0, 0xF0, 0xF0 };
 
 pub fn main() void {
+    hal.time.init();
+    microzig.interrupt.enable_interrupts();
     board.uart_setup.apply(.{ .baud_rate = 115_200 });
     board.spi_setup.apply(.{ .baud_rate = 1_000_000 });
 
@@ -116,11 +41,15 @@ pub fn main() void {
 }
 
 fn run() !void {
-    var radio = nrf24l01.init(Radio_SPI.init(), Radio_CE{}, SleepClock{});
-    const clock = SleepClock{};
+    var radio = nrf24l01.init(
+        hal.drivers.SPI_DatagramDevice(hal.gpio.pin(.b, 0)).init(),
+        hal.drivers.GPIO_Device(hal.gpio.pin(.d, 7)){},
+        hal.drivers.ClockDevice{},
+    );
 
     // The radio needs up to 100 ms after power-up before it can be set up.
-    clock.sleep_ms(100);
+    hal.time.sleep_ms(100);
+
     try radio.apply(.{ .address = address, .payload_size = 1 });
     try radio.start_listening();
 
