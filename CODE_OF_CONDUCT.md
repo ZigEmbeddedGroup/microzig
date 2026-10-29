@@ -12,8 +12,7 @@ server.
 
 ## Strict No LLM / No AI Policy
 
-This policy takes effect October 28th, 2026. New PRs, issues, or comments
-are subject to this policy going forward.
+This policy takes effect October 28th, 2026.
 
 No LLM-generated content, whether it be code or prose.
 
