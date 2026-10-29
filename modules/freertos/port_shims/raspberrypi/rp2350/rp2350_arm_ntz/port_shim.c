@@ -1,4 +1,4 @@
-// picosdk_stubs.c — Pico SDK function stubs for the FreeRTOS port.
+// port_shim.c — Pico SDK function stubs for the FreeRTOS RP2350_ARM_NTZ port.
 //
 // The FreeRTOS RP2040/RP2350 port references these Pico SDK functions,
 // which are not provided by MicroZig. These minimal stubs satisfy the

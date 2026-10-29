@@ -73,12 +73,14 @@ static inline irq_handler_t *get_vtable(void) {
 #endif
 }
 
+#if !PICO_NO_RAM_VECTOR_TABLE
 static void set_raw_irq_handler_and_unlock(uint num, irq_handler_t handler, uint32_t save) {
     // update vtable (vtable_handler may be same or updated depending on cases, but we do it anyway for compactness)
     get_vtable()[VTABLE_FIRST_IRQ + num] = handler;
     __dmb();
     spin_unlock(spin_lock_instance(PICO_SPINLOCK_ID_IRQ), save);
 }
+#endif
 
 void irq_set_exclusive_handler(uint num, irq_handler_t handler) {
     check_irq_param(num);

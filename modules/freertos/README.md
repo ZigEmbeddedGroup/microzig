@@ -13,7 +13,7 @@ Hardware-tested on **Seeed XIAO RP2350** (ARM Cortex-M33).
 - ✅ **Software Timers** — auto-reload and one-shot with callback support
 - ✅ **Event Groups** — multi-bit synchronization and rendezvous/barrier patterns
 - ✅ **Task Notifications** — lightweight direct-to-task signaling
-- ✅ **ISR variants** — all primitives provide `*FromIsr` functions with wake flags
+- ✅ **ISR variants** — supported operations provide `*_from_isr` helpers
 - ✅ **Raw C escape hatch** — `freertos.c.*` for anything not yet wrapped
 
 ## Quick Start
@@ -34,7 +34,7 @@ pub fn main() !void {
     );
 
     // Start the scheduler — never returns
-    freertos.task.startScheduler();
+    freertos.task.start_scheduler();
 }
 
 fn hello_task(_: ?*anyopaque) callconv(.c) void {
@@ -48,6 +48,8 @@ fn hello_task(_: ?*anyopaque) callconv(.c) void {
 
 ## API Reference
 
+**Allocation and deletion:** The default build uses `heap_1`, which supports allocation but cannot free memory.
+
 ### Tasks (`freertos.task`)
 
 Task creation, deletion, scheduling, and runtime queries.
@@ -55,26 +57,26 @@ Task creation, deletion, scheduling, and runtime queries.
 | Function | Description |
 |---|---|
 | `create(function, name, stack_depth, params, priority)` | Create a task → `Error!TaskHandle` |
-| `destroy(handle)` | Delete a task (`null` = self) |
+| `destroy(handle)` | Delete a task (`null` = self; requires a freeing heap) |
 | `delay(ticks)` | Block for `ticks` ticks |
-| `delayUntil(prev_wake_time, increment)` | Periodic delay → `bool` |
+| `delay_until(prev_wake_time, increment)` | Periodic delay → `bool` |
 | `suspend(handle)` | Suspend a task (`null` = self) |
 | `resume(handle)` | Resume a suspended task |
-| `resumeFromIsr(handle)` | Resume from ISR → `bool` (context switch needed) |
-| `abortDelay(handle)` | Force-unblock a task → `bool` |
-| `setPriority(handle, priority)` | Change a task's priority |
-| `getPriority(handle)` | Get current priority |
-| `getCurrentHandle()` | Handle of the running task |
-| `getHandle(name)` | Look up task by name → `?TaskHandle` |
-| `getName(handle)` | Task name string |
-| `getState(handle)` | → `.running`, `.ready`, `.blocked`, `.suspended`, `.deleted` |
-| `getStackHighWaterMark(handle)` | Minimum free stack (words) since creation |
-| `getTickCount()` | Current system tick |
-| `getCount()` | Total number of tasks |
-| `startScheduler()` | Start FreeRTOS — **never returns** |
-| `endScheduler()` | Stop FreeRTOS |
-| `getSchedulerState()` | → `.not_started`, `.running`, `.suspended` |
-| `suspendAll()` / `resumeAll()` | Disable/enable task switching |
+| `resume_from_isr(handle)` | Resume from ISR → `bool` (context switch needed) |
+| `abort_delay(handle)` | Force-unblock a task → `bool` |
+| `set_priority(handle, priority)` | Change a task's priority |
+| `get_priority(handle)` | Get current priority |
+| `get_current_handle()` | Handle of the running task |
+| `get_handle(name)` | Look up task by name → `?TaskHandle` |
+| `get_name(handle)` | Task name string |
+| `get_state(handle)` | → `.running`, `.ready`, `.blocked`, `.suspended`, `.deleted` |
+| `get_stack_high_water_mark(handle)` | Minimum free stack (words) since creation |
+| `get_tick_count()` | Current system tick |
+| `get_count()` | Total number of tasks |
+| `start_scheduler()` | Start FreeRTOS — **never returns** |
+| `end_scheduler()` | Stop FreeRTOS |
+| `get_scheduler_state()` | → `.not_started`, `.running`, `.suspended` |
+| `suspend_all()` / `resume_all()` | Disable/enable task switching |
 
 ### Queues (`freertos.queue`)
 
@@ -92,15 +94,16 @@ const value = try q.receive(freertos.config.max_delay); // value: u32
 |---|---|
 | `create(T, length)` | Create a `Queue(T)` with given capacity → `Error!Queue(T)` |
 | `q.send(item, timeout)` | Send to back → `Error!void` (`QueueFull` on timeout) |
-| `q.sendToFront(item, timeout)` | Send to front |
+| `q.send_to_front(item, timeout)` | Send to front |
 | `q.overwrite(item)` | Overwrite single-item queue (never blocks) |
 | `q.receive(timeout)` | Receive and remove → `Error!T` (`QueueEmpty` on timeout) |
 | `q.peek(timeout)` | Read front item without removing |
-| `q.sendFromIsr(item)` | ISR send → `IsrResult` |
-| `q.receiveFromIsr()` | ISR receive → `?IsrReceiveResult(T)` |
-| `q.messagesWaiting()` | Number of items in queue |
-| `q.spacesAvailable()` | Free slots remaining |
+| `q.send_from_isr(item)` | ISR send → `ISR_Result` |
+| `q.receive_from_isr()` | ISR receive → `?IsrReceiveResult(T)` |
+| `q.messages_waiting()` | Number of items in queue |
+| `q.spaces_available()` | Free slots remaining |
 | `q.reset()` | Flush the queue |
+| `q.destroy()` | Delete the queue (requires a freeing heap) |
 
 ### Semaphores (`freertos.semaphore`)
 
@@ -108,14 +111,14 @@ Binary and counting semaphores for synchronization and signaling between tasks/I
 
 | Function | Description |
 |---|---|
-| `createBinary()` | Create binary semaphore (starts empty) → `Error!Semaphore` |
-| `createCounting(max, initial)` | Create counting semaphore → `Error!Semaphore` |
+| `create_binary()` | Create binary semaphore (starts empty) → `Error!Semaphore` |
+| `create_counting(max, initial)` | Create counting semaphore → `Error!Semaphore` |
 | `s.take(timeout)` | Acquire → `Error!void` (`Timeout`) |
 | `s.give()` | Release → `Error!void` (`Failure` if not taken) |
-| `s.giveFromIsr()` | Release from ISR → `IsrResult` |
-| `s.takeFromIsr()` | Acquire from ISR → `IsrResult` |
-| `s.getCount()` | Current count (or 1/0 for binary) |
-| `s.destroy()` | Free the semaphore |
+| `s.give_from_isr()` | Release from ISR → `ISR_Result` |
+| `s.take_from_isr()` | Acquire from ISR → `ISR_Result` |
+| `s.get_count()` | Current count (or 1/0 for binary) |
+| `s.destroy()` | Delete the semaphore (requires a freeing heap) |
 
 ### Mutexes (`freertos.mutex`)
 
@@ -134,11 +137,11 @@ defer mtx.release() catch {};
 | Function | Description |
 |---|---|
 | `create()` | Create a standard mutex → `Error!Mutex` |
-| `createRecursive()` | Create a recursive mutex → `Error!Recursive` |
+| `create_recursive()` | Create a recursive mutex → `Error!Recursive` |
 | `m.acquire(timeout)` | Lock → `Error!void` (`Timeout`) |
 | `m.release()` | Unlock → `Error!void` (`Failure` if not held) |
-| `m.getHolder()` | Task holding the mutex → `?TaskHandle` |
-| `m.destroy()` | Free the mutex |
+| `m.get_holder()` | Task holding the mutex → `?TaskHandle` |
+| `m.destroy()` | Delete the mutex (requires a freeing heap) |
 
 Recursive mutexes can be acquired multiple times by the same task — each `acquire` must be paired with a `release`.
 
@@ -151,22 +154,22 @@ var events = try freertos.event_group.create();
 defer events.destroy();
 
 // Task A sets bit 0
-_ = events.setBits(0x01);
+_ = events.set_bits(0x01);
 
 // Task B waits for bits 0 AND 1
-const bits = try events.waitBits(0x03, .{ .wait_for_all = true, .timeout = 1000 });
+const bits = try events.wait_bits(0x03, .{ .wait_for_all = true, .timeout = 1000 });
 ```
 
 | Function | Description |
 |---|---|
 | `create()` | Create an event group → `Error!EventGroup` |
-| `e.setBits(bits)` | Set bits → returns new value |
-| `e.clearBits(bits)` | Clear bits → returns previous value |
-| `e.getBits()` | Read current bits |
-| `e.waitBits(bits, opts)` | Wait for bit pattern → `Error!EventBits` (`Timeout`) |
+| `e.set_bits(bits)` | Set bits → returns new value |
+| `e.clear_bits(bits)` | Clear bits → returns previous value |
+| `e.get_bits()` | Read current bits |
+| `e.wait_bits(bits, opts)` | Wait for bit pattern → `Error!EventBits` (`Timeout`) |
 | `e.sync(set, wait, timeout)` | Barrier: set bits then wait for others → `Error!EventBits` |
-| `e.setBitsFromIsr(bits)` | Set bits from ISR → `IsrResult` |
-| `e.destroy()` | Free the event group |
+| `e.set_bits_from_isr(bits)` | Set bits from ISR → `ISR_Result` |
+| `e.destroy()` | Delete the event group (requires a freeing heap) |
 
 `WaitOptions` fields: `clear_on_exit` (default `true`), `wait_for_all` (default `false`), `timeout` (default `max_delay`).
 
@@ -177,7 +180,7 @@ Periodic or one-shot timers that execute a callback in the timer daemon task con
 ```zig
 var tmr = try freertos.timer.create("heartbeat", 1000, true, null, my_callback);
 try tmr.start(0);
-defer tmr.destroyBlocking();
+defer tmr.destroy_blocking();
 ```
 
 | Function | Description |
@@ -186,15 +189,15 @@ defer tmr.destroyBlocking();
 | `t.start(cmd_timeout)` | Start/restart the timer |
 | `t.stop(cmd_timeout)` | Stop the timer |
 | `t.reset(cmd_timeout)` | Reset countdown from now |
-| `t.changePeriod(new_period, cmd_timeout)` | Change period and restart |
-| `t.destroy(cmd_timeout)` | Delete timer (can fail if queue full) |
-| `t.destroyBlocking()` | Delete timer, wait forever (safe for `defer`) |
-| `t.isActive()` | Check if running → `bool` |
-| `t.getName()` / `t.getPeriod()` / `t.getExpiryTime()` | Timer properties |
-| `t.getId()` / `t.setId(ptr)` | User-defined ID pointer |
-| `t.getAutoReload()` / `t.setAutoReload(bool)` | Auto-reload mode |
-| `t.startFromIsr()` / `t.stopFromIsr()` / `t.resetFromIsr()` | ISR variants → `IsrResult` |
-| `pendFunctionCall(fn, p1, p2, timeout)` | Defer a function call to the timer daemon |
+| `t.change_period(new_period, cmd_timeout)` | Change period and restart |
+| `t.destroy(cmd_timeout)` | Enqueue timer deletion (requires a freeing heap; can fail if command queue full) |
+| `t.destroy_blocking()` | Wait indefinitely to enqueue timer deletion (requires a freeing heap) |
+| `t.is_active()` | Check if running → `bool` |
+| `t.get_name()` / `t.get_period()` / `t.get_expiry_time()` | Timer properties |
+| `t.get_id()` / `t.set_id(ptr)` | User-defined ID pointer |
+| `t.get_auto_reload()` / `t.set_auto_reload(bool)` | Auto-reload mode |
+| `t.start_from_isr()` / `t.stop_from_isr()` / `t.reset_from_isr()` | ISR variants → `ISR_Result` |
+| `pend_function_call(fn, p1, p2, timeout)` | Defer a function call to the timer daemon |
 
 > ⚠️ **Implementation note:** The C macros `xTimerStart`, `xTimerStop`, etc. pass untyped `NULL` that Zig's `@cImport` can't coerce. The wrapper calls `xTimerGenericCommandFromTask` / `FromISR` directly, which is functionally identical.
 
@@ -211,16 +214,16 @@ _ = freertos.notification.take(true, freertos.config.max_delay) catch {}; // rec
 | Function | Description |
 |---|---|
 | `notify(handle, value, action)` | Send notification at index 0 |
-| `notifyIndexed(handle, index, value, action)` | Send at specific index |
-| `notifyAndQuery(handle, value, action)` | Send and get previous value → `Error!u32` |
+| `notify_indexed(handle, index, value, action)` | Send at specific index |
+| `notify_and_query(handle, value, action)` | Send and get previous value → `Error!u32` |
 | `give(handle)` | Increment notification (lightweight semaphore give) |
-| `notifyFromIsr(handle, value, action)` | Send from ISR → `IsrResult` |
-| `giveFromIsr(handle)` | Increment from ISR → `IsrResult` |
+| `notify_from_isr(handle, value, action)` | Send from ISR → `ISR_Result` |
+| `give_from_isr(handle)` | Increment from ISR → `ISR_Result` |
 | `wait(clear_entry, clear_exit, timeout)` | Wait for notification → `Error!u32` |
-| `waitIndexed(index, clear_entry, clear_exit, timeout)` | Wait at specific index |
+| `wait_indexed(index, clear_entry, clear_exit, timeout)` | Wait at specific index |
 | `take(clear_on_exit, timeout)` | Binary/counting semaphore pattern → `Error!u32` |
-| `clearState(handle)` | Clear pending state → `bool` |
-| `clearBits(handle, bits)` | Clear bits in notification value → previous value |
+| `clear_state(handle)` | Clear pending state → `bool` |
+| `clear_bits(handle, bits)` | Clear bits in notification value → previous value |
 
 `Action` enum: `.none`, `.set_bits`, `.increment`, `.set_value_overwrite`, `.set_value_no_overwrite`
 
@@ -242,10 +245,10 @@ Two helper functions convert C return codes to Zig errors:
 
 ```zig
 // Check pdPASS/pdFAIL return codes
-try freertos.config.checkBaseType(rc);
+try freertos.config.check_base_type(rc);
 
 // Convert nullable C handle → Zig error (null → error.OutOfMemory)
-const handle = try freertos.config.checkHandle(c.TaskHandle_t, raw_handle);
+const handle = try freertos.config.check_handle(c.TaskHandle_t, raw_handle);
 ```
 
 ### Raw C Access
@@ -313,10 +316,12 @@ export fn vApplicationTickHook() callconv(.c) void {
 | `configTICK_RATE_HZ` | 1000 | 1 ms tick resolution |
 | `configMAX_PRIORITIES` | 32 | Priority levels 0–31 |
 | `configMINIMAL_STACK_SIZE` | 256 | Words (1 KB on 32-bit) |
-| `configTOTAL_HEAP_SIZE` | 128 KB | FreeRTOS heap (heap_4) |
+| `configTOTAL_HEAP_SIZE` | 128 KB | FreeRTOS heap (`heap_1`, allocation only) |
 | `configCHECK_FOR_STACK_OVERFLOW` | 2 | Full stack painting check — traps via `@trap()` |
 | `configSUPPORT_DYNAMIC_ALLOCATION` | 1 | Dynamic only (static not yet supported) |
 | `configNUMBER_OF_CORES` | 1 | Single-core only |
+
+To enable object deletion and reclaim memory, replace `portable/MemMang/heap_1.c` with a heap implementation that supports freeing, such as `portable/MemMang/heap_4.c`, in [build.zig](build.zig).
 
 ### Pico SDK interop (disabled)
 
@@ -324,6 +329,7 @@ export fn vApplicationTickHook() callconv(.c) void {
 
 ## Known Limitations
 
+- **Object deletion** — the default `heap_1` allocator cannot free memory; task deletion and object `destroy()`/`destroy_blocking()` calls require a freeing heap
 - **Static allocation** — `configSUPPORT_STATIC_ALLOCATION` is off; `xTaskCreateStatic` etc. are not wrapped
 - **Stream/message buffers** — not yet wrapped (use `freertos.c` as a workaround)
 - **Multicore SMP** — `configNUMBER_OF_CORES` is 1; FreeRTOS SMP support is not yet integrated
