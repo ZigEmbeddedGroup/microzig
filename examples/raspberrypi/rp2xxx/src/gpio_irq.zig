@@ -20,6 +20,11 @@ pub const std_options = microzig.std_options(.{
     .logFn = rp2xxx.uart.log,
 });
 
+pub const microzig_options: microzig.Options = .{
+    // This function has to handle both cpus if BANK0 interrupts are enabled on both.
+    .interrupts = .{ .IO_IRQ_BANK0 = .{ .c = &callback_alt } },
+};
+
 comptime {
     _ = microzig.export_startup();
 }
