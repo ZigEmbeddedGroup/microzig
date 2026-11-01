@@ -191,7 +191,11 @@ pub const Response = struct {
 
     pub fn data(self: *Self) []const u8 {
         const head: usize = self.padding() + switch (self.sdp.channel()) {
-            .control => @sizeOf(CDC_Header),
+            .control => blk: {
+                // Ensure the cached header parser advances the reader to the payload.
+                _ = self.cdc();
+                break :blk @sizeOf(CDC_Header);
+            },
             .event, .data => @sizeOf(BDC_Header) + self.bdc().padding(),
         };
         const tail = self.sdp.len - @sizeOf(SDP_Header);
@@ -817,4 +821,39 @@ test "events mask" {
         .disassoc_ind,
     });
     try testing.expectEqualSlices(u8, &buf, &mask);
+}
+
+test "response payload offset: padded WiFi event is decoded" {
+    const head = 22; // 14-byte SDPCM header, 4-byte BDC header, 4-byte padding
+    var packet: [head + @sizeOf(EventPacket)]u8 = @splat(0);
+    std.mem.writeInt(u16, packet[0..2], packet.len, .little);
+    std.mem.writeInt(u16, packet[2..4], ~@as(u16, packet.len), .little);
+    packet[5] = 1; // event channel
+    packet[7] = 14;
+    packet[14] = 0x20;
+    packet[17] = 1; // BDC padding in words
+    @memcpy(packet[18..22], &[_]u8{ 0, 1, 0xe7, 0 });
+    std.mem.writeInt(u16, packet[head + 12 ..][0..2], 0x886c, .big);
+    @memcpy(packet[head + 19 ..][0..3], &[_]u8{ 0, 0x10, 0x18 });
+    std.mem.writeInt(u32, packet[head + 28 ..][0..4], @backingInt(EventType.auth), .big);
+    var rsp = try Response.init(&packet);
+    const evt = rsp.event();
+    try testing.expect(evt != null);
+    try testing.expectEqual(EventType.auth, evt.?.msg.event_type);
+    try testing.expectEqualSlices(u8, packet[head..], rsp.data());
+    try testing.expectEqualSlices(u8, packet[head..], rsp.data());
+}
+
+test "response payload offset: control payload does not depend on reading cdc first" {
+    const head = @sizeOf(SDP_Header) + @sizeOf(CDC_Header);
+    var packet: [head + 4]u8 = @splat(0);
+    std.mem.writeInt(u16, packet[0..2], packet.len, .little);
+    std.mem.writeInt(u16, packet[2..4], ~@as(u16, packet.len), .little);
+    packet[7] = @sizeOf(SDP_Header);
+    std.mem.writeInt(u32, packet[@sizeOf(SDP_Header)..][0..4], @backingInt(Cmd.get_var), .little);
+    @memcpy(packet[head..], "test");
+    var rsp = try Response.init(&packet);
+    try testing.expectEqualSlices(u8, "test", rsp.data());
+    _ = rsp.cdc();
+    try testing.expectEqualSlices(u8, "test", rsp.data());
 }
