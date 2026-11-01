@@ -21,6 +21,7 @@ zig build
 ## Sorcerer GUI
 
 The GUI provides an interactive interface for:
+
 - Browsing all MicroZig register definitions
 - Viewing generated Zig code with syntax highlighting
 - Opening custom SVD/ATDF files
@@ -39,6 +40,7 @@ zig build run
 ### Dependencies
 
 The GUI requires additional dependencies:
+
 - DVUI (SDL3-based UI framework)
 - tree-sitter-zig (syntax highlighting)
 - serial (serial port communication)
@@ -103,6 +105,7 @@ General options:
 # Run CLI with arguments
 zig build run-cli -- list --port ch32v
 zig build run-cli -- generate CH32V003 -o /tmp/regs
+zig build run-cli -- generate CH32V006 -o /tmp/regs
 ```
 
 ## Architecture
@@ -120,7 +123,7 @@ Both tools share the same underlying data:
 Sorcerer supports the following formats via regz:
 
 | Format | Extension | Description |
-|--------|-----------|-------------|
+| -------- | ----------- | ------------- |
 | SVD | `.svd` | ARM CMSIS System View Description |
 | ATDF | `.atdf` | Microchip ATDF (AVR/SAM devices) |
 | Embassy | - | Embassy HAL register definitions |
