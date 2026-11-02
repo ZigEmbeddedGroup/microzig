@@ -25,6 +25,10 @@ pub fn build(b: *std.Build) void {
         .{ .target = mb.ports.ch32v.boards.ch32v003.ch32v003f4p6_r0_1v1, .name = "ch32v003f4p6_r0_1v1_empty", .file = "src/empty.zig" },
         .{ .target = mb.ports.ch32v.boards.ch32v003.ch32v003f4p6_r0_1v1, .name = "ch32v003f4p6_r0_1v1_blinky", .file = "src/blinky.zig" },
 
+        // CH32V006
+        .{ .target = mb.ports.ch32v.chips.ch32v006x8, .name = "empty_ch32v006", .file = "src/empty.zig" },
+        .{ .target = mb.ports.ch32v.chips.ch32v006x8, .name = "blinky_ch32v006", .file = "src/blinky.zig" },
+
         // CH32V103
         .{ .target = mb.ports.ch32v.chips.ch32v103x6, .name = "empty_ch32v103", .file = "src/empty.zig" },
         .{ .target = mb.ports.ch32v.chips.ch32v103x6, .name = "blinky_ch32v103", .file = "src/blinky.zig" },

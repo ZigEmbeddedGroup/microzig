@@ -1,4 +1,8 @@
 const microzig = @import("microzig");
+const std = @import("std");
+const pins = microzig.hal.pins;
+const RCC = microzig.chip.peripherals.RCC;
+const mcu_name = @typeName(microzig.chip);
 
 pub const panic = microzig.panic;
 
