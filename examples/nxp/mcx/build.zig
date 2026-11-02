@@ -20,6 +20,7 @@ pub fn build(b: *std.Build) void {
     const available_examples = [_]Example{
         .{ .name = "mcxa156_blinky", .target = frdm_mcxa156, .file = "src/mcxa156/blinky.zig" },
         .{ .name = "mcxa156_clkout", .target = frdm_mcxa156, .file = "src/mcxa156/clkout.zig" },
+        .{ .name = "mcxa156_uart", .target = frdm_mcxa156, .file = "src/mcxa156/uart.zig" },
         .{ .name = "mcxa153_blinky", .target = frdm_mcxa153, .file = "src/mcxa153_blinky.zig" },
         .{ .name = "mcxn947_blinky", .target = frdm_mcxn947, .file = "src/mcxn947_blinky.zig" },
         .{ .name = "gpio_input", .target = frdm_mcxa153, .file = "src/gpio_input.zig" },

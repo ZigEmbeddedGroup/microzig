@@ -14,7 +14,7 @@ comptime {
 
 pub fn main() !void {
     PORT4.init();
-    clkout.enable(.P4_2, .SLOW_CLK, 0);
+    clkout.enable(.P4_2, .FRO_12M, 1);
     try hal.syscon.clock_init(.{
         .frohf = .{ .freq = .@"96Mhz", .fro_hf_div = 1 },
         .ahb_div = 4,

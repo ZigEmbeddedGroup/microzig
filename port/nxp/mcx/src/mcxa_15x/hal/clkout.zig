@@ -5,8 +5,6 @@ const mapper = @import("mapper.zig");
 const port = @import("port.zig");
 const meta = @import("meta_utils.zig");
 
-const MRCC0 = microzig.chip.peripherals.MRCC0;
-
 const Clock_Source = enum(u3) {
     FRO_12M = 0,
     FRO_HF_DIV = 1,
@@ -17,28 +15,8 @@ const Clock_Source = enum(u3) {
 };
 
 pub fn enable(comptime pin: mapper.PIN, src: Clock_Source, div: u4) void {
-    set_pin(pin);
-    syscon.unlock_clock_configuration();
-    defer syscon.freeze_clock_configuration();
+    syscon.set_clock(.CLKOUT, div, @fromBackingInt(@backingInt(src)));
 
-    MRCC0.MRCC_CLKOUT_CLKSEL.modify_one("MUX", @fromBackingInt(@intCast(@backingInt(src))));
-
-    MRCC0.MRCC_CLKOUT_CLKDIV.write(.{
-        .DIV = div,
-        .HALT = .OFF,
-        .RESET = .OFF,
-    });
-
-    MRCC0.MRCC_CLKOUT_CLKDIV.write(.{
-        .DIV = div,
-        .HALT = .ON,
-        .RESET = .ON,
-    });
-
-    while (MRCC0.MRCC_CLKOUT_CLKDIV.read().UNSTAB == .OFF) {}
-}
-
-fn set_pin(comptime pin: mapper.PIN) void {
     port.Port.configure_pin(pin, .{
         .MUX = comptime meta.check_mux(pin, .CLKOUT_clkout),
     });
