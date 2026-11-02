@@ -26,7 +26,7 @@ $ riscv64-unknown-elf-objdump --disassemble-all ELF_FILE > DISASSEMBLED_FILE
 $ wch-isp -pr flash BIN_FILE
 ```
 
-### CH32V003
+### CH32V003 and CH32V006
 
 - [wlink](https://github.com/ch32-rs/wlink)
   - [wchlinke-mode-switch](https://github.com/74th/wchlinke-mode-switch)
@@ -35,3 +35,7 @@ $ wch-isp -pr flash BIN_FILE
 ```bash
 $ wlink flash --address 0x08000000 BIN_FILE
 ```
+
+CH32V003 code FLASH ends at `0x0800 4000` (16KB)
+CH32V006 code FLASH ends at `0x0800 F800` (62KB)
+
