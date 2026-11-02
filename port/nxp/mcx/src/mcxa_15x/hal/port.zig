@@ -8,6 +8,7 @@ const PORT_T = microzig.chip.types.peripherals.PORT0;
 //TODO ADD ALL PIN CONFG
 pub const PinConfig = struct {
     MUX: u3,
+    input_buffer_enabled: bool = true,
 };
 
 const PIN_T = @FieldType(microzig.chip.types.peripherals.PORT0, "PCR0");
@@ -57,5 +58,6 @@ pub const Port = enum(u3) {
         defer pin_regs.modify_one("LK", .lk1);
 
         pin_regs.modify_one("MUX", @fromBackingInt(@intCast(config.MUX)));
+        pin_regs.modify_one("IBE", @fromBackingInt(@intFromBool(config.input_buffer_enabled)));
     }
 };

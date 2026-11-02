@@ -2,7 +2,85 @@ const microzig = @import("microzig");
 
 const chip = microzig.chip;
 
-var clocks: Clock_Frequencies = .{};
+pub var clocks: Clock_Frequencies = .{};
+
+const mrcc_addr = @intFromPtr(microzig.chip.peripherals.MRCC0);
+
+const ClockDiv = packed struct(u32) {
+    /// Functional Clock Divider
+    DIV: u4 = 0x0,
+    reserved29: u25 = 0,
+    /// Reset divider counter
+    RESET: enum(u1) {
+        /// Divider isn't reset
+        ON = 0x0,
+        /// Divider is reset
+        OFF = 0x1,
+    } = .ON,
+    /// Halt divider counter
+    HALT: enum(u1) {
+        /// Divider clock is running
+        ON = 0x0,
+        /// Divider clock is stopped
+        OFF = 0x1,
+    } = .OFF,
+    /// Divider status flag
+    UNSTAB: enum(u1) {
+        /// Divider clock is stable
+        ON = 0x0,
+        /// Clock frequency isn't stable
+        OFF = 0x1,
+    } = .ON,
+};
+
+pub const Mux = enum(u3) {
+    clkroot_func_0 = 0x0,
+    clkroot_func_1 = 0x1,
+    clkroot_func_3 = 0x3,
+    clkroot_func_4 = 0x4,
+    clkroot_func_5 = 0x5,
+    _,
+};
+
+const ClockMux = packed struct(u32) {
+    /// Functional Clock Mux Select
+    MUX: Mux = @fromBackingInt(@intCast(0x7)),
+    padding: u29 = 0,
+};
+
+pub const ClkPeripheral = enum(u32) {
+    I3C0 = 0xA0, // I3C0_FCLK
+    CTIMER0 = 0xA8,
+    CTIMER1 = 0xB0,
+    CTIMER2 = 0xB8,
+    CTIMER3 = 0xC0,
+    CTIMER4 = 0xC8,
+    FLEXIO0 = 0xD8,
+    LPI2C0 = 0xE0,
+    LPI2C1 = 0xE8,
+    LPSPI0 = 0xF0,
+    LPSPI1 = 0xF8,
+    LPUART0 = 0x100,
+    LPUART1 = 0x108,
+    LPUART2 = 0x110,
+    LPUART3 = 0x118,
+    LPUART4 = 0x120,
+    ADC0 = 0x140,
+    ADC1 = 0x148,
+    DAC0 = 0x170,
+    FLEXCAN0 = 0x178,
+    LPI2C2 = 0x180,
+    LPI2C3 = 0x188,
+    CLKOUT = 0x198,
+
+    pub inline fn clksel(self: ClkPeripheral) *volatile ClockMux {
+        return @ptrFromInt(@backingInt(self) + mrcc_addr);
+    }
+
+    pub inline fn clkdiv(self: ClkPeripheral) *volatile ClockDiv {
+        return @ptrFromInt(@backingInt(self) + 4 + mrcc_addr);
+    }
+};
 
 pub inline fn unlock_clock_configuration() void {
     chip.peripherals.SYSCON.CLKUNLOCK.write(.{ .UNLOCK = .ENABLE });
@@ -321,7 +399,7 @@ pub const Clock_Frequencies = struct {
     fro_hf: usize = 0,
     fro_hf_div: usize = 0,
     clk_48m: usize = 0,
-    fro_12m: usize = 0,
+    fro_12m: usize = 12_000_000,
     clk_1m: usize = 1_000_000,
     main_clk: usize = 0,
     cpu_clk: usize = 0,
@@ -519,4 +597,27 @@ fn get_flash_wait_states(mode: Drive_Mode, cpu_clk: usize) u4 {
             } else return 3;
         },
     }
+}
+
+pub fn set_clock(peri: ClkPeripheral, div: u4, sel: Mux) void {
+    unlock_clock_configuration();
+    defer freeze_clock_configuration();
+
+    const clk_mux = peri.clksel();
+    const clk_div = peri.clkdiv();
+
+    clk_mux.* = .{ .MUX = sel };
+    clk_div.* = .{
+        .DIV = div,
+        .HALT = .OFF,
+        .RESET = .OFF,
+    };
+
+    clk_div.* = .{
+        .DIV = div,
+        .HALT = .ON,
+        .RESET = .ON,
+    };
+
+    while (clk_div.UNSTAB == .OFF) {}
 }
