@@ -51,7 +51,7 @@ pub const rcc = struct {
     const util = @import("common/util.zig");
 
     // Any peripheral that must be enable in RCC.
-    pub const Peripherals = enum.Peripherals;
+    pub const Peripherals = enums.Peripherals;
 
     ///configure the power and clock registers before enabling the RTC
     ///this function also can be called from `rtc.enable()`
