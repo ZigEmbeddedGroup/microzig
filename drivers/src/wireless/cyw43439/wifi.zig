@@ -357,7 +357,8 @@ fn response_poll(self: *Self, cmd: ioctl.Cmd, data: ?[]u8) !usize {
                     return error.Cyw43InvalidCommandStatus;
                 }
             },
-            else => self.log_response(&rsp),
+            .event => self.handle_event(&rsp),
+            .data => self.log_response(&rsp),
         }
     }
     log.err("ioctl: missing response in response_poll", .{});
@@ -367,6 +368,9 @@ fn response_poll(self: *Self, cmd: ioctl.Cmd, data: ?[]u8) !usize {
 pub const JoinOptions = struct {
     security: Security = .wpa2_psk,
     wait_ms: u32 = 30 * 1000,
+    /// Only enable when retrying the same network and credentials. An automatic
+    /// reassociation completed during configuration can satisfy this request.
+    preserve_auto_reconnect: bool = false,
 
     pub const Security = enum {
         open,
@@ -378,6 +382,8 @@ pub const JoinOptions = struct {
 
 pub fn join(self: *Self, ssid: []const u8, pwd: []const u8, opt: JoinOptions) !JoinPoller {
     self.err = null;
+    self.event_log = .{};
+    self.join_state = .none;
 
     var buf: [64]u8 = @splat(0); // space for 10 addresses
     // Enable multicast
@@ -433,13 +439,34 @@ pub fn join(self: *Self, ssid: []const u8, pwd: []const u8, opt: JoinOptions) !J
         .open => &.{ 0, 0, 0, 0 },
     });
 
-    try self.set_cmd(.set_ssid, ioctl.encode_ssid(&buf, ssid));
+    // The radio can automatically reassociate while command replies are being
+    // polled. When retrying the same credentials, keep that authenticated link
+    // instead of clearing its events and aborting it with another set_ssid.
+    if (opt.preserve_auto_reconnect and
+        self.event_log.auth == .success and
+        self.event_log.link == .success and
+        self.event_log.psk_sup == .success and
+        (self.event_log.assoc == .success or self.event_log.join == .success))
+    {
+        // Automatic reassociation does not emit the explicit set_ssid reply.
+        self.event_log.set_ssid = .success;
+        self.err = null;
+        self.join_state = .joined;
+        log.debug("preserving authenticated automatic reassociation", .{});
+        return .{ .parent = self };
+    }
 
+    // Configuration may have consumed events from the previous association.
+    // Start the new attempt before set_ssid: its response can be interleaved
+    // with authentication/link events, including a completed join.
+    self.err = null;
+    self.event_log = .{};
+    self.join_state = .joining;
     if (opt.security == .open) {
         self.event_log.psk_sup = .success;
     }
 
-    self.join_state = .joining;
+    try self.set_cmd(.set_ssid, ioctl.encode_ssid(&buf, ssid));
     return .{ .parent = self };
 }
 
@@ -1070,4 +1097,127 @@ test "receive capacity rejects oversized packets and polls full Ethernet frames"
     try testing.expectEqual(@as(usize, 0), mock.packet_reads);
     try wifi.poll();
     try testing.expectEqual(@as(usize, 1), mock.packet_reads);
+}
+
+test "control response polling preserves interleaved reconnect events" {
+    const Mock = struct {
+        index: usize = 0,
+        const events = [_]ioctl.EventType{ .auth, .reassoc, .link, .psk_sup, .join, .set_ssid };
+        fn read(ptr: *anyopaque, words: []u32) void {
+            const self: *@This() = @ptrCast(@alignCast(ptr));
+            const is_event = self.index < events.len;
+            const len: u16 = if (is_event) 94 else 28;
+            if (words.len == 2) {
+                words[0] = @as(u32, 1) << 8 | @as(u32, len) << 9;
+                words[1] = 0;
+                return;
+            }
+            @memset(words, 0);
+            const packet = mem.sliceAsBytes(words);
+            mem.writeInt(u16, packet[0..2], len, .little);
+            mem.writeInt(u16, packet[2..4], ~len, .little);
+            if (is_event) {
+                packet[5] = 1;
+                packet[7] = 14;
+                packet[14] = 0x20;
+                packet[17] = 1;
+                const head = 22;
+                mem.writeInt(u16, packet[head + 12 ..][0..2], 0x886c, .big);
+                @memcpy(packet[head + 19 ..][0..3], &[_]u8{ 0, 0x10, 0x18 });
+                mem.writeInt(u16, packet[head + 26 ..][0..2], 1, .big); // link up
+                mem.writeInt(u32, packet[head + 28 ..][0..4], @backingInt(events[self.index]), .big);
+                if (events[self.index] == .psk_sup)
+                    mem.writeInt(u32, packet[head + 32 ..][0..4], @backingInt(ioctl.EventStatus.unsolicited), .big);
+            } else {
+                packet[7] = 12;
+                mem.writeInt(u32, packet[12..16], @backingInt(ioctl.Cmd.set_ssid), .little);
+                mem.writeInt(u16, packet[22..24], 7, .little);
+            }
+            self.index += 1;
+        }
+        fn write(_: *anyopaque, _: []u32) void {
+            unreachable;
+        }
+        fn irq(_: *anyopaque) void {}
+        fn sleep(_: u32) void {}
+    };
+    var mock: Mock = .{};
+    var bus: Bus = .{
+        .spi = .{ .ptr = &mock, .vtable = &.{ .read = Mock.read, .write = Mock.write, .irq_cleared = Mock.irq } },
+        .sleep_ms = Mock.sleep,
+    };
+    var wifi: Self = .{ .bus = &bus, .join_state = .joining, .request_id = 7 };
+    try testing.expectEqual(@as(usize, 0), try wifi.response_poll(.set_ssid, null));
+    try testing.expectEqual(JoinState.joined, wifi.join_state);
+    try testing.expectEqual(EventLog.EventState.success, wifi.event_log.auth);
+    try testing.expectEqual(EventLog.EventState.success, wifi.event_log.assoc);
+    try testing.expectEqual(EventLog.EventState.success, wifi.event_log.psk_sup);
+}
+
+test "join preserves automatic reassociation only when explicitly requested" {
+    const Mock = struct {
+        cmd: u32 = 0,
+        id: u16 = 0,
+        event_index: usize = 0,
+        set_ssid_count: usize = 0,
+        const events = [_]ioctl.EventType{ .auth, .reassoc, .link, .join, .psk_sup };
+        fn write(ptr: *anyopaque, words: []u32) void {
+            const self: *@This() = @ptrCast(@alignCast(ptr));
+            const packet = mem.sliceAsBytes(words)[4..];
+            self.cmd = mem.readInt(u32, packet[12..16], .little);
+            self.id = mem.readInt(u16, packet[22..24], .little);
+            if (self.cmd == @backingInt(ioctl.Cmd.set_ssid)) self.set_ssid_count += 1;
+        }
+        fn read(ptr: *anyopaque, words: []u32) void {
+            const self: *@This() = @ptrCast(@alignCast(ptr));
+            const is_event = self.cmd == @backingInt(ioctl.Cmd.set_wpa_auth) and self.event_index < events.len;
+            const len: u16 = if (is_event) 94 else 28;
+            if (words.len == 2) {
+                words[0] = @as(u32, 1) << 8 | @as(u32, len) << 9;
+                words[1] = 0;
+                return;
+            }
+            @memset(words, 0);
+            const packet = mem.sliceAsBytes(words);
+            mem.writeInt(u16, packet[0..2], len, .little);
+            mem.writeInt(u16, packet[2..4], ~len, .little);
+            if (is_event) {
+                packet[5] = 1;
+                packet[7] = 14;
+                packet[14] = 0x20;
+                packet[17] = 1;
+                const head = 22;
+                mem.writeInt(u16, packet[head + 12 ..][0..2], 0x886c, .big);
+                @memcpy(packet[head + 19 ..][0..3], &[_]u8{ 0, 0x10, 0x18 });
+                mem.writeInt(u16, packet[head + 26 ..][0..2], 1, .big);
+                mem.writeInt(u32, packet[head + 28 ..][0..4], @backingInt(events[self.event_index]), .big);
+                if (events[self.event_index] == .psk_sup)
+                    mem.writeInt(u32, packet[head + 32 ..][0..4], @backingInt(ioctl.EventStatus.unsolicited), .big);
+                self.event_index += 1;
+            } else {
+                packet[7] = 12;
+                mem.writeInt(u32, packet[12..16], self.cmd, .little);
+                mem.writeInt(u16, packet[22..24], self.id, .little);
+            }
+        }
+        fn irq(_: *anyopaque) void {}
+        fn sleep(_: u32) void {}
+    };
+    inline for (.{ true, false }) |preserve| {
+        var mock: Mock = .{};
+        var bus: Bus = .{
+            .spi = .{ .ptr = &mock, .vtable = &.{ .read = Mock.read, .write = Mock.write, .irq_cleared = Mock.irq } },
+            .sleep_ms = Mock.sleep,
+        };
+        var wifi: Self = .{ .bus = &bus };
+        var poller = try wifi.join("test-network", "test-password", .{ .preserve_auto_reconnect = preserve });
+        if (preserve) {
+            try testing.expectEqual(JoinState.joined, wifi.join_state);
+            try testing.expectEqual(@as(usize, 0), mock.set_ssid_count);
+            try testing.expect(!try poller.poll());
+        } else {
+            try testing.expectEqual(JoinState.joining, wifi.join_state);
+            try testing.expectEqual(@as(usize, 1), mock.set_ssid_count);
+        }
+    }
 }
