@@ -1,4 +1,4 @@
-.{ .zig_version = "0.17.0", .tests = .{
+.{ .zig_version = "0.17.1", .tests = .{
     .{ .address = 16969728, .expected = .{
         .line = 163,
         .column = 33,
