@@ -14,9 +14,16 @@ pub const Define = struct {
     value: i64,
 };
 
+pub const Label = struct {
+    name: []const u8,
+    offset: u5,
+};
+
 pub const Program = struct {
     name: []const u8,
     defines: []const Define,
+    /// Public labels
+    labels: []const Label,
 
     /// Stores the raw instruction stream.
     instructions: []const u16,
@@ -30,6 +37,13 @@ pub const Program = struct {
 
     pub fn get_mask(program: Program) u32 {
         return (@as(u32, 1) << @as(u5, @intCast(program.instructions.len))) - 1;
+    }
+
+    pub fn get_label_by_name(program: Program, name: []const u8) ?u5 {
+        return for (program.labels) |label| {
+            if (std.mem.eql(u8, label.name, name))
+                break label.offset;
+        } else null;
     }
 };
 
@@ -101,16 +115,12 @@ pub fn assemble_impl(comptime chip: Chip, comptime source: []const u8, diags: *?
     for (encoder_output.programs.slice()) |bounded|
         try programs.append(bounded.to_exported_program());
 
+    var defines = BoundedArray(Define, options.encode.max_defines).init(0) catch unreachable;
+    for (encoder_output.global_defines.slice()) |define|
+        defines.append(.{ .name = define.name, .value = define.value }) catch unreachable;
+
     return Output{
-        .defines = blk: {
-            var tmp = BoundedArray(Define, options.encode.max_defines).init(0) catch unreachable;
-            for (encoder_output.global_defines.slice()) |define|
-                tmp.append(.{
-                    .name = define.name,
-                    .value = define.value,
-                }) catch unreachable;
-            break :blk comptime_copy(Define, tmp.slice());
-        },
+        .defines = comptime_copy(Define, defines.slice()),
         .programs = comptime_copy(Program, programs.slice()),
     };
 }

@@ -81,6 +81,11 @@ pub fn Encoder(comptime chip: Chip, comptime options: Options) type {
             wrap_target: ?u5,
             wrap: ?u5,
 
+            fn comptime_copy(comptime T: type, comptime slice: []const T) []const T {
+                const arr: [slice.len]T = slice[0..slice.len].*;
+                return &arr;
+            }
+
             pub fn to_exported_program(comptime bounded: BoundedProgram) assembler.Program {
                 comptime var program_name: [bounded.name.len]u8 = undefined;
                 std.mem.copyForwards(u8, &program_name, bounded.name);
@@ -101,6 +106,19 @@ pub fn Encoder(comptime chip: Chip, comptime options: Options) type {
 
                         const defines_const = tmp;
                         break :blk defines_const.const_slice();
+                    },
+                    .labels = blk: {
+                        var tmp = BoundedArray(assembler.Label, 32).init(0) catch unreachable;
+                        for (bounded.labels.slice()) |label| {
+                            if (label.public) {
+                                tmp.append(.{
+                                    .name = comptime_copy(u8, label.name),
+                                    .offset = label.index,
+                                }) catch unreachable;
+                            }
+                        }
+
+                        break :blk comptime_copy(assembler.Label, tmp.slice());
                     },
                     .instructions = @as([]const u16, @ptrCast(bounded.instructions.const_slice())),
                     .relocations = @as([]const assembler.Relocation, @ptrCast(bounded.relocations.const_slice())),

@@ -772,7 +772,7 @@ pub const GlobalConfiguration = struct {
         for (@typeInfo(GlobalConfiguration).@"struct".field_names) |field_name| {
             if (@field(self, field_name)) |pin_config| {
                 const name: []const u8 = pin_config.name orelse field_name;
-                const typ: type = if (pin_config.function == .SIO)
+                const typ: type = if (pin_config.function == .SIO or pin_config.function.is_pio())
                     gpio.Pin
                 else if (pin_config.function.is_pwm())
                     pwm.Pwm
@@ -802,7 +802,7 @@ pub const GlobalConfiguration = struct {
             if (@field(self, field_name)) |pin_config| {
                 const cname = pin_config.name orelse field_name;
                 if (@hasField(T, cname)) {
-                    if (pin_config.function == .SIO) {
+                    if (comptime pin_config.function == .SIO or pin_config.function.is_pio()) {
                         @field(ret, cname) = gpio.num(@backingInt(@field(Pin, field_name)));
                     } else if (comptime pin_config.function.is_pwm()) {
                         @field(ret, cname) = pwm.Pwm{
