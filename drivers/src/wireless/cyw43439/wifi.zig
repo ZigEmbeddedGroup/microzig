@@ -1099,40 +1099,60 @@ test "receive capacity rejects oversized packets and polls full Ethernet frames"
     try testing.expectEqual(@as(usize, 1), mock.packet_reads);
 }
 
+// Shared wire fixtures for the join tests; keep encoding independent of Response.
+const JoinTestPackets = struct {
+    const sdpcm_len = 12;
+    const control_len = sdpcm_len + 16; // CDC header, no response data
+    const event_offset = sdpcm_len + 2 + 4 + 4; // bus padding, BDC header, BDC padding
+    const event_len = event_offset + 14 + 10 + 48; // Ethernet, vendor header, event message
+
+    fn reply(words: []u32, typ: ?ioctl.EventType, command: u32, id: u16) void {
+        const len: u16 = if (typ != null) event_len else control_len;
+        @memset(words, 0);
+        const packet = mem.sliceAsBytes(words);
+        // Radio/host SDPCM and CDC headers use little-endian fields.
+        mem.writeInt(u16, packet[0..2], len, .little);
+        mem.writeInt(u16, packet[2..4], ~len, .little);
+        if (typ) |event_type| {
+            packet[5] = 1; // SDPCM event channel
+            packet[7] = sdpcm_len + 2; // BDC follows two bytes of bus padding
+            packet[14] = 0x20; // BDC version 2 in the upper nibble
+            packet[17] = 1; // BDC payload offset, in 4-byte words
+
+            // Inside BDC, Ethernet/vendor event fields use network byte order.
+            const eth = packet[event_offset..];
+            mem.writeInt(u16, eth[12..14], 0x886c, .big); // Broadcom EtherType, after both MACs
+            @memcpy(eth[19..22], &[_]u8{ 0x00, 0x10, 0x18 }); // Broadcom OUI in vendor header
+            const msg = eth[14 + 10 ..]; // skip Ethernet and vendor headers
+            mem.writeInt(u16, msg[2..4], 1, .big); // event flags: link up
+            mem.writeInt(u32, msg[4..8], @backingInt(event_type), .big);
+            const status: ioctl.EventStatus = if (event_type == .psk_sup) .unsolicited else .success;
+            mem.writeInt(u32, msg[8..12], @backingInt(status), .big);
+        } else {
+            packet[7] = sdpcm_len;
+            const cdc = packet[sdpcm_len..];
+            mem.writeInt(u32, cdc[0..4], command, .little);
+            mem.writeInt(u16, cdc[10..12], id, .little); // after cmd, outlen, inlen and flags
+        }
+    }
+};
+
 test "control response polling preserves interleaved reconnect events" {
+    const request_id = 7;
     const Mock = struct {
         index: usize = 0,
         const events = [_]ioctl.EventType{ .auth, .reassoc, .link, .psk_sup, .join, .set_ssid };
         fn read(ptr: *anyopaque, words: []u32) void {
             const self: *@This() = @ptrCast(@alignCast(ptr));
             const is_event = self.index < events.len;
-            const len: u16 = if (is_event) 94 else 28;
-            if (words.len == 2) {
+            const len: u16 = if (is_event) JoinTestPackets.event_len else JoinTestPackets.control_len;
+            if (words.len == 2) { // bus-status read, plus trailing SPI status word
+                // gSPI status: F2 packet available at bit 8, packet length at bits 9..19.
                 words[0] = @as(u32, 1) << 8 | @as(u32, len) << 9;
                 words[1] = 0;
                 return;
             }
-            @memset(words, 0);
-            const packet = mem.sliceAsBytes(words);
-            mem.writeInt(u16, packet[0..2], len, .little);
-            mem.writeInt(u16, packet[2..4], ~len, .little);
-            if (is_event) {
-                packet[5] = 1;
-                packet[7] = 14;
-                packet[14] = 0x20;
-                packet[17] = 1;
-                const head = 22;
-                mem.writeInt(u16, packet[head + 12 ..][0..2], 0x886c, .big);
-                @memcpy(packet[head + 19 ..][0..3], &[_]u8{ 0, 0x10, 0x18 });
-                mem.writeInt(u16, packet[head + 26 ..][0..2], 1, .big); // link up
-                mem.writeInt(u32, packet[head + 28 ..][0..4], @backingInt(events[self.index]), .big);
-                if (events[self.index] == .psk_sup)
-                    mem.writeInt(u32, packet[head + 32 ..][0..4], @backingInt(ioctl.EventStatus.unsolicited), .big);
-            } else {
-                packet[7] = 12;
-                mem.writeInt(u32, packet[12..16], @backingInt(ioctl.Cmd.set_ssid), .little);
-                mem.writeInt(u16, packet[22..24], 7, .little);
-            }
+            JoinTestPackets.reply(words, if (is_event) events[self.index] else null, @backingInt(ioctl.Cmd.set_ssid), request_id);
             self.index += 1;
         }
         fn write(_: *anyopaque, _: []u32) void {
@@ -1146,7 +1166,7 @@ test "control response polling preserves interleaved reconnect events" {
         .spi = .{ .ptr = &mock, .vtable = &.{ .read = Mock.read, .write = Mock.write, .irq_cleared = Mock.irq } },
         .sleep_ms = Mock.sleep,
     };
-    var wifi: Self = .{ .bus = &bus, .join_state = .joining, .request_id = 7 };
+    var wifi: Self = .{ .bus = &bus, .join_state = .joining, .request_id = request_id };
     try testing.expectEqual(@as(usize, 0), try wifi.response_poll(.set_ssid, null));
     try testing.expectEqual(JoinState.joined, wifi.join_state);
     try testing.expectEqual(EventLog.EventState.success, wifi.event_log.auth);
@@ -1163,42 +1183,24 @@ test "join preserves automatic reassociation only when explicitly requested" {
         const events = [_]ioctl.EventType{ .auth, .reassoc, .link, .join, .psk_sup };
         fn write(ptr: *anyopaque, words: []u32) void {
             const self: *@This() = @ptrCast(@alignCast(ptr));
-            const packet = mem.sliceAsBytes(words)[4..];
-            self.cmd = mem.readInt(u32, packet[12..16], .little);
-            self.id = mem.readInt(u16, packet[22..24], .little);
+            const packet = mem.sliceAsBytes(words)[@sizeOf(u32)..]; // skip SPI command word
+            const cdc = packet[JoinTestPackets.sdpcm_len..];
+            self.cmd = mem.readInt(u32, cdc[0..4], .little);
+            self.id = mem.readInt(u16, cdc[10..12], .little); // CDC request ID
             if (self.cmd == @backingInt(ioctl.Cmd.set_ssid)) self.set_ssid_count += 1;
         }
         fn read(ptr: *anyopaque, words: []u32) void {
             const self: *@This() = @ptrCast(@alignCast(ptr));
             const is_event = self.cmd == @backingInt(ioctl.Cmd.set_wpa_auth) and self.event_index < events.len;
-            const len: u16 = if (is_event) 94 else 28;
-            if (words.len == 2) {
+            const len: u16 = if (is_event) JoinTestPackets.event_len else JoinTestPackets.control_len;
+            if (words.len == 2) { // bus-status read, plus trailing SPI status word
+                // gSPI status: F2 packet available at bit 8, packet length at bits 9..19.
                 words[0] = @as(u32, 1) << 8 | @as(u32, len) << 9;
                 words[1] = 0;
                 return;
             }
-            @memset(words, 0);
-            const packet = mem.sliceAsBytes(words);
-            mem.writeInt(u16, packet[0..2], len, .little);
-            mem.writeInt(u16, packet[2..4], ~len, .little);
-            if (is_event) {
-                packet[5] = 1;
-                packet[7] = 14;
-                packet[14] = 0x20;
-                packet[17] = 1;
-                const head = 22;
-                mem.writeInt(u16, packet[head + 12 ..][0..2], 0x886c, .big);
-                @memcpy(packet[head + 19 ..][0..3], &[_]u8{ 0, 0x10, 0x18 });
-                mem.writeInt(u16, packet[head + 26 ..][0..2], 1, .big);
-                mem.writeInt(u32, packet[head + 28 ..][0..4], @backingInt(events[self.event_index]), .big);
-                if (events[self.event_index] == .psk_sup)
-                    mem.writeInt(u32, packet[head + 32 ..][0..4], @backingInt(ioctl.EventStatus.unsolicited), .big);
-                self.event_index += 1;
-            } else {
-                packet[7] = 12;
-                mem.writeInt(u32, packet[12..16], self.cmd, .little);
-                mem.writeInt(u16, packet[22..24], self.id, .little);
-            }
+            JoinTestPackets.reply(words, if (is_event) events[self.event_index] else null, self.cmd, self.id);
+            if (is_event) self.event_index += 1;
         }
         fn irq(_: *anyopaque) void {}
         fn sleep(_: u32) void {}
