@@ -303,7 +303,7 @@ fn do_resize(ptr: *anyopaque, memory: []u8, _: Alignment, new_len: usize, _: usi
 
         chunk.get_next().unlink(self);
 
-        chunk._size = combined_size;
+        chunk._size = combined_size | 0x01;
         chunk.get_next().previous_size = combined_size;
     }
 
@@ -1007,6 +1007,25 @@ test "resize - grow in place when next chunk is free" {
 
     // Pointer should remain the same
     try testing.expectEqual(original_ptr, mem.ptr);
+    try testing.expect(alloc.dbg_integrity_check());
+
+    a.free(mem);
+}
+
+test "resize - grow entire next chunk stays allocated" {
+    var buffer: [2048]u8 align(16) = undefined;
+    var alloc = try Alloc.init_with_buffer(&buffer);
+    const a = alloc.allocator();
+    const max_size = alloc.max_alloc_size();
+
+    var mem = try a.alloc(u8, 64);
+    @memset(mem, 0xff);
+
+    try testing.expect(a.resize(mem, max_size));
+    mem = mem.ptr[0..max_size];
+
+    try testing.expect(!Chunk.from_data(mem, &alloc).is_free(&alloc));
+    try testing.expectEqualSlices(u8, &(@as([64]u8, @splat(0xff))), mem[0..64]);
     try testing.expect(alloc.dbg_integrity_check());
 
     a.free(mem);
