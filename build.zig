@@ -67,6 +67,7 @@ pub fn build(b: *Build) void {
             .exclude_dirs = &.{b.path("sim")},
         });
         builder.addRule(.{ .builtin = .field_naming }, .{
+            // there is a lot of fields that follows random naming convention
             .error_field = .off,
             .error_field_min_len = .off,
             .error_field_max_len = .off,
@@ -95,27 +96,26 @@ pub fn build(b: *Build) void {
         // }); // Struct declaration should be TitleCase
         builder.addRule(.{ .builtin = .function_naming }, .{
             .exclude_export = true,
-            .function = .off, //.{ .@"error" = .snake_case }, // vTaskDelay
+            .function = .off, //.{ .@"error" = .snake_case }, // vTaskDelay and more
             .function_that_returns_type = .off,
             .function_arg = .off, // TODO
             .function_arg_that_is_type = .off, // TODO
             .function_arg_that_is_fn = .off, //.{ .@"error" = .snake_case }, // TODO: callbacks in rp2xxx
             .function_arg_that_is_type_fn = .{ .@"error" = .snake_case },
-            // .function_that_returns_type = , //
         });
         builder.addRule(.{ .builtin = .file_naming }, .{
             // i don't think there is a way to disable this check for specific files via comment
             .file_namespace = .off,
             .file_struct = .off,
         });
-        builder.addRule(.{ .builtin = .import_ordering }, .{}); // TODO
+        // builder.addRule(.{ .builtin = .import_ordering }, .{}); // TODO
         // builder.addRule(.{ .builtin = .no_unused }, .{}); // doesn't handle @field so it triggers for every instruction in aviron
         // builder.addRule(.{ .builtin = .no_deprecated }, .{}); // TODO
         // builder.addRule(.{ .builtin = .no_empty_block }, .{}); // TODO: requires comment in empty blocks
-        // builder.addRule(.{ .builtin = .no_inferred_error_unions }, .{}); // TODO:
-        // builder.addRule(.{ .builtin = .no_orelse_unreachable }, .{}); // TODO: maybe this is worth using?
-        // builder.addRule(.{ .builtin = .require_labeled_continue }, .{}); // TODO
-        // builder.addRule(.{ .builtin = .no_unsafe_undefined }, .{}); // TODO
+        // builder.addRule(.{ .builtin = .no_inferred_error_unions }, .{}); // TODO:maybe this is worth using?
+        // builder.addRule(.{ .builtin = .no_orelse_unreachable }, .{}); // TODO: ditto
+        // builder.addRule(.{ .builtin = .require_labeled_continue }, .{}); // TODO: ditto
+        // builder.addRule(.{ .builtin = .no_unsafe_undefined }, .{}); // TODO ditto
         // builder.addRule(.{ .builtin = .no_literal_only_bool_expression }, .{}); // TODO: there is only one issue in esp wifi
         builder.addRule(.{ .builtin = .no_hidden_allocations }, .{});
         builder.addRule(.{ .builtin = .switch_case_ordering }, .{
