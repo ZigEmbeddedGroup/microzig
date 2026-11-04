@@ -219,7 +219,7 @@ pub const Channel = struct {
     pub fn set_request(self: Channel, request: Request) void {
         const mux_index: u5 = switch (self.controller) {
             .dma1 => self.index,
-            .dma2 => self.index + 8,
+            .dma2 => @as(u5, self.index) + 8,
         };
         const zero_based: u5 = mux_index - 1;
         const shift: u5 = @intCast((zero_based % 4) * 8);
