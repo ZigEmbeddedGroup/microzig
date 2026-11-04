@@ -14,6 +14,8 @@ pub const LinkerScript = internals.LinkerScript;
 pub const Stack = internals.Stack;
 pub const MemoryRegion = internals.MemoryRegion;
 
+const zlinter = @import("zlinter");
+
 // If more ports are available, the error "error: evaluation exceeded 1000 backwards branches" may occur.
 // In such cases, consider increasing the argument value for @setEvalBranchQuota().
 const port_list: []const struct {
@@ -57,6 +59,17 @@ pub fn build(b: *Build) void {
     );
 
     b.installArtifact(generate_linker_script_exe);
+
+    const lint_cmd = b.step("lint", "Lint source code.");
+    lint_cmd.dependOn(step: {
+        var builder = zlinter.builder(b, .{});
+        builder.addPaths(.{
+            .exclude_dirs = &.{b.path("tools/sorcerer")},
+        });
+        builder.addRule(.{ .builtin = .no_hidden_allocations }, .{});
+        builder.addRule(.{ .builtin = .require_fmt }, .{});
+        break :step builder.build();
+    });
 }
 
 pub const PortSelect = struct {
