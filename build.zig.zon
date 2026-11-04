@@ -34,6 +34,11 @@
 
         .@"modules/riscv32-common" = .{ .path = "modules/riscv32-common" },
         .@"modules/rtt" = .{ .path = "modules/rtt" },
+        .zlinter = .{
+            // 0.17.x doens't compile on 0.17.1
+            .url = "git+https://github.com/kurtwagner/zlinter#1b79bec911fda0b4333bd012fbe21dc571c8f924",
+            .hash = "zlinter-0.0.1-OjQ08QVrFgD1IXOCrUAG-hE-_yoEgq1JXDNZmXNBnmM8",
+        },
     },
     .paths = .{
         "README.md",
