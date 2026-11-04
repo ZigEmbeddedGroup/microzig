@@ -10,7 +10,7 @@
 //! support `writev` and `writev_then_readv`.
 //!
 //! Functions return `!void` and pass results through pointers: on AVR, Zig
-//! 0.17.0 can't compile error unions with a non-void payload
+//! 0.17.1 can't compile error unions with a non-void payload
 //! (https://codeberg.org/ziglang/zig/issues/37099).
 
 const std = @import("std");
