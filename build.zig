@@ -14,6 +14,8 @@ pub const LinkerScript = internals.LinkerScript;
 pub const Stack = internals.Stack;
 pub const MemoryRegion = internals.MemoryRegion;
 
+const zlinter = @import("zlinter");
+
 // If more ports are available, the error "error: evaluation exceeded 1000 backwards branches" may occur.
 // In such cases, consider increasing the argument value for @setEvalBranchQuota().
 const port_list: []const struct {
@@ -57,6 +59,89 @@ pub fn build(b: *Build) void {
     );
 
     b.installArtifact(generate_linker_script_exe);
+
+    const lint_cmd = b.step("lint", "Lint source code.");
+    lint_cmd.dependOn(step: {
+        var builder = zlinter.builder(b, .{});
+        builder.addPaths(.{
+            .exclude_dirs = &.{b.path("sim")},
+        });
+        builder.addRule(.{ .builtin = .field_naming }, .{
+            .error_field = .off,
+            .error_field_min_len = .off,
+            .error_field_max_len = .off,
+
+            .enum_field = .off,
+            .enum_field_min_len = .off,
+            .enum_field_max_len = .off,
+
+            .struct_field = .off,
+            .struct_field_that_is_type = .off,
+            .struct_field_that_is_fn = .off, // .{ .@"error" = .snake_case }, // TODO: callbacks in rp2xxx
+            .struct_field_that_is_type_fn = .off, // .{ .@"error" = .snake_case }, // TODO: std.Options and coumple of places in rp2xxx
+            .struct_field_min_len = .off,
+            .struct_field_max_len = .off,
+
+            .union_field = .off,
+            .union_field_min_len = .off,
+            .union_field_max_len = .off,
+        });
+        // builder.addRule(.{ .builtin = .field_ordering }, .{}); // TODO: needs disable/enable comments for register definitions
+        // builder.addRule(.{ .builtin = .declaration_naming }, .{
+        //     .decl_name_min_len = .off,
+        //     .decl_name_max_len = .off,
+        //     .const_decl = .off,
+        //     .decl_that_is_namespace = .off, // single letter decls trigger this
+        // }); // Struct declaration should be TitleCase
+        builder.addRule(.{ .builtin = .function_naming }, .{
+            .exclude_export = true,
+            .function = .off, //.{ .@"error" = .snake_case }, // vTaskDelay
+            .function_that_returns_type = .off,
+            .function_arg = .off, // TODO
+            .function_arg_that_is_type = .off, // TODO
+            .function_arg_that_is_fn = .off, //.{ .@"error" = .snake_case }, // TODO: callbacks in rp2xxx
+            .function_arg_that_is_type_fn = .{ .@"error" = .snake_case },
+            // .function_that_returns_type = , //
+        });
+        builder.addRule(.{ .builtin = .file_naming }, .{
+            // i don't think there is a way to disable this check for specific files via comment
+            .file_namespace = .off,
+            .file_struct = .off,
+        });
+        builder.addRule(.{ .builtin = .import_ordering }, .{}); // TODO
+        // builder.addRule(.{ .builtin = .no_unused }, .{}); // doesn't handle @field so it triggers for every instruction in aviron
+        // builder.addRule(.{ .builtin = .no_deprecated }, .{}); // TODO
+        // builder.addRule(.{ .builtin = .no_empty_block }, .{}); // TODO: requires comment in empty blocks
+        // builder.addRule(.{ .builtin = .no_inferred_error_unions }, .{}); // TODO:
+        // builder.addRule(.{ .builtin = .no_orelse_unreachable }, .{}); // TODO: maybe this is worth using?
+        // builder.addRule(.{ .builtin = .require_labeled_continue }, .{}); // TODO
+        // builder.addRule(.{ .builtin = .no_unsafe_undefined }, .{}); // TODO
+        // builder.addRule(.{ .builtin = .no_literal_only_bool_expression }, .{}); // TODO: there is only one issue in esp wifi
+        builder.addRule(.{ .builtin = .no_hidden_allocations }, .{});
+        builder.addRule(.{ .builtin = .switch_case_ordering }, .{
+            .else_is_last = .off, // TODO
+        });
+        // builder.addRule(.{ .builtin = .max_positional_args }, .{}); // TODO
+        // builder.addRule(.{ .builtin = .no_comment_out_code }, .{}); // TODO: i think this is good to enable;
+        // builder.addRule(.{ .builtin = .no_todo }, .{}); // TODO: this require links to issues
+        builder.addRule(.{ .builtin = .no_literal_args }, .{
+            .detect_bool_literal = .off, // this might be good to implement
+            .detect_number_literal = .off,
+        });
+        // builder.addRule(.{ .builtin = .no_swallow_error }, .{}); // TODO
+        // builder.addRule(.{ .builtin = .no_panic }, .{});
+        // builder.addRule(.{ .builtin = .no_redundant_comptime }, .{}); // TODO
+        // builder.addRule(.{ .builtin = .require_exhaustive_enum_switch }, .{}); // thera are `else => ...`
+        // builder.addRule(.{ .builtin = .require_braces }, .{});
+        // builder.addRule(.{ .builtin = .require_doc_comment }, .{}); // TODO: a man can only dream
+        // builder.addRule(.{ .builtin = .require_errdefer_dealloc }, .{}); // TODO: there are couple of false psotivies with arena allcators
+        builder.addRule(.{ .builtin = .require_fmt }, .{});
+        // builder.addRule(.{ .builtin = .no_global_vars }, .{}); // symbols from linker are using this
+        builder.addRule(.{ .builtin = .build_zig_zon }, .{
+            .require_license_path = .off, // nested build.zig.zon doesn't have LICENSE
+        });
+        break :step builder.build();
+    });
 }
 
 pub const PortSelect = struct {
