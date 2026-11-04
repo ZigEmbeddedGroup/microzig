@@ -2,7 +2,7 @@ const std = @import("std");
 
 // concrete arch's that we support in codegen, for stuff like interrupt
 // table generation
-pub const Arch = enum {
+pub const Arch = enum { // zlinter-disable-current-line field_ordering
     unknown,
 
     // arm

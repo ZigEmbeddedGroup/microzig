@@ -133,7 +133,7 @@ pub const Chip = struct {
     url: ?[]const u8 = null,
 
     /// The provider for register definitions.
-    register_definition: union(enum) {
+    register_definition: union(enum) { // zlinter-disable-current-line field_ordering
         /// Use `regz` to create a json file from a SVD schema.
         svd: LazyPath,
 
@@ -205,7 +205,7 @@ pub const Board = struct {
 /// The resulting binary format for the firmware file.
 /// A lot of embedded systems don't use plain ELF files, thus we provide means
 /// to convert the resulting ELF into other common formats.
-pub const BinaryFormat = union(enum) {
+pub const BinaryFormat = union(enum) { // zlinter-disable-current-line field_ordering
     /// [Executable and Linkable Format](https://en.wikipedia.org/wiki/Executable_and_Linkable_Format), the standard output from the compiler.
     elf,
 
@@ -259,7 +259,7 @@ pub const LinkerScript = struct {
     /// Generate assert for existence of microzig_main
     assert_microzig_main: bool = true,
 
-    pub const GenerateOptions = union(enum) {
+    pub const GenerateOptions = union(enum) { // zlinter-disable-current-line field_ordering
         /// Only generates a comment with target info.
         none,
         /// Only generates memory regions.
@@ -306,7 +306,7 @@ pub const MemoryRegion = struct {
         }
     }
 
-    pub const Tag = enum {
+    pub const Tag = enum { // zlinter-disable-current-line field_ordering
         /// This is a (normally) immutable memory region where the code is stored.
         flash,
 

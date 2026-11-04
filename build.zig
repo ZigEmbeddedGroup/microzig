@@ -87,7 +87,7 @@ pub fn build(b: *Build) void {
             .union_field_min_len = .off,
             .union_field_max_len = .off,
         });
-        // builder.addRule(.{ .builtin = .field_ordering }, .{}); // TODO: needs disable/enable comments for register definitions
+        builder.addRule(.{ .builtin = .field_ordering }, .{}); // TODO: needs disable/enable comments for register definitions
         // builder.addRule(.{ .builtin = .declaration_naming }, .{
         //     .decl_name_min_len = .off,
         //     .decl_name_max_len = .off,
