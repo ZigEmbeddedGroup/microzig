@@ -67,10 +67,10 @@ fn run_test(
     var flash_storage = aviron.Flash.Static(mcu_config.flash_size){};
     var sram = aviron.FixedSizeMemory(mcu_config.sram_size, .{ .address_type = u24 }){};
 
-    var stdout = std.array_list.Managed(u8).init(gpa);
+    var stdout = std.array_list.Managed(u8).init(gpa); // zlinter-disable-current-line no_deprecated
     defer stdout.deinit();
 
-    var stderr = std.array_list.Managed(u8).init(gpa);
+    var stderr = std.array_list.Managed(u8).init(gpa); // zlinter-disable-current-line no_deprecated
     defer stderr.deinit();
 
     var io = IO{
@@ -325,8 +325,8 @@ const IO = struct {
     ramp_d: u8 = 0,
     e_ind: u8 = 0,
 
-    stdout: *std.array_list.Managed(u8),
-    stderr: *std.array_list.Managed(u8),
+    stdout: *std.array_list.Managed(u8), // zlinter-disable-current-line no_deprecated
+    stderr: *std.array_list.Managed(u8), // zlinter-disable-current-line no_deprecated
 
     stdin: []const u8,
 
