@@ -61,28 +61,28 @@ pub fn parse_pin(comptime spec: []const u8) type {
     };
 }
 
-pub fn route_pin(comptime pin: type, function: PinTarget) void {
+pub fn route_pin(pin: type, function: PinTarget) void {
     var val = pin.regs.pinsel_reg.read();
     @field(val, pin.regs.pinsel_field) = @backingInt(function);
     pin.regs.pinsel_reg.write(val);
 }
 
 pub const gpio = struct {
-    pub fn set_output(comptime pin: type) void {
+    pub fn set_output(pin: type) void {
         pin.regs.dir.raw |= pin.gpio_mask;
     }
-    pub fn set_input(comptime pin: type) void {
+    pub fn set_input(pin: type) void {
         pin.regs.dir.raw &= ~pin.gpio_mask;
     }
 
-    pub fn read(comptime pin: type) microzig.gpio.State {
+    pub fn read(pin: type) microzig.gpio.State {
         return if ((pin.regs.pin.raw & pin.gpio_mask) != 0)
             microzig.gpio.State.high
         else
             microzig.gpio.State.low;
     }
 
-    pub fn write(comptime pin: type, state: microzig.gpio.State) void {
+    pub fn write(pin: type, state: microzig.gpio.State) void {
         if (state == .high) {
             pin.regs.set.raw = pin.gpio_mask;
         } else {

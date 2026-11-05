@@ -89,7 +89,7 @@ pub const Diagnostics = struct {
 };
 
 /// Creates a copy of a slice at comptime that is guaranteed to be immutable.
-fn comptime_copy(comptime T: type, comptime slice: []const T) []const T {
+fn comptime_copy(T: type, comptime slice: []const T) []const T {
     const arr: [slice.len]T = slice[0..slice.len].*;
     return &arr;
 }

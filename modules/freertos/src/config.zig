@@ -85,7 +85,7 @@ pub fn check_true(rc: BaseType) bool {
 }
 
 /// Convert a nullable C handle to a Zig optional, returning OutOfMemory if null.
-pub fn check_handle(comptime T: type, handle: T) Error!T {
+pub fn check_handle(T: type, handle: T) Error!T {
     if (handle == null) return error.OutOfMemory;
     return handle;
 }

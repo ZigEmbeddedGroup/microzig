@@ -1,4 +1,4 @@
-pub fn Table(comptime T: type, comptime len: usize, comptime values: [len]T) type {
+pub fn Table(T: type, comptime len: usize, comptime values: [len]T) type {
     return struct {
         pub const data linksection(".progmem.data") = values;
 
@@ -8,7 +8,7 @@ pub fn Table(comptime T: type, comptime len: usize, comptime values: [len]T) typ
     };
 }
 
-pub inline fn read(comptime T: type, ptr: *const T) T {
+pub inline fn read(T: type, ptr: *const T) T {
     return ptr.*;
 }
 
