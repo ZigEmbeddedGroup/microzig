@@ -78,7 +78,7 @@ pub fn init_timer(comptime tim: timer.Instances) void {
     gptim.clear_interrupts();
 
     microzig.interrupt.enable_interrupts();
-    microzig.interrupt.enable(@field(microzig.cpu.ExternalInterrupt, @tagName(tim)));
+    microzig.interrupt.enable(@field(microzig.cpu.Interrupt, @tagName(tim)));
     gptim.start();
 
     tim_ctx = gptim;
