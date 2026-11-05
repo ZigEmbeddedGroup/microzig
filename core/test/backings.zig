@@ -3,7 +3,7 @@ const std = @import("std");
 const microzig = @import("../build.zig");
 
 fn root_dir() []const u8 {
-    return std.Io.Dir.path.dirname(@src().file) orelse unreachable;
+    return std.Io.Dir.path.dirname(@src().file).?;
 }
 
 const cpu = microzig.Cpu{
