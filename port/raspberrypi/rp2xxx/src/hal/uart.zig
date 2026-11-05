@@ -257,7 +257,7 @@ pub const UART = enum(u1) {
     fn apply_internal(uart: UART, config: Config) void {
         const uart_regs = uart.get_regs();
         const peri_freq = config.clock_config.peri.?.frequency();
-        uart.set_baudrate(config.baud_rate, peri_freq);
+        uart.set_baudrate(config.baud_rate, peri_freq); // zlinter-disable-current-line no_deprecated
         uart.set_format(config.word_bits, config.stop_bits, config.parity);
         uart.set_flow_control(config.flow_control);
         uart_regs.UARTLCR_H.modify(.{ .FEN = 1 });

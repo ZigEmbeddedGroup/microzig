@@ -144,7 +144,7 @@ pub const File = struct {
 pub const Node = union(enum) {
     pub const ID = u16;
     pub const Kind = std.meta.Tag(Node);
-    pub const Map = std.AutoArrayHashMapUnmanaged(ID, Node);
+    pub const Map = std.array_hash_map.Auto(ID, Node);
 
     file: File,
     dir: Dir,

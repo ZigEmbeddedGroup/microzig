@@ -34,7 +34,7 @@ fn atomic_load(comptime T: type, ptr: *volatile T, _: i32) T {
     return val;
 }
 
-fn atomic_rmw(comptime T: type, ptr: *volatile T, val: T, _: i32, comptime op: std.builtin.AtomicRmwOp) T {
+fn atomic_rmw(comptime T: type, ptr: *volatile T, val: T, _: i32, comptime op: std.lang.AtomicRmwOp) T {
     const save = atomic_lock();
     defer atomic_unlock(save);
     const tmp = ptr.*;

@@ -24,7 +24,7 @@ const Context = struct {
     db: *Database,
     arena: std.heap.ArenaAllocator,
     interrupt_groups: std.StringHashMapUnmanaged(std.ArrayList(InterruptGroupEntry)) = .empty,
-    inferred_register_group_offsets: std.AutoArrayHashMapUnmanaged(StructID, u64) = .{},
+    inferred_register_group_offsets: std.array_hash_map.Auto(StructID, u64) = .{},
 
     fn init(db: *Database) Context {
         return Context{
@@ -629,7 +629,7 @@ fn load_field(ctx: *Context, node: xml.Node, peripheral_struct_id: StructID, par
         var i = offset;
         while (i < 32) : (i += 1) {
             if (0 != (@as(u64, 1) << @as(u5, @intCast(i))) & mask) {
-                const field_name = try std.fmt.allocPrint(db.gpa, "{s}_bit{}", .{
+                const field_name = try db.gpa.print("{s}_bit{}", .{
                     name,
                     bit_count,
                 });
