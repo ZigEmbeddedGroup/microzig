@@ -31,7 +31,7 @@ pub fn parse_pin(comptime spec: []const u8) type {
     if (spec[0] != 'P')
         @compileError(invalid_format_msg);
 
-    const index = std.mem.indexOfScalar(u8, spec, '.') orelse @compileError(invalid_format_msg);
+    const index = std.mem.findScalar(u8, spec, '.') orelse @compileError(invalid_format_msg);
 
     const _port: comptime_int = std.fmt.parseInt(u3, spec[1..index], 10) catch @compileError(invalid_format_msg);
     const _pin: comptime_int = std.fmt.parseInt(u5, spec[index + 1 ..], 10) catch @compileError(invalid_format_msg);

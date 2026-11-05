@@ -270,14 +270,14 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
             var size = @sizeOf(descriptor.Configuration);
             var field_names: [driver_info.field_names.len][:0]const u8 = undefined;
             var field_types: [driver_info.field_names.len]type = undefined;
-            var field_attrs: [driver_info.field_names.len]std.builtin.Type.Struct.FieldAttributes = undefined;
+            var field_attrs: [driver_info.field_names.len]std.lang.Type.Struct.FieldAttributes = undefined;
             var ep_handler_types: [2][16]type = @splat(@splat(void));
             var ep_handler_names: [2][16][:0]const u8 = undefined;
             var ep_handler_drivers: [2][16]?usize = @splat(@splat(null));
             var itf_handlers: []const DriverEnum = &.{};
             var driver_alloc_names: []const [:0]const u8 = &.{};
             var driver_alloc_types: []const type = &.{};
-            var driver_alloc_attrs: []const std.builtin.Type.Struct.FieldAttributes = &.{};
+            var driver_alloc_attrs: []const std.lang.Type.Struct.FieldAttributes = &.{};
 
             for (driver_info.field_names, driver_info.field_types, 0..) |driver_field_name, driver_field_type, drv_id| {
                 // Get descriptor type for the current driver
@@ -291,7 +291,7 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
                 if (result.alloc_bytes) |len| {
                     driver_alloc_names = driver_alloc_names ++ &[_][:0]const u8{driver_field_name};
                     driver_alloc_types = driver_alloc_types ++ &[_]type{[len]u8};
-                    driver_alloc_attrs = driver_alloc_attrs ++ &[_]std.builtin.Type.Struct.FieldAttributes{.{ .@"align" = result.alloc_align }};
+                    driver_alloc_attrs = driver_alloc_attrs ++ &[_]std.lang.Type.Struct.FieldAttributes{.{ .@"align" = result.alloc_align }};
                 } else {
                     assert(result.alloc_align == null);
                 }

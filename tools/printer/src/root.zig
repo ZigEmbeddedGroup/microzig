@@ -38,7 +38,7 @@ fn output_line(
 ) !void {
     try terminal.writer.writeAll(line);
 
-    const prefix_index = std.mem.indexOf(u8, line, "0x") orelse return;
+    const prefix_index = std.mem.find(u8, line, "0x") orelse return;
     var after_prefix = line[prefix_index + 2 ..];
 
     var hex_digit_count: u32 = 0;
@@ -71,7 +71,7 @@ fn output_location_info(
 
     if (query_result.source_location) |src_loc| {
         try terminal.writer.print("{f}:{}:{}", .{
-            std.fs.path.fmtJoin(&.{ src_loc.dir_path, src_loc.file_path }),
+            std.Io.Dir.path.fmtJoin(&.{ src_loc.dir_path, src_loc.file_path }),
             src_loc.line,
             src_loc.column,
         });
