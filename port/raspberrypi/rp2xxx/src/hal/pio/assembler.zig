@@ -3,9 +3,9 @@ const std = @import("std");
 const BoundedArray = @import("bounded-array").BoundedArray;
 
 const Chip = @import("../chip.zig").Chip;
-const tokenizer = @import("assembler/tokenizer.zig");
-const encoder = @import("assembler/encoder.zig");
 
+pub const tokenizer = @import("assembler/tokenizer.zig");
+pub const encoder = @import("assembler/encoder.zig");
 pub const TokenizeOptions = tokenizer.Options;
 pub const EncodeOptions = encoder.Options;
 
