@@ -10,7 +10,7 @@ pub fn build(b: *Build) void {
 
     // Compile for huge amount of targets to detect breakage early on:
     for ([_]bool{ false, true }) |validation_single_threaded| {
-        for (std.enums.values(std.builtin.OptimizeMode)) |validation_optimize| {
+        for (std.enums.values(std.lang.Optimize)) |validation_optimize| {
             for (validation_target_list) |validation_target_query| {
                 const validation_target = b.resolveTargetQuery(validation_target_query);
 

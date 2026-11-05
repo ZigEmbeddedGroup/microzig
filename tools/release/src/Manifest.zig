@@ -325,10 +325,10 @@ pub fn serialize(manifest: *Manifest, allocator: Allocator, opts: SerializeOptio
     // Add or replace minimum_zig_version.
     if (opts.minimum_zig_version != null) {
         if (manifest.nodes.minimum_zig_version.unwrap()) |mzv_node| {
-            const mzv_text = try std.fmt.allocPrint(a, "\"{s}\"", .{opts.minimum_zig_version.?});
+            const mzv_text = try a.print("\"{s}\"", .{opts.minimum_zig_version.?});
             try fixups.replace_nodes_with_string.put(allocator, mzv_node, mzv_text);
         } else if (manifest.nodes.version.unwrap()) |version_node| {
-            const mzv_field = try std.fmt.allocPrint(a, "\n    .minimum_zig_version = \"{s}\",", .{opts.minimum_zig_version.?});
+            const mzv_field = try a.print("\n    .minimum_zig_version = \"{s}\",", .{opts.minimum_zig_version.?});
             try fixups.append_string_after_node.put(allocator, version_node, mzv_field);
         }
     }

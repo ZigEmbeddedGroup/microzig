@@ -1254,7 +1254,7 @@ test "oom - near exhaustion still works" {
     const a = alloc.allocator();
 
     // Allocate until near exhaustion
-    var allocations: std.ArrayListUnmanaged([]u8) = .empty;
+    var allocations: std.ArrayList([]u8) = .empty;
     defer allocations.deinit(testing.allocator);
 
     while (true) {
@@ -1448,7 +1448,7 @@ test "stress - random alloc/free pattern" {
     var prng = std.Random.DefaultPrng.init(12345);
     const random = prng.random();
 
-    var allocations: std.ArrayListUnmanaged([]u8) = .empty;
+    var allocations: std.ArrayList([]u8) = .empty;
     defer allocations.deinit(testing.allocator);
 
     // Perform random operations
@@ -1501,7 +1501,7 @@ test "stress - many small allocations" {
     var alloc = try Alloc.init_with_buffer(&buffer);
     const a = alloc.allocator();
 
-    var allocations: std.ArrayListUnmanaged([]u8) = .empty;
+    var allocations: std.ArrayList([]u8) = .empty;
     defer allocations.deinit(testing.allocator);
 
     // Allocate many small chunks
@@ -1537,7 +1537,7 @@ test "fallback - allocation delegates when primary exhausted" {
     const a = alloc1.allocator();
 
     // Exhaust primary
-    var primary_allocations: std.ArrayListUnmanaged([]u8) = .empty;
+    var primary_allocations: std.ArrayList([]u8) = .empty;
     defer primary_allocations.deinit(testing.allocator);
 
     while (true) {
@@ -1569,7 +1569,7 @@ test "fallback - free delegates correctly" {
     const mem1 = try a.alloc(u8, 32);
 
     // Exhaust primary to force fallback use
-    var temp_allocs: std.ArrayListUnmanaged([]u8) = .empty;
+    var temp_allocs: std.ArrayList([]u8) = .empty;
     defer temp_allocs.deinit(testing.allocator);
 
     while (true) {
@@ -1602,7 +1602,7 @@ test "fallback - chain of allocators" {
 
     const a = alloc1.allocator();
 
-    var all_allocations: std.ArrayListUnmanaged([]u8) = .empty;
+    var all_allocations: std.ArrayList([]u8) = .empty;
     defer all_allocations.deinit(testing.allocator);
 
     // Should be able to allocate from all three buffers
