@@ -179,7 +179,7 @@ pub const SPI = enum(u1) {
         return spi.get_regs().SSPSR.read().RNE == 1;
     }
 
-    fn validate_bitwidth(comptime PacketType: type) void {
+    fn validate_bitwidth(PacketType: type) void {
         if (@bitSizeOf(PacketType) < 4 or @bitSizeOf(PacketType) > 16)
             @compileError("PacketType must be a datatype with a size between 4 and 16 bits inclusive");
     }
@@ -202,7 +202,7 @@ pub const SPI = enum(u1) {
 
     /// Disable SPI, pre-fill the TX FIFO as much as possible, and then re-enable to start transmission.
     /// Leads to performance gains in thoroughput. Returns how many bytes were consumed from src.
-    fn prime_tx_fifo(spi: SPI, comptime PacketType: type, src_iter: *microzig.utilities.SliceVector([]const PacketType).Iterator) usize {
+    fn prime_tx_fifo(spi: SPI, PacketType: type, src_iter: *microzig.utilities.SliceVector([]const PacketType).Iterator) usize {
         const spi_regs = spi.get_regs();
         spi_regs.SSPCR1.modify(.{
             .SSE = 0,
@@ -221,7 +221,7 @@ pub const SPI = enum(u1) {
     }
 
     /// Same as prime_tx_fifo but for a repeated byte.
-    fn prime_tx_fifo_repeated(spi: SPI, comptime PacketType: type, repeated_byte: PacketType, repeat_count: usize) usize {
+    fn prime_tx_fifo_repeated(spi: SPI, PacketType: type, repeated_byte: PacketType, repeat_count: usize) usize {
         const spi_regs = spi.get_regs();
         spi_regs.SSPCR1.modify(.{
             .SSE = 0,
@@ -242,7 +242,7 @@ pub const SPI = enum(u1) {
     /// PacketType specifies the bit width of each packet using any of
     /// the types u4, u5, ..., u16. Data truncation is possible if this
     /// doesn't match the peripheral's configured bit width.
-    pub fn transceive_blocking(spi: SPI, comptime PacketType: type, src: []const PacketType, dst: []PacketType) void {
+    pub fn transceive_blocking(spi: SPI, PacketType: type, src: []const PacketType, dst: []PacketType) void {
         return spi.transceive_vecs_blocking(PacketType, &.{src}, &.{dst});
     }
 
@@ -257,7 +257,7 @@ pub const SPI = enum(u1) {
     ///       suffixes won't need to be concatenated/inserted to the original buffer, but can be managed
     ///       in a separate memory.
     ///
-    pub fn transceive_vecs_blocking(spi: SPI, comptime PacketType: type, src_vecs: []const []const PacketType, dst_vecs: []const []PacketType) void {
+    pub fn transceive_vecs_blocking(spi: SPI, PacketType: type, src_vecs: []const []const PacketType, dst_vecs: []const []PacketType) void {
         comptime validate_bitwidth(PacketType);
 
         const src_data = microzig.utilities.SliceVector([]const PacketType).init(src_vecs);
@@ -298,7 +298,7 @@ pub const SPI = enum(u1) {
     /// PacketType specifies the bit width of each packet using any of
     /// the types u4, u5, ..., u16. Data truncation is possible if this
     /// doesn't match the peripheral's configured bit width.
-    pub fn write_blocking(spi: SPI, comptime PacketType: type, src: []const PacketType) void {
+    pub fn write_blocking(spi: SPI, PacketType: type, src: []const PacketType) void {
         return spi.writev_blocking(PacketType, &.{src});
     }
 
@@ -312,7 +312,7 @@ pub const SPI = enum(u1) {
     /// PacketType specifies the bit width of each packet using any of
     /// the types u4, u5, ..., u16. Data truncation is possible if this
     /// doesn't match the peripheral's configured bit width.
-    pub fn writev_blocking(spi: SPI, comptime PacketType: type, src_vec: []const []const PacketType) void {
+    pub fn writev_blocking(spi: SPI, PacketType: type, src_vec: []const []const PacketType) void {
         comptime validate_bitwidth(PacketType);
 
         var src_iter = microzig.utilities.SliceVector([]const u8).init(src_vec).iterator();
@@ -354,7 +354,7 @@ pub const SPI = enum(u1) {
     /// PacketType specifies the bit width of each packet using any of
     /// the types u4, u5, ..., u16. Data truncation is possible if this
     /// doesn't match the peripheral's configured bit width.
-    pub fn read_blocking(spi: SPI, comptime PacketType: type, repeated_tx_data: PacketType, dst: []PacketType) void {
+    pub fn read_blocking(spi: SPI, PacketType: type, repeated_tx_data: PacketType, dst: []PacketType) void {
         return spi.readv_blocking(PacketType, repeated_tx_data, &.{dst});
     }
 
@@ -371,7 +371,7 @@ pub const SPI = enum(u1) {
     /// PacketType specifies the bit width of each packet using any of
     /// the types u4, u5, ..., u16. Data truncation is possible if this
     /// doesn't match the peripheral's configured bit width.
-    pub fn readv_blocking(spi: SPI, comptime PacketType: type, repeated_tx_data: PacketType, dst_vec: []const []PacketType) void {
+    pub fn readv_blocking(spi: SPI, PacketType: type, repeated_tx_data: PacketType, dst_vec: []const []PacketType) void {
         comptime validate_bitwidth(PacketType);
 
         const dst_data = microzig.utilities.SliceVector([]PacketType).init(dst_vec);

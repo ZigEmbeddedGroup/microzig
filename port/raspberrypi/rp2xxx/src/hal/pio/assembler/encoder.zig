@@ -173,7 +173,7 @@ pub fn Encoder(comptime chip: Chip, comptime options: Options) type {
         }
 
         fn evaluate_impl(
-            comptime T: type,
+            T: type,
             define_lists: []const []const DefineWithIndex,
             value: Value,
             index: u32,
@@ -223,7 +223,7 @@ pub fn Encoder(comptime chip: Chip, comptime options: Options) type {
 
         fn evaluate(
             self: *Self,
-            comptime T: type,
+            T: type,
             program: BoundedProgram,
             value: Value,
             index: u32,
@@ -252,7 +252,7 @@ pub fn Encoder(comptime chip: Chip, comptime options: Options) type {
 
         fn evaluate_global(
             self: *Self,
-            comptime T: type,
+            T: type,
             value: Value,
             index: u32,
             diags: *?Diagnostics,

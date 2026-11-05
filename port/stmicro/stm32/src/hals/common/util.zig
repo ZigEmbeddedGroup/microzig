@@ -29,7 +29,7 @@ pub fn create_peripheral_enum(comptime bases_name: []const []const u8) type {
     return @Enum(usize, .exhaustive, field_names, field_values[0..]);
 }
 
-pub fn sub_peripheral_enum(comptime T: type, comptime keep_name: []const []const u8, match_type: ?[]const u8) type {
+pub fn sub_peripheral_enum(T: type, comptime keep_name: []const []const u8, match_type: ?[]const u8) type {
     var field_names: []const []const u8 = &.{};
     var field_values: []const usize = &.{};
     @setEvalBranchQuota(10_000);

@@ -45,7 +45,7 @@ const EP_State = struct {
     tx_busy: bool = false,
 };
 
-fn PerEndpointArray(comptime N: comptime_int) type {
+fn PerEndpointArray(N: comptime_int) type {
     return [N][2]EP_State; // [ep][dir]
 }
 

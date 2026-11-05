@@ -159,7 +159,7 @@ pub fn set_temp_sensor_enabled(enable: bool) void {
 }
 
 /// T must be floating point.
-pub fn temp_sensor_result_to_celcius(comptime T: type, comptime vref: T, result: u12) T {
+pub fn temp_sensor_result_to_celcius(T: type, comptime vref: T, result: u12) T {
     // TODO: consider fixed-point
     const raw = @as(T, @floatFromInt(result));
     const voltage: T = vref * raw / 0x0fff;

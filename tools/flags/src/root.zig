@@ -23,7 +23,7 @@ const label_prefix = "--";
 /// Flags must have a `default` decl.
 ///
 /// - Integers can use decimal, octal, or hexidecimal formats
-pub fn parse(comptime Flags: type, arena: Allocator, args: []const []const u8) !struct { Flags, Positionals } {
+pub fn parse(Flags: type, arena: Allocator, args: []const []const u8) !struct { Flags, Positionals } {
     _ = arena;
     var flags: Flags = .default;
     return outer: for (args[1..], 1..) |arg, i| {
@@ -46,7 +46,7 @@ pub fn parse(comptime Flags: type, arena: Allocator, args: []const []const u8) !
     } else .{ flags, &.{} };
 }
 
-fn parse_value(comptime T: type, key: []const u8, value: []const u8, equals: ?usize) !T {
+fn parse_value(T: type, key: []const u8, value: []const u8, equals: ?usize) !T {
     const field_info = @typeInfo(T);
     return switch (T) {
         []const u8 => value,

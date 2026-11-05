@@ -95,7 +95,7 @@ pub const ExecOptions = struct {
     side_set_optional: bool = false,
 };
 
-pub fn PinMapping(comptime Count: type) type {
+pub fn PinMapping(Count: type) type {
     return struct {
         /// Creates a mapping with a single pin, length 1
         pub fn single(pin: gpio.Pin) PinMapping(Count) {

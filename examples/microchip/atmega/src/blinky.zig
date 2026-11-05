@@ -21,7 +21,7 @@ pub fn main() void {
     }
 }
 
-pub fn busy_sleep(comptime limit: comptime_int) void {
+pub fn busy_sleep(limit: comptime_int) void {
     if (limit <= 0) @compileError("limit must be positive!");
 
     const outer = std.math.divCeil(comptime_int, limit, std.math.maxInt(u16)) catch unreachable;

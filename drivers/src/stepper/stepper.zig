@@ -48,7 +48,7 @@ pub const DRV8825 = struct {
     const MS_TABLE = [_]u3{ 0b000, 0b001, 0b010, 0b011, 0b100, 0b111 };
 };
 
-pub fn Stepper(comptime Driver: type) type {
+pub fn Stepper(Driver: type) type {
     return struct {
         const Self = @This();
         pub const SpeedProfile = union(enum) {

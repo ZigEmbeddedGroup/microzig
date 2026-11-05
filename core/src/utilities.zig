@@ -54,7 +54,7 @@ pub inline fn initialize_system_memories(which: enum {
 
 /// A helper class that allows operating on a slice of slices
 /// with similar operations to those of a slice.
-pub fn SliceVector(comptime Slice: type) type {
+pub fn SliceVector(Slice: type) type {
     const type_info = @typeInfo(Slice);
     if (type_info != .pointer)
         @compileError("Slice must have a slice type!");
@@ -519,7 +519,7 @@ pub const end_of_stack: *const anyopaque = blk: switch (microzig.config.stack) {
 /// A naive circular buffer implementation. At time of writing, it's intended
 /// to fill in where the deleted std.fifo.LinearFifo was used, so the API might
 /// seem unfinished.
-pub fn CircularBuffer(comptime T: type, comptime len: usize) type {
+pub fn CircularBuffer(T: type, comptime len: usize) type {
     return struct {
         items: [len]T,
         start: usize,
