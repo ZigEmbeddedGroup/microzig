@@ -176,9 +176,9 @@ pub fn log(
 fn RegFieldType(register_name: []const u8, field_name: []const u8) type {
     const reg_idx = std.meta.fieldIndex(peri_types.uart0, register_name) orelse
         @compileError("No register " ++ register_name ++ " in uart0.");
-    const Reg = std.meta.fieldTypes(peri_types.uart0)[reg_idx].underlying_type;
+    const Reg = @typeInfo(peri_types.uart0).@"struct".field_types[reg_idx].underlying_type;
 
     const fld_idx = std.meta.fieldIndex(Reg, field_name) orelse
         @compileError("No field " ++ field_name ++ " in uart0." ++ register_name ++ ".");
-    return std.meta.fieldTypes(Reg)[fld_idx];
+    return @typeInfo(Reg).@"struct".field_types[fld_idx];
 }

@@ -39,7 +39,7 @@ pub fn KeyboardMatrix(comptime options: Options) type {
 
         /// A set that can store if each key is set or not.
         pub const Set = struct {
-            pressed: std.StaticBitSet(key_count) = .empty,
+            pressed: std.bit_set.Static(key_count) = .empty,
 
             /// Adds a key to the set.
             pub fn add(set: *Set, key: Key) void {

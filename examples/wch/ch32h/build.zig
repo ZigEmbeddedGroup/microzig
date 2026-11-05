@@ -5,7 +5,7 @@ const MicroBuild = microzig.MicroBuild(.{
     .ch32h = true,
 });
 
-fn add_example(b: *std.Build, mb: anytype, comptime name: []const u8, optimize: std.builtin.OptimizeMode) void {
+fn add_example(b: *std.Build, mb: anytype, comptime name: []const u8, optimize: std.lang.Optimize) void {
     const v3f = mb.add_firmware(.{
         .name = "v3f",
         .root_source_file = b.path("src/ch32h417_only/" ++ name ++ "_v3f.zig"),

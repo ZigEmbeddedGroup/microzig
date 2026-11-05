@@ -49,7 +49,7 @@ pub fn main(init: std.process.Init) !void {
         .file => if (std.mem.eql(u8, entry.basename, "build.zig.zon")) {
             const path = try entry.dir.realPathFileAlloc(io, "build.zig.zon", allocator);
             std.log.info("found build.zig.zon: {s}", .{path});
-            try todo.put(allocator, std.fs.path.dirname(path).?, {});
+            try todo.put(allocator, std.Io.Dir.path.dirname(path).?, {});
         },
         else => {},
     };
@@ -135,7 +135,7 @@ pub fn main(init: std.process.Init) !void {
     const root_manifest = manifests.get(root_path).?;
     // calculate urls
     for (manifests.keys(), manifests.values()) |path, manifest| {
-        try urls.put(allocator, path, try std.fmt.allocPrint(allocator, "{s}/{f}/{s}.tar.gz", .{
+        try urls.put(allocator, path, try allocator.print("{s}/{f}/{s}.tar.gz", .{
             base_url,
             root_manifest.version,
             manifest.name,
@@ -161,7 +161,7 @@ pub fn main(init: std.process.Init) !void {
                     try manifest.dependencies.put(allocator, dep_name, .{
                         .remote = .{
                             .url = urls.get(dep_path).?,
-                            .hash = try std.fmt.allocPrint(allocator, "{s}", .{hashes.get(dep_path).?}),
+                            .hash = try allocator.print("{s}", .{hashes.get(dep_path).?}),
                             .lazy = old.local.lazy,
                         },
                     });
@@ -197,15 +197,15 @@ pub fn main(init: std.process.Init) !void {
             continue;
         }
 
-        const out_path = try std.fmt.allocPrint(allocator, "{f}/{s}.tar.gz", .{
+        const out_path = try allocator.print("{f}/{s}.tar.gz", .{
             root_manifest.version,
             manifest.name,
         });
 
-        var dir = try out_dir.createDirPathOpen(io, std.fs.path.dirname(out_path).?, .{});
+        var dir = try out_dir.createDirPathOpen(io, std.Io.Dir.path.dirname(out_path).?, .{});
         defer dir.close(io);
 
-        const file = try dir.createFile(io, std.fs.path.basename(out_path), .{});
+        const file = try dir.createFile(io, std.Io.Dir.path.basename(out_path), .{});
         defer file.close(io);
 
         const tar_gz = try archives.get(path).?.to_tar_gz(allocator);
@@ -235,7 +235,7 @@ pub fn main(init: std.process.Init) !void {
 
         var package: json.ObjectMap = .empty;
         try package.put(allocator, "dependencies", .{ .object = deps });
-        try package.put(allocator, "version", .{ .string = try std.fmt.allocPrint(allocator, "{f}", .{manifest.version}) });
+        try package.put(allocator, "version", .{ .string = try allocator.print("{f}", .{manifest.version}) });
         try package.put(allocator, "url", .{ .string = urls.get(path).? });
         try package.put(allocator, "hash", .{ .string = hashes.get(path).? });
 
@@ -254,11 +254,11 @@ pub fn main(init: std.process.Init) !void {
 
     if (manifests.get(root_path)) |manifest| {
         var metadata: json.ObjectMap = .empty;
-        try metadata.put(allocator, "version", .{ .string = try std.fmt.allocPrint(allocator, "{f}", .{manifest.version}) });
+        try metadata.put(allocator, "version", .{ .string = try allocator.print("{f}", .{manifest.version}) });
         try metadata.put(allocator, "minimum_zig_version", .{ .string = minimum_zig_version });
         try metadata.put(allocator, "packages", .{ .object = packages });
 
-        const version_path = try std.fmt.allocPrint(allocator, "{f}", .{manifest.version});
+        const version_path = try allocator.print("{f}", .{manifest.version});
         var dir = try out_dir.openDir(io, version_path, .{});
         defer dir.close(io);
 

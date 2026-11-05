@@ -17,7 +17,7 @@ pub fn main(init: std.process.Init) !void {
 
     const elf_path = args[1];
     const test_data_path = args[2];
-    const test_name = std.fs.path.stem(test_data_path);
+    const test_name = std.Io.Dir.path.stem(test_data_path);
 
     const elf_file = try std.Io.Dir.cwd().openFile(io, elf_path, .{});
     defer elf_file.close(io);

@@ -958,7 +958,7 @@ fn get_nested_struct_fields(
 fn recursively_calculate_struct_size(
     db: *Database,
     depth: *u8,
-    cache: *std.AutoArrayHashMapUnmanaged(StructID, u64),
+    cache: *std.array_hash_map.Auto(StructID, u64),
     gpa: Allocator,
     struct_id: StructID,
 ) !u64 {
@@ -1013,7 +1013,7 @@ pub fn get_nested_struct_fields_with_calculated_size(
 
     log.debug("nested_struct_fields.len={} struct_id={f}", .{ nested_struct_fields.len, struct_id });
 
-    var size_cache: std.AutoArrayHashMapUnmanaged(StructID, u64) = .empty;
+    var size_cache: std.array_hash_map.Auto(StructID, u64) = .empty;
     defer size_cache.deinit(gpa);
 
     for (nested_struct_fields) |*nsf| {

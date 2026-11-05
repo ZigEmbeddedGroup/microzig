@@ -107,17 +107,17 @@ pub fn build(b: *std.Build) void {
         .{ .name = "flash-program", .file = "src/flash_program.zig" },
     };
 
-    var available_examples: std.array_list.Managed(Example) = .init(b.allocator);
-    available_examples.appendSlice(specific_examples) catch @panic("out of memory");
+    var available_examples: std.ArrayList(Example) = .empty;
+    available_examples.appendSlice(b.allocator, specific_examples) catch @panic("out of memory");
     for (chip_agnostic_examples) |example| {
-        available_examples.append(.{
+        available_examples.append(b.allocator, .{
             .target = raspberrypi.pico,
             .name = b.fmt("pico_{s}", .{example.name}),
             .file = example.file,
             .imports = example.imports,
         }) catch @panic("out of memory");
 
-        available_examples.append(.{
+        available_examples.append(b.allocator, .{
             .target = raspberrypi.pico2_arm,
             .name = b.fmt("pico2_arm_{s}", .{example.name}),
             .file = example.file,
@@ -125,7 +125,7 @@ pub fn build(b: *std.Build) void {
         }) catch @panic("out of memory");
 
         if (example.works_with_riscv) {
-            available_examples.append(.{
+            available_examples.append(b.allocator, .{
                 .target = raspberrypi.pico2_riscv,
                 .name = b.fmt("pico2_riscv_{s}", .{example.name}),
                 .file = example.file,
@@ -154,7 +154,7 @@ pub fn build(b: *std.Build) void {
         });
 
         // Import net module for some examples
-        if (std.mem.indexOf(u8, example.name, "_net-") != null) {
+        if (std.mem.find(u8, example.name, "_net-") != null) {
             const net_dep = b.dependency("net", .{
                 .target = b.resolveTargetQuery(fw.target.zig_target),
                 .optimize = optimize,
@@ -170,7 +170,7 @@ pub fn build(b: *std.Build) void {
 
         // Import freertos module for some examples, kind of a hack
         // probably list of required modules should be specified in each example independently
-        if (std.mem.indexOf(u8, example.name, "_freertos-") != null) {
+        if (std.mem.find(u8, example.name, "_freertos-") != null) {
             var port_name: []const u8 = "Unknown";
 
             // FIXME: hacky way to select port based on target name (it doesn't take RP2350_RISCV into account)

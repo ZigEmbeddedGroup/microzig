@@ -780,7 +780,7 @@ const Parser = struct {
         }
     };
 
-    fn read_address(reader: *std.Io.Reader, dwarf_format: dwarf.Format, endian: std.builtin.Endian) !u64 {
+    fn read_address(reader: *std.Io.Reader, dwarf_format: dwarf.Format, endian: std.lang.Endian) !u64 {
         return switch (dwarf_format) {
             .@"32" => try reader.takeInt(u32, endian),
             .@"64" => try reader.takeInt(u64, endian),
