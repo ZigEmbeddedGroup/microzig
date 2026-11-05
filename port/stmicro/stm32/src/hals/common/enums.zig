@@ -46,7 +46,7 @@ pub fn to_peripheral(comptime val: anytype) Peripherals {
     };
 }
 
-pub fn get_regs(comptime T: type, comptime val: anytype) *volatile T {
+pub fn get_regs(T: type, comptime val: anytype) *volatile T {
     const periph_enum = comptime to_peripheral(val);
     return @field(microzig.chip.peripherals, @tagName(periph_enum));
 }

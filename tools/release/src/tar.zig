@@ -266,7 +266,7 @@ pub fn builder(allocator: Allocator, writer: anytype) Builder(@TypeOf(writer)) {
     return Builder(@TypeOf(writer)).init(allocator, writer);
 }
 
-pub fn Builder(comptime Writer: type) type {
+pub fn Builder(Writer: type) type {
     return struct {
         writer: Writer,
         arena: std.heap.ArenaAllocator,
@@ -445,7 +445,7 @@ pub fn fileExtractor(path: []const u8, reader: anytype) FileExtractor(@TypeOf(re
     return FileExtractor(@TypeOf(reader)).init(path, reader);
 }
 
-pub fn FileExtractor(comptime ReaderType: type) type {
+pub fn FileExtractor(ReaderType: type) type {
     return struct {
         path: []const u8,
         internal: ReaderType,

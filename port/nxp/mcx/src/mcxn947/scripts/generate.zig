@@ -64,7 +64,7 @@ pub fn print_fields(comptime ty: []const u8, comptime suffix_: ?[]const u8) []Fi
 
 /// For a given packed structure `T`, this function returns
 /// the bit index its the field named `field_name`.
-fn get_field_offset(comptime T: type, comptime field_name: []const u8) u8 {
+fn get_field_offset(T: type, comptime field_name: []const u8) u8 {
     std.debug.assert(@typeInfo(T) == .@"struct");
     std.debug.assert(std.meta.containerLayout(T) == .@"packed");
     std.debug.assert(std.meta.fieldIndex(T, field_name) != null);

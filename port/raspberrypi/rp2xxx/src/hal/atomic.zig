@@ -21,20 +21,20 @@ inline fn atomic_unlock(critical_section: CriticalSection) void {
     atomic_spinlock.unlock_irq(critical_section);
 }
 
-fn atomic_store(comptime T: type, ptr: *volatile T, val: T, _: i32) void {
+fn atomic_store(T: type, ptr: *volatile T, val: T, _: i32) void {
     const save = atomic_lock();
     defer atomic_unlock(save);
     ptr.* = val;
 }
 
-fn atomic_load(comptime T: type, ptr: *volatile T, _: i32) T {
+fn atomic_load(T: type, ptr: *volatile T, _: i32) T {
     const save = atomic_lock();
     defer atomic_unlock(save);
     const val = ptr.*;
     return val;
 }
 
-fn atomic_rmw(comptime T: type, ptr: *volatile T, val: T, _: i32, comptime op: std.lang.AtomicRmwOp) T {
+fn atomic_rmw(T: type, ptr: *volatile T, val: T, _: i32, comptime op: std.lang.AtomicRmwOp) T {
     const save = atomic_lock();
     defer atomic_unlock(save);
     const tmp = ptr.*;
@@ -54,7 +54,7 @@ fn atomic_rmw(comptime T: type, ptr: *volatile T, val: T, _: i32, comptime op: s
     return tmp;
 }
 
-fn atomic_compare_exchange(comptime T: type, ptr: *volatile T, expected: *T, desired: T, _: i32, _: i32) bool {
+fn atomic_compare_exchange(T: type, ptr: *volatile T, expected: *T, desired: T, _: i32, _: i32) bool {
     const save = atomic_lock();
     defer atomic_unlock(save);
     const old_value = ptr.*;

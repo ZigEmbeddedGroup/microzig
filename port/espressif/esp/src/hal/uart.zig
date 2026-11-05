@@ -4,11 +4,11 @@ const peripherals = microzig.chip.peripherals;
 
 // TODO: chip independent. currently specific to esp32c3.
 
-fn reg(comptime index: comptime_int) @TypeOf(@field(peripherals, std.fmt.comptimePrint("UART{}", .{index}))) {
+fn reg(index: comptime_int) @TypeOf(@field(peripherals, std.fmt.comptimePrint("UART{}", .{index}))) {
     return @field(peripherals, std.fmt.comptimePrint("UART{}", .{index}));
 }
 
-pub fn write(comptime index: comptime_int, slice: []const u8) void {
+pub fn write(index: comptime_int, slice: []const u8) void {
     const r = reg(index);
     for (slice) |c| {
         while (r.STATUS.read().TXFIFO_CNT > 8) {}

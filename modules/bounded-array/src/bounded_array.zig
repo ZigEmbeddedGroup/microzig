@@ -15,7 +15,7 @@ const testing = std.testing;
 /// var slice = a.slice(); // a slice of the 64-byte array
 /// var a_clone = a; // creates a copy - the structure doesn't use any internal pointers
 /// ```
-pub fn BoundedArray(comptime T: type, comptime buffer_capacity: usize) type {
+pub fn BoundedArray(T: type, comptime buffer_capacity: usize) type {
     return BoundedArrayAligned(T, @alignOf(T), buffer_capacity);
 }
 
@@ -33,7 +33,7 @@ pub fn BoundedArray(comptime T: type, comptime buffer_capacity: usize) type {
 //  try testing.expectEqual(@as(u16, 65535), b[0]);
 /// ```
 pub fn BoundedArrayAligned(
-    comptime T: type,
+    T: type,
     comptime alignment: u29,
     comptime buffer_capacity: usize,
 ) type {

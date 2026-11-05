@@ -97,17 +97,17 @@ pub const gpio = struct {
         af15,
     };
 
-    pub fn set_output(comptime pin: type) void {
+    pub fn set_output(pin: type) void {
         set_reg_field(RCC.AHB1ENR, "GPIO" ++ pin.gpio_port_name ++ "EN", 1);
         set_reg_field(@field(pin.gpio_port, "MODER"), "MODER" ++ pin.suffix, 0b01);
     }
 
-    pub fn set_input(comptime pin: type) void {
+    pub fn set_input(pin: type) void {
         set_reg_field(RCC.AHB1ENR, "GPIO" ++ pin.gpio_port_name ++ "EN", 1);
         set_reg_field(@field(pin.gpio_port, "MODER"), "MODER" ++ pin.suffix, 0b00);
     }
 
-    pub fn set_alternate_function(comptime pin: type, af: AlternateFunction) void {
+    pub fn set_alternate_function(pin: type, af: AlternateFunction) void {
         set_reg_field(RCC.AHB1ENR, "GPIO" ++ pin.gpio_port_name ++ "EN", 1);
         set_reg_field(@field(pin.gpio_port, "MODER"), "MODER" ++ pin.suffix, 0b10);
         if (pin.pin_number < 8) {
@@ -117,13 +117,13 @@ pub const gpio = struct {
         }
     }
 
-    pub fn read(comptime pin: type) microzig.gpio.State {
+    pub fn read(pin: type) microzig.gpio.State {
         const idr_reg = pin.gpio_port.IDR;
         const reg_value = @field(idr_reg.read(), "IDR" ++ pin.suffix); // TODO extract to getRegField()?
         return @as(microzig.gpio.State, @fromBackingInt(reg_value));
     }
 
-    pub fn write(comptime pin: type, state: microzig.gpio.State) void {
+    pub fn write(pin: type, state: microzig.gpio.State) void {
         switch (state) {
             .low => set_reg_field(pin.gpio_port.BSRR, "BR" ++ pin.suffix, 1),
             .high => set_reg_field(pin.gpio_port.BSRR, "BS" ++ pin.suffix, 1),
@@ -155,7 +155,7 @@ pub const uart = struct {
     const PinDirection = std.meta.FieldEnum(microzig.uart.Pins);
 
     /// Checks if a pin is valid for a given uart index and direction
-    pub fn is_valid_pin(comptime pin: type, comptime index: usize, comptime direction: PinDirection) bool {
+    pub fn is_valid_pin(pin: type, comptime index: usize, comptime direction: PinDirection) bool {
         const pin_name = pin.name;
 
         return switch (direction) {
@@ -364,7 +364,7 @@ pub const i2c = struct {
     const PinLine = std.meta.FieldEnum(microzig.i2c.Pins);
 
     /// Checks if a pin is valid for a given i2c index and line
-    pub fn is_valid_pin(comptime pin: type, comptime index: usize, comptime line: PinLine) bool {
+    pub fn is_valid_pin(pin: type, comptime index: usize, comptime line: PinLine) bool {
         const pin_name = pin.name;
 
         return switch (line) {
