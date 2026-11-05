@@ -109,7 +109,7 @@ pub const HTS221 = struct {
     // internal read buffer
     read_buffer: [2]u8 = .{ 0, 0 },
 
-    fn read_register(self: *@This(), comptime Regs: type, reg: RegsAddr) InterfaceError!Regs {
+    fn read_register(self: *@This(), Regs: type, reg: RegsAddr) InterfaceError!Regs {
         const raw = try self.read_one_byte(reg);
         return @as(Regs, @bitCast(raw));
     }

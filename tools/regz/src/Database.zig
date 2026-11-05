@@ -418,7 +418,7 @@ pub const StructLayout = enum {
     pub const BaseType = []const u8;
 };
 
-fn gen_field_list(comptime T: type, opts: struct { prefix: ?[]const u8 = null }) []const u8 {
+fn gen_field_list(T: type, opts: struct { prefix: ?[]const u8 = null }) []const u8 {
     var buf: [4096]u8 = undefined;
     var fbs: std.Io.Writer = .fixed(&buf);
 
@@ -436,7 +436,7 @@ fn gen_field_list(comptime T: type, opts: struct { prefix: ?[]const u8 = null })
     return buf_copy[0..fbs.buffered().len];
 }
 
-fn zig_type_to_sql_type(comptime T: type) []const u8 {
+fn zig_type_to_sql_type(T: type) []const u8 {
     const info = @typeInfo(T);
     return switch (info) {
         .int => "INTEGER",
@@ -450,11 +450,11 @@ fn zig_type_to_sql_type(comptime T: type) []const u8 {
     };
 }
 
-fn gen_sql_table(comptime name: []const u8, comptime T: type) [:0]const u8 {
+fn gen_sql_table(comptime name: []const u8, T: type) [:0]const u8 {
     return gen_sql_table_impl(name, T) catch unreachable;
 }
 
-fn gen_sql_table_impl(comptime name: []const u8, comptime T: type) ![:0]const u8 {
+fn gen_sql_table_impl(comptime name: []const u8, T: type) ![:0]const u8 {
     var buf: [4096]u8 = undefined;
     var fbs: std.Io.Writer = .fixed(&buf);
 
@@ -579,7 +579,7 @@ pub const Format = enum {
     }
 };
 
-fn ID(comptime T: type, comptime table_name: []const u8) type {
+fn ID(T: type, comptime table_name: []const u8) type {
     return enum(T) {
         pub const BaseType = u32;
         pub const table = table_name;
@@ -812,7 +812,7 @@ pub fn get_device_id_by_name(db: *Database, name: []const u8) !?DeviceID {
     return @fromBackingInt(@intCast(row.int(0)));
 }
 
-fn scan_row(comptime T: type, allocator: Allocator, row: zqlite.Row) !T {
+fn scan_row(T: type, allocator: Allocator, row: zqlite.Row) !T {
     var entry: T = undefined;
     const info = @typeInfo(T).@"struct";
     inline for (info.field_names, info.field_types, 0..) |field_name, field_type, i| {
@@ -846,7 +846,7 @@ fn scan_row(comptime T: type, allocator: Allocator, row: zqlite.Row) !T {
     return entry;
 }
 
-fn all(db: *Database, comptime T: type, comptime query: []const u8, allocator: Allocator, args: anytype) ![]T {
+fn all(db: *Database, T: type, comptime query: []const u8, allocator: Allocator, args: anytype) ![]T {
     var rows = try db.conn.rows(query, args);
     defer rows.deinit();
 
@@ -1457,7 +1457,7 @@ fn get_parent_struct_id(db: *Database, struct_id: StructID) !StructID {
 
 fn one_alloc(
     db: *Database,
-    comptime T: type,
+    T: type,
     allocator: Allocator,
     comptime query: []const u8,
     args: anytype,
@@ -1467,7 +1467,7 @@ fn one_alloc(
 
 fn get_one_alloc(
     db: *Database,
-    comptime T: type,
+    T: type,
     allocator: Allocator,
     comptime query: []const u8,
     args: anytype,

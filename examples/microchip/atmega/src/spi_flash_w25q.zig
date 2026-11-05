@@ -273,7 +273,7 @@ fn write_hex_u24(val: u24) void {
     write_hex_u8(@truncate(val));
 }
 
-pub fn busy_sleep(comptime limit: comptime_int) void {
+pub fn busy_sleep(limit: comptime_int) void {
     if (limit <= 0) @compileError("limit must be positive!");
 
     const outer = std.math.divCeil(comptime_int, limit, std.math.maxInt(u16)) catch unreachable;

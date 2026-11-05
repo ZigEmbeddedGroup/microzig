@@ -29,7 +29,7 @@ pub const ISR_Result = struct {
 };
 
 /// Result from an ISR receive operation.
-pub fn IsrReceiveResult(comptime T: type) type {
+pub fn IsrReceiveResult(T: type) type {
     return struct {
         /// The received item.
         item: T,
@@ -41,7 +41,7 @@ pub fn IsrReceiveResult(comptime T: type) type {
 // ── Generic Queue ───────────────────────────────────────────────────────
 
 /// A type-safe FreeRTOS queue holding items of type `T`.
-pub fn Queue(comptime T: type) type {
+pub fn Queue(T: type) type {
     return struct {
         const Self = @This();
         /// Underlying FreeRTOS C handle. Use `freertos.c` for direct C API access.
@@ -166,6 +166,6 @@ pub fn Queue(comptime T: type) type {
 // ── Top-Level Convenience ───────────────────────────────────────────────
 
 /// Create a new queue holding items of type `T` with the given capacity.
-pub fn create(comptime T: type, length: u32) Error!Queue(T) {
+pub fn create(T: type, length: u32) Error!Queue(T) {
     return Queue(T).create(length);
 }

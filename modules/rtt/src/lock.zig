@@ -3,7 +3,7 @@ const builtin = @import("builtin");
 
 /// A generic struct that provides exclusive access to the RTT control block
 pub fn GenericLock(
-    comptime Context: type,
+    Context: type,
     comptime lock_fn: fn (context: Context) void,
     comptime unlock_fn: fn (context: Context) void,
 ) type {

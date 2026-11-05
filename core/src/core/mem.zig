@@ -1,6 +1,6 @@
 const std = @import("std");
 
-pub fn EndianInt(comptime T: type, e: std.lang.Endian) type {
+pub fn EndianInt(T: type, e: std.lang.Endian) type {
     return packed struct(T) {
         raw: T,
 

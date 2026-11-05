@@ -1,7 +1,7 @@
 const std = @import("std");
 const assert = std.debug.assert;
 
-pub fn Mmio(comptime Packed: type) type {
+pub fn Mmio(Packed: type) type {
     @setEvalBranchQuota(2_000);
 
     const size = @bitSizeOf(Packed);

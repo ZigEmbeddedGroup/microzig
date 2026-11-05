@@ -5,7 +5,7 @@ const microzig = @import("microzig");
 
 const largest_atomic_size = @sizeOf(usize);
 
-inline fn atomic_store(comptime T: type, ptr: *volatile T, val: T, _: i32) void {
+inline fn atomic_store(T: type, ptr: *volatile T, val: T, _: i32) void {
     if (@sizeOf(T) > largest_atomic_size) {
         @compileError("only supports types with a size of less than 4");
     }
@@ -13,7 +13,7 @@ inline fn atomic_store(comptime T: type, ptr: *volatile T, val: T, _: i32) void 
     ptr.* = val;
 }
 
-inline fn atomic_load(comptime T: type, ptr: *volatile T, _: i32) T {
+inline fn atomic_load(T: type, ptr: *volatile T, _: i32) T {
     if (@sizeOf(T) > largest_atomic_size) {
         @compileError("only supports types with a size of less than 4");
     }
@@ -21,7 +21,7 @@ inline fn atomic_load(comptime T: type, ptr: *volatile T, _: i32) T {
     return ptr.*;
 }
 
-inline fn atomic_rmw(comptime T: type, ptr: *volatile T, val: T, _: i32, comptime op: std.lang.AtomicRmwOp) T {
+inline fn atomic_rmw(T: type, ptr: *volatile T, val: T, _: i32, comptime op: std.lang.AtomicRmwOp) T {
     const cs = microzig.interrupt.enter_critical_section();
     defer cs.leave();
 
@@ -42,7 +42,7 @@ inline fn atomic_rmw(comptime T: type, ptr: *volatile T, val: T, _: i32, comptim
     return tmp;
 }
 
-inline fn atomic_compare_exchange(comptime T: type, ptr: *volatile T, expected: *T, desired: T, _: i32, _: i32) bool {
+inline fn atomic_compare_exchange(T: type, ptr: *volatile T, expected: *T, desired: T, _: i32, _: i32) bool {
     const cs = microzig.interrupt.enter_critical_section();
     defer cs.leave();
 

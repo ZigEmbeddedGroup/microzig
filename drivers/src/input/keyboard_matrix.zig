@@ -156,7 +156,7 @@ pub const Key = enum(u16) {
     };
 };
 
-inline fn busyloop(comptime N: comptime_int) void {
+inline fn busyloop(N: comptime_int) void {
     for (0..N) |_| {
         // wait some cycles so the physics does its magic and convey
         // the electrons

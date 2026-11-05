@@ -31,22 +31,22 @@ fn set_reg_field(reg: anytype, comptime field_name: anytype, value: anytype) voi
 }
 
 pub const gpio = struct {
-    pub fn set_output(comptime pin: type) void {
+    pub fn set_output(pin: type) void {
         _ = pin;
         // TODO: check if pin is already configured as output
     }
-    pub fn set_input(comptime pin: type) void {
+    pub fn set_input(pin: type) void {
         _ = pin;
         // TODO: check if pin is already configured as input
     }
 
-    pub fn read(comptime pin: type) microzig.gpio.State {
+    pub fn read(pin: type) microzig.gpio.State {
         _ = pin;
         // TODO: check if pin is configured as input
         return .low;
     }
 
-    pub fn write(comptime pin: type, state: microzig.gpio.State) void {
+    pub fn write(pin: type, state: microzig.gpio.State) void {
         _ = pin;
         _ = state;
         // TODO: check if pin is configured as output

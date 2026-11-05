@@ -769,7 +769,7 @@ const Parser = struct {
             }
         }
 
-        fn get_uint(fv: FormValue, comptime U: type) !U {
+        fn get_uint(fv: FormValue, U: type) !U {
             return switch (fv) {
                 inline .udata,
                 .sdata,

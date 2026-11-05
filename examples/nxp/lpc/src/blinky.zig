@@ -63,7 +63,7 @@ const PatchedGpio = extern struct {
     }
 };
 
-pub fn busy_sleep(comptime limit: comptime_int) void {
+pub fn busy_sleep(limit: comptime_int) void {
     if (limit <= 0) @compileError("limit must be non-negative!");
 
     comptime var bits = 0;

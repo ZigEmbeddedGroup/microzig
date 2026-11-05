@@ -31,7 +31,7 @@ pub const Flash = struct {
         return 0;
     }
 
-    pub fn Static(comptime size: comptime_int) type {
+    pub fn Static(size: comptime_int) type {
         if ((size & 1) != 0)
             @compileError("size must be a multiple of two!");
         return struct {
@@ -159,7 +159,7 @@ pub const BusConfig = struct {
 };
 
 /// IO Bus interface with masked writes as the primary write method
-pub fn IOBusInterface(comptime address_type: type) type {
+pub fn IOBusInterface(address_type: type) type {
     return struct {
         const Self = @This();
         pub const Address = address_type;
@@ -227,7 +227,7 @@ pub fn Bus(comptime config: BusConfig) type {
 
 /// Fixed-size memory device with byte-addressable read/write operations
 /// Takes an optional bus_config parameter. If not provided, uses the smallest address width needed.
-pub fn FixedSizeMemory(comptime size: comptime_int, comptime bus_config: ?BusConfig) type {
+pub fn FixedSizeMemory(size: comptime_int, comptime bus_config: ?BusConfig) type {
     const default_addr_type = if (size <= 256) u8 else if (size <= 65536) u16 else u24;
     const config = bus_config orelse BusConfig{ .address_type = default_addr_type };
 
@@ -263,7 +263,7 @@ pub fn FixedSizeMemory(comptime size: comptime_int, comptime bus_config: ?BusCon
 }
 
 /// A logical memory space composed of non-overlapping segments.
-pub fn MemoryMapping(comptime BusType: type) type {
+pub fn MemoryMapping(BusType: type) type {
     return struct {
         const Self = @This();
 
