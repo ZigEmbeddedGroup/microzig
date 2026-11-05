@@ -16,7 +16,7 @@ pub const Define = struct {
 
 pub const Label = struct {
     name: []const u8,
-    offset: u5,
+    index: u5,
 };
 
 pub const Program = struct {
@@ -39,10 +39,10 @@ pub const Program = struct {
         return (@as(u32, 1) << @as(u5, @intCast(program.instructions.len))) - 1;
     }
 
-    pub fn get_label_by_name(program: Program, name: []const u8) ?u5 {
+    pub fn get_label_index(program: Program, name: []const u8) ?u5 {
         return for (program.labels) |label| {
             if (std.mem.eql(u8, label.name, name))
-                break label.offset;
+                break label.index;
         } else null;
     }
 };
@@ -117,7 +117,7 @@ pub fn assemble_impl(comptime chip: Chip, comptime source: []const u8, diags: *?
 
     var defines = BoundedArray(Define, options.encode.max_defines).init(0) catch unreachable;
     for (encoder_output.global_defines.slice()) |define|
-        defines.append(.{ .name = define.name, .value = define.value }) catch unreachable;
+        try defines.append(.{ .name = define.name, .value = define.value });
 
     return Output{
         .defines = comptime_copy(Define, defines.slice()),

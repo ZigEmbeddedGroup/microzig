@@ -113,7 +113,7 @@ pub fn Encoder(comptime chip: Chip, comptime options: Options) type {
                             if (label.public) {
                                 tmp.append(.{
                                     .name = comptime_copy(u8, label.name),
-                                    .offset = label.index,
+                                    .index = label.index,
                                 }) catch unreachable;
                             }
                         }
