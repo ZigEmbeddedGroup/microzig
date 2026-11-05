@@ -63,8 +63,8 @@ pub const ReportItem = union(enum) {
 
         pub fn local(self: @This()) i32 {
             return switch (self) {
-                inline else => |x| @backingInt(x),
                 .vendor => |x| x,
+                inline else => |x| @backingInt(x),
             };
         }
     };
