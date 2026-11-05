@@ -33,7 +33,7 @@ const Context = struct {
         from: RegisterPropertiesParent,
     ) !RegisterProperties {
         const register_props = try RegisterProperties.parse(node);
-        var base_register_props = ctx.register_props.get(from) orelse unreachable;
+        var base_register_props = ctx.register_props.get(from).?;
         inline for (@typeInfo(RegisterProperties).@"struct".field_names) |field_name| {
             if (@field(register_props, field_name)) |value|
                 @field(base_register_props, field_name) = value;
@@ -1673,7 +1673,7 @@ test "svd.DimElements.parse missing dimIncrement" {
 
     var root = try doc.get_root_element();
     var iterator = root.iterate(&.{"peripherals"}, &.{"peripheral"});
-    const peripheral_node = iterator.next() orelse unreachable;
+    const peripheral_node = iterator.next().?;
     try expectError(error.NameFieldMalformed, DimElements.parse(&ctx, peripheral_node));
 }
 
@@ -1701,7 +1701,7 @@ test "svd.DimElements.parse missing dim" {
 
     var root = try doc.get_root_element();
     var iterator = root.iterate(&.{"peripherals"}, &.{"peripheral"});
-    const peripheral_node = iterator.next() orelse unreachable;
+    const peripheral_node = iterator.next().?;
     try expectError(error.DimElementGroupMalformed, DimElements.parse(&ctx, peripheral_node));
 }
 
@@ -1730,7 +1730,7 @@ test "svd.DimElements.parse invalid name without %s or [%s]" {
 
     var root = try doc.get_root_element();
     var iterator = root.iterate(&.{"peripherals"}, &.{"peripheral"});
-    const peripheral_node = iterator.next() orelse unreachable;
+    const peripheral_node = iterator.next().?;
     try expectError(error.NameFieldMalformed, DimElements.parse(&ctx, peripheral_node));
 }
 

@@ -705,7 +705,7 @@ pub fn create_device(db: *Database, opts: CreateDeviceOptions) !DeviceID {
         opts.description,
     });
 
-    const row = try db.conn.row(
+    const row = (try db.conn.row(
         \\INSERT INTO devices
         \\  (name, description, arch)
         \\VALUES
@@ -716,7 +716,7 @@ pub fn create_device(db: *Database, opts: CreateDeviceOptions) !DeviceID {
         opts.name,
         opts.description,
         opts.arch.to_string(),
-    }) orelse unreachable;
+    })).?;
     defer row.deinit();
 
     return @fromBackingInt(@intCast(row.int(0)));
@@ -1610,7 +1610,7 @@ pub fn create_interrupt(db: *Database, device_id: DeviceID, opts: CreateInterrup
         opts.description,
     });
 
-    const row = try db.conn.row(
+    const row = (try db.conn.row(
         \\INSERT INTO interrupts
         \\  (device_id, name, description, idx)
         \\VALUES
@@ -1621,7 +1621,7 @@ pub fn create_interrupt(db: *Database, device_id: DeviceID, opts: CreateInterrup
         opts.name,
         opts.description,
         opts.idx,
-    }) orelse unreachable;
+    })).?;
     defer row.deinit();
 
     return @fromBackingInt(@intCast(row.int(0)));
@@ -1647,12 +1647,12 @@ pub fn create_peripheral(db: *Database, opts: CreatePeripheralOptions) !Peripher
     const struct_id = opts.struct_id orelse try db.create_struct(.{});
 
     const peripheral_id: PeripheralID = blk: {
-        const row = try db.conn.row("INSERT INTO peripherals (struct_id, name, description, size_bytes) VALUES (?, ?, ?, ?) RETURNING id", .{
+        const row = (try db.conn.row("INSERT INTO peripherals (struct_id, name, description, size_bytes) VALUES (?, ?, ?, ?) RETURNING id", .{
             @backingInt(struct_id),
             opts.name,
             opts.description,
             opts.size_bytes,
-        }) orelse unreachable;
+        })).?;
         defer row.deinit();
 
         break :blk @fromBackingInt(@intCast(row.int(0)));
@@ -1691,7 +1691,7 @@ pub fn create_device_peripheral(
         opts.description,
     });
 
-    const row = try db.conn.row(
+    const row = (try db.conn.row(
         \\INSERT INTO device_peripherals
         \\  (device_id, struct_id, name, description, offset_bytes, count)
         \\VALUES
@@ -1704,7 +1704,7 @@ pub fn create_device_peripheral(
         opts.description,
         opts.offset_bytes,
         opts.count,
-    }) orelse unreachable;
+    })).?;
     defer row.deinit();
 
     return @fromBackingInt(@intCast(row.int(0)));
@@ -1719,7 +1719,7 @@ pub const CreateModeOptions = struct {
 
 pub fn create_mode(db: *Database, parent: StructID, opts: CreateModeOptions) !ModeID {
     log.debug("create_mode: name={s} parent={f}", .{ opts.name, parent });
-    const row = try db.conn.row(
+    const row = (try db.conn.row(
         \\INSERT INTO modes
         \\  (name, struct_id, description, value, qualifier)
         \\VALUES
@@ -1731,7 +1731,7 @@ pub fn create_mode(db: *Database, parent: StructID, opts: CreateModeOptions) !Mo
         opts.description,
         opts.value,
         opts.qualifier,
-    }) orelse unreachable;
+    })).?;
     defer row.deinit();
 
     const mode_id: ModeID = @fromBackingInt(@intCast(row.int(0)));
@@ -1777,7 +1777,7 @@ pub fn create_register(db: *Database, parent: StructID, opts: CreateRegisterOpti
     errdefer db.conn.rollback();
 
     const register_id: RegisterID = blk: {
-        const row = try db.conn.row(
+        const row = (try db.conn.row(
             \\INSERT INTO registers
             \\  (name, description, ref_type, offset_bytes, size_bits, count, access, reset_mask, reset_value)
             \\VALUES
@@ -1793,7 +1793,7 @@ pub fn create_register(db: *Database, parent: StructID, opts: CreateRegisterOpti
             opts.access.to_string(),
             opts.reset_mask,
             opts.reset_value,
-        }) orelse unreachable;
+        })).?;
         defer row.deinit();
         break :blk @fromBackingInt(@intCast(row.int(0)));
     };
@@ -1908,7 +1908,7 @@ pub const CreateEnumOptions = struct {
 };
 
 pub fn create_enum(db: *Database, struct_id: ?StructID, opts: CreateEnumOptions) !EnumID {
-    const row = try db.conn.row(
+    const row = (try db.conn.row(
         \\INSERT INTO enums
         \\  (struct_id, name, description, size_bits)
         \\VALUES
@@ -1919,7 +1919,7 @@ pub fn create_enum(db: *Database, struct_id: ?StructID, opts: CreateEnumOptions)
         opts.name,
         opts.description,
         opts.size_bits,
-    }) orelse unreachable;
+    })).?;
     defer row.deinit();
 
     const enum_id: EnumID = @fromBackingInt(@intCast(row.int(0)));
@@ -1959,7 +1959,7 @@ pub const CreateStructOptions = struct {};
 pub fn create_struct(db: *Database, opts: CreateStructOptions) !StructID {
     _ = opts;
 
-    const row = try db.conn.row("INSERT INTO structs DEFAULT VALUES RETURNING id", .{}) orelse unreachable;
+    const row = (try db.conn.row("INSERT INTO structs DEFAULT VALUES RETURNING id", .{})).?;
     defer row.deinit();
 
     const struct_id: StructID = @fromBackingInt(@intCast(row.int(0)));
