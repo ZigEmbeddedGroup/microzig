@@ -49,11 +49,13 @@ pub fn main(init: std.process.Init) !void {
         .mode = try std.Io.Terminal.Mode.detect(io, stdout, no_color, clicolor_force),
     };
 
-    try printer.annotate(
-        gpa,
-        io,
-        &reader.interface,
-        &terminal,
-        &debug_info.impl.elf,
-    );
+    while (true) {
+        try printer.annotate(
+            gpa,
+            io,
+            &reader.interface,
+            &terminal,
+            &debug_info.impl.elf,
+        );
+    }
 }
