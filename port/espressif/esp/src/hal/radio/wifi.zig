@@ -163,7 +163,7 @@ pub fn init(gpa: std.mem.Allocator, config: InitConfig) InitError!void {
     }
 
     // TODO: if coex enabled
-    if (false) try c_err(c.coex_init());
+    // if (false) try c_err(c.coex_init());
 
     try c_err(c.esp_wifi_init_internal(&init_config));
 
