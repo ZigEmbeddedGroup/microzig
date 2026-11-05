@@ -87,7 +87,7 @@ pub fn init(dep: *std.Build.Dependency) ?Self {
 pub fn build(b: *std.Build) !void {
     const generate = b.option(bool, "generate", "") orelse false;
     if (generate) {
-        const stm32_data_generated = b.lazyDependency("stm32-data-generated", .{}) orelse return;
+        const stm32_data_generated = try b.dependencyLazy("stm32-data-generated", .{});
 
         const generate_optimize: std.lang.Optimize = .safe;
         const regz_dep = b.dependency("microzig/tools/regz", .{

@@ -87,10 +87,10 @@ pub const Header = extern struct {
                     break;
             }
 
-            _ = try std.fmt.bufPrint(&self.prefix, "{s}", .{path[0..i]});
-            _ = try std.fmt.bufPrint(&self.name, "{s}", .{path[i + 1 ..]});
+            _ = try std.mem.print(&self.prefix, "{s}", .{path[0..i]});
+            _ = try std.mem.print(&self.name, "{s}", .{path[i + 1 ..]});
         } else {
-            _ = try std.fmt.bufPrint(&self.name, "{s}", .{path});
+            _ = try std.mem.print(&self.name, "{s}", .{path});
         }
     }
 
@@ -98,11 +98,11 @@ pub const Header = extern struct {
         if (linkname.len > self.linkname.len)
             return error.TooBig;
 
-        _ = try std.fmt.bufPrint(&self.linkname, "{s}", .{linkname});
+        _ = try std.mem.print(&self.linkname, "{s}", .{linkname});
     }
 
     pub fn setSize(self: *Self, size: u64) !void {
-        _ = try std.fmt.bufPrint(&self.size, "{o:0>11}", .{size});
+        _ = try std.mem.print(&self.size, "{o:0>11}", .{size});
     }
 
     pub fn get_size(header: Header) !u64 {
@@ -110,14 +110,14 @@ pub const Header = extern struct {
     }
 
     pub fn setMtime(self: *Self, mtime: u32) !void {
-        _ = try std.fmt.bufPrint(&self.mtime, "{o:0>11}", .{mtime});
+        _ = try std.mem.print(&self.mtime, "{o:0>11}", .{mtime});
     }
 
     pub fn setMode(self: *Self, filetype: FileType, perm: u32) !void {
         switch (filetype) {
-            .regular => _ = try std.fmt.bufPrint(&self.mode, "0{o:0>6}", .{perm}),
-            .directory => _ = try std.fmt.bufPrint(&self.mode, "0{o:0>6}", .{perm}),
-            .symbolic_link => _ = try std.fmt.bufPrint(&self.mode, "0{o:0>6}", .{perm}),
+            .regular => _ = try std.mem.print(&self.mode, "0{o:0>6}", .{perm}),
+            .directory => _ = try std.mem.print(&self.mode, "0{o:0>6}", .{perm}),
+            .symbolic_link => _ = try std.mem.print(&self.mode, "0{o:0>6}", .{perm}),
             else => return error.Unsupported,
         }
     }
@@ -127,11 +127,11 @@ pub const Header = extern struct {
     }
 
     fn setUid(self: *Self, uid: u32) !void {
-        _ = try std.fmt.bufPrint(&self.uid, "{o:0>7}", .{uid});
+        _ = try std.mem.print(&self.uid, "{o:0>7}", .{uid});
     }
 
     fn setGid(self: *Self, gid: u32) !void {
-        _ = try std.fmt.bufPrint(&self.gid, "{o:0>7}", .{gid});
+        _ = try std.mem.print(&self.gid, "{o:0>7}", .{gid});
     }
 
     pub fn updateChecksum(self: *Self) !void {
@@ -144,12 +144,12 @@ pub const Header = extern struct {
                 val;
         }
 
-        _ = try std.fmt.bufPrint(&self.checksum, "{o:0>7}", .{checksum});
+        _ = try std.mem.print(&self.checksum, "{o:0>7}", .{checksum});
     }
 
     pub fn fromStat(stat: std.Io.File.Stat, path: []const u8) !Header {
-        if (std.mem.indexOf(u8, path, "\\") != null) return error.NeedPosixPath;
-        if (std.fs.path.isAbsolute(path)) return error.NeedRelPath;
+        if (std.mem.find(u8, path, "\\") != null) return error.NeedPosixPath;
+        if (std.Io.Dir.path.isAbsolute(path)) return error.NeedRelPath;
 
         var ret = Self.init();
         ret.typeflag = switch (stat.kind) {
@@ -224,7 +224,7 @@ pub fn instantiate(
             try components.append(component);
         }
 
-        const tmp_path = try std.fs.path.join(allocator, components.items);
+        const tmp_path = try std.Io.Dir.path.join(allocator, components.items);
         defer allocator.free(tmp_path);
 
         if (skip_depth >= components.items.len) {
@@ -237,7 +237,7 @@ pub fn instantiate(
             _ = components.orderedRemove(0);
         }
 
-        const file_path = try std.fs.path.join(allocator, components.items);
+        const file_path = try std.Io.Dir.path.join(allocator, components.items);
         defer allocator.free(file_path);
 
         switch (header.typeflag) {
@@ -315,7 +315,7 @@ pub fn Builder(comptime Writer: type) type {
                     .ctime = undefined,
                 };
                 const allocator = self.arena.child_allocator;
-                const posix_dirpath = try std.mem.replaceOwned(u8, allocator, dirpath, std.fs.path.sep_str_windows, std.fs.path.sep_str_posix);
+                const posix_dirpath = try std.mem.replaceOwned(u8, allocator, dirpath, std.Io.Dir.path.sep_str_windows, std.Io.Dir.path.sep_str_posix);
                 defer allocator.free(posix_dirpath);
 
                 const header = try Header.fromStat(stat, posix_dirpath);
@@ -332,15 +332,15 @@ pub fn Builder(comptime Writer: type) type {
         ) !void {
             const allocator = self.arena.child_allocator;
             const path = if (prefix) |prefix_path|
-                try std.fs.path.join(allocator, &[_][]const u8{ prefix_path, subpath })
+                try std.Io.Dir.path.join(allocator, &[_][]const u8{ prefix_path, subpath })
             else
                 subpath;
             defer if (prefix != null) allocator.free(path);
 
-            const posix_path = try std.mem.replaceOwned(u8, allocator, path, std.fs.path.sep_str_windows, std.fs.path.sep_str_posix);
+            const posix_path = try std.mem.replaceOwned(u8, allocator, path, std.Io.Dir.path.sep_str_windows, std.Io.Dir.path.sep_str_posix);
             defer allocator.free(posix_path);
 
-            if (std.fs.path.dirname(posix_path)) |dirname|
+            if (std.Io.Dir.path.dirname(posix_path)) |dirname|
                 try self.maybeAddDirectories(posix_path[0 .. dirname.len + 1]);
             const subfile = try root.openFile(subpath, .{ .mode = .read_write });
             defer subfile.close();
@@ -369,7 +369,7 @@ pub fn Builder(comptime Writer: type) type {
         /// add slice of bytes as file `path`
         pub fn addSlice(self: *Self, slice: []const u8, path: []const u8) !void {
             const allocator = self.arena.child_allocator;
-            const posix_path = try std.mem.replaceOwned(u8, allocator, path, std.fs.path.sep_str_windows, std.fs.path.sep_str_posix);
+            const posix_path = try std.mem.replaceOwned(u8, allocator, path, std.Io.Dir.path.sep_str_windows, std.Io.Dir.path.sep_str_posix);
             defer allocator.free(posix_path);
 
             const stat = std.fs.File.Stat{
@@ -420,8 +420,8 @@ pub const PaxHeaderMap = struct {
 
         var it = std.mem.tokenize(u8, text, "\n");
         while (it.next()) |line| {
-            const begin = (std.mem.indexOf(u8, line, " ") orelse return error.BadMapEntry) + 1;
-            const eql = std.mem.indexOf(u8, line[begin..], "=") orelse return error.BadMapEntry;
+            const begin = (std.mem.find(u8, line, " ") orelse return error.BadMapEntry) + 1;
+            const eql = std.mem.find(u8, line[begin..], "=") orelse return error.BadMapEntry;
             try map.put(line[begin .. begin + eql], line[begin + eql + 1 ..]);
         }
 
@@ -472,7 +472,7 @@ pub fn FileExtractor(comptime ReaderType: type) type {
                         if (c != 0) break;
                     } else return error.FileNotFound;
                     const size = try std.fmt.parseInt(usize, &header.size, 8);
-                    const name = header.name[0 .. std.mem.indexOf(u8, &header.name, "\x00") orelse header.name.len];
+                    const name = header.name[0 .. std.mem.find(u8, &header.name, "\x00") orelse header.name.len];
                     if (std.mem.eql(u8, name, self.path)) {
                         self.len = size;
                         break;

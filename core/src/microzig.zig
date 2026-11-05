@@ -187,7 +187,7 @@ fn microzig_main() callconv(.c) noreturn {
                 };
 
                 var buf: [msg_base.len + max_error_size]u8 = undefined;
-                const msg = std.fmt.bufPrint(&buf, "{s}{s}", .{ msg_base, @errorName(err) }) catch @panic(msg_base);
+                const msg = std.mem.print(&buf, "{s}{s}", .{ msg_base, @errorName(err) }) catch @panic(msg_base);
                 @panic(msg);
             } else {
                 @panic(msg_base);

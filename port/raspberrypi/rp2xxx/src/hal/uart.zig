@@ -529,7 +529,6 @@ pub const UART = enum(u1) {
         });
     }
 
-    /// Deprecated, use set_divider instead
     pub fn set_baudrate(uart: UART, baud_rate: u32, peri_freq: u32) void {
         const baud_rate_div = (8 * peri_freq / baud_rate);
         var baud_ibrd = @as(u16, @intCast(baud_rate_div >> 7));

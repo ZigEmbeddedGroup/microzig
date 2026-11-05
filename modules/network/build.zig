@@ -82,5 +82,5 @@ pub fn build(b: *std.Build) void {
 }
 
 fn to_s(buf: []u8, value: usize) []const u8 {
-    return std.fmt.bufPrint(buf, "{d}", .{value}) catch @panic("insufficient to_s buffer");
+    return std.mem.print(buf, "{d}", .{value}) catch @panic("insufficient to_s buffer");
 }

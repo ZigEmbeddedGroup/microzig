@@ -21,7 +21,7 @@ inline fn atomic_load(comptime T: type, ptr: *volatile T, _: i32) T {
     return ptr.*;
 }
 
-inline fn atomic_rmw(comptime T: type, ptr: *volatile T, val: T, _: i32, comptime op: std.builtin.AtomicRmwOp) T {
+inline fn atomic_rmw(comptime T: type, ptr: *volatile T, val: T, _: i32, comptime op: std.lang.AtomicRmwOp) T {
     const cs = microzig.interrupt.enter_critical_section();
     defer cs.leave();
 

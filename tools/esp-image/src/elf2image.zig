@@ -75,7 +75,7 @@ pub fn main(init: std.process.Init) !void {
     var flash_mmu_page_size: Flash_MMU_PageSize = esp_image.DEFAULT_FLASH_MMU_PAGE_SIZE;
     if (cli_args.flash_mmu_page_size) |page_size_override| {
         if (chip.supported_flash_mmu_page_sizes) |supported_flash_mmu_page_sizes| {
-            if (std.mem.indexOfScalar(Flash_MMU_PageSize, supported_flash_mmu_page_sizes, page_size_override) != null) {
+            if (std.mem.findScalar(Flash_MMU_PageSize, supported_flash_mmu_page_sizes, page_size_override) != null) {
                 flash_mmu_page_size = page_size_override;
             } else {
                 std.log.err("flash mmu page size `{t}` is not supported by chip `{t}`... using default `{t}`", .{
@@ -133,7 +133,7 @@ pub fn main(init: std.process.Init) !void {
         } else {
             var it = elf_header.iterateSectionHeaders(&elf_file_reader);
             while (try it.next()) |hdr| {
-                if (hdr.sh_type == std.elf.SHT_PROGBITS and hdr.sh_flags & std.elf.SHF_ALLOC != 0 and hdr.sh_size > 0) {
+                if (hdr.sh_type == @backingInt(std.elf.SHT.PROGBITS) and hdr.sh_flags & std.elf.SHF_ALLOC != 0 and hdr.sh_size > 0) {
                     try info_list.append(gpa, .{
                         .addr = @as(u32, @intCast(hdr.sh_addr)),
                         .file_offset = @as(u32, @intCast(hdr.sh_offset)),

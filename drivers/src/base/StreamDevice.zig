@@ -177,7 +177,7 @@ pub const Reader = struct {
 /// A device implementation that can be used to write unit tests for datagram devices.
 pub const TestDevice = struct {
     input: ?std.Io.Reader,
-    output: ?std.array_list.Managed(u8),
+    output: ?std.ArrayList(u8),
 
     connected: bool,
 
@@ -189,7 +189,7 @@ pub const TestDevice = struct {
 
             .input = if (input) |bytes| .fixed(bytes) else null,
             .output = if (write_enabled)
-                std.array_list.Managed(u8).init(std.testing.allocator)
+                .empty
             else
                 null,
         };
@@ -197,7 +197,7 @@ pub const TestDevice = struct {
 
     pub fn deinit(td: *TestDevice) void {
         if (td.output) |*list| {
-            list.deinit();
+            list.deinit(std.testing.allocator);
         }
         td.* = undefined;
     }
@@ -260,7 +260,7 @@ pub const TestDevice = struct {
 
         var total_len: usize = 0;
         for (bytes_vec) |bytes| {
-            list.appendSlice(bytes) catch return error.IoError;
+            list.appendSlice(std.testing.allocator, bytes) catch return error.IoError;
             total_len += bytes.len;
         }
         return total_len;

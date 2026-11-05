@@ -28,12 +28,12 @@ pub fn main(init: std.process.Init) !void {
 
     var lut: [std.math.maxInt(u16) + 1]isa.Opcode = @splat(.unknown);
 
-    var base_number_bit_set: std.bit_set.IntegerBitSet(16) = .empty;
+    var base_number_bit_set: std.bit_set.Integer(16) = .empty;
     var unknown_indices = try BoundedArray(u8, 16).init(0);
-    var unknown_indices_bit_set: std.bit_set.IntegerBitSet(16) = .empty;
-    var result_bit_set: std.bit_set.IntegerBitSet(16) = .empty;
+    var unknown_indices_bit_set: std.bit_set.Integer(16) = .empty;
+    var result_bit_set: std.bit_set.Integer(16) = .empty;
 
-    var positionals = std.enums.EnumArray(isa.Opcode, std.AutoArrayHashMapUnmanaged(u8, BoundedArray(u8, 16))).initFill(.{});
+    var positionals = std.enums.EnumArray(isa.Opcode, std.array_hash_map.Auto(u8, BoundedArray(u8, 16))).initFill(.{});
     defer for (&positionals.values) |*map| {
         map.deinit(gpa);
     };
@@ -113,12 +113,12 @@ pub fn main(init: std.process.Init) !void {
             }
         };
 
-        var items = std.array_list.Managed(BitSet).init(gpa);
-        defer items.deinit();
+        var items: std.ArrayList(BitSet) = .empty;
+        defer items.deinit(gpa);
 
         var it = map.iterator();
         while (it.next()) |entry| {
-            try items.append(.{
+            try items.append(gpa, .{
                 .name = entry.key_ptr.*,
                 .count = entry.value_ptr.*.slice().len,
             });

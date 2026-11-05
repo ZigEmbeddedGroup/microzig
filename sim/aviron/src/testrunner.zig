@@ -67,10 +67,10 @@ fn run_test(
     var flash_storage = aviron.Flash.Static(mcu_config.flash_size){};
     var sram = aviron.FixedSizeMemory(mcu_config.sram_size, .{ .address_type = u24 }){};
 
-    var stdout = std.array_list.Managed(u8).init(gpa);
+    var stdout: std.Io.Writer.Allocating = .init(gpa);
     defer stdout.deinit();
 
-    var stderr = std.array_list.Managed(u8).init(gpa);
+    var stderr: std.Io.Writer.Allocating = .init(gpa);
     defer stderr.deinit();
 
     var io = IO{
@@ -78,8 +78,8 @@ fn run_test(
         .sp = mcu_config.sram_base + mcu_config.sram_size - 1,
         .config = test_config,
         .stdin = test_config.stdin,
-        .stdout = &stdout,
-        .stderr = &stderr,
+        .stdout = &stdout.writer,
+        .stderr = &stderr.writer,
     };
 
     const flash_mem = flash_storage.memory();
@@ -213,17 +213,17 @@ fn run_test(
         ok = false;
     }
 
-    if (!std.mem.eql(u8, stdout.items, test_config.stdout)) {
+    if (!std.mem.eql(u8, stdout.written(), test_config.stdout)) {
         std.debug.print("stdout mismatch:\n", .{});
         std.debug.print("expected: '{x}'\n", .{test_config.stdout});
-        std.debug.print("actual:   '{x}'\n", .{stdout.items});
+        std.debug.print("actual:   '{x}'\n", .{stdout.written()});
         ok = false;
     }
 
-    if (!std.mem.eql(u8, stderr.items, test_config.stderr)) {
+    if (!std.mem.eql(u8, stderr.written(), test_config.stderr)) {
         std.debug.print("stderr mismatch:\n", .{});
         std.debug.print("expected: '{x}'\n", .{test_config.stderr});
-        std.debug.print("actual:   '{x}'\n", .{stderr.items});
+        std.debug.print("actual:   '{x}'\n", .{stderr.written()});
         ok = false;
     }
 
@@ -325,8 +325,8 @@ const IO = struct {
     ramp_d: u8 = 0,
     e_ind: u8 = 0,
 
-    stdout: *std.array_list.Managed(u8),
-    stderr: *std.array_list.Managed(u8),
+    stdout: *std.Io.Writer,
+    stderr: *std.Io.Writer,
 
     stdin: []const u8,
 
@@ -456,8 +456,8 @@ const IO = struct {
                 io.exit_code = value & mask;
             },
 
-            .stdio => io.stdout.append(value & mask) catch @panic("out of memory"),
-            .stderr => io.stderr.append(value & mask) catch @panic("out of memory"),
+            .stdio => io.stdout.writeByte(value & mask) catch @panic("out of memory"),
+            .stderr => io.stderr.writeByte(value & mask) catch @panic("out of memory"),
 
             .scratch_0 => write_masked(&io.scratch_regs[0x0], mask, value),
             .scratch_1 => write_masked(&io.scratch_regs[0x1], mask, value),

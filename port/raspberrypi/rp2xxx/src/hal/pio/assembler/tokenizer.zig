@@ -2272,7 +2272,7 @@ test "tokenize.instr.comment with no whitespace" {
 
 test "format tokenizer" {
     const test_tokenizer = Tokenizer(.RP2040).init("out 1");
-    const string = try std.fmt.allocPrint(std.testing.allocator, "{f}", .{test_tokenizer});
+    const string = try std.testing.allocator.print("{f}", .{test_tokenizer});
     defer std.testing.allocator.free(string);
     try expectEqualStrings(
         \\parser:

@@ -70,7 +70,7 @@ pub const TestSuiteConfig = struct {
 
     cpu: ?[]const u8 = null,
     cpus: ?[][]const u8 = null, // Alternative to cpu: run test against multiple MCUs
-    optimize: std.builtin.OptimizeMode = .small,
+    optimize: std.lang.Optimize = .small,
 
     gcc_flags: []const []const u8 = &.{
         "-g",

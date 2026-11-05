@@ -247,7 +247,7 @@ pub fn find_equivalent_enums(
         }
     };
 
-    var groups: std.ArrayHashMapUnmanaged(SignatureKey, std.ArrayList(AnonymousEnumInfo), HashMapContext, false) = .{};
+    var groups: std.array_hash_map.Custom(SignatureKey, std.ArrayList(AnonymousEnumInfo), HashMapContext, false) = .{};
 
     for (anonymous_enums) |enum_info| {
         const signature = try self.compute_enum_signature(arena, enum_info.enum_id);

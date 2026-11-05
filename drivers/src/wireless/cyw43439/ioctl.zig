@@ -225,7 +225,7 @@ pub const Response = struct {
         }
         var evt: EventPacket = undefined;
         @memcpy(std.mem.asBytes(&evt), buf[0..@sizeOf(EventPacket)]);
-        std.mem.byteSwapAllFields(EventPacket, &evt);
+        std.mem.byteSwap(EventPacket, &evt);
 
         if (evt.eth.ether_type != 0x886c) return null;
         if (!mem.eql(u8, &evt.hdr.oui, &.{ 0x00, 0x10, 0x18 })) return null;

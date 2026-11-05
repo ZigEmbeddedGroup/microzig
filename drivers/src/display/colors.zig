@@ -10,7 +10,7 @@ pub const BlackWhite = enum(u1) {
     white = 1,
 };
 
-pub fn RGB565_Generic(desired_endianness: std.builtin.Endian) type {
+pub fn RGB565_Generic(desired_endianness: std.lang.Endian) type {
     return struct {
         const Self = @This();
 
