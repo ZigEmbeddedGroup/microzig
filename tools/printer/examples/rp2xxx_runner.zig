@@ -17,14 +17,9 @@ pub fn main(init: std.process.Init) !void {
     const serial_device_path = args[2];
     const baud_rate = try std.fmt.parseInt(u32, args[3], 10);
 
-    const elf_file = try std.Io.Dir.cwd().openFile(io, elf_path, .{});
-    defer elf_file.close(io);
-    var elf_file_reader = elf_file.reader(io, &elf_file_reader_buf);
-
-    var elf: printer.Elf = try .init(gpa, &elf_file_reader);
-    defer elf.deinit(gpa);
-
-    var debug_info: printer.DebugInfo = try .init(gpa, elf);
+    var coverage: std.debug.Coverage = .init;
+    // arch is ignored for elf files, .thumb is just a placeholder
+    var debug_info: std.debug.Info = try .load(gpa, io, .initCwd(elf_path), &coverage, .elf, .thumb);
     defer debug_info.deinit(gpa);
 
     const serial_device = try std.Io.Dir.cwd().openFile(io, serial_device_path, .{});
@@ -55,10 +50,10 @@ pub fn main(init: std.process.Init) !void {
     };
 
     try printer.annotate(
+        gpa,
         io,
         &reader.interface,
         &terminal,
-        elf,
-        &debug_info,
+        &debug_info.impl.elf,
     );
 }
