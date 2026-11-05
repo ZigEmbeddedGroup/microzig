@@ -111,8 +111,8 @@ pub const Input = if (has_rp2350b)
 
         pub fn get_gpio_pin(in: Input) gpio.Pin {
             return switch (in) {
-                else => gpio.num(@as(u9, @backingInt(in)) + 40),
                 .temp_sensor => @panic("temp_sensor doesn't have a pin"),
+                else => gpio.num(@as(u9, @backingInt(in)) + 40),
             };
         }
 
@@ -131,8 +131,8 @@ else
 
         pub fn get_gpio_pin(in: Input) gpio.Pin {
             return switch (in) {
-                else => gpio.num(@as(u5, @backingInt(in)) + 26),
                 .temp_sensor => @panic("temp_sensor doesn't have a pin"),
+                else => gpio.num(@as(u5, @backingInt(in)) + 26),
             };
         }
 
@@ -143,13 +143,13 @@ else
 /// input.
 pub fn configure_gpio_pin_num(in: Input) void {
     switch (in) {
+        .temp_sensor => {},
         else => {
             const pin = in.get_gpio_pin();
             pin.set_function(.disabled);
             pin.set_pull(.disabled);
             pin.set_input_enabled(false);
         },
-        .temp_sensor => {},
     }
 }
 

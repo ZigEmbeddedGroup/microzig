@@ -69,6 +69,8 @@ pub fn build(b: *Build) void {
         builder.addRule(.{ .builtin = .no_hidden_allocations }, .{});
         builder.addRule(.{ .builtin = .no_deprecated }, .{});
         builder.addRule(.{ .builtin = .require_fmt }, .{});
+        builder.addRule(.{ .builtin = .switch_case_ordering }, .{});
+
         break :step builder.build();
     });
 }
