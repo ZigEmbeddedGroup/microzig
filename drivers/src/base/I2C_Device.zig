@@ -131,7 +131,7 @@ pub const VTable = struct {
 /// A device implementation that can be used to write unit tests for datagram devices.
 pub const TestDevice = struct {
     arena: std.heap.ArenaAllocator,
-    packets: std.array_list.Managed([]u8),
+    packets: std.array_list.Managed([]u8), // zlinter-disable-current-line no_deprecated
 
     // If empty, reads are supported, but don't yield data.
     // If `null`, reads are not supported.
@@ -152,7 +152,7 @@ pub const TestDevice = struct {
     pub fn init(input: ?[]const []const u8, write_enabled: bool) TestDevice {
         return TestDevice{
             .arena = std.heap.ArenaAllocator.init(std.testing.allocator),
-            .packets = std.array_list.Managed([]u8).init(std.testing.allocator),
+            .packets = .init(std.testing.allocator),
 
             .input_sequence = input,
             .input_sequence_pos = 0,

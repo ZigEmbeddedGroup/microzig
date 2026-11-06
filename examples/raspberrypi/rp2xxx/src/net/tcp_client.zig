@@ -132,7 +132,7 @@ const Client = struct {
                 // ref: https://github.com/lwip-tcpip/lwip/blob/6ca936f6b588cee702c638eee75c2436e6cf75de/src/include/lwip/opt.h#L1310
                 var buf: [net.lwip.TCP_SND_BUF + 128]u8 = @splat('-');
                 // add some header to the buf
-                _ = std.fmt.bufPrint(
+                _ = std.mem.print(
                     &buf,
                     "hello from rpi pi pico {}",
                     .{self.send_count},
