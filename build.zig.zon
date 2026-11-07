@@ -40,6 +40,11 @@
         "build.zig",
         "build.zig.zon",
         "LICENSE",
-        "tools/generate_linker_script.zig",
+        "build-internals",
+        "core",
+        "drivers",
+        "tools",
+        "port",
+        "modules",
     },
 }
