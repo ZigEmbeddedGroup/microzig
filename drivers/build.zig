@@ -12,10 +12,12 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/root.zig"),
         .target = target,
         .optimize = optimize,
-        .imports = &.{.{
-            .name = "link",
-            .module = b.dependency("link", .{}).module("link"),
-        }},
+        .imports = &.{
+            .{
+                .name = "link",
+                .module = b.dependency("link", .{}).module("link"),
+            },
+        },
     });
 
     drivers_mod.addOptions("config", options);

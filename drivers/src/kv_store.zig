@@ -6,10 +6,13 @@ const isAligned = std.mem.isAlignedGeneric;
 
 const log = std.log.scoped(.drivers_storage);
 
-// TODO: support huge items that don't fit in a sector
-// TODO: caching
+// TODO: cache
+// TODO: stable data format for non extern keys and values
 
 pub const Options = struct {
+    write_size_override: ?u32 = null,
+    erase_size_override: ?u32 = null,
+
     max_write_attempts: usize = 2,
     max_erase_attempts: usize = 2,
     max_read_attempts: usize = 2,
@@ -48,10 +51,12 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
     return struct {
         const Storage = @This();
 
-        const WRITE_SIZE = Flash.WRITE_SIZE;
-        const ERASE_SIZE = Flash.ERASE_SIZE;
+        const WRITE_SIZE = if (options.write_size_override) |write_size| write_size else Flash.WRITE_SIZE;
+        const ERASE_SIZE = if (options.erase_size_override) |erase_size| erase_size else Flash.ERASE_SIZE;
 
         comptime {
+            if (options.write_size_override) |write_size| assert(write_size > 0 and write_size % Flash.WRITE_SIZE == 0);
+            if (options.erase_size_override) |erase_size| assert(erase_size > 0 and erase_size % Flash.ERASE_SIZE == 0);
             assert(std.math.isPowerOfTwo(WRITE_SIZE));
             assert(std.math.isPowerOfTwo(ERASE_SIZE));
         }
@@ -132,7 +137,6 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
                 last_sector_offset;
 
             var item_it: ItemIterator = .init(&storage, active_sector_offset);
-
             while (try item_it.next()) |item| {
                 if (item.tag == .freed) continue;
                 if (item.key == .corrupted) {
@@ -206,7 +210,7 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
 
                     // because we call it before updating current_offset, we
                     // skip the last added item
-                    storage.remove(key) catch {};
+                    storage.free_all_items(key) catch {};
 
                     storage.current_offset += item_stride;
 
@@ -215,8 +219,25 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
             } else return error.OutOfMemory;
         }
 
-        /// Remove the given key from storage.
-        pub fn remove(storage: *Storage, key: Key) Error!void {
+        pub fn print_all_items(storage: *Storage) !void {
+            var current_sector_offset = storage.active_sector_offset;
+            while (true) : (current_sector_offset = storage.get_prev_sector(current_sector_offset)) {
+                var item_it: ItemIterator = .init(storage, current_sector_offset);
+                while (try item_it.next()) |item| {
+                    log.info("found item, sector={}, offset={}, tag={}, key={}", .{
+                        current_sector_offset,
+                        item.offset,
+                        item.tag,
+                        item.key,
+                    });
+                }
+                if (current_sector_offset == storage.last_sector_offset) {
+                    break;
+                }
+            }
+        }
+
+        fn free_all_items(storage: *Storage, key: Key) Error!void {
             var current_sector_offset = storage.active_sector_offset;
             while (true) : (current_sector_offset = storage.get_prev_sector(current_sector_offset)) {
                 var item_it: ItemIterator = .init(storage, current_sector_offset);
@@ -323,24 +344,6 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
 
                 if (current_sector_offset == last_sector_offset) {
                     return null;
-                }
-            }
-        }
-
-        pub fn print_all_items(storage: *Storage) !void {
-            var current_sector_offset = storage.active_sector_offset;
-            while (true) : (current_sector_offset = storage.get_prev_sector(current_sector_offset)) {
-                var item_it: ItemIterator = .init(storage, current_sector_offset);
-                while (try item_it.next()) |item| {
-                    log.info("found item, sector={}, offset={}, tag={}, key={}", .{
-                        current_sector_offset,
-                        item.offset,
-                        item.tag,
-                        item.key,
-                    });
-                }
-                if (current_sector_offset == storage.last_sector_offset) {
-                    break;
                 }
             }
         }
