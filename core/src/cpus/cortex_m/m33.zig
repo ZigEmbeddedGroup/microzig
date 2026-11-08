@@ -453,3 +453,232 @@ pub const MemoryProtectionUnit = extern struct {
         LIMIT: u27,
     });
 };
+
+pub const DebugControlBlock = extern struct {
+    /// Debug Halting Control and Status Register
+    ///
+    /// Careful when using .modify() on this register, you should always write
+    /// the DBGKEY to the upper half of the register, otherwise the write will
+    /// be ignored.
+    DHCSR: mmio.Mmio(packed struct(u32) {
+        /// Debug enable.
+        C_DEBUGEN: u1,
+        /// Core halt. When set to 1, halts the core.
+        C_HALT: u1,
+        /// Core step. When set to 1, steps the core.
+        C_STEP: u1,
+        /// Mask interrupts when halting or stepping.
+        C_MASKINTS: u1,
+        reserved0: u1 = 0,
+        /// Snap stall control.
+        C_SNAPSTALL: u1,
+        /// Halt on PMU overflow control.
+        C_PMOV: u1,
+        reserved1: u9 = 0,
+
+        /// Upper 16 bits: write DBGKEY or read status flags
+        upper: packed union(u16) {
+            /// Debug Key. Must be written as 0xA05F to enable writes to this register.
+            DBGKEY: u16,
+            /// Status flags (Read-Only).
+            status: packed struct(u16) {
+                /// Register ready status.
+                S_REGRDY: u1,
+                /// Core halt status.
+                S_HALT: u1,
+                /// Core sleep status.
+                S_SLEEP: u1,
+                /// Core lockup status.
+                S_LOCKUP: u1,
+                /// Secure Debug Enabled status.
+                S_SDE: u1,
+                /// Non-secure Unprivileged Halting Debug Enabled status.
+                S_NSUIDE: u1,
+                /// Secure Unprivileged Halting Debug Enabled status.
+                S_SUIDE: u1,
+                /// Floating-point registers Debuggable status.
+                S_FPD: u1,
+                /// Retire sticky status.
+                S_RETIRE_ST: u1,
+                /// Reset sticky status.
+                S_RESET_ST: u1,
+                /// Restart sticky status.
+                S_RESTART_ST: u1,
+                reserved2: u5 = 0,
+            },
+        },
+    }),
+    /// Debug Core Register Selector Register
+    DCRSR: mmio.Mmio(packed struct(u32) {
+        /// Register selector.
+        REGSEL: u8,
+        reserved0: u8 = 0,
+        /// Write / not Read access to the selected core register.
+        /// 0 = Read
+        /// 1 = Write
+        REGWnR: u1,
+        reserved1: u15 = 0,
+    }),
+    /// Debug Core Register Data Register
+    DCRDR: u32,
+    /// Debug Exception and Monitor Control Register
+    DEMCR: mmio.Mmio(packed struct(u32) {
+        /// Vector catch on core reset.
+        VC_CORERESET: u1,
+        reserved0: u3 = 0,
+        /// Vector catch on Memory Management Fault.
+        VC_MMERR: u1,
+        /// Vector catch on Coprocessor Access Fault.
+        VC_NOCPERR: u1,
+        /// Vector catch on Check Fault.
+        VC_CHKERR: u1,
+        /// Vector catch on State Fault.
+        VC_STATERR: u1,
+        /// Vector catch on Bus Fault.
+        VC_BUSERR: u1,
+        /// Vector catch on Interrupt/Exception Fault.
+        VC_INTERR: u1,
+        /// Vector catch on Hard Fault.
+        VC_HARDERR: u1,
+        /// Vector catch on Secure Fault.
+        VC_SFERR: u1,
+        reserved1: u4 = 0,
+        /// Debug Monitor Enable.
+        MON_EN: u1,
+        /// Debug Monitor pending state.
+        MON_PEND: u1,
+        /// Debug Monitor step enable.
+        MON_STEP: u1,
+        /// Debug Monitor request.
+        MON_REQ: u1,
+        /// Secure Debug Monitor Enable.
+        SDME: u1,
+        /// Unprivileged Debug Monitor Enable.
+        UMON_EN: u1,
+        reserved2: u1 = 0,
+        /// Monitor pend request key.
+        MONPRKEY: u1,
+        /// Trace enable. Enables DWT and ITM features.
+        TRCENA: u1,
+        reserved3: u7 = 0,
+    }),
+    /// Debug Set Clear Exception and Monitor Control Register
+    DSCMECR: mmio.Mmio(packed struct(u32) {
+        reserved0: u1 = 0,
+        /// Set monitor pend.
+        SET_MON_PEND: u1,
+        reserved1: u1 = 0,
+        /// Set monitor request.
+        SET_MON_REQ: u1,
+        reserved2: u13 = 0,
+        /// Clear monitor pend.
+        CLR_MON_PEND: u1,
+        reserved3: u1 = 0,
+        /// Clear monitor request.
+        CLR_MON_REQ: u1,
+        reserved4: u12 = 0,
+    }),
+    /// Debug Authentication Control Register
+    DAUTHCTRL: u32,
+    /// Debug Security Control and Status Register
+    DSCSR: mmio.Mmio(packed struct(u32) {
+        /// Secure banked register select enable.
+        SBRSELEN: u1,
+        /// Secure banked register select.
+        SBRSEL: u1,
+        reserved0: u14 = 0,
+        /// Current domain Secure.
+        CDS: u1,
+        /// CDS write-enable key.
+        CDSKEY: u1,
+        reserved1: u14 = 0,
+    }),
+};
+
+pub const DataWatchpointAndTrace = extern struct {
+    /// Control Register
+    CTRL: mmio.Mmio(packed struct(u32) {
+        /// Enables the Cycle Count Register (CYCCNT).
+        CYCCNTENA: u1,
+        /// Reload value for the Post-preset counter.
+        POSTPRESET: u4,
+        /// Reload value for the Post-init counter.
+        POSTINIT: u4,
+        /// Selects the tap on the CYCCNT for POSTCNT.
+        CYCTAP: u1,
+        /// Synchronization tap select.
+        SYNCTAP: u2,
+        /// Enables PC sampling.
+        PCSAMPLENA: u1,
+        reserved0: u3 = 0,
+        /// Enables Exception trace.
+        EXCTRCENA: u1,
+        /// Enables CPI event trace.
+        CPIEVTENA: u1,
+        /// Enables Exception event trace.
+        EXCEVTENA: u1,
+        /// Enables Sleep event trace.
+        SLEEPEVTENA: u1,
+        /// Enables LSU event trace.
+        LSUEVTENA: u1,
+        /// Enables Folded instruction event trace.
+        FOLDEVTENA: u1,
+        /// Enables Cycle count event trace.
+        CYCEVTENA: u1,
+        /// Cycle counter disable secure.
+        CYCDISS: u1 = 0,
+        /// Profiling counter not supported.
+        NOPRFCNT: u1,
+        /// Cycle counter not supported.
+        NOCYCCNT: u1,
+        /// External triggers not supported.
+        NOEXTTRIG: u1,
+        /// Trace packet generation not supported.
+        NOTRCPKT: u1,
+        /// Number of comparators implemented.
+        NUMCOMP: u4,
+    }),
+    /// Cycle Count Register
+    CYCCNT: u32,
+    /// CPI Count Register
+    CPICNT: u32,
+    /// Exception Overhead Count Register
+    EXCCNT: u32,
+    /// Sleep Count Register
+    SLEEPCNT: u32,
+    /// LSU Count Register
+    LSUCNT: u32,
+    /// Folded Instruction Count Register
+    FOLDCNT: u32,
+    /// Program Counter Sample Register
+    PCSR: u32,
+
+    /// DWT Comparators
+    COMPARATORS: [15]Comparator,
+
+    pub const Comparator = extern struct {
+        /// Comparator Value Register
+        COMP: u32,
+        reserved: u32 = 0,
+        /// Comparator Function Register
+        FUNCTION: mmio.Mmio(packed struct(u32) {
+            /// Comparator function (e.g., PC value, data address, data value).
+            FUNCTION: u4,
+            reserved0: u1 = 0,
+            /// Emit range tracing.
+            EMITRANGE: u1,
+            reserved1: u2 = 0,
+            /// Data value size.
+            DATAVSIZE: u2,
+            /// Linked comparator number.
+            LNK1ENA: u1,
+            /// Linked comparator number.
+            DATAVADDR0: u4,
+            reserved2: u9 = 0,
+            /// Comparator matched status.
+            MATCHED: u1,
+            reserved3: u7 = 0,
+        }),
+        VMASK: u32,
+    };
+};
