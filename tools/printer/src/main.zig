@@ -21,6 +21,8 @@ pub fn main(init: std.process.Init) !void {
     // arch is ignored for elf files, .thumb is just a placeholder
     var debug_info: std.debug.Info = try .load(gpa, io, .initCwd(elf_path), &coverage, .elf, .thumb);
     defer debug_info.deinit(gpa);
+    // NOTE: this is safe because we specify the elf object format when loading the debug_info
+    const elf_file = &debug_info.impl.elf;
 
     const input_file = if (args.len <= 2 or std.mem.eql(u8, args[2], "-"))
         std.Io.File.stdin()
@@ -46,7 +48,7 @@ pub fn main(init: std.process.Init) !void {
             io,
             &reader.interface,
             &terminal,
-            &debug_info.impl.elf,
+            elf_file,
         );
     }
 }

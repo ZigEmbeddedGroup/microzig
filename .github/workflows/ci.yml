@@ -108,6 +108,22 @@ jobs:
         run: zig build test
         working-directory: tools/esp-image
 
+  test-printer:
+    name: Test Printer
+    continue-on-error: true
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v2
+      - name: Build Printer
+        run: zig build
+        working-directory: tools/printer
+
   build-sorcerer:
     name: Build Sorcerer
     if: false # Temporarily disabled: Sorcerer dependency fetches are flaky on CI. https://github.com/ZigEmbeddedGroup/microzig/issues/949

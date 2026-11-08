@@ -8,20 +8,20 @@ pub fn annotate(
     io: Io,
     in_stream: *Io.Reader,
     terminal: *Io.Terminal,
-    elf: *std.debug.ElfFile,
+    elf_file: *std.debug.ElfFile,
 ) !void {
     while (true) {
         const line = in_stream.takeDelimiterInclusive('\n') catch |err| switch (err) {
             error.ReadFailed => return error.ReadFailed,
             error.EndOfStream => {
-                try output_line(gpa, io, in_stream.buffered(), terminal, elf);
+                try output_line(gpa, io, in_stream.buffered(), terminal, elf_file);
                 try terminal.writer.flush();
                 return;
             },
             error.StreamTooLong => return error.StreamTooLong,
         };
 
-        try output_line(gpa, io, line, terminal, elf);
+        try output_line(gpa, io, line, terminal, elf_file);
         try terminal.writer.flush();
     }
 }
@@ -31,7 +31,7 @@ fn output_line(
     io: Io,
     line: []const u8,
     terminal: *Io.Terminal,
-    elf: *std.debug.ElfFile,
+    elf_file: *std.debug.ElfFile,
 ) !void {
     try terminal.writer.writeAll(line);
 
@@ -53,32 +53,32 @@ fn output_line(
 
     var text_arena: std.heap.ArenaAllocator = .init(gpa);
     defer text_arena.deinit();
-    const di = &(elf.dwarf orelse return);
-    const compile_unit = di.findCompileUnit(elf.endian, address) catch return;
-    const maybe_name = di.getSymbolName(address);
-    const maybe_src_loc = di.getLineNumberInfo(gpa, text_arena.allocator(), elf.endian, compile_unit, address) catch null;
+    const di = &(elf_file.dwarf orelse return);
+    const compile_unit = di.findCompileUnit(elf_file.endian, address) catch return;
+    const maybe_symbol_name = di.getSymbolName(address);
+    const maybe_src_loc = di.getLineNumberInfo(gpa, text_arena.allocator(), elf_file.endian, compile_unit, address) catch null;
 
-    try output_location_info(terminal, address, maybe_name, maybe_src_loc);
-    if (maybe_src_loc) |src_loc| try output_source_line(io, terminal, src_loc);
+    if (maybe_src_loc) |src_loc| {
+        if (maybe_symbol_name) |symbol_name| {
+            try output_location_info(terminal, address, symbol_name, src_loc);
+            try output_source_line(io, terminal, src_loc);
+        }
+    }
 }
 
 fn output_location_info(
     terminal: *Io.Terminal,
     address: u64,
-    maybe_name: ?[]const u8,
-    maybe_src_loc: ?std.debug.SourceLocation,
+    symbol_name: []const u8,
+    src_loc: std.debug.SourceLocation,
 ) !void {
     try terminal.setColor(.bold);
 
-    if (maybe_src_loc) |src_loc| {
-        try terminal.writer.print("{s}:{}:{}", .{
-            src_loc.file_name,
-            src_loc.line,
-            src_loc.column,
-        });
-    } else {
-        try terminal.writer.writeAll("???:?:?");
-    }
+    try terminal.writer.print("{s}:{}:{}", .{
+        src_loc.file_name,
+        src_loc.line,
+        src_loc.column,
+    });
 
     try terminal.setColor(.reset);
     try terminal.writer.writeAll(": ");
@@ -86,8 +86,8 @@ fn output_location_info(
     try terminal.setColor(.dim);
     try terminal.writer.print("0x{x} in {s} ({s})\n", .{
         address,
-        maybe_name orelse "???",
-        if (maybe_src_loc) |src_loc| std.Io.Dir.path.basename(src_loc.file_name) else "???",
+        symbol_name,
+        std.Io.Dir.path.basename(src_loc.file_name),
     });
     try terminal.setColor(.reset);
 }
