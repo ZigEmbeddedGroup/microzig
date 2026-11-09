@@ -72,10 +72,10 @@ pub const Output = struct {
     pub fn get_define_by_name(
         comptime output: Output,
         comptime name: []const u8,
-    ) u32 {
+    ) i64 {
         return for (output.defines) |define| {
             if (std.mem.eql(u8, name, define.name))
-                break define;
+                break define.value;
         } else @panic(std.fmt.comptimePrint("define '{s}' not found", .{name}));
     }
 };
@@ -180,6 +180,15 @@ test "assemble" {
     // this also verifies that the assemble function can be compiled
     _ = comptime assemble(.RP2040, ".program testprog", .{})
         .get_program_by_name("testprog");
+}
+
+test "get_define_by_name" {
+    const output = comptime assemble(.RP2040,
+        \\.define PUBLIC T1 3
+        \\.program testprog
+        \\    nop
+    , .{});
+    try std.testing.expectEqual(@as(i64, 3), comptime output.get_define_by_name("T1"));
 }
 
 test "format compile error" {
