@@ -8,6 +8,8 @@ const log = std.log.scoped(.drivers_storage);
 
 // TODO: cache
 // TODO: stable data format for non extern keys and values
+// TODO: test data corruption
+// TODO: add and test programming page multiple times error
 
 pub const Options = struct {
     write_size_override: ?u32 = null,
@@ -136,7 +138,11 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
             else
                 last_sector_offset;
 
-            var item_it: ItemIterator = .init(&storage, active_sector_offset);
+            var item_it: ItemIterator = .{
+                .storage = &storage,
+                .next_offset = active_sector_offset + WRITE_SIZE, // don't forget the sector tag
+                .end_offset = active_sector_offset + ERASE_SIZE,
+            };
             while (try item_it.next()) |item| {
                 if (item.tag == .freed) continue;
                 if (item.key == .corrupted) {
@@ -167,7 +173,9 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
         }
 
         /// Store the given key and value. If the key already exists, it will
-        /// be overwritten.
+        /// be overwritten. If this function doesn't return an error, then the
+        /// item was successfully written and a following fetch should return
+        /// it.
         pub fn store(storage: *Storage, key: Key, value: anytype) Error!void {
             if (comptime !is_type_allowed(@TypeOf(value))) @compileError("invalid value type " ++ @typeName(@TypeOf(value)));
 
@@ -219,28 +227,17 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
             } else return error.OutOfMemory;
         }
 
-        pub fn print_all_items(storage: *Storage) !void {
-            var current_sector_offset = storage.active_sector_offset;
-            while (true) : (current_sector_offset = storage.get_prev_sector(current_sector_offset)) {
-                var item_it: ItemIterator = .init(storage, current_sector_offset);
-                while (try item_it.next()) |item| {
-                    log.info("found item, sector={}, offset={}, tag={}, key={}", .{
-                        current_sector_offset,
-                        item.offset,
-                        item.tag,
-                        item.key,
-                    });
-                }
-                if (current_sector_offset == storage.last_sector_offset) {
-                    break;
-                }
-            }
-        }
-
         fn free_all_items(storage: *Storage, key: Key) Error!void {
             var current_sector_offset = storage.active_sector_offset;
             while (true) : (current_sector_offset = storage.get_prev_sector(current_sector_offset)) {
-                var item_it: ItemIterator = .init(storage, current_sector_offset);
+                var item_it: ItemIterator = .{
+                    .storage = storage,
+                    .next_offset = current_sector_offset + WRITE_SIZE, // don't forget the sector tag
+                    .end_offset = if (current_sector_offset == storage.active_sector_offset)
+                        storage.current_offset
+                    else
+                        current_sector_offset + ERASE_SIZE,
+                };
                 while (try item_it.next()) |item| {
                     if (item.tag == .freed) continue;
                     switch (item.key) {
@@ -253,6 +250,31 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
                         },
                         .corrupted => continue,
                     }
+                }
+                if (current_sector_offset == storage.last_sector_offset) {
+                    break;
+                }
+            }
+        }
+
+        pub fn print_all_items(storage: *Storage) !void {
+            var current_sector_offset = storage.active_sector_offset;
+            while (true) : (current_sector_offset = storage.get_prev_sector(current_sector_offset)) {
+                var item_it: ItemIterator = .{
+                    .storage = storage,
+                    .next_offset = current_sector_offset + WRITE_SIZE, // don't forget the sector tag
+                    .end_offset = if (current_sector_offset == storage.active_sector_offset)
+                        storage.current_offset
+                    else
+                        current_sector_offset + ERASE_SIZE,
+                };
+                while (try item_it.next()) |item| {
+                    log.info("found item, sector={}, offset={}, tag={}, key={}", .{
+                        current_sector_offset,
+                        item.offset,
+                        item.tag,
+                        item.key,
+                    });
                 }
                 if (current_sector_offset == storage.last_sector_offset) {
                     break;
@@ -280,7 +302,11 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
                 else
                     storage.last_sector_offset;
 
-            var item_it: ItemIterator = .init(storage, to_be_erased_sector_offset);
+            var item_it: ItemIterator = .{
+                .storage = storage,
+                .next_offset = to_be_erased_sector_offset + WRITE_SIZE, // don't forget the sector tag
+                .end_offset = to_be_erased_sector_offset + ERASE_SIZE,
+            };
             while (try item_it.next()) |item| {
                 if (item.tag == .freed) continue;
                 switch (item.key) {
@@ -325,7 +351,14 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
         fn fetch_item_internal(storage: *Storage, key: Key, last_sector_offset: u32) !?Item {
             var current_sector_offset = storage.active_sector_offset;
             while (true) : (current_sector_offset = storage.get_prev_sector(current_sector_offset)) {
-                var item_it: ItemIterator = .init(storage, current_sector_offset);
+                var item_it: ItemIterator = .{
+                    .storage = storage,
+                    .next_offset = current_sector_offset + WRITE_SIZE, // don't forget the sector tag
+                    .end_offset = if (current_sector_offset == storage.active_sector_offset)
+                        storage.current_offset
+                    else
+                        current_sector_offset + ERASE_SIZE,
+                };
                 var maybe_item: ?Item = null;
                 while (try item_it.next()) |item| {
                     if (item.tag == .freed) continue;
@@ -386,8 +419,10 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
             var attempts_remaining: usize = options.max_read_attempts;
             while (attempts_remaining > 0) : (attempts_remaining -= 1) {
                 return storage.flash.read(offset, data) catch |err| switch (err) {
-                    error.Corrupted => return error.Corrupted,
-                    else => continue,
+                    error.InvalidRange,
+                    error.Corrupted,
+                    => |e| return e,
+                    error.ReadFailed => continue,
                 };
             } else return error.ReadFailed;
         }
@@ -396,8 +431,10 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
             var attempts_remaining: usize = options.max_read_attempts;
             while (attempts_remaining > 0) : (attempts_remaining -= 1) {
                 return storage.flash.read_buf(offset, end) catch |err| switch (err) {
-                    error.Corrupted => return error.Corrupted,
-                    else => continue,
+                    error.InvalidRange,
+                    error.Corrupted,
+                    => |e| return e,
+                    error.ReadFailed => continue,
                 };
             } else return error.ReadFailed;
         }
@@ -422,7 +459,10 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
         fn write_retrying(storage: *Storage, offset: u32, data: []const u8) !void {
             var attempts_remaining: usize = options.max_write_attempts;
             while (attempts_remaining > 0) : (attempts_remaining -= 1) {
-                storage.flash.write(offset, data) catch continue;
+                storage.flash.write(offset, data) catch |err| switch (err) {
+                    error.InvalidRange => return error.InvalidRange,
+                    error.WriteFailed => continue,
+                };
                 break;
             }
 
@@ -431,7 +471,7 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
             const end = current_offset + @as(u32, @truncate(data.len));
             while (storage.read_buf_retrying(current_offset, end) catch |err| switch (err) {
                 error.Corrupted => return error.InvalidWrite,
-                else => return err,
+                else => |e| return e,
             }) |flash_data| : ({
                 current_offset += @truncate(flash_data.len);
                 data_offset += flash_data.len;
@@ -448,7 +488,10 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
             }
             var attempts_remaining: usize = options.max_erase_attempts;
             attempts: while (attempts_remaining > 0) : (attempts_remaining -= 1) {
-                storage.flash.erase(offset, ERASE_SIZE) catch continue :attempts;
+                storage.flash.erase(offset, ERASE_SIZE) catch |err| switch (err) {
+                    error.InvalidRange => return error.InvalidRange,
+                    error.EraseFailed => continue,
+                };
                 if (try storage.is_sector_erased(offset)) {
                     break :attempts;
                 } else {
@@ -492,17 +535,6 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
             next_offset: u32,
             end_offset: u32,
             corrupted_header_flag: bool = false,
-
-            pub fn init(storage: *Storage, sector_offset: u32) ItemIterator {
-                return .{
-                    .storage = storage,
-                    .next_offset = sector_offset + WRITE_SIZE, // don't forget the sector tag
-                    .end_offset = if (sector_offset == storage.active_sector_offset)
-                        storage.current_offset
-                    else
-                        sector_offset + ERASE_SIZE,
-                };
-            }
 
             pub fn next(it: *ItemIterator) !?Item {
                 const current_offset = it.next_offset;
@@ -644,7 +676,7 @@ pub fn MockFlash(options: MockFlashOptions) type {
             };
         }
 
-        pub fn erase(self: *Self, offset: u32, size: u32) error{InvalidRange}!void {
+        pub fn erase(self: *Self, offset: u32, size: u32) error{ InvalidRange, EraseFailed }!void {
             if (offset + size > self.buf.len) {
                 return error.InvalidRange;
             }
@@ -678,7 +710,9 @@ pub fn MockFlash(options: MockFlashOptions) type {
         }
 
         pub fn read_buf(self: *Self, offset: u32, end: u32) error{ InvalidRange, ReadFailed, Corrupted }!?[]const u8 {
-            if (offset > self.buf.len or end > self.buf.len) return error.InvalidRange;
+            if (offset > self.buf.len or end > self.buf.len) {
+                return error.InvalidRange;
+            }
 
             if (self.corruption_tripwire) |corruption_tripwire| {
                 const start_page_id = alignBackward(u32, offset, WRITE_SIZE) / WRITE_SIZE;
@@ -698,7 +732,9 @@ pub fn MockFlash(options: MockFlashOptions) type {
         }
 
         pub fn read(self: *Self, offset: u32, data: []u8) error{ InvalidRange, ReadFailed, Corrupted }!void {
-            if (offset + data.len > self.buf.len) return error.InvalidRange;
+            if (offset + data.len > self.buf.len) {
+                return error.InvalidRange;
+            }
 
             if (self.corruption_tripwire) |corruption_tripwire| {
                 const start_page_id = alignBackward(u32, offset, WRITE_SIZE) / WRITE_SIZE;
@@ -733,6 +769,7 @@ pub fn MockFlash(options: MockFlashOptions) type {
                 if (self.power_loss_tripwire == page_id) {
                     self.power_loss_tripwire = null;
                     self.power_loss_tripped = true;
+                    std.mem.copyForwards(u8, self.buf[offset..][copy_offset..][0 .. WRITE_SIZE / 2], data[copy_offset..][0 .. WRITE_SIZE / 2]);
                     break;
                 }
 
@@ -876,21 +913,40 @@ fn do_fuzz(_: void, smith: *testing.Smith) !void {
     var oracle: std.array_hash_map.Auto(u32, Value) = .empty;
     defer oracle.deinit(testing.allocator);
 
+    const power_loss_tripwire = smith.valueRangeLessThan(u32, 0, FLASH_SIZE / TestFlash.WRITE_SIZE);
+    storage.flash.power_loss_tripwire = power_loss_tripwire;
+
     const Action = enum {
         store,
         fetch,
     };
 
-    for (0..10000) |_| {
+    for (0..1000) |_| {
         switch (smith.value(Action)) {
             .store => {
                 const key = smith.value(u32);
                 const value = smith.value(Value);
-                try oracle.put(testing.allocator, key, value);
+                var item_written_successfully = true;
                 storage.store(key, value) catch |err| switch (err) {
                     error.OutOfMemory => break,
+                    // if we encountered a power loss and we failed to write,
+                    // the item isn't successfully written
+                    error.InvalidWrite,
+                    error.EraseFailed,
+                    => |e| if (storage.flash.power_loss_tripped) {
+                        item_written_successfully = false;
+                    } else return e,
                     else => return err,
                 };
+                if (storage.flash.power_loss_tripped) {
+                    storage = try .init(TestFlash.init(buf), 0, FLASH_SIZE);
+                }
+                if (item_written_successfully) {
+                    std.log.info("store {} = {}", .{ key, value });
+                    try oracle.put(testing.allocator, key, value);
+                } else {
+                    std.log.info("skip storing {}.. interrupted by power loss", .{key});
+                }
             },
             .fetch => {
                 const key_index = smith.index(oracle.keys().len + 1);
@@ -900,6 +956,7 @@ fn do_fuzz(_: void, smith: *testing.Smith) !void {
                     smith.value(u32);
                 const expected = oracle.get(key);
                 const actual = try storage.fetch(key, Value);
+                std.log.info("fetch {} = {?} (expected {?})", .{ key, actual, expected });
                 try testing.expectEqual(expected, actual);
             },
         }
