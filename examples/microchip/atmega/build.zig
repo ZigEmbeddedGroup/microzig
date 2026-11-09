@@ -29,6 +29,8 @@ pub fn build(b: *std.Build) void {
         .{ .target = mb.ports.atmega.boards.arduino.uno_rev3, .name = "arduino-uno_uart_echo", .file = "src/uart_echo.zig" },
         .{ .target = mb.ports.atmega.boards.emakefun.rf_nano_v3, .name = "rf-nano-v3_uart_echo", .file = "src/uart_echo.zig" },
         .{ .target = mb.ports.atmega.boards.emakefun.rf_nano_v3, .name = "rf-nano-v3_spi_nrf24", .file = "src/spi_nrf24.zig" },
+        .{ .target = mb.ports.atmega.boards.emakefun.rf_nano_v3, .name = "rf-nano-v3_nrf24_send", .file = "src/nrf24_send.zig" },
+        .{ .target = mb.ports.atmega.boards.emakefun.rf_nano_v3, .name = "rf-nano-v3_nrf24_receive", .file = "src/nrf24_receive.zig" },
     };
 
     for (available_examples) |example| {
