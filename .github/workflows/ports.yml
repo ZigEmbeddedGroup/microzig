@@ -6,6 +6,11 @@ on:
     branches: [main, zig-master]
   workflow_dispatch:
 
+env:
+  # Share a single local cache between all zig build steps so it doesn't build regz multiple times
+  ZIG_LOCAL_CACHE_DIR: ${{ github.workspace }}/.zig-cache
+  ZIG_LOCAL_PKG_DIR: ${{ github.workspace }}/zig-pkg
+
 jobs:
   unit-test:
     name: "Unit Test"
