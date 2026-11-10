@@ -6,7 +6,7 @@ pub const descriptor = @import("usb/descriptor.zig");
 pub const drivers = struct {
     pub const CDC = @import("usb/drivers/CDC.zig");
     pub const EchoExample = @import("usb/drivers/EchoExample.zig");
-    pub const hid = @import("usb/drivers/hid.zig");
+    pub const hid = @import("usb/drivers/HID.zig");
 };
 pub const types = @import("usb/types.zig");
 
