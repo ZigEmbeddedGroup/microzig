@@ -129,9 +129,8 @@ var usb_controller: usb.DeviceController(.{
     .serial = "someserial",
     .max_supported_packet_size = USB_Device.max_supported_packet_size,
 }, &.{.{
-    .attributes = .{ .self_powered = false },
-    .max_current_ma = 50,
-    .Drivers = struct { keyboard: Keyboard, reset: rp2xxx.usb.ResetDriver(null, 0) },
+    .{ .attributes = .{ .self_powered = false }, .max_current_ma = 50 },
+    struct { keyboard: Keyboard, reset: rp2xxx.usb.ResetDriver(null, 0) },
 }}, .{.{
     .keyboard = .{ .itf_string = "Boot Keyboard", .poll_interval = 1 },
     .reset = "",

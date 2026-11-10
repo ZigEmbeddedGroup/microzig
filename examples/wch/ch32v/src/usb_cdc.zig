@@ -32,9 +32,8 @@ const USB_Controller = usb.DeviceController(.{
     .serial = "someserial",
     .max_supported_packet_size = hal.usb.max_packet_size,
 }, &.{.{
-    .attributes = .{ .self_powered = false },
-    .max_current_ma = 50,
-    .Drivers = struct { serial: USB_Serial },
+    .{ .attributes = .{ .self_powered = false }, .max_current_ma = 50 },
+    struct { serial: USB_Serial },
 }}, .{.{
     .serial = .{ .itf_notifi = "Board CDC", .itf_data = "Board CDC Data" },
 }});

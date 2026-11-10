@@ -136,9 +136,8 @@ var usb_controller: usb.DeviceController(.{
     .serial = "someserial",
     .max_supported_packet_size = USBD.max_supported_packet_size,
 }, &.{.{
-    .attributes = .{ .self_powered = false },
-    .max_current_ma = 50,
-    .Drivers = struct { keyboard: Keyboard },
+    .{ .attributes = .{ .self_powered = false }, .max_current_ma = 50 },
+    struct { keyboard: Keyboard },
 }}, .{.{
     .keyboard = .{ .itf_string = "Boot Keyboard", .poll_interval = 1 },
 }}) = .init;
