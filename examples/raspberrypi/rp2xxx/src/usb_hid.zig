@@ -128,13 +128,14 @@ var usb_controller: usb.DeviceController(.{
     .bcd_device = .v1_00,
     .serial = "someserial",
     .max_supported_packet_size = USB_Device.max_supported_packet_size,
-}, &.{.{
+}, &.{usb.Configuration(
     .{ .attributes = .{ .self_powered = false }, .max_current_ma = 50 },
     struct { keyboard: Keyboard, reset: rp2xxx.usb.ResetDriver(null, 0) },
-}}, .{.{
-    .keyboard = .{ .itf_string = "Boot Keyboard", .poll_interval = 1 },
-    .reset = "",
-}}) = .init;
+    .{
+        .keyboard = .{ .itf_string = "Boot Keyboard", .poll_interval = 1 },
+        .reset = "",
+    },
+)}) = .init;
 
 pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
     std.log.err("panic: {s}", .{message});

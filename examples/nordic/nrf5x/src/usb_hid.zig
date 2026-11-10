@@ -135,12 +135,13 @@ var usb_controller: usb.DeviceController(.{
     .bcd_device = .v1_00,
     .serial = "someserial",
     .max_supported_packet_size = USBD.max_supported_packet_size,
-}, &.{.{
+}, &.{usb.Configuration(
     .{ .attributes = .{ .self_powered = false }, .max_current_ma = 50 },
     struct { keyboard: Keyboard },
-}}, .{.{
-    .keyboard = .{ .itf_string = "Boot Keyboard", .poll_interval = 1 },
-}}) = .init;
+    .{
+        .keyboard = .{ .itf_string = "Boot Keyboard", .poll_interval = 1 },
+    },
+)}) = .init;
 
 pub fn main() !void {
     board.init();

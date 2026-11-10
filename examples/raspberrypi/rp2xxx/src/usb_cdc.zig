@@ -22,13 +22,14 @@ var usb_controller: usb.DeviceController(.{
     .bcd_device = .v1_00,
     .serial = "someserial",
     .max_supported_packet_size = USB_Device.max_supported_packet_size,
-}, &.{.{
+}, &.{usb.Configuration(
     .{ .attributes = .{ .self_powered = false }, .max_current_ma = 50 },
     struct { serial: USB_Serial, reset: rp2xxx.usb.ResetDriver(null, 0) },
-}}, .{.{
-    .serial = .{ .itf_notifi = "Board CDC", .itf_data = "Board CDC Data" },
-    .reset = "",
-}}) = .init;
+    .{
+        .serial = .{ .itf_notifi = "Board CDC", .itf_data = "Board CDC Data" },
+        .reset = "",
+    },
+)}) = .init;
 
 pub const std_options = microzig.std_options(.{
     .log_level = .debug,
