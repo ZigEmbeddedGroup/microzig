@@ -19,7 +19,7 @@ pub const Descriptor = extern struct {
     /// through this function is preffered to making the whole driver generic.
     pub fn create(
         alloc: *usb.DescriptorAllocator,
-        max_supported_packet_size: usb.types.Len,
+        max_supported_packet_size: usb.types.PacketLength,
         itf_string: []const u8,
     ) usb.DescriptorCreateResult(@This()) {
         return .{

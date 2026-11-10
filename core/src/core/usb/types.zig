@@ -480,5 +480,8 @@ pub const Version = extern struct {
     }
 };
 
-/// Represents packet length.
-pub const Len = u11;
+/// Represents physical packet length.
+pub const PacketLength = u11;
+
+/// Deprecated; use `PacketLength`.
+pub const Len = PacketLength;

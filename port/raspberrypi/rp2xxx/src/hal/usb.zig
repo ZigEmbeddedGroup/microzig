@@ -268,7 +268,7 @@ pub fn Polled(config: Config) type {
             itf: *usb.DeviceInterface,
             ep_num: usb.types.Endpoint.Num,
             data: []const []const u8,
-        ) usb.types.Len {
+        ) usb.types.PacketLength {
             log.debug("writev {t} {}: {any}", .{ ep_num, data[0].len, data[0] });
 
             const self: *@This() = @fieldParentPtr("interface", itf);
@@ -283,7 +283,7 @@ pub fn Polled(config: Config) type {
                 hw_buf = hw_buf[len..];
             }
 
-            const len: usb.types.Len = @intCast(ep.data_buffer.len - hw_buf.len);
+            const len: usb.types.PacketLength = @intCast(ep.data_buffer.len - hw_buf.len);
 
             var bufctrl = bufctrl_ptr.read();
             assert(bufctrl.AVAILABLE_0 == 0);
@@ -314,7 +314,7 @@ pub fn Polled(config: Config) type {
             itf: *usb.DeviceInterface,
             ep_num: usb.types.Endpoint.Num,
             data: []const []u8,
-        ) usb.types.Len {
+        ) usb.types.PacketLength {
             var total_len: usize = data[0].len;
             for (data[1..]) |d| total_len += d.len;
             log.debug("readv {t} {}", .{ ep_num, total_len });
@@ -340,7 +340,7 @@ pub fn Polled(config: Config) type {
         fn ep_listen(
             itf: *usb.DeviceInterface,
             ep_num: usb.types.Endpoint.Num,
-            len: usb.types.Len,
+            len: usb.types.PacketLength,
         ) void {
             log.debug("listen {t} {}", .{ ep_num, len });
 
@@ -454,7 +454,7 @@ pub fn ResetDriver(bootsel_activity_led: ?u5, interface_disable_mask: u32) type 
 
             pub fn create(
                 alloc: *usb.DescriptorAllocator,
-                _: usb.types.Len,
+                _: usb.types.PacketLength,
                 interface_str: []const u8,
             ) usb.DescriptorCreateResult(@This()) {
                 return .{ .descriptor = .{ .reset_interface = .{

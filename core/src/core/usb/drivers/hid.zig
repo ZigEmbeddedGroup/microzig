@@ -337,7 +337,7 @@ pub fn InterruptDriver(options: InterruptDriverOptions) type {
 
             pub fn create(
                 alloc: *usb.DescriptorAllocator,
-                max_supported_packet_size: usb.types.Len,
+                max_supported_packet_size: usb.types.PacketLength,
                 desc_options: Options,
             ) usb.DescriptorCreateResult(@This()) {
                 assert(@sizeOf(InReport) <= max_supported_packet_size);

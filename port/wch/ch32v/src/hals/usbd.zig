@@ -666,7 +666,7 @@ pub fn Polled(comptime setup: Setup, comptime cfg: Config) type {
             }
         }
 
-        fn ep_listen(itf: *usb.DeviceInterface, ep_num: types.Endpoint.Num, len: types.Len) void {
+        fn ep_listen(itf: *usb.DeviceInterface, ep_num: types.Endpoint.Num, len: types.PacketLength) void {
             log.debug("ep_listen ep{} len={}", .{ ep_num, len });
             const self: *Self = @fieldParentPtr("interface", itf);
 
@@ -696,7 +696,7 @@ pub fn Polled(comptime setup: Setup, comptime cfg: Config) type {
             Epr.set_stat_rx(ep_i, .valid);
         }
 
-        fn ep_readv(itf: *usb.DeviceInterface, ep_num: types.Endpoint.Num, data: []const []u8) types.Len {
+        fn ep_readv(itf: *usb.DeviceInterface, ep_num: types.Endpoint.Num, data: []const []u8) types.PacketLength {
             const self: *Self = @fieldParentPtr("interface", itf);
             const ep_i: u4 = epn(ep_num);
             const st_out = self.st(ep_num, .out);
@@ -727,7 +727,7 @@ pub fn Polled(comptime setup: Setup, comptime cfg: Config) type {
             return @intCast(copied);
         }
 
-        fn ep_writev(itf: *usb.DeviceInterface, ep_num: types.Endpoint.Num, vec: []const []const u8) types.Len {
+        fn ep_writev(itf: *usb.DeviceInterface, ep_num: types.Endpoint.Num, vec: []const []const u8) types.PacketLength {
             log.debug("ep_writev called for ep{} with {} chunks", .{ ep_num, vec.len });
             const self: *Self = @fieldParentPtr("interface", itf);
             assert(vec.len > 0);

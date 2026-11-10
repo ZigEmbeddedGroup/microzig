@@ -522,7 +522,7 @@ pub fn Polled(comptime _: Setup, comptime cfg: Config) type {
             log.debug("ep_open completed for ep{}", .{ep_i});
         }
 
-        fn ep_listen(itf: *usb.DeviceInterface, ep_num: types.Endpoint.Num, len: types.Len) void {
+        fn ep_listen(itf: *usb.DeviceInterface, ep_num: types.Endpoint.Num, len: types.PacketLength) void {
             log.info("ep_listen called for ep{} len={}", .{ ep_num, len });
             const self: *Self = @fieldParentPtr("interface", itf);
 
@@ -558,7 +558,7 @@ pub fn Polled(comptime _: Setup, comptime cfg: Config) type {
             set_rx_ctrl(ep_i, RES_ACK, current_rx_tog(ep_i), false);
         }
 
-        fn ep_readv(itf: *usb.DeviceInterface, ep_num: types.Endpoint.Num, data: []const []u8) types.Len {
+        fn ep_readv(itf: *usb.DeviceInterface, ep_num: types.Endpoint.Num, data: []const []u8) types.PacketLength {
             const self: *Self = @fieldParentPtr("interface", itf);
 
             const st_out = self.st(ep_num, .out);
@@ -583,10 +583,10 @@ pub fn Polled(comptime _: Setup, comptime cfg: Config) type {
             }
 
             // Driver is responsible for re-arming via ep_listen().
-            return @as(types.Len, @intCast(copied));
+            return @intCast(copied);
         }
 
-        fn ep_writev(itf: *usb.DeviceInterface, ep_num: types.Endpoint.Num, vec: []const []const u8) types.Len {
+        fn ep_writev(itf: *usb.DeviceInterface, ep_num: types.Endpoint.Num, vec: []const []const u8) types.PacketLength {
             const self: *Self = @fieldParentPtr("interface", itf);
             assert(vec.len > 0);
 
@@ -619,7 +619,7 @@ pub fn Polled(comptime _: Setup, comptime cfg: Config) type {
             set_tx_ctrl(ep_i, RES_ACK, current_tx_tog(ep_i), false);
 
             // For ZLP ACK, usb.DeviceInterface.ep_ack() expects ep_writev() returns 0.
-            return @as(types.Len, @intCast(w));
+            return @intCast(w);
         }
 
         // ---- HW init ---------------------------------------------------------

@@ -263,7 +263,7 @@ pub const USBD = struct {
         itf: *usb.DeviceInterface,
         ep_num: usb.types.Endpoint.Num,
         data: []const []const u8,
-    ) usb.types.Len {
+    ) usb.types.PacketLength {
         const self: *Self = @fieldParentPtr("interface", itf);
         log.debug("ep_writev {t}: ({} bytes) {X} ({s})", .{ ep_num, data[0].len, data[0], data[0] });
 
@@ -283,7 +283,7 @@ pub const USBD = struct {
             scratch_slice = scratch_slice[len..];
         }
 
-        const len: usb.types.Len = @intCast(scratch_cap - scratch_slice.len);
+        const len: usb.types.PacketLength = @intCast(scratch_cap - scratch_slice.len);
 
         // Prepare DMA transfer
         peripherals.USBD.EPIN[i].PTR.write_raw(@intFromPtr(scratch));
@@ -323,7 +323,7 @@ pub const USBD = struct {
         itf: *usb.DeviceInterface,
         ep_num: usb.types.Endpoint.Num,
         data: []const []u8,
-    ) usb.types.Len {
+    ) usb.types.PacketLength {
         var total_len: usize = data[0].len;
         for (data[1..]) |d| total_len += d.len;
         log.debug("ep_readv {t}: ({} bytes)", .{ ep_num, total_len });
@@ -362,7 +362,7 @@ pub const USBD = struct {
     fn ep_listen(
         _: *usb.DeviceInterface,
         ep_num: usb.types.Endpoint.Num,
-        len: usb.types.Len,
+        len: usb.types.PacketLength,
     ) void {
         log.debug("ep_listen {t}: ({} bytes)", .{ ep_num, len });
 

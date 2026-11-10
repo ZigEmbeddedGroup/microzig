@@ -85,7 +85,7 @@ pub const Descriptor = extern struct {
     /// through this function is preferred to making the whole driver generic.
     pub fn create(
         alloc: *usb.DescriptorAllocator,
-        max_supported_packet_size: usb.types.Len,
+        max_supported_packet_size: usb.types.PacketLength,
         strings: Strings,
     ) usb.DescriptorCreateResult(@This()) {
         // Endpoint and interface numbers are allocated through the `alloc` parameter,
@@ -165,15 +165,15 @@ line_coding: LineCoding align(4),
 notifi_ready: std.atomic.Value(bool),
 
 rx_data: []u8,
-rx_seek: usb.types.Len,
-rx_end: usb.types.Len,
+rx_seek: usb.types.PacketLength,
+rx_end: usb.types.PacketLength,
 rx_ready: std.atomic.Value(bool),
 
 tx_data: []u8,
-tx_end: usb.types.Len,
+tx_end: usb.types.PacketLength,
 tx_ready: std.atomic.Value(bool),
 
-pub fn available(self: *@This()) usb.types.Len {
+pub fn available(self: *@This()) usb.types.PacketLength {
     return self.rx_end - self.rx_seek;
 }
 

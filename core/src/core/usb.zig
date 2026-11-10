@@ -84,9 +84,9 @@ pub fn DescriptorCreateResult(Descriptor: type) type {
 /// Any device implementation used with DeviceController must implement these functions
 pub const DeviceInterface = struct {
     pub const VTable = struct {
-        ep_writev: *const fn (*DeviceInterface, types.Endpoint.Num, []const []const u8) types.Len,
-        ep_readv: *const fn (*DeviceInterface, types.Endpoint.Num, []const []u8) types.Len,
-        ep_listen: *const fn (*DeviceInterface, types.Endpoint.Num, types.Len) void,
+        ep_writev: *const fn (*DeviceInterface, types.Endpoint.Num, []const []const u8) types.PacketLength,
+        ep_readv: *const fn (*DeviceInterface, types.Endpoint.Num, []const []u8) types.PacketLength,
+        ep_listen: *const fn (*DeviceInterface, types.Endpoint.Num, types.PacketLength) void,
         ep_open: *const fn (*DeviceInterface, *const descriptor.Endpoint) void,
         set_address: *const fn (*DeviceInterface, u7) void,
     };
@@ -94,7 +94,7 @@ pub const DeviceInterface = struct {
     vtable: *const VTable,
 
     /// Called by drivers to send a packet.
-    pub fn ep_writev(self: *@This(), ep_num: types.Endpoint.Num, data: []const []const u8) types.Len {
+    pub fn ep_writev(self: *@This(), ep_num: types.Endpoint.Num, data: []const []const u8) types.PacketLength {
         return self.vtable.ep_writev(self, ep_num, data);
     }
 
@@ -106,13 +106,13 @@ pub const DeviceInterface = struct {
     /// Called by drivers to retrieve a received packet.
     /// Must be called exactly once for each packet.
     /// Buffers in `data` must collectively be long enough to fit the whole packet.
-    pub fn ep_readv(self: *@This(), ep_num: types.Endpoint.Num, data: []const []u8) types.Len {
+    pub fn ep_readv(self: *@This(), ep_num: types.Endpoint.Num, data: []const []u8) types.PacketLength {
         return self.vtable.ep_readv(self, ep_num, data);
     }
 
     /// Called by drivers to report readiness to receive up to `len` bytes.
     /// After being called it may not be called again until a packet is received.
-    pub fn ep_listen(self: *@This(), ep_num: types.Endpoint.Num, len: types.Len) void {
+    pub fn ep_listen(self: *@This(), ep_num: types.Endpoint.Num, len: types.PacketLength) void {
         return self.vtable.ep_listen(self, ep_num, len);
     }
 
@@ -174,8 +174,8 @@ pub const Config = struct {
                 assert(param_types.len == 3);
                 // The first must be a DescriptorAllocator
                 assert(param_types[0] == *DescriptorAllocator);
-                // The second is usb.types.Len
-                assert(param_types[1] == types.Len);
+                // The second is usb.types.PacketLength
+                assert(param_types[1] == types.PacketLength);
                 // And save the type of the third
                 field_types[i] = param_types[2].?;
             }
@@ -198,7 +198,7 @@ pub const Config = struct {
     /// Serial number string.
     serial: []const u8,
     /// Largest packet length the hardware supports. Must be a power of 2 and at least 8.
-    max_supported_packet_size: types.Len,
+    max_supported_packet_size: types.PacketLength,
     /// Currently only a single configuration is supported.
     configurations: []const Configuration,
     /// Only use either IN or OUT on each endpoint. Useful for debugging.

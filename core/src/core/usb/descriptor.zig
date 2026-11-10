@@ -212,7 +212,7 @@ pub const Endpoint = extern struct {
     /// currently support) in milliseconds.
     interval: u8,
 
-    pub fn control(ep: types.Endpoint, max_packet_size: types.Len) @This() {
+    pub fn control(ep: types.Endpoint, max_packet_size: types.PacketLength) @This() {
         return .{
             .endpoint = ep,
             .attributes = .{ .transfer_type = .Control, .usage = .data },
@@ -221,7 +221,7 @@ pub const Endpoint = extern struct {
         };
     }
 
-    pub fn bulk(ep: types.Endpoint, max_packet_size: types.Len) @This() {
+    pub fn bulk(ep: types.Endpoint, max_packet_size: types.PacketLength) @This() {
         return .{
             .endpoint = ep,
             .attributes = .{ .transfer_type = .Bulk, .usage = .data },
@@ -230,7 +230,7 @@ pub const Endpoint = extern struct {
         };
     }
 
-    pub fn interrupt(ep: types.Endpoint, max_packet_size: types.Len, poll_interval: u8) @This() {
+    pub fn interrupt(ep: types.Endpoint, max_packet_size: types.PacketLength, poll_interval: u8) @This() {
         return .{
             .endpoint = ep,
             .attributes = .{ .transfer_type = .Interrupt, .usage = .data },
