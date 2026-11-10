@@ -1,7 +1,5 @@
 const std = @import("std");
 
-const EndianInt = @import("../mem.zig").EndianInt;
-
 const types = @import("types.zig");
 const assert = std.debug.assert;
 
@@ -69,9 +67,9 @@ pub const Device = extern struct {
     /// Maximum length of data this device can move.
     max_packet_size0: u8,
     /// ID of product vendor.
-    vendor: EndianInt(u16, .little) align(1),
+    vendor: types.LeInt(u16) align(1),
     /// ID of product.
-    product: EndianInt(u16, .little) align(1),
+    product: types.LeInt(u16) align(1),
     /// Device version number as Binary Coded Decimal.
     bcd_device: types.Version,
     /// Index of manufacturer name in string descriptor table.
@@ -130,7 +128,7 @@ pub const Configuration = extern struct {
     /// Total length of all descriptors in this configuration, concatenated.
     /// This will include this descriptor, plus at least one interface
     /// descriptor, plus each interface descriptor's endpoint descriptors.
-    total_length: EndianInt(u16, .little) align(1),
+    total_length: types.LeInt(u16) align(1),
     /// Number of interface descriptors in this configuration.
     num_interfaces: u8,
     /// Number to use when requesting this configuration via a
@@ -157,7 +155,7 @@ pub const String = struct {
         const ret: *const extern struct {
             length: u8 = @sizeOf(@This()),
             descriptor_type: Type = .string,
-            lang: EndianInt(u16, .little) align(1),
+            lang: types.LeInt(u16) align(1),
         } = comptime &.{ .lang = .from(@backingInt(lang)) };
         return .{ .data = std.mem.asBytes(ret) };
     }
@@ -207,7 +205,7 @@ pub const Endpoint = extern struct {
     /// control the transfer type using the values from `TransferType`.
     attributes: Attributes,
     /// Maximum packet size this endpoint can accept/produce.
-    max_packet_size: EndianInt(u16, .little) align(1),
+    max_packet_size: types.LeInt(u16) align(1),
     /// Interval for polling interrupt/isochronous endpoints (which we don't
     /// currently support) in milliseconds.
     interval: u8,
@@ -300,7 +298,7 @@ pub const BOS = struct {
         const header: []const u8 = std.mem.asBytes(&extern struct {
             length: u8 = @sizeOf(@This()),
             descriptor_type: Type = .bos,
-            total_length: EndianInt(u16, .little) align(1) = .from(@sizeOf(@This()) + data.len),
+            total_length: types.LeInt(u16) align(1) = .from(@sizeOf(@This()) + data.len),
             num_descriptors: u8 = @intCast(objects.len),
         }{});
         return .{ .data = header ++ data };
@@ -378,5 +376,5 @@ pub const HID = extern struct {
     /// Type of HID class report
     report_type: CsType = .Report,
     /// The total size of the Report descriptor
-    report_length: EndianInt(u16, .little) align(1),
+    report_length: types.LeInt(u16) align(1),
 };

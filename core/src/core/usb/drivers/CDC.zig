@@ -2,9 +2,6 @@ const std = @import("std");
 const microzig = @import("../../../microzig.zig");
 const assert = microzig.assert;
 
-const mem = @import("../../mem.zig");
-const EndianInt = mem.EndianInt;
-
 const usb = @import("../../usb.zig");
 const log = std.log.scoped(.usb_cdc);
 
@@ -45,7 +42,7 @@ pub const LineCoding = extern struct {
         _,
     };
 
-    bit_rate: EndianInt(u32, .little),
+    bit_rate: usb.types.LeInt(u32),
     stop_bits: StopBits,
     parity: Parity,
     data_bits: u8,
