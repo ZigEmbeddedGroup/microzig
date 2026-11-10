@@ -158,11 +158,12 @@ test "i2c.translate_baudrate" {
 }
 
 pub const instance = struct {
-    pub const I2C0: I2C = @as(I2C, @fromBackingInt(0));
-    pub const I2C1: I2C = @as(I2C, @fromBackingInt(1));
     pub fn num(instance_number: u1) I2C {
-        return @as(I2C, @fromBackingInt(instance_number));
+        return @fromBackingInt(instance_number);
     }
+
+    pub const I2C0 = num(0);
+    pub const I2C1 = num(1);
 };
 
 /// An API for interacting with the RP2040's I2C driver.

@@ -29,7 +29,7 @@ pub const State = enum(u1) {
     high = 1,
 
     pub inline fn invert(state: State) State {
-        return @as(State, @fromBackingInt(~@backingInt(state)));
+        return @fromBackingInt(~@backingInt(state));
     }
 
     pub inline fn value(state: State) u1 {

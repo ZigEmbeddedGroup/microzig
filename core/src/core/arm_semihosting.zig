@@ -216,7 +216,7 @@ pub const Time = struct {
 
     ///return the host time in epoch
     pub fn system_time() usize {
-        return @as(usize, @bitCast(sys_time()));
+        return @bitCast(sys_time());
     }
     ///return the corrent tick counter value in centiseconds
     pub fn absolute() TimeError!usize {

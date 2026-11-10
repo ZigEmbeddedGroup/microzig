@@ -46,7 +46,7 @@ const rp2xxx_buffers = struct {
     fn data_offset(ep_data_buffer: []u8) u16 {
         const buf_base = @intFromPtr(&ep_data_buffer[0]);
         const dpram_base = @intFromPtr(peripherals.USB_DPRAM);
-        return @as(u16, @intCast(buf_base - dpram_base));
+        return @intCast(buf_base - dpram_base);
     }
 };
 

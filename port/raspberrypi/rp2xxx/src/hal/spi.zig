@@ -58,11 +58,12 @@ pub const Config = struct {
 };
 
 pub const instance = struct {
-    pub const SPI0: SPI = @as(SPI, @fromBackingInt(0));
-    pub const SPI1: SPI = @as(SPI, @fromBackingInt(1));
     pub fn num(instance_number: u1) SPI {
-        return @as(SPI, @fromBackingInt(instance_number));
+        return @fromBackingInt(instance_number);
     }
+
+    pub const SPI0 = num(0);
+    pub const SPI1 = num(1);
 };
 
 pub const ConfigError = error{
