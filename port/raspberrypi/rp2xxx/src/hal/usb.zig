@@ -86,8 +86,8 @@ pub fn Polled(config: Config) type {
     return struct {
         pub const max_supported_packet_size = 64;
         pub const max_supported_bcd_usb: usb.types.Version = .v1_10;
-        pub const default_vendor_id: usb.Config.IdStringPair = .{ .id = 0x2E8A, .str = "Raspberry Pi" };
-        pub const default_product_id: usb.Config.IdStringPair = switch (chip) {
+        pub const default_vendor_id: usb.Options.IdStringPair = .{ .id = 0x2E8A, .str = "Raspberry Pi" };
+        pub const default_product_id: usb.Options.IdStringPair = switch (chip) {
             .RP2040 => .{ .id = 0x000A, .str = "Pico test device" },
             .RP2350 => .{ .id = 0x000F, .str = "Pico 2 test device" },
         };

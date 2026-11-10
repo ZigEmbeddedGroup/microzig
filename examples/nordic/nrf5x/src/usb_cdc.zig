@@ -40,12 +40,11 @@ var usb_controller: usb.DeviceController(.{
     .bcd_device = .v1_00,
     .serial = "someserial",
     .max_supported_packet_size = USBD.max_supported_packet_size,
-    .configurations = &.{.{
-        .attributes = .{ .self_powered = false },
-        .max_current_ma = 50,
-        .Drivers = struct { serial: USB_Serial },
-    }},
-}, .{.{
+}, &.{.{
+    .attributes = .{ .self_powered = false },
+    .max_current_ma = 50,
+    .Drivers = struct { serial: USB_Serial },
+}}, .{.{
     .serial = .{ .itf_notifi = "Board CDC", .itf_data = "Board CDC Data" },
 }}) = .init;
 

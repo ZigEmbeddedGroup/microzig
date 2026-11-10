@@ -146,41 +146,10 @@ pub fn DriverHandlers(Driver: type) type {
     return @Struct(.auto, null, field_names, &@splat(EndpointHandler(Driver)), &@splat(.{}));
 }
 
-pub const Config = struct {
+pub const Options = struct {
     pub const IdStringPair = struct {
         id: u16,
         str: []const u8,
-    };
-
-    pub const Configuration = struct {
-        name: []const u8 = "",
-        attributes: descriptor.Configuration.Attributes,
-        max_current_ma: u9,
-        Drivers: type,
-
-        /// Generate A struct with a field for each field in Drivers, where the type is the third
-        /// arg of the Drivers' Descriptor's 'create' method.
-        pub fn Args(self: @This()) type {
-            const info = @typeInfo(self.Drivers).@"struct";
-            const count = info.field_names.len;
-            var field_names: [count][:0]const u8 = undefined;
-            var field_types: [count]type = undefined;
-            for (info.field_names, info.field_types, 0..) |field_name, field_type, i| {
-                // Collect field names
-                field_names[i] = field_name;
-                // Collect the type info  for the Descriptor.create function parameter
-                const param_types = @typeInfo(@TypeOf(field_type.Descriptor.create)).@"fn".param_types;
-                // Ensure it takes 3 parameters
-                assert(param_types.len == 3);
-                // The first must be a DescriptorAllocator
-                assert(param_types[0] == *DescriptorAllocator);
-                // The second is usb.types.PacketLength
-                assert(param_types[1] == types.PacketLength);
-                // And save the type of the third
-                field_types[i] = param_types[2].?;
-            }
-            return @Struct(.auto, null, &field_names, &field_types, &@splat(.{}));
-        }
     };
 
     /// Usb specification version.
@@ -199,18 +168,40 @@ pub const Config = struct {
     serial: []const u8,
     /// Largest packet length the hardware supports. Must be a power of 2 and at least 8.
     max_supported_packet_size: types.PacketLength,
-    /// Currently only a single configuration is supported.
-    configurations: []const Configuration,
     /// Only use either IN or OUT on each endpoint. Useful for debugging.
     /// Realistically, it should only be turned off if you are exhausting
     /// the 15 endpoint limit.
     unique_endpoints: bool = true,
+};
 
-    pub fn DriverArgs(self: @This()) type {
-        var field_types: [self.configurations.len]type = undefined;
-        for (self.configurations, &field_types) |cfg, *dst|
-            dst.* = cfg.Args();
-        return @Tuple(&field_types);
+pub const Configuration = struct {
+    name: []const u8 = "",
+    attributes: descriptor.Configuration.Attributes,
+    max_current_ma: u9,
+    Drivers: type,
+
+    /// Generate A struct with a field for each field in Drivers, where the type is the third
+    /// arg of the Drivers' Descriptor's 'create' method.
+    pub fn Args(self: @This()) type {
+        const info = @typeInfo(self.Drivers).@"struct";
+        const count = info.field_names.len;
+        var field_names: [count][:0]const u8 = undefined;
+        var field_types: [count]type = undefined;
+        for (info.field_names, info.field_types, 0..) |field_name, field_type, i| {
+            // Collect field names
+            field_names[i] = field_name;
+            // Collect the type info  for the Descriptor.create function parameter
+            const param_types = @typeInfo(@TypeOf(field_type.Descriptor.create)).@"fn".param_types;
+            // Ensure it takes 3 parameters
+            assert(param_types.len == 3);
+            // The first must be a DescriptorAllocator
+            assert(param_types[0] == *DescriptorAllocator);
+            // The second is usb.types.PacketLength
+            assert(param_types[1] == types.PacketLength);
+            // And save the type of the third
+            field_types[i] = param_types[2].?;
+        }
+        return @Struct(.auto, null, &field_names, &field_types, &@splat(.{}));
     }
 };
 
@@ -229,13 +220,23 @@ pub fn validate_controller(T: type) void {
 ///
 /// Responds to host requests and dispatches to the appropriate drivers.
 /// When this type is build (at comptime), it builds descriptor and handler tables based on the
-/// provided config.
-pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
-    std.debug.assert(config.configurations.len == 1);
+/// provided options.
+pub fn DeviceController(
+    options: Options,
+    configurations: []const Configuration,
+    driver_args: blk: {
+        var field_types: [configurations.len]type = undefined;
+        for (configurations, &field_types) |cfg, *dst|
+            dst.* = cfg.Args();
+        break :blk @Tuple(&field_types);
+    },
+) type {
+    // Currently only a single configuration is supported.
+    std.debug.assert(configurations.len == 1);
 
     return struct {
         // We only support one configuration
-        const config0 = config.configurations[0];
+        const config0 = configurations[0];
         const driver_info = @typeInfo(config0.Drivers).@"struct";
         const DriverEnum = std.meta.FieldEnum(config0.Drivers);
 
@@ -244,26 +245,26 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
         /// * table of handlers for endpoints
         /// * table of handlers for interfaces
         const descriptor_parse_result = blk: {
-            const max_psize = config.max_supported_packet_size;
+            const max_psize = options.max_supported_packet_size;
             assert(max_psize >= 8);
             assert(std.math.isPowerOfTwo(max_psize));
 
-            var alloc: DescriptorAllocator = .init(config.unique_endpoints);
-            const manufacturer_s = alloc.string(config.vendor.str);
-            const product_s = alloc.string(config.product.str);
-            const serial_s = alloc.string(config.serial);
+            var alloc: DescriptorAllocator = .init(options.unique_endpoints);
+            const manufacturer_s = alloc.string(options.vendor.str);
+            const product_s = alloc.string(options.product.str);
+            const serial_s = alloc.string(options.serial);
 
             const desc_device: descriptor.Device = .{
-                .bcd_usb = config.bcd_usb,
-                .device_triple = config.device_triple,
-                .max_packet_size0 = @min(config.max_supported_packet_size, 64),
-                .vendor = .from(config.vendor.id),
-                .product = .from(config.product.id),
-                .bcd_device = config.bcd_device,
+                .bcd_usb = options.bcd_usb,
+                .device_triple = options.device_triple,
+                .max_packet_size0 = @min(options.max_supported_packet_size, 64),
+                .vendor = .from(options.vendor.id),
+                .product = .from(options.product.id),
+                .bcd_device = options.bcd_device,
                 .manufacturer_s = manufacturer_s,
                 .product_s = product_s,
                 .serial_s = serial_s,
-                .num_configurations = config.configurations.len,
+                .num_configurations = configurations.len,
             };
             const configuration_s = alloc.string(config0.name);
 
@@ -384,7 +385,7 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
                     },
                     drv: DriverConfig = .{},
                 }{},
-                .string_descriptors = const_alloc.string_descriptors(config.language),
+                .string_descriptors = const_alloc.string_descriptors(options.language),
                 .handlers_itf = itf_handlers,
                 .handlers_ep = struct {
                     in: ep_handlers_types[idx_in] = const_ep_handlers[idx_in],
