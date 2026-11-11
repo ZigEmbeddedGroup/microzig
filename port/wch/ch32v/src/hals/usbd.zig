@@ -334,7 +334,7 @@ pub fn Polled(comptime setup: Setup, comptime cfg: Config) type {
         };
 
         comptime {
-            usb.validate_device(@This());
+            usb.validate_device(Self);
         }
 
         const vtable: usb.DeviceInterface.VTable = .{

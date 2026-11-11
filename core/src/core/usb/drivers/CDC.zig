@@ -223,7 +223,7 @@ itf_data_str: []const u8 = "",
 /// are used, this function is called for each, with different arguments. Passing arguments
 /// through this function is preferred to making the whole driver generic.
 pub fn driver_info(
-    self: @This(),
+    self: Driver,
     comptime device_capabilities: usb.DeviceCapabilities,
     alloc: *usb.DescriptorAllocator,
 ) usb.DriverInfo(Descriptor) {

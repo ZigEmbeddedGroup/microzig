@@ -40,6 +40,8 @@ const EP_Config = struct {
 };
 
 pub const USBD = struct {
+    const Self = @This();
+
     power: PowerState = .detached,
 
     bufs_in: [NUM_EP][MAX_PACKET_SIZE]u8 align(4) = @splat(@splat(0)),
@@ -59,7 +61,7 @@ pub const USBD = struct {
     };
 
     comptime {
-        usb.validate_device(@This());
+        usb.validate_device(Self);
     }
 
     const vtable: usb.DeviceInterface.VTable = .{
@@ -69,8 +71,6 @@ pub const USBD = struct {
         .ep_open = ep_open,
         .set_address = set_address,
     };
-
-    const Self = @This();
 
     pub fn init() Self {
         peripherals.USBD.USBPULLUP.write_raw(0);

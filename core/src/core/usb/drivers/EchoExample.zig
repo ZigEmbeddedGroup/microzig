@@ -124,7 +124,7 @@ itf_string: []const u8 = "",
 /// this function is called for each, with different arguments.
 /// Aside from the descriptor, this function can return a type that is later used
 pub fn driver_info(
-    self: @This(),
+    self: Driver,
     comptime device_capabilities: usb.DeviceCapabilities,
     alloc: *usb.DescriptorAllocator,
 ) usb.DriverInfo(Descriptor) {

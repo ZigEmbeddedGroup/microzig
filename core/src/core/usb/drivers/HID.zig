@@ -165,7 +165,7 @@ InReport: type,
 OutReport: type,
 
 pub fn driver_info(
-    comptime self: @This(),
+    comptime self: Driver,
     comptime device_capabilities: usb.DeviceCapabilities,
     alloc: *usb.DescriptorAllocator,
 ) usb.DriverInfo(Descriptor) {
