@@ -70,13 +70,13 @@ pub const DeviceCapabilities = struct {
 /// Wraps a Descriptor type. Returned by the `create` method of the Descriptor.
 pub fn DriverInfo(Descriptor: type) type {
     return struct {
+        /// If not void, a pointer to a value of this type
+        /// will be passed to driver's init function.
+        Alloc: type = void,
+        /// Field attributes of `Alloc`
+        alloc_attrs: std.builtin.Type.Struct.FieldAttributes = .{},
         Runtime: type,
         descriptor: Descriptor,
-        /// If not null, a slice of this length will be passed
-        /// to driver's init function.
-        alloc_bytes: ?usize = null,
-        /// Null means natural alignment
-        alloc_align: ?usize = null,
     };
 }
 
@@ -255,11 +255,7 @@ pub fn DeviceController(options: Options, Configurations: []const type) type {
         const configurations = descriptor_parse_result.configurations;
 
         const config_descriptor = configurations[0].Descriptor{};
-        const handlers_itf = configurations[0].handlers_itf;
-        const handlers_ep = configurations[0].HandlersEp{};
-        const drivers_ep = configurations[0].drivers_ep;
-        const DriverAlloc = configurations[0].DriverAlloc;
-        const RuntimeData = configurations[0].RuntimeData;
+        const endpoint2handler = configurations[0].EndpointHandlers{};
 
         /// If not zero, change the device address at the next opportunity.
         /// Necessary because when the host sets the device address,
@@ -270,9 +266,9 @@ pub fn DeviceController(options: Options, Configurations: []const type) type {
         /// Ep0 data waiting to be sent
         tx_slice: ?[]const u8,
         /// Driver state
-        driver_data: ?RuntimeData,
+        driver_data: ?configurations[0].RuntimeData,
         /// Additional driver allocations (size is comptime-known)
-        driver_alloc: DriverAlloc,
+        driver_alloc: configurations[0].DriverAlloc,
 
         /// Initial values
         pub const init: @This() = .{
@@ -285,7 +281,7 @@ pub fn DeviceController(options: Options, Configurations: []const type) type {
 
         /// Returns a pointer to the drivers
         /// or null in case host has not yet configured the device.
-        pub fn drivers(self: *@This()) ?*RuntimeData {
+        pub fn drivers(self: *@This()) ?*configurations[0].RuntimeData {
             return if (self.driver_data) |*ret| ret else null;
         }
 
@@ -314,8 +310,8 @@ pub fn DeviceController(options: Options, Configurations: []const type) type {
         pub fn on_buffer(self: *@This(), device_itf: *DeviceInterface, comptime ep: types.Endpoint) void {
             log.debug("on_buffer {t} {t}", .{ ep.num, ep.dir });
 
-            const driver_opt = comptime drivers_ep[@backingInt(ep.dir)][@backingInt(ep.num)];
-            const handler = comptime @field(handlers_ep, @tagName(ep.dir))[@backingInt(ep.num)];
+            const driver = comptime configurations[0].endpoint2driver[@backingInt(ep.dir)][@backingInt(ep.num)];
+            const handler = comptime @field(endpoint2handler, @tagName(ep.dir))[@backingInt(ep.num)];
 
             if (comptime ep == types.Endpoint.in(.ep0)) {
                 // We use this opportunity to finish the delayed
@@ -343,9 +339,8 @@ pub fn DeviceController(options: Options, Configurations: []const type) type {
             } else if (comptime ep == types.Endpoint.out(.ep0))
                 log.warn("Unhandled packet on ep0 Out", .{});
 
-            if (comptime driver_opt) |driver| {
+            if (comptime driver.len != 0)
                 handler(&@field(self.driver_data.?, driver), ep.num);
-            }
         }
 
         /// Called by the device implementation on bus reset.
@@ -399,12 +394,12 @@ pub fn DeviceController(options: Options, Configurations: []const type) type {
 
         fn process_interface_setup(self: *@This(), setup: *const types.SetupPacket) ?[]const u8 {
             const itf_num: u8 = @truncate(setup.index.native());
+            const num_interfaces = configurations[0].interface2driver.len;
             switch (itf_num) {
-                inline else => |itf| if (comptime itf < handlers_itf.len) {
-                    const drv = handlers_itf[itf];
-                    return @field(self.driver_data.?, drv).class_request(setup);
-                } else {
-                    log.warn("Interface index ({}) out of range ({})", .{ itf_num, handlers_itf.len });
+                inline else => |itf| if (comptime itf < num_interfaces)
+                    return @field(self.driver_data.?, configurations[0].interface2driver[itf]).class_request(setup)
+                else {
+                    log.warn("Interface index ({}) out of range ({})", .{ itf_num, num_interfaces });
                     return nak;
                 },
             }
@@ -444,7 +439,7 @@ pub fn DeviceController(options: Options, Configurations: []const type) type {
                 self.driver_data = null
             else {
                 // We support just one config for now so ignore config index
-                self.driver_data = @as(RuntimeData, undefined);
+                self.driver_data = @as(configurations[0].RuntimeData, undefined);
                 configurations[0].init(device_itf, &self.driver_data.?, &self.driver_alloc, config_descriptor);
             }
         }

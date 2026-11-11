@@ -233,7 +233,7 @@ pub fn driver_info(
     const itf_data = alloc.next_itf();
     return .{
         .Runtime = Runtime,
-        .alloc_bytes = 2 * device_capabilities.max_packet_size,
+        .Alloc = [2 * device_capabilities.max_packet_size]u8,
         .descriptor = .{
             .itf_assoc = .{
                 .first_interface = itf_notifi,

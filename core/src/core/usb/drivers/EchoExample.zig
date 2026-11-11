@@ -129,6 +129,9 @@ pub fn driver_info(
     alloc: *usb.DescriptorAllocator,
 ) usb.DriverInfo(Descriptor) {
     return .{
+        // Buffers whose length is only known after creating the
+        // descriptor can be allocated at this stage.
+        .Alloc = [device_capabilities.max_packet_size]u8,
         .Runtime = Runtime,
         .descriptor = .{
             .itf = .{
@@ -141,8 +144,5 @@ pub fn driver_info(
             .ep_out = .bulk(alloc.next_ep(.out), device_capabilities.max_packet_size),
             .ep_in = .bulk(alloc.next_ep(.in), device_capabilities.max_packet_size),
         },
-        // Buffers whose length is only known after creating the
-        // descriptor can be allocated at this stage.
-        .alloc_bytes = device_capabilities.max_packet_size,
     };
 }
