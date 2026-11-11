@@ -4,7 +4,7 @@ const log = std.log.scoped(.usb_ctrl);
 
 pub const descriptor = @import("usb/descriptor.zig");
 pub const drivers = struct {
-    pub const CDC = @import("usb/drivers/CDC.zig");
+    pub const CDC = @import("usb/drivers/CDC.zig").CDC;
     pub const EchoExample = @import("usb/drivers/EchoExample.zig");
     pub const hid = @import("usb/drivers/hid.zig");
 };
@@ -230,7 +230,7 @@ pub fn validate_controller(T: type) void {
 /// Responds to host requests and dispatches to the appropriate drivers.
 /// When this type is build (at comptime), it builds descriptor and handler tables based on the
 /// provided config.
-pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
+pub fn DeviceController(config: Config) type {
     std.debug.assert(config.configurations.len == 1);
 
     return struct {
@@ -283,7 +283,7 @@ pub fn DeviceController(config: Config, driver_args: config.DriverArgs()) type {
                 // Get descriptor type for the current driver
                 const Descriptors = driver_field_type.Descriptor;
                 // Call the create method on the descriptor, which wraps it with the allow stuff.
-                const result = Descriptors.create(&alloc, max_psize, @field(driver_args[0], driver_field_name));
+                const result = Descriptors.create(&alloc, max_psize);
                 // Get the descriptor instance from the result.
                 const descriptors = result.descriptor;
 

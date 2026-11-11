@@ -8,29 +8,31 @@ const usb = microzig.core.usb;
 // read from/write to the peripheral.
 const USB_Device = rp2xxx.usb.Polled(.{});
 // USB class driver
-const USB_Serial = usb.drivers.CDC;
+const USB_Serial = usb.drivers.CDC(.{.itf_notifi = "Board CDC", .itf_data = "Board CDC Data"});
 
 var usb_device: USB_Device = undefined;
 
 // Generate a device controller with descriptor and handlers setup for CDC (USB_Serial) and
 // picotool-controlled reset (ResetDriver).
-var usb_controller: usb.DeviceController(.{
-    .bcd_usb = USB_Device.max_supported_bcd_usb,
-    .device_triple = .unspecified,
-    .vendor = USB_Device.default_vendor_id,
-    .product = USB_Device.default_product_id,
-    .bcd_device = .v1_00,
-    .serial = "someserial",
-    .max_supported_packet_size = USB_Device.max_supported_packet_size,
-    .configurations = &.{.{
-        .attributes = .{ .self_powered = false },
-        .max_current_ma = 50,
-        .Drivers = struct { serial: USB_Serial, reset: rp2xxx.usb.ResetDriver(null, 0) },
-    }},
-}, .{.{
-    .serial = .{ .itf_notifi = "Board CDC", .itf_data = "Board CDC Data" },
-    .reset = "",
-}}) = .init;
+var usb_controller: usb.DeviceController(
+    .{
+        .bcd_usb = USB_Device.max_supported_bcd_usb,
+        .device_triple = .unspecified,
+        .vendor = USB_Device.default_vendor_id,
+        .product = USB_Device.default_product_id,
+        .bcd_device = .v1_00,
+        .serial = "someserial",
+        .max_supported_packet_size = USB_Device.max_supported_packet_size,
+        .configurations = &.{.{
+            .attributes = .{ .self_powered = false },
+            .max_current_ma = 50,
+            .Drivers = struct {
+                serial: USB_Serial,
+                // reset: rp2xxx.usb.ResetDriver(null, 0),
+            },
+        }},
+    },
+) = .init;
 
 pub const std_options = microzig.std_options(.{
     .log_level = .debug,
