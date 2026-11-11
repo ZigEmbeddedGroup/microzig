@@ -4,7 +4,10 @@ const assert = std.debug.assert;
 const SFAttributes = std.builtin.Type.Struct.FieldAttributes;
 
 pub const Keycode = enum(u8) {
-    // Codes taken from https://gist.github.com/mildsunrise/4e231346e2078f440969cdefb6d4caa3
+    // Codes taken from:
+    // https://gist.github.com/mildsunrise/4e231346e2078f440969cdefb6d4caa3
+    // https://gist.github.com/MightyPork/6da26e382a7ad91b5496ee55fdc73db2
+
     // zig fmt: off
     reserved = 0x00, error_roll_over, post_fail, error_undefined,
     a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z,
@@ -13,15 +16,64 @@ pub const Keycode = enum(u8) {
     @"-", @"=", @"[", @"]", @"\\", @"non_us_#", @";", @"'", @"`", @",", @".", @"/",
     caps_lock,
     f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12,
+
     print_screen, scroll_lock, pause, insert, home, page_up, delete_forward, end, page_down,
     right_arrow, left_arrow, down_arrow, up_arrow, num_lock,
+
     kpad_div, kpad_mul, kpad_sub, kpad_add, kpad_enter,
     kpad_1, kpad_2, kpad_3, kpad_4, kpad_5, kpad_6, kpad_7, kpad_8, kpad_9, kpad_0,
     kpad_delete, @"non_us_\\", application, power, @"kpad_=",
+
     f13, f14, f15, f16, f17, f18, f19, f20, f21, f22, f23, f24,
-    lctrl = 224, lshift, lalt, lgui, rctrl, rshift, ralt, rgui,
+
+    execute, help, menu, select, stop, again, undo, cut, copy, paste, find,
+    mute, volumeup, volumedown,
+    locking_caps_lock, locking_num_lock, locking_scroll_lock,
+
+    @"kpad_,", @"kpad_alternate_=",
+
+    international1, international2, international3, international4, international5,
+    international6, international7, international8, international9,
+    lang1, lang2, lang3, lang4, lang5, lang6, lang7, lang8, lang9,
+
+    alternate_erase, sysreq_attention, cancel, clear, prior, @"return",
+    separator, out, oper, clear_again, crsel_props, exsel,
+
+    kpad_00 = 0xb0, kpad_000, kpad_thousands_separator, kpad_decimal_separator,
+    kpad_currency_unit, kpad_currency_subunit,
+    @"kpad_(", @"kpad_)", @"kpad_{", @"kpad_}", kpad_tab, kpad_backspace,
+    kpad_a, kpad_b, kpad_c, kpad_d, kpad_e, kpad_f,
+    kpad_xor, @"kpad_^", @"kpad_%", @"kpad_<", @"kpad_>", @"kpad_&", @"kpad_&&",
+    @"kpad_|", @"kpad_||", @"kpad_:", @"kpad_#", kpad_space, @"kpad_@", @"kpad_!",
+    kpad_memory_store, kpad_memory_recall, kpad_memory_clear, kpad_memory_add,
+    kpad_memory_subtract, kpad_memory_multiply, kpad_memory_divide, @"kpad_+/-",
+    kpad_clear, kpad_clear_entry, kpad_binary, kpad_octal, kpad_decimal, kpad_hexadecimal,
+
+    lctrl = 0xe0, lshift, lalt, lgui, rctrl, rshift, ralt, rgui,
+
+    media_playpause, media_stopcd, media_previoussong, media_nextsong,
+    media_ejectcd, media_volumeup, media_volumedown, media_mute,
+    media_www, media_back, media_forward, media_stop, media_find,
+    media_scrollup, media_scrolldown, media_edit, media_sleep,
+    media_coffee, media_refresh, media_calc,
     // zig fmt: on
     _,
+
+    // Aliases
+    const open: @This() = .execute;
+    const props: @This() = .menu;
+    const front: @This() = .select;
+    const ro: @This() = .international1;
+    const katakanahiragana: @This() = .international2;
+    const yen: @This() = .international3;
+    const henkan: @This() = .international4;
+    const muhenkan: @This() = .international5;
+    const kpjpcomma: @This() = .international6;
+    const hangeul: @This() = .lang1;
+    const hanja: @This() = .lang2;
+    const katakana: @This() = .lang3;
+    const hiragana: @This() = .lang4;
+    const zenkakuhankaku: @This() = .lang5;
 };
 
 pub const Ledcode = enum(u3) {
