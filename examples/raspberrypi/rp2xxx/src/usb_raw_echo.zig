@@ -20,7 +20,7 @@ var usb_controller: usb.DeviceController(.{
     .bcd_device = .v1_00,
     .serial = "someserial",
     .max_supported_packet_size = USB_Device.max_supported_packet_size,
-}, &.{usb.Configuration(
+}, &.{usb.configuration.Create(
     .{ .attributes = .{ .self_powered = false }, .max_current_ma = 50 },
     .{
         .echo = usb.drivers.EchoExample{},
