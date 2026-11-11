@@ -55,6 +55,8 @@ pub const LineCoding = extern struct {
     };
 };
 
+const CDC_Driver = @This();
+
 // This struct bundles all the descriptors CDC needs into one Configuration.
 pub const Descriptor = extern struct {
     const desc = usb.descriptor;
@@ -148,133 +150,137 @@ pub const Descriptor = extern struct {
     }
 };
 
-// These field names are matched (at comptime) to the field names in the descriptor returned from
-// `create` when binding the endpoints.
-pub const handlers: usb.DriverHandlers(@This()) = .{
-    .ep_notifi = on_notifi_ready,
-    .ep_out = on_rx,
-    .ep_in = on_tx_ready,
-};
+pub const Runtime = struct {
+    device: *usb.DeviceInterface,
+    descriptor: *const Descriptor,
+    line_coding: LineCoding align(4),
+    notifi_ready: std.atomic.Value(bool),
 
-device: *usb.DeviceInterface,
-descriptor: *const Descriptor,
-line_coding: LineCoding align(4),
-notifi_ready: std.atomic.Value(bool),
+    rx_data: []u8,
+    rx_seek: usb.types.PacketLength,
+    rx_end: usb.types.PacketLength,
+    rx_ready: std.atomic.Value(bool),
 
-rx_data: []u8,
-rx_seek: usb.types.PacketLength,
-rx_end: usb.types.PacketLength,
-rx_ready: std.atomic.Value(bool),
+    tx_data: []u8,
+    tx_end: usb.types.PacketLength,
+    tx_ready: std.atomic.Value(bool),
 
-tx_data: []u8,
-tx_end: usb.types.PacketLength,
-tx_ready: std.atomic.Value(bool),
-
-pub fn available(self: *@This()) usb.types.PacketLength {
-    return self.rx_end - self.rx_seek;
-}
-
-pub fn read(self: *@This(), dst: []u8) usize {
-    const len = @min(dst.len, self.rx_end - self.rx_seek);
-    @memcpy(dst[0..len], self.rx_data[self.rx_seek..][0..len]);
-    self.rx_seek += len;
-
-    if (self.available() > 0) return len;
-
-    // request more data
-    if (self.rx_ready.load(.seq_cst)) {
-        const ep_out = self.descriptor.ep_out.endpoint.num;
-        self.rx_ready.store(false, .seq_cst);
-        self.rx_end = self.device.ep_readv(ep_out, &.{self.rx_data});
-        self.rx_seek = 0;
-        self.device.ep_listen(ep_out, @intCast(self.rx_data.len));
+    pub fn available(self: *@This()) usb.types.PacketLength {
+        return self.rx_end - self.rx_seek;
     }
 
-    return len;
-}
+    pub fn read(self: *@This(), dst: []u8) usize {
+        const len = @min(dst.len, self.rx_end - self.rx_seek);
+        @memcpy(dst[0..len], self.rx_data[self.rx_seek..][0..len]);
+        self.rx_seek += len;
 
-pub fn write(self: *@This(), data: []const u8) usize {
-    const len = @min(self.tx_data.len - self.tx_end, data.len);
+        if (self.available() > 0) return len;
 
-    @memcpy(self.tx_data[self.tx_end..][0..len], data[0..len]);
-    self.tx_end += @intCast(len);
+        // request more data
+        if (self.rx_ready.load(.seq_cst)) {
+            const ep_out = self.descriptor.ep_out.endpoint.num;
+            self.rx_ready.store(false, .seq_cst);
+            self.rx_end = self.device.ep_readv(ep_out, &.{self.rx_data});
+            self.rx_seek = 0;
+            self.device.ep_listen(ep_out, @intCast(self.rx_data.len));
+        }
 
-    if (self.tx_end == self.tx_data.len)
-        _ = self.flush();
+        return len;
+    }
 
-    return len;
-}
+    pub fn write(self: *@This(), data: []const u8) usize {
+        const len = @min(self.tx_data.len - self.tx_end, data.len);
 
-/// Flushes tx buffer. Returns true if there is no more buffered data.
-pub fn flush(self: *@This()) bool {
-    if (self.tx_end == 0)
+        @memcpy(self.tx_data[self.tx_end..][0..len], data[0..len]);
+        self.tx_end += @intCast(len);
+
+        if (self.tx_end == self.tx_data.len)
+            _ = self.flush();
+
+        return len;
+    }
+
+    /// Flushes tx buffer. Returns true if there is no more buffered data.
+    pub fn flush(self: *@This()) bool {
+        if (self.tx_end == 0)
+            return true;
+
+        if (!self.tx_ready.load(.seq_cst))
+            return false;
+        self.tx_ready.store(false, .seq_cst);
+
+        assert(self.tx_end == self.device.ep_writev(
+            self.descriptor.ep_in.endpoint.num,
+            &.{self.tx_data[0..self.tx_end]},
+        ), .{});
+        self.tx_end = 0;
         return true;
+    }
 
-    if (!self.tx_ready.load(.seq_cst))
-        return false;
-    self.tx_ready.store(false, .seq_cst);
+    // *** USB driver interface below ***
 
-    assert(self.tx_end == self.device.ep_writev(
-        self.descriptor.ep_in.endpoint.num,
-        &.{self.tx_data[0..self.tx_end]},
-    ), .{});
-    self.tx_end = 0;
-    return true;
-}
-
-// Called when the host selects a configuration.
-pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterface, data: []u8) void {
-    const len_half = @divExact(data.len, 2);
-    assert(len_half == desc.ep_in.max_packet_size.native(), .{});
-    assert(len_half == desc.ep_out.max_packet_size.native(), .{});
-    self.* = .{
-        .device = device,
-        .descriptor = desc,
-        .line_coding = .init,
-        .notifi_ready = .init(true),
-
-        // `init` provides a data buffer, which we split in half for rx and tx data.
-        .rx_data = data[0..len_half],
-        .rx_seek = 0,
-        .rx_end = 0,
-        .rx_ready = .init(false),
-
-        .tx_data = data[len_half..],
-        .tx_end = 0,
-        .tx_ready = .init(true),
+    // These field names are matched (at comptime) to the field names in the descriptor returned from
+    // `create` when binding the endpoints.
+    pub const handlers: usb.DriverHandlers(CDC_Driver, @This()) = .{
+        .ep_notifi = on_notifi_ready,
+        .ep_out = on_rx,
+        .ep_in = on_tx_ready,
     };
-    device.ep_listen(desc.ep_out.endpoint.num, @intCast(self.rx_data.len));
-}
 
-/// Handle class-specific SETUP requests where recipient=Interface
-/// Called by DeviceController when the interface number matches this driver.
-pub fn class_request(self: *@This(), setup: *const usb.types.SetupPacket) ?[]const u8 {
-    const mgmt_request: ManagementRequestType = @fromBackingInt(setup.request);
-    log.debug("cdc setup: {any} {} {}", .{ mgmt_request, setup.length.native(), setup.value.native() });
+    // Called when the host selects a configuration.
+    pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterface, data: []u8) void {
+        const len_half = @divExact(data.len, 2);
+        assert(len_half == desc.ep_in.max_packet_size.native(), .{});
+        assert(len_half == desc.ep_out.max_packet_size.native(), .{});
+        self.* = .{
+            .device = device,
+            .descriptor = desc,
+            .line_coding = .init,
+            .notifi_ready = .init(true),
 
-    return switch (mgmt_request) {
-        .SetLineCoding => usb.ack, // we should handle data phase somehow to read sent line_coding
-        .GetLineCoding => std.mem.asBytes(&self.line_coding),
-        .SetControlLineState => usb.ack,
-        .SendBreak => usb.ack,
-        else => usb.nak,
-    };
-}
+            // `init` provides a data buffer, which we split in half for rx and tx data.
+            .rx_data = data[0..len_half],
+            .rx_seek = 0,
+            .rx_end = 0,
+            .rx_ready = .init(false),
 
-pub fn on_rx(self: *@This(), ep_num: usb.types.Endpoint.Num) void {
-    if (self.rx_ready.load(.seq_cst))
-        log.warn("{s}({t}) called before buffer was consumed", .{ "on_rx", ep_num });
-    self.rx_ready.store(true, .seq_cst);
-}
+            .tx_data = data[len_half..],
+            .tx_end = 0,
+            .tx_ready = .init(true),
+        };
+        device.ep_listen(desc.ep_out.endpoint.num, @intCast(self.rx_data.len));
+    }
 
-pub fn on_tx_ready(self: *@This(), ep_num: usb.types.Endpoint.Num) void {
-    if (self.tx_ready.load(.seq_cst))
-        log.warn("{s}({t}) called before buffer was consumed", .{ "on_tx_ready", ep_num });
-    self.tx_ready.store(true, .seq_cst);
-}
+    /// Handle class-specific SETUP requests where recipient=Interface
+    /// Called by DeviceController when the interface number matches this driver.
+    pub fn class_request(self: *@This(), setup: *const usb.types.SetupPacket) ?[]const u8 {
+        const mgmt_request: ManagementRequestType = @fromBackingInt(setup.request);
+        log.debug("cdc setup: {any} {} {}", .{ mgmt_request, setup.length.native(), setup.value.native() });
 
-pub fn on_notifi_ready(self: *@This(), ep_num: usb.types.Endpoint.Num) void {
-    if (self.notifi_ready.load(.seq_cst))
-        log.warn("{s}({t}) called before buffer was consumed", .{ "on_notifi_ready", ep_num });
-    self.notifi_ready.store(true, .seq_cst);
-}
+        return switch (mgmt_request) {
+            .SetLineCoding => usb.ack, // we should handle data phase somehow to read sent line_coding
+            .GetLineCoding => std.mem.asBytes(&self.line_coding),
+            .SetControlLineState => usb.ack,
+            .SendBreak => usb.ack,
+            else => usb.nak,
+        };
+    }
+
+    pub fn on_rx(self: *@This(), ep_num: usb.types.Endpoint.Num) void {
+        if (self.rx_ready.load(.seq_cst))
+            log.warn("{s}({t}) called before buffer was consumed", .{ "on_rx", ep_num });
+        self.rx_ready.store(true, .seq_cst);
+    }
+
+    pub fn on_tx_ready(self: *@This(), ep_num: usb.types.Endpoint.Num) void {
+        if (self.tx_ready.load(.seq_cst))
+            log.warn("{s}({t}) called before buffer was consumed", .{ "on_tx_ready", ep_num });
+        self.tx_ready.store(true, .seq_cst);
+    }
+
+    pub fn on_notifi_ready(self: *@This(), ep_num: usb.types.Endpoint.Num) void {
+        if (self.notifi_ready.load(.seq_cst))
+            log.warn("{s}({t}) called before buffer was consumed", .{ "on_notifi_ready", ep_num });
+        self.notifi_ready.store(true, .seq_cst);
+    }
+};

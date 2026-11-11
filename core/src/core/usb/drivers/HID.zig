@@ -293,16 +293,65 @@ pub const ReportItem = union(enum) {
 
 const ClassCode = usb.types.ClassSubclassProtocol.ClassCode.HID;
 
-pub const InterruptDriverOptions = struct {
-    subclass: ClassCode.Subclass(),
-    protocol: ClassCode.Protocol(),
+pub const HID_InterruptDriver = @This();
+
+subclass: ClassCode.Subclass(),
+protocol: ClassCode.Protocol(),
+
+itf_string: []const u8 = "",
+poll_interval: u8,
+country_code: usb.descriptor.HID.CountryCode = .NotSupported,
+
+generic_runtime: struct {
+    report_descriptor: []const ?ReportItem,
     InReport: type,
     OutReport: type,
-    report_descriptor: []const ?ReportItem,
+},
+
+pub const Descriptor = extern struct {
+    const desc = usb.descriptor;
+
+    interface: desc.Interface,
+    hid: desc.HID,
+    ep_out: desc.Endpoint,
+    ep_in: desc.Endpoint,
+
+    pub fn create(
+        alloc: *usb.DescriptorAllocator,
+        max_supported_packet_size: usb.types.PacketLength,
+        options: HID_InterruptDriver,
+    ) usb.DescriptorCreateResult(@This()) {
+        assert(@sizeOf(options.generic_runtime.InReport) <= max_supported_packet_size);
+        assert(@sizeOf(options.generic_runtime.OutReport) <= max_supported_packet_size);
+        return .{ .descriptor = .{
+            .interface = .{
+                .interface_number = alloc.next_itf(),
+                .alternate_setting = 0,
+                .num_endpoints = 2,
+                .interface_triple = .from(.HID, options.subclass, options.protocol),
+                .interface_s = alloc.string(options.itf_string),
+            },
+            .hid = .{
+                .country_code = options.country_code,
+                .num_descriptors = 1,
+                .report_length = .from(options.generic_runtime.report_descriptor.len),
+            },
+            .ep_out = .interrupt(
+                alloc.next_ep(.out),
+                @sizeOf(options.generic_runtime.OutReport),
+                options.poll_interval,
+            ),
+            .ep_in = .interrupt(
+                alloc.next_ep(.in),
+                @sizeOf(options.generic_runtime.InReport),
+                options.poll_interval,
+            ),
+        } };
+    }
 };
 
 /// HID Driver with an IN and OUT endpoint
-pub fn InterruptDriver(options: InterruptDriverOptions) type {
+pub fn Runtime(options: @FieldType(HID_InterruptDriver, "generic_runtime")) type {
     const log = std.log.scoped(.usb_hid_int_driver);
 
     return struct {
@@ -321,65 +370,19 @@ pub fn InterruptDriver(options: InterruptDriverOptions) type {
         const OutReport = options.OutReport;
         const InReport = options.InReport;
 
-        pub const Descriptor = extern struct {
-            const desc = usb.descriptor;
+        pub const Descriptor = HID_InterruptDriver.Descriptor;
 
-            interface: desc.Interface,
-            hid: desc.HID,
-            ep_out: desc.Endpoint,
-            ep_in: desc.Endpoint,
-
-            pub const Options = struct {
-                itf_string: []const u8 = "",
-                poll_interval: u8,
-                country_code: desc.HID.CountryCode = .NotSupported,
-            };
-
-            pub fn create(
-                alloc: *usb.DescriptorAllocator,
-                max_supported_packet_size: usb.types.PacketLength,
-                desc_options: Options,
-            ) usb.DescriptorCreateResult(@This()) {
-                assert(@sizeOf(InReport) <= max_supported_packet_size);
-                assert(@sizeOf(OutReport) <= max_supported_packet_size);
-                return .{ .descriptor = .{
-                    .interface = .{
-                        .interface_number = alloc.next_itf(),
-                        .alternate_setting = 0,
-                        .num_endpoints = 2,
-                        .interface_triple = .from(.HID, options.subclass, options.protocol),
-                        .interface_s = alloc.string(desc_options.itf_string),
-                    },
-                    .hid = .{
-                        .country_code = desc_options.country_code,
-                        .num_descriptors = 1,
-                        .report_length = .from(report_descriptor.len),
-                    },
-                    .ep_out = .interrupt(
-                        alloc.next_ep(.out),
-                        @sizeOf(OutReport),
-                        desc_options.poll_interval,
-                    ),
-                    .ep_in = .interrupt(
-                        alloc.next_ep(.in),
-                        @sizeOf(InReport),
-                        desc_options.poll_interval,
-                    ),
-                } };
-            }
-        };
-
-        pub const handlers: usb.DriverHandlers(@This()) = .{
+        pub const handlers: usb.DriverHandlers(HID_InterruptDriver, @This()) = .{
             .ep_in = on_tx_ready,
             .ep_out = on_rx,
         };
 
         device: *usb.DeviceInterface,
-        descriptor: *const Descriptor,
+        descriptor: *const @This().Descriptor,
         tx_ready: std.atomic.Value(bool),
         rx_ready: std.atomic.Value(bool),
 
-        pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterface) void {
+        pub fn init(self: *@This(), desc: *const @This().Descriptor, device: *usb.DeviceInterface) void {
             log.debug("init", .{});
             self.* = .{
                 .device = device,

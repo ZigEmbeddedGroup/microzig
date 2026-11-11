@@ -6,7 +6,7 @@ pub const descriptor = @import("usb/descriptor.zig");
 pub const drivers = struct {
     pub const CDC = @import("usb/drivers/CDC.zig");
     pub const EchoExample = @import("usb/drivers/EchoExample.zig");
-    pub const hid = @import("usb/drivers/HID.zig");
+    pub const HID_Interrupt = @import("usb/drivers/HID.zig");
 };
 pub const types = @import("usb/types.zig");
 
@@ -121,7 +121,7 @@ pub fn EndpointHandler(Driver: type) type {
     return fn (*Driver, types.Endpoint.Num) void;
 }
 
-pub fn DriverHandlers(Driver: type) type {
+pub fn DriverHandlers(Driver: type, Runtime: type) type {
     var field_names: []const [:0]const u8 = &.{};
 
     const info = @typeInfo(Driver.Descriptor).@"struct";
@@ -130,7 +130,7 @@ pub fn DriverHandlers(Driver: type) type {
         else => {},
     };
 
-    return @Struct(.auto, null, field_names, &@splat(EndpointHandler(Driver)), &@splat(.{}));
+    return @Struct(.auto, null, field_names, &@splat(EndpointHandler(Runtime)), &@splat(.{}));
 }
 
 pub const Options = struct {
@@ -203,14 +203,13 @@ pub fn Configuration(
         RuntimeData: type,
 
         pub fn create(max_psize: types.PacketLength, strings: []const []const u8) struct { @This(), []const []const u8 } {
-            const RuntimeData = Drivers;
-
             var alloc = DescriptorAllocator.init(options.unique_endpoints, strings);
             const configuration_s = alloc.string(options.name);
-            const driver_info = @typeInfo(RuntimeData).@"struct";
+            const driver_info = @typeInfo(Drivers).@"struct";
 
             var field_names: [driver_info.field_names.len][:0]const u8 = undefined;
-            var field_types: [driver_info.field_names.len]type = undefined;
+            var desc_field_types: [driver_info.field_names.len]type = undefined;
+            var runtime_field_types: [driver_info.field_names.len]type = undefined;
             var field_attrs: [driver_info.field_names.len]std.builtin.Type.Struct.FieldAttributes = undefined;
             var ep_handler_types: [2][16]type = @splat(@splat(void));
             var ep_handler_names: [2][16][:0]const u8 = undefined;
@@ -220,9 +219,14 @@ pub fn Configuration(
             var driver_alloc_types: []const type = &.{};
             var driver_alloc_attrs: []const std.builtin.Type.Struct.FieldAttributes = &.{};
 
-            for (driver_info.field_names, driver_info.field_types, 0..) |driver_field_name, driver_field_type, drv_id| {
+            for (driver_info.field_names, driver_info.field_types, 0..) |driver_field_name, DriverType, drv_id| {
+                runtime_field_types[drv_id] = if (@hasField(DriverType, "generic_runtime"))
+                    DriverType.Runtime(@field(driver_args, driver_field_name).generic_runtime)
+                else
+                    DriverType.Runtime;
+
                 // Get descriptor type for the current driver
-                const Descriptors = driver_field_type.Descriptor;
+                const Descriptors = DriverType.Descriptor;
                 // Call the create method on the descriptor, which wraps it with the allow stuff.
                 const result = Descriptors.create(&alloc, max_psize, @field(driver_args, driver_field_name));
                 // Get the descriptor instance from the result.
@@ -254,7 +258,7 @@ pub fn Configuration(
                             descriptor.Interface => .{ desc.interface_number, 1 },
                             else => |T| @compileError(
                                 "Expected first descriptor of driver " ++
-                                    @typeName(driver_field_type) ++
+                                    @typeName(DriverType) ++
                                     " to be of type Interface or InterfaceAssociation descriptor, got: " ++
                                     @typeName(T),
                             ),
@@ -277,7 +281,7 @@ pub fn Configuration(
                                     .{ ep_num, desc.endpoint.dir, ep_handler_drivers[ep_dir][ep_num], driver_field_name },
                                 ));
 
-                            ep_handler_types[ep_dir][ep_num] = EndpointHandler(driver_field_type);
+                            ep_handler_types[ep_dir][ep_num] = EndpointHandler(runtime_field_types[drv_id]);
                             ep_handler_drivers[ep_dir][ep_num] = drv_id;
                             ep_handler_names[ep_dir][ep_num] = field_name;
                         },
@@ -287,7 +291,7 @@ pub fn Configuration(
                     }
                 }
                 field_names[drv_id] = driver_field_name;
-                field_types[drv_id] = Descriptors;
+                desc_field_types[drv_id] = Descriptors;
                 field_attrs[drv_id] = .{ .default_value_ptr = &descriptors };
             }
 
@@ -299,7 +303,7 @@ pub fn Configuration(
             for (&ep_handler_types, &ep_handler_names, &ep_handler_drivers, 0..) |htypes, hnames, hdrivers, dir| {
                 for (&htypes, &hnames, &hdrivers, 0..) |T, name, drv_id, ep| {
                     if (T != void)
-                        ep_handlers[dir][ep] = @field(driver_info.field_types[drv_id.?].handlers, name);
+                        ep_handlers[dir][ep] = @field(runtime_field_types[drv_id.?].handlers, name);
                 }
             }
 
@@ -307,7 +311,7 @@ pub fn Configuration(
             const const_alloc = alloc.to_const();
             const const_ep_handlers = ep_handlers;
 
-            const DriverConfig = @Struct(.@"extern", null, &field_names, &field_types, &field_attrs);
+            const DriverConfig = @Struct(.@"extern", null, &field_names, &desc_field_types, &field_attrs);
             const Descriptor = extern struct {
                 first: descriptor.Configuration = .{
                     .total_length = .from(@sizeOf(descriptor.Configuration) + @sizeOf(DriverConfig)),
@@ -351,7 +355,7 @@ pub fn Configuration(
                         out: ep_handlers_types[idx_out] = const_ep_handlers[idx_out],
                     },
                     .handlers_itf = handlers_itf,
-                    .RuntimeData = RuntimeData,
+                    .RuntimeData = @Struct(.auto, null, &field_names, &runtime_field_types, &@splat(.{})),
                 },
                 const_alloc.strings,
             };

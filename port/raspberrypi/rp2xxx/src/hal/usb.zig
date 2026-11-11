@@ -471,33 +471,35 @@ pub fn ResetDriver(bootsel_activity_led: ?u5, interface_disable_mask: u32) type 
             }
         };
 
-        pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterface) void {
-            _ = desc;
-            _ = device;
-            self.* = .{};
-        }
-
-        pub fn class_request(self: *@This(), setup: *const usb.types.SetupPacket) ?[]const u8 {
-            _ = self;
-            switch (setup.request) {
-                0x01 => {
-                    const value = setup.value.native();
-                    const mask = @as(u32, 1) << if (value & 0x100 != 0)
-                        @intCast(value >> 9)
-                    else
-                        bootsel_activity_led orelse 0;
-                    const itf_disable = (value & 0x7F) | interface_disable_mask;
-                    log_drv.debug("Resetting to bootsel. Mask: {} Itf disable: {}", .{ mask, itf_disable });
-                    microzig.hal.rom.reset_to_usb_boot();
-                },
-                0x02 => {
-                    log_drv.debug("Resetting to flash", .{});
-                    // Not implemented yet
-                    microzig.hal.rom.reset_to_usb_boot();
-                },
-                else => return usb.nak,
+        pub const Runtime = struct {
+            pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterface) void {
+                _ = desc;
+                _ = device;
+                self.* = .{};
             }
-            return usb.ack;
-        }
+
+            pub fn class_request(self: *@This(), setup: *const usb.types.SetupPacket) ?[]const u8 {
+                _ = self;
+                switch (setup.request) {
+                    0x01 => {
+                        const value = setup.value.native();
+                        const mask = @as(u32, 1) << if (value & 0x100 != 0)
+                            @intCast(value >> 9)
+                        else
+                            bootsel_activity_led orelse 0;
+                        const itf_disable = (value & 0x7F) | interface_disable_mask;
+                        log_drv.debug("Resetting to bootsel. Mask: {} Itf disable: {}", .{ mask, itf_disable });
+                        microzig.hal.rom.reset_to_usb_boot();
+                    },
+                    0x02 => {
+                        log_drv.debug("Resetting to flash", .{});
+                        // Not implemented yet
+                        microzig.hal.rom.reset_to_usb_boot();
+                    },
+                    else => return usb.nak,
+                }
+                return usb.ack;
+            }
+        };
     };
 }
