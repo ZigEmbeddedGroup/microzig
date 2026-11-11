@@ -124,10 +124,10 @@ pub fn EndpointHandler(Driver: type) type {
     return fn (*Driver, types.Endpoint.Num) void;
 }
 
-pub fn DriverHandlers(Driver: type, Runtime: type) type {
+pub fn DriverHandlers(Descriptor: type, Runtime: type) type {
     var field_names: []const [:0]const u8 = &.{};
 
-    const info = @typeInfo(Driver.Descriptor).@"struct";
+    const info = @typeInfo(Descriptor).@"struct";
     for (info.field_names, info.field_types) |field_name, field_type| switch (field_type) {
         descriptor.Endpoint => field_names = field_names ++ .{field_name},
         else => {},

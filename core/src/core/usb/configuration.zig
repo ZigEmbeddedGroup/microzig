@@ -18,28 +18,6 @@ pub const Options = struct {
 pub fn Create(
     options: Options,
     driver_config: anytype,
-    // driver_args: blk: {
-    //     const info = @typeInfo(Drivers).@"struct";
-    //     const count = info.field_names.len;
-    //     var field_names: [count][:0]const u8 = undefined;
-    //     var field_types: [count]type = undefined;
-    //     for (info.field_names, info.field_types, 0..) |field_name, field_type, i| {
-    //         // Collect field names
-    //         field_names[i] = field_name;
-    //         // Collect the type info  for the Descriptor.create function parameter
-    //         const param_types = @typeInfo(@TypeOf(field_type.Descriptor.create)).@"fn".param_types;
-    //         // Ensure it takes 3 parameters
-    //         assert(param_types.len == 3);
-    //         // The first must be a DescriptorAllocator
-    //         assert(param_types[0] == *DescriptorAllocator);
-    //         // The second is usb.types.PacketLength
-    //         assert(param_types[1] == types.PacketLength);
-    //         // And save the type of the third
-    //         assert(param_types[2] == field_type);
-    //         field_types[i] = param_types[2].?;
-    //     }
-    //     break :blk @Struct(.auto, null, &field_names, &field_types, &@splat(.{}));
-    // },
 ) type {
     return struct {
         const DriverName = []const u8;

@@ -1,27 +1,37 @@
 //! This is an example driver that sends any data received on ep2 to ep1.
+//! Also acts as the specification of the USB driver interface.
+
 const std = @import("std");
 const usb = @import("../../usb.zig");
 const assert = std.debug.assert;
 const log = std.log.scoped(.usb_echo);
 
-/// The descriptors need to have the same memory layout as the sent data.
+/// Binary representation of the device descriptor as sent to the host.
+/// Make sure to use `extern` layout and endian-aware field types,
+/// such as `usb.types.LeInt(uXX/iXX)`.
 pub const Descriptor = extern struct {
     const desc = usb.descriptor;
 
     itf: desc.Interface,
+    /// Endpoint descriptor names are special.
+    /// Later, they are matched to endpoint handler functions
     ep_out: desc.Endpoint,
     ep_in: desc.Endpoint,
 };
 
+/// Runtime data and code associated with an instance of the driver.
+/// Avoid using global variables here, so that multiple driver instances
+/// can be used at the same time.
 pub const Runtime = struct {
     /// This is a mapping from endpoint descriptor field names to handler function names.
-    /// 'in' and 'out' are from the perspective of the host, so, usb devices send data on 'in' endpoints
-    /// and receive on 'out' endpoints.
-    pub const handlers: usb.DriverHandlers(EchoExampleDriver, @This()) = .{
+    /// 'in' and 'out' are from the perspective of the host.
+    /// USB devices send data on 'in' endpoints and receive on 'out' endpoints.
+    pub const handlers: usb.DriverHandlers(Descriptor, @This()) = .{
         .ep_in = on_tx_ready,
         .ep_out = on_rx,
     };
 
+    /// Fields in this struct have no special meaning to MicroZig
     device: *usb.DeviceInterface,
     descriptor: *const Descriptor,
     packet_buffer: []u8,
@@ -70,14 +80,25 @@ pub const Runtime = struct {
     }
 };
 
-pub const EchoExampleDriver = @This();
+/// `Runtime` type can be generic, in which case the driver type
+/// is the only paramater passed. It may be a good idea to make this function
+/// a wrapper around another, that only takes a subset of the parameters.
+/// This way the generic types are much more readable in zig error output
+/// and potentially less code is duplicated when using multiple driver instances
+/// with different options. See HID.zig for an example.
 
+// Each field represents a configuration option of the driver.
+// The values are declared by user code and available during initialization.
+// May not have any fields if the driver does not require configuration.
+// Common use case for this type of configuration is for descriptor data
+// that is not used by the driver at runtime, like descriptor strings.
 itf_string: []const u8 = "",
 
 /// This function is used during descriptor creation. Endpoint and interface numbers are
-/// allocated through the `alloc` parameter. Third argument contains driver configuration.
-/// If multiple instances of a driver are used, this function is called for each,
-/// with different arguments.
+/// allocated through the `alloc` parameter. Third argument contains the maximum supported
+/// packet length, which varies by implementation. If multiple instances of a driver are used,
+/// this function is called for each, with different arguments.
+/// Aside from the descriptor, this function can return a type that is later used
 pub fn create_descriptor(
     self: @This(),
     alloc: *usb.DescriptorAllocator,

@@ -142,7 +142,7 @@ pub const Runtime = struct {
 
     // These field names are matched (at comptime) to the field names in the descriptor returned from
     // `create` when binding the endpoints.
-    pub const handlers: usb.DriverHandlers(CDC_Driver, @This()) = .{
+    pub const handlers: usb.DriverHandlers(Descriptor, @This()) = .{
         .ep_notifi = on_notifi_ready,
         .ep_out = on_rx,
         .ep_in = on_tx_ready,
@@ -181,8 +181,6 @@ pub const Runtime = struct {
         self.notifi_ready.store(true, .seq_cst);
     }
 };
-
-const CDC_Driver = @This();
 
 itf_notifi_str: []const u8 = "",
 itf_data_str: []const u8 = "",

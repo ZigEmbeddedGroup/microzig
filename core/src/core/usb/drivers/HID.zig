@@ -314,15 +314,13 @@ pub fn RuntimeGeneric(InReport: type, OutReport: type, report_descriptor: []cons
             _,
         };
 
-        pub const Descriptor = HID_InterruptDriver.Descriptor;
-
-        pub const handlers: usb.DriverHandlers(HID_InterruptDriver, @This()) = .{
+        pub const handlers: usb.DriverHandlers(Descriptor, @This()) = .{
             .ep_in = on_tx_ready,
             .ep_out = on_rx,
         };
 
         device: *usb.DeviceInterface,
-        descriptor: *const @This().Descriptor,
+        descriptor: *const Descriptor,
         tx_ready: std.atomic.Value(bool),
         rx_ready: std.atomic.Value(bool),
 
@@ -431,8 +429,6 @@ pub fn Runtime(self: @This()) type {
 }
 
 const ClassCode = usb.types.ClassSubclassProtocol.ClassCode.HID;
-
-pub const HID_InterruptDriver = @This();
 
 subclass: ClassCode.Subclass(),
 protocol: ClassCode.Protocol(),
