@@ -2,7 +2,7 @@ const std = @import("std");
 
 const Elf = @This();
 
-endian: std.builtin.Endian,
+endian: std.lang.Endian,
 format: Format,
 sections: Sections,
 loaded_regions: []const Region,
@@ -41,33 +41,33 @@ pub fn init(allocator: std.mem.Allocator, file_reader: *std.Io.File.Reader) !Elf
     const format: Format = if (elf_header.is_64) .@"64" else .@"32";
 
     const string_table_data = blk: {
-        var shdr: std.elf.Elf64_Shdr = undefined;
+        var shdr: std.elf.Elf64.Shdr = undefined;
         if (format == .@"32") {
-            // var shdr32: std.elf.Elf32_Shdr = undefined;
-            const offset = elf_header.shoff + @sizeOf(std.elf.Elf32_Shdr) * elf_header.shstrndx;
+            // var shdr32: std.elf.Elf32.Shdr = undefined;
+            const offset = elf_header.shoff + @sizeOf(std.elf.Elf32.Shdr) * elf_header.shstrndx;
             try file_reader.seekTo(offset);
-            const shdr32 = try file_reader.interface.takeStruct(std.elf.Elf32_Shdr, elf_header.endian);
+            const shdr32 = try file_reader.interface.takeStruct(std.elf.Elf32.Shdr, elf_header.endian);
 
             shdr = .{
-                .sh_name = shdr32.sh_name,
-                .sh_type = shdr32.sh_type,
-                .sh_flags = shdr32.sh_flags,
-                .sh_addr = shdr32.sh_addr,
-                .sh_offset = shdr32.sh_offset,
-                .sh_size = shdr32.sh_size,
-                .sh_link = shdr32.sh_link,
-                .sh_info = shdr32.sh_info,
-                .sh_addralign = shdr32.sh_addralign,
-                .sh_entsize = shdr32.sh_entsize,
+                .name = shdr32.name,
+                .type = shdr32.type,
+                .flags = .{ .shf = shdr32.flags.shf },
+                .addr = shdr32.addr,
+                .offset = shdr32.offset,
+                .size = shdr32.size,
+                .link = shdr32.link,
+                .info = shdr32.info,
+                .addralign = shdr32.addralign,
+                .entsize = shdr32.entsize,
             };
         } else {
-            const offset = elf_header.shoff + @sizeOf(std.elf.Elf64_Shdr) * elf_header.shstrndx;
+            const offset = elf_header.shoff + @sizeOf(std.elf.Elf64.Shdr) * elf_header.shstrndx;
             try file_reader.seekTo(offset);
-            shdr = try file_reader.interface.takeStruct(std.elf.Elf64_Shdr, elf_header.endian);
+            shdr = try file_reader.interface.takeStruct(std.elf.Elf64.Shdr, elf_header.endian);
         }
 
-        try file_reader.seekTo(shdr.sh_offset);
-        break :blk try file_reader.interface.readAlloc(allocator, shdr.sh_size);
+        try file_reader.seekTo(shdr.offset);
+        break :blk try file_reader.interface.readAllocAll(allocator, shdr.size);
     };
     defer allocator.free(string_table_data);
 
@@ -87,7 +87,7 @@ pub fn init(allocator: std.mem.Allocator, file_reader: *std.Io.File.Reader) !Elf
             if (std.mem.eql(u8, name, section_field_name)) {
                 try file_reader.seekTo(shdr.sh_offset);
 
-                const section_data = try file_reader.interface.readAlloc(allocator, shdr.sh_size);
+                const section_data = try file_reader.interface.readAllocAll(allocator, shdr.sh_size);
                 errdefer allocator.free(section_data);
 
                 sections.put(@fromBackingInt(section_field_value), section_data);

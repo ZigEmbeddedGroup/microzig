@@ -49,7 +49,7 @@ pub fn main() void {
         var aa = std.heap.ArenaAllocator.init(fba.allocator());
         defer aa.deinit();
         var temp_buf: [7]u8 = undefined;
-        const str = std.fmt.bufPrint(&temp_buf, "Try #{}", .{i}) catch unreachable;
+        const str = std.mem.print(&temp_buf, "Try #{}", .{i}) catch unreachable;
         var counter_buf: [80]u8 = undefined;
         const text_centered = center_to_screen(&counter_buf, str);
 

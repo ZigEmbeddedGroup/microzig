@@ -28,7 +28,7 @@ pub fn decode(inst_val: u16) !Instruction {
             const Bitsets = @Tuple(types: {
                 var bs_types: [positionals.len]type = undefined;
                 for (positionals, 0..) |pos, i| {
-                    bs_types[i] = std.bit_set.IntegerBitSet(pos[1].len);
+                    bs_types[i] = std.bit_set.Integer(pos[1].len);
                 }
                 break :types &bs_types;
             });
@@ -38,7 +38,7 @@ pub fn decode(inst_val: u16) !Instruction {
                 bs.* = .empty;
             }
 
-            var bitset: std.bit_set.IntegerBitSet(16) = .empty;
+            var bitset: std.bit_set.Integer(16) = .empty;
             bitset.mask = @bitReverse(inst_val);
 
             var result: Result = undefined;

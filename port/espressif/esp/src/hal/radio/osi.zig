@@ -28,9 +28,9 @@ pub var wifi_interrupt_handler: ?struct {
     arg: ?*anyopaque,
 } = undefined;
 
-extern fn vsnprintf(buffer: [*c]u8, len: usize, fmt: [*c]const u8, va_list: std.builtin.VaList) callconv(.c) void;
+extern fn vsnprintf(buffer: [*c]u8, len: usize, fmt: [*c]const u8, va_list: std.lang.VaList) callconv(.c) void;
 
-fn syslog(fmt: ?[*:0]const u8, va_list: std.builtin.VaList) callconv(.c) void {
+fn syslog(fmt: ?[*:0]const u8, va_list: std.lang.VaList) callconv(.c) void {
     var buf: [512:0]u8 = undefined;
     vsnprintf(&buf, 512, fmt, va_list);
     log.debug("{s}", .{std.mem.span((&buf).ptr)});
@@ -46,7 +46,7 @@ pub fn strlen(str: ?[*:0]const u8) callconv(.c) usize {
 
 pub fn strnlen(str: ?[*:0]const u8, n: usize) callconv(.c) usize {
     const s = str orelse return 0;
-    return if (std.mem.indexOfScalar(u8, s[0..n], 0)) |index| index else n;
+    return if (std.mem.findScalar(u8, s[0..n], 0)) |index| index else n;
 }
 
 test "strnlen" {
@@ -60,7 +60,7 @@ pub fn strrchr(str: ?[*:0]const u8, chr: u32) callconv(.c) ?[*:0]const u8 {
     // Should return even the index of the zero byte if requested. This
     // implementation only works with single byte characters.
 
-    if (std.mem.lastIndexOfScalar(u8, s[0 .. std.mem.len(s) + 1], @intCast(chr))) |index| {
+    if (std.mem.findScalarLast(u8, s[0 .. std.mem.len(s) + 1], @intCast(chr))) |index| {
         return @ptrFromInt(@intFromPtr(s) + index);
     } else {
         return null;

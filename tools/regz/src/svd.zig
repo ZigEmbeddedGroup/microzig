@@ -19,8 +19,8 @@ const log = std.log.scoped(.svd);
 const Context = struct {
     db: *Database,
     arena: ArenaAllocator,
-    register_props: std.AutoArrayHashMapUnmanaged(RegisterPropertiesParent, RegisterProperties) = .{},
-    derived_peripherals: std.AutoArrayHashMapUnmanaged(xml.Node, []const u8) = .{},
+    register_props: std.array_hash_map.Auto(RegisterPropertiesParent, RegisterProperties) = .{},
+    derived_peripherals: std.array_hash_map.Auto(xml.Node, []const u8) = .{},
 
     fn deinit(ctx: *Context) void {
         ctx.register_props.deinit(ctx.db.gpa);
@@ -33,7 +33,7 @@ const Context = struct {
         from: RegisterPropertiesParent,
     ) !RegisterProperties {
         const register_props = try RegisterProperties.parse(node);
-        var base_register_props = ctx.register_props.get(from) orelse unreachable;
+        var base_register_props = ctx.register_props.get(from).?;
         inline for (@typeInfo(RegisterProperties).@"struct".field_names) |field_name| {
             if (@field(register_props, field_name)) |value|
                 @field(base_register_props, field_name) = value;
@@ -406,7 +406,7 @@ fn load_register_with_dim_element_group(ctx: *Context, node: xml.Node, parent: S
                 .list => blk: {
                     const replacement = try dim_elements.dim_index_value(ctx, i);
                     const new_name = try std.mem.replaceOwned(u8, ctx.arena.allocator(), name, "%s", replacement);
-                    break :blk try std.fmt.allocPrintSentinel(ctx.arena.allocator(), "{s}", .{new_name}, 0);
+                    break :blk try ctx.arena.allocator().printSentinel("{s}", .{new_name}, 0);
                 },
             },
             .description = node.get_value("description"),
@@ -501,7 +501,7 @@ fn load_field(ctx: *Context, node: xml.Node, register_id: RegisterID, props: *co
                     .list => listblk: {
                         const replacement = try elements.dim_index_value(ctx, i);
                         const new_name = try std.mem.replaceOwned(u8, ctx.arena.allocator(), node.get_value("name").?, "%s", replacement);
-                        break :listblk try std.fmt.allocPrintSentinel(ctx.arena.allocator(), "{s}", .{new_name}, 0);
+                        break :listblk try ctx.arena.allocator().printSentinel("{s}", .{new_name}, 0);
                     },
                 };
             } else try get_name_without_suffix(node, "%s"),
@@ -569,7 +569,7 @@ pub const Revision = struct {
         if (!std.mem.startsWith(u8, str, "r"))
             return error.Malformed;
 
-        const p_index = std.mem.indexOf(u8, str, "p") orelse return error.Malformed;
+        const p_index = std.mem.find(u8, str, "p") orelse return error.Malformed;
         return Revision{
             .release = try std.fmt.parseInt(u64, str[1..p_index], 10),
             .part = try std.fmt.parseInt(u64, str[p_index + 1 ..], 10),
@@ -679,7 +679,7 @@ const DimElements = struct {
             var ret: std.ArrayList([]const u8) = .empty;
             defer ret.deinit(gpa);
 
-            if (std.mem.indexOf(u8, list.pattern, "-")) |dash_idx| {
+            if (std.mem.find(u8, list.pattern, "-")) |dash_idx| {
                 const begin_str = list.pattern[0..dash_idx];
                 const end_str = list.pattern[dash_idx + 1 ..];
 
@@ -693,7 +693,7 @@ const DimElements = struct {
                         return error.InvalidRange;
 
                     for (begin..end + 1) |c| {
-                        const identifier = try std.fmt.allocPrint(gpa, "{c}", .{@as(u8, @intCast(c))});
+                        const identifier = try gpa.print("{c}", .{@as(u8, @intCast(c))});
                         try ret.append(gpa, identifier);
                     }
                 } else {
@@ -703,7 +703,7 @@ const DimElements = struct {
                         return error.InvalidRange;
 
                     for (begin..end + 1) |n| {
-                        const identifier = try std.fmt.allocPrint(gpa, "{}", .{n});
+                        const identifier = try gpa.print("{}", .{n});
                         try ret.append(gpa, identifier);
                     }
                 }
@@ -766,7 +766,7 @@ const DimElements = struct {
             const buf = try ctx.arena.allocator().allocSentinel(u8, 16, 0);
             @memset(buf, 0);
             // dim index range is with
-            dim_index = try std.fmt.bufPrintSentinel(buf, "0-{d}", .{dim.? - 1}, 0);
+            dim_index = try std.mem.printSentinel(buf, "0-{d}", .{dim.? - 1}, 0);
         }
 
         if (node.get_value("dimArrayIndex") != null) {
@@ -794,10 +794,10 @@ const DimElements = struct {
         const start_index = iter.next().?;
         const parse_start = std.fmt.parseInt(usize, start_index, 0);
         if (parse_start) |start| {
-            return try std.fmt.allocPrintSentinel(ctx.arena.allocator(), "{d}", .{start + index}, 0);
+            return try ctx.arena.allocator().printSentinel("{d}", .{start + index}, 0);
         } else |_| {
             if (start_index.len == 1 and std.ascii.isAlphabetic(start_index[0])) {
-                return std.fmt.allocPrintSentinel(ctx.arena.allocator(), "{c}", .{start_index[0] + @as(u8, @truncate(index))}, 0);
+                return ctx.arena.allocator().printSentinel("{c}", .{start_index[0] + @as(u8, @truncate(index))}, 0);
             }
             return error.DimIndexInvalid;
         }
@@ -814,7 +814,7 @@ const DimElements = struct {
         const start_index = iter_value.?;
         const parse_start = std.fmt.parseInt(usize, start_index, 0);
         if (parse_start) |start| {
-            return try std.fmt.allocPrintSentinel(ctx.arena.allocator(), "{d}", .{start}, 0);
+            return try ctx.arena.allocator().printSentinel("{d}", .{start}, 0);
         } else |_| {
             if (start_index.len == 1 and std.ascii.isAlphabetic(start_index[0])) {
                 return start_index;
@@ -1673,7 +1673,7 @@ test "svd.DimElements.parse missing dimIncrement" {
 
     var root = try doc.get_root_element();
     var iterator = root.iterate(&.{"peripherals"}, &.{"peripheral"});
-    const peripheral_node = iterator.next() orelse unreachable;
+    const peripheral_node = iterator.next().?;
     try expectError(error.NameFieldMalformed, DimElements.parse(&ctx, peripheral_node));
 }
 
@@ -1701,7 +1701,7 @@ test "svd.DimElements.parse missing dim" {
 
     var root = try doc.get_root_element();
     var iterator = root.iterate(&.{"peripherals"}, &.{"peripheral"});
-    const peripheral_node = iterator.next() orelse unreachable;
+    const peripheral_node = iterator.next().?;
     try expectError(error.DimElementGroupMalformed, DimElements.parse(&ctx, peripheral_node));
 }
 
@@ -1730,7 +1730,7 @@ test "svd.DimElements.parse invalid name without %s or [%s]" {
 
     var root = try doc.get_root_element();
     var iterator = root.iterate(&.{"peripherals"}, &.{"peripheral"});
-    const peripheral_node = iterator.next() orelse unreachable;
+    const peripheral_node = iterator.next().?;
     try expectError(error.NameFieldMalformed, DimElements.parse(&ctx, peripheral_node));
 }
 

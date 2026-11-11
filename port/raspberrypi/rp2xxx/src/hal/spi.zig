@@ -276,12 +276,12 @@ pub const SPI = enum(u1) {
 
         while (rx_remaining > 0 or tx_remaining > 0) {
             if (tx_remaining > 0 and spi.is_writable() and rx_remaining < tx_remaining + fifo_depth) {
-                const element = src_iter.next_element() orelse unreachable;
+                const element = src_iter.next_element().?;
                 spi_regs.SSPDR.write_raw(element.value);
                 tx_remaining -= 1;
             }
             if (rx_remaining > 0 and spi.is_readable()) {
-                const element = dst_iter.next_element_ptr() orelse unreachable;
+                const element = dst_iter.next_element_ptr().?;
                 const value: u16 = spi_regs.SSPDR.read().DATA;
                 element.value_ptr.* = @truncate(value);
                 rx_remaining -= 1;
@@ -390,7 +390,7 @@ pub const SPI = enum(u1) {
             }
             if (rx_remaining > 0 and spi.is_readable()) {
                 const value: u16 = spi_regs.SSPDR.read().DATA;
-                const dst = dst_iter.next_element_ptr() orelse unreachable;
+                const dst = dst_iter.next_element_ptr().?;
 
                 dst.value_ptr.* = @truncate(value);
                 rx_remaining -= 1;

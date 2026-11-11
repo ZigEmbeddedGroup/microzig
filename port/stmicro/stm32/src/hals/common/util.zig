@@ -8,7 +8,7 @@ pub fn has_port(comptime id: u8) bool {
 
 pub fn match_name(heystack: []const u8, needles: []const []const u8) bool {
     for (needles) |needle| {
-        if (std.mem.indexOf(u8, heystack, needle)) |_| {
+        if (std.mem.find(u8, heystack, needle)) |_| {
             return true;
         }
     }
@@ -63,7 +63,7 @@ pub fn sub_peripheral_enum(comptime T: type, comptime keep_name: []const []const
         if (match_name(field_name, keep_name)) {
             if (match_type) |match| {
                 const type_name = @typeName(@TypeOf(@field(peripherals, field_name)));
-                _ = std.mem.indexOf(u8, type_name, match) orelse continue;
+                _ = std.mem.find(u8, type_name, match) orelse continue;
             }
             field_names = field_names ++ .{field_name};
             field_values = field_values ++ .{field_value};

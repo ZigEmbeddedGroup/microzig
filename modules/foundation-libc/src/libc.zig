@@ -53,7 +53,7 @@ pub fn undefined_behaviour(comptime string: []const u8) noreturn {
 }
 
 /// Zig panic handler, forwards panics to `foundation_libc_panic_handler`.
-pub fn panic(msg: []const u8, maybe_error_return_trace: ?*std.builtin.StackTrace, maybe_return_address: ?usize) noreturn {
+pub fn panic(msg: []const u8, maybe_error_return_trace: ?*std.lang.StackTrace, maybe_return_address: ?usize) noreturn {
     _ = maybe_error_return_trace;
     _ = maybe_return_address;
     h.foundation_libc_panic_handler(msg.ptr, msg.len);
@@ -68,7 +68,7 @@ fn fallback_panic_handler(msg_ptr: [*]const u8, msg_len: usize) callconv(.c) nor
 }
 comptime {
     const ptr = &fallback_panic_handler;
-    @export(ptr, std.builtin.ExportOptions{
+    @export(ptr, .{
         .name = "foundation_libc_panic_handler",
         .linkage = .weak,
         .visibility = .default,
