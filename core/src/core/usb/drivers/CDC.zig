@@ -5,6 +5,8 @@ const assert = microzig.assert;
 const usb = @import("../../usb.zig");
 const log = std.log.scoped(.usb_cdc);
 
+const Driver = @This();
+
 /// CDC PSTN Subclass Management Element Requests
 pub const ManagementRequestType = enum(u8) {
     SetCommFeature = 0x02,
@@ -140,6 +142,36 @@ pub const Runtime = struct {
 
     // *** USB driver interface below ***
 
+    // Called when the host selects a configuration.
+    pub fn init(
+        self: *Runtime,
+        _: Driver,
+        descriptor: *const Descriptor,
+        device: *usb.DeviceInterface,
+        data: []u8,
+    ) void {
+        const len_half = @divExact(data.len, 2);
+        assert(len_half == descriptor.ep_in.max_packet_size.native(), .{});
+        assert(len_half == descriptor.ep_out.max_packet_size.native(), .{});
+        self.* = .{
+            .device = device,
+            .descriptor = descriptor,
+            .line_coding = .init,
+            .notifi_ready = .init(true),
+
+            // `init` provides a data buffer, which we split in half for rx and tx data.
+            .rx_data = data[0..len_half],
+            .rx_seek = 0,
+            .rx_end = 0,
+            .rx_ready = .init(false),
+
+            .tx_data = data[len_half..],
+            .tx_end = 0,
+            .tx_ready = .init(true),
+        };
+        device.ep_listen(descriptor.ep_out.endpoint.num, @intCast(self.rx_data.len));
+    }
+
     // These field names are matched (at comptime) to the field names in the descriptor returned from
     // `create` when binding the endpoints.
     pub const handlers: usb.DriverHandlers(Descriptor, @This()) = .{
@@ -190,16 +222,18 @@ itf_data_str: []const u8 = "",
 /// by the user when creating the device controller type. If multiple instances of a driver
 /// are used, this function is called for each, with different arguments. Passing arguments
 /// through this function is preferred to making the whole driver generic.
-pub fn create_descriptor(
-    comptime self: @This(),
+pub fn driver_info(
+    self: @This(),
     alloc: *usb.DescriptorAllocator,
-    max_supported_packet_size: usb.types.PacketLength,
-) usb.DescriptorCreateResult(Descriptor) {
+    comptime max_supported_packet_size: usb.types.PacketLength,
+) usb.DriverInfo(Descriptor) {
     // Endpoint and interface numbers are allocated through the `alloc` parameter,
     // so that multiple instances of this driver can coexist.
     const itf_notifi = alloc.next_itf();
     const itf_data = alloc.next_itf();
     return .{
+        .Runtime = Runtime,
+        .alloc_bytes = 2 * max_supported_packet_size,
         .descriptor = .{
             .itf_assoc = .{
                 .first_interface = itf_notifi,
@@ -253,36 +287,5 @@ pub fn create_descriptor(
             .ep_out = .bulk(alloc.next_ep(.out), max_supported_packet_size),
             .ep_in = .bulk(alloc.next_ep(.in), max_supported_packet_size),
         },
-        .alloc_bytes = 2 * max_supported_packet_size,
     };
-}
-
-// Called when the host selects a configuration.
-pub fn init_runtime(
-    comptime _: @This(),
-    comptime descriptor: Descriptor,
-    runtime: *Runtime,
-    device: *usb.DeviceInterface,
-    data: []u8,
-) void {
-    const len_half = @divExact(data.len, 2);
-    assert(len_half == descriptor.ep_in.max_packet_size.native(), .{});
-    assert(len_half == descriptor.ep_out.max_packet_size.native(), .{});
-    runtime.* = .{
-        .device = device,
-        .descriptor = &descriptor,
-        .line_coding = .init,
-        .notifi_ready = .init(true),
-
-        // `init` provides a data buffer, which we split in half for rx and tx data.
-        .rx_data = data[0..len_half],
-        .rx_seek = 0,
-        .rx_end = 0,
-        .rx_ready = .init(false),
-
-        .tx_data = data[len_half..],
-        .tx_end = 0,
-        .tx_ready = .init(true),
-    };
-    device.ep_listen(descriptor.ep_out.endpoint.num, @intCast(runtime.rx_data.len));
 }

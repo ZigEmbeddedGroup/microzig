@@ -446,65 +446,60 @@ pub fn Polled(config: Config) type {
 }
 
 pub fn ResetDriver(bootsel_activity_led: ?u5, interface_disable_mask: u32) type {
+    const log_drv = std.log.scoped(.pico_reset);
+
+    const Descriptor = extern struct {
+        reset_interface: usb.descriptor.Interface,
+    };
+
+    const Runtime = struct {
+        pub fn init(_: *@This(), _: anytype, _: *const Descriptor, _: *usb.DeviceInterface) void {}
+
+        pub fn class_request(_: *@This(), setup: *const usb.types.SetupPacket) ?[]const u8 {
+            switch (setup.request) {
+                0x01 => {
+                    const value = setup.value.native();
+                    const mask = @as(u32, 1) << if (value & 0x100 != 0)
+                        @intCast(value >> 9)
+                    else
+                        bootsel_activity_led orelse 0;
+                    const itf_disable = (value & 0x7F) | interface_disable_mask;
+                    log_drv.debug("Resetting to bootsel. Mask: {} Itf disable: {}", .{ mask, itf_disable });
+                    microzig.hal.rom.reset_to_usb_boot();
+                },
+                0x02 => {
+                    log_drv.debug("Resetting to flash", .{});
+                    // Not implemented yet
+                    microzig.hal.rom.reset_to_usb_boot();
+                },
+                else => return usb.nak,
+            }
+            return usb.ack;
+        }
+    };
+
     return struct {
-        const log_drv = std.log.scoped(.pico_reset);
-
-        const Descriptor = extern struct {
-            reset_interface: usb.descriptor.Interface,
-        };
-
         itf_string: []const u8 = "",
 
-        pub fn create_descriptor(
+        pub fn driver_info(
             self: @This(),
             alloc: *usb.DescriptorAllocator,
             _: usb.types.PacketLength,
-        ) usb.DescriptorCreateResult(Descriptor) {
-            return .{ .descriptor = .{ .reset_interface = .{
-                .interface_number = alloc.next_itf(),
-                .alternate_setting = 0,
-                .num_endpoints = 0,
-                .interface_triple = .from(
-                    .VendorSpecific,
-                    @fromBackingInt(0x00),
-                    @fromBackingInt(0x01),
-                ),
-                .interface_s = alloc.string(self.itf_string),
-            } } };
+        ) usb.DriverInfo(Descriptor) {
+            return .{
+                .Runtime = Runtime,
+                .descriptor = .{ .reset_interface = .{
+                    .interface_number = alloc.next_itf(),
+                    .alternate_setting = 0,
+                    .num_endpoints = 0,
+                    .interface_triple = .from(
+                        .VendorSpecific,
+                        @fromBackingInt(0x00),
+                        @fromBackingInt(0x01),
+                    ),
+                    .interface_s = alloc.string(self.itf_string),
+                } },
+            };
         }
-
-        pub fn init_runtime(
-            comptime _: @This(),
-            comptime _: Descriptor,
-            runtime: *Runtime,
-            _: *usb.DeviceInterface,
-        ) void {
-            runtime.* = .{};
-        }
-
-        pub const Runtime = struct {
-            pub fn class_request(self: *@This(), setup: *const usb.types.SetupPacket) ?[]const u8 {
-                _ = self;
-                switch (setup.request) {
-                    0x01 => {
-                        const value = setup.value.native();
-                        const mask = @as(u32, 1) << if (value & 0x100 != 0)
-                            @intCast(value >> 9)
-                        else
-                            bootsel_activity_led orelse 0;
-                        const itf_disable = (value & 0x7F) | interface_disable_mask;
-                        log_drv.debug("Resetting to bootsel. Mask: {} Itf disable: {}", .{ mask, itf_disable });
-                        microzig.hal.rom.reset_to_usb_boot();
-                    },
-                    0x02 => {
-                        log_drv.debug("Resetting to flash", .{});
-                        // Not implemented yet
-                        microzig.hal.rom.reset_to_usb_boot();
-                    },
-                    else => return usb.nak,
-                }
-                return usb.ack;
-            }
-        };
     };
 }

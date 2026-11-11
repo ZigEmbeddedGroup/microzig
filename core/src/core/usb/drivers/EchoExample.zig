@@ -6,6 +6,8 @@ const usb = @import("../../usb.zig");
 const assert = std.debug.assert;
 const log = std.log.scoped(.usb_echo);
 
+const Driver = @This();
+
 /// Binary representation of the device descriptor as sent to the host.
 /// Make sure to use `extern` layout and endian-aware field types,
 /// such as `usb.types.LeInt(uXX/iXX)`.
@@ -36,6 +38,28 @@ pub const Runtime = struct {
     descriptor: *const Descriptor,
     packet_buffer: []u8,
     tx_ready: std.atomic.Value(bool),
+
+    /// This function is called when the host chooses a configuration that contains this driver. `self`
+    /// points to undefined memory. `data` is of the length specified in `Descriptor.create()`.
+    pub fn init(
+        self: *@This(),
+        _: Driver,
+        descriptor: *const Descriptor,
+        device: *usb.DeviceInterface,
+        data: []u8,
+    ) void {
+        assert(data.len == descriptor.ep_in.max_packet_size.native());
+        self.* = .{
+            .device = device,
+            .descriptor = descriptor,
+            .packet_buffer = data,
+            .tx_ready = .init(false),
+        };
+        device.ep_listen(
+            descriptor.ep_out.endpoint.num,
+            @intCast(descriptor.ep_out.max_packet_size.native()),
+        );
+    }
 
     /// Used for interface configuration through endpoint 0.
     /// Data returned by this function is sent on endpoint 0.
@@ -99,12 +123,13 @@ itf_string: []const u8 = "",
 /// packet length, which varies by implementation. If multiple instances of a driver are used,
 /// this function is called for each, with different arguments.
 /// Aside from the descriptor, this function can return a type that is later used
-pub fn create_descriptor(
+pub fn driver_info(
     self: @This(),
     alloc: *usb.DescriptorAllocator,
     max_supported_packet_size: usb.types.PacketLength,
-) usb.DescriptorCreateResult(Descriptor) {
+) usb.DriverInfo(Descriptor) {
     return .{
+        .Runtime = Runtime,
         .descriptor = .{
             .itf = .{
                 .interface_number = alloc.next_itf(),
@@ -120,26 +145,4 @@ pub fn create_descriptor(
         // descriptor can be allocated at this stage.
         .alloc_bytes = max_supported_packet_size,
     };
-}
-
-/// This function is called when the host chooses a configuration that contains this driver. `self`
-/// points to undefined memory. `data` is of the length specified in `Descriptor.create()`.
-pub fn init_runtime(
-    comptime _: @This(),
-    comptime desc: Descriptor,
-    runtime: *Runtime,
-    device: *usb.DeviceInterface,
-    data: []u8,
-) void {
-    assert(data.len == desc.ep_in.max_packet_size.native());
-    runtime.* = .{
-        .device = device,
-        .descriptor = &desc,
-        .packet_buffer = data,
-        .tx_ready = .init(false),
-    };
-    device.ep_listen(
-        desc.ep_out.endpoint.num,
-        @intCast(desc.ep_out.max_packet_size.native()),
-    );
 }
