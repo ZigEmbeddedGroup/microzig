@@ -10,6 +10,7 @@ const time = nrf.time;
 const USBD = nrf.usbd.USBD;
 const clocks = nrf.clocks;
 const uart = nrf.uart.num(0);
+const Keycode = usb.HID_report.BootKeycode;
 
 pub const panic = microzig.panic;
 
@@ -27,44 +28,10 @@ comptime {
     _ = microzig.export_startup();
 }
 
-pub const Modifiers = packed struct(u8) {
-    lctrl: bool,
-    lshift: bool,
-    lalt: bool,
-    lgui: bool,
-    rctrl: bool,
-    rshift: bool,
-    ralt: bool,
-    rgui: bool,
-
-    pub const none: @This() = @bitCast(@as(u8, 0));
-};
-
-pub const Code = enum(u8) {
-    // Codes taken from https://gist.github.com/mildsunrise/4e231346e2078f440969cdefb6d4caa3
-    // zig fmt: off
-    reserved = 0x00, error_roll_over, post_fail, error_undefined,
-    a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z,
-    top_1, top_2, top_3, top_4, top_5, top_6, top_7, top_8, top_9, top_0,
-    enter, escape, delete, tab, space,
-    @"-", @"=", @"[", @"]", @"\\", @"non_us_#", @";", @"'", @"`", @",", @".", @"/",
-    caps_lock,
-    f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12,
-    print_screen, scroll_lock, pause, insert, home, page_up, delete_forward, end, page_down,
-    right_arrow, left_arrow, down_arrow, up_arrow, num_lock,
-    kpad_div, kpad_mul, kpad_sub, kpad_add, kpad_enter,
-    kpad_1, kpad_2, kpad_3, kpad_4, kpad_5, kpad_6, kpad_7, kpad_8, kpad_9, kpad_0,
-    kpad_delete, @"non_us_\\", application, power, @"kpad_=",
-    f13, f14, f15, f16, f17, f18, f19, f20, f21, f22, f23, f24,
-    lctrl = 224, lshift, lalt, lgui, rctrl, rshift, ralt, rgui,
-    // zig fmt: on
-    _,
-};
-
 pub const KeyboardInReport = extern struct {
-    modifiers: Modifiers,
+    modifiers: usb.HID_report.BootKeyboardModifiers,
     reserved: u8 = 0,
-    keys: [6]Code,
+    keys: [6]Keycode,
 
     comptime {
         std.debug.assert(@sizeOf(@This()) == 8);
@@ -85,44 +52,7 @@ const hid_driver_options: usb.drivers.HID_Interrupt = .{
     .protocol = .Boot,
     .itf_string = "Boot Keyboard",
     .poll_interval = 1,
-    .report_descriptor = &.{
-        .{ .global_usage_page = .generic_desktop },
-        .local_usage_enum(.{ .generic_desktop = .keyboard }),
-        .{ .main_collection = .Application },
-        // Input: modifier key bitmap
-        .{ .data = .{
-            .usage = .{ .global_page = .keyboard },
-            .usage_range = .{ 0xE0, 0xE7 },
-            .count = 8,
-            .Child = bool,
-            .dir = .in,
-            .type = .dynamic,
-        } },
-        // Reserved 8 bits
-        .{ .data_static = .{ .in, u8 } },
-        // Output: indicator LEDs
-        .{ .data = .{
-            .usage = .{ .global_page = .led },
-            .usage_range = .{ 1, 5 },
-            .count = 5,
-            .Child = bool,
-            .dir = .out,
-            .type = .dynamic,
-        } },
-        // Padding
-        .{ .data_static = .{ .out, u3 } },
-        // Input: up to 6 pressed key codes
-        .{ .data = .{
-            .usage = .{ .global_page = .keyboard },
-            .usage_range = .{ 0x00, 0xff },
-            .count = 6,
-            .Child = u8,
-            .dir = .in,
-            .type = .selector,
-        } },
-        // End
-        .main_collection_end,
-    },
+    .report_descriptor = &usb.HID_report.boot_keyboard,
     .InReport = KeyboardInReport,
     .OutReport = KeyboardOutReport,
 };
@@ -154,7 +84,7 @@ pub fn main() !void {
 
     var old: u64 = time.get_time_since_boot().to_us();
     var new: u64 = 0;
-    const message: []const Code = &.{ .h, .e, .l, .l, .o, .space, .w, .o, .r, .l, .d, .caps_lock, .enter };
+    const message: []const Keycode = &.{ .h, .e, .l, .l, .o, .space, .w, .o, .r, .l, .d, .caps_lock, .enter };
     var idx: usize = 0;
 
     while (true) {
@@ -170,7 +100,7 @@ pub fn main() !void {
                 std.log.info("report {}", .{idx});
                 idx += @intFromBool(if (idx & 1 == 0 and idx < 2 * message.len)
                     drivers.keyboard.send_report(
-                        &.{ .modifiers = .none, .keys = .{message[@intCast(idx / 2)]} ++ @as([5]Code, @splat(.reserved)) },
+                        &.{ .modifiers = .none, .keys = .{message[@intCast(idx / 2)]} ++ @as([5]Keycode, @splat(.reserved)) },
                     )
                 else
                     drivers.keyboard.send_report(&.empty));

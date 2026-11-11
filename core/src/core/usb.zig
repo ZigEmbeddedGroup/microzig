@@ -9,6 +9,7 @@ pub const drivers = struct {
     pub const EchoExample = @import("usb/drivers/EchoExample.zig");
     pub const HID_Interrupt = @import("usb/drivers/HID.zig");
 };
+pub const HID_report = @import("usb/HID_report.zig");
 pub const types = @import("usb/types.zig");
 
 pub const ack: []const u8 = "";
