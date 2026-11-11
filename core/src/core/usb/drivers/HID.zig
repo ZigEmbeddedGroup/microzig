@@ -171,11 +171,12 @@ pub fn driver_info(
 ) usb.DriverInfo(Descriptor) {
     assert(@sizeOf(self.InReport) <= device_capabilities.max_packet_size);
     assert(@sizeOf(self.OutReport) <= device_capabilities.max_packet_size);
+    const report_descriptor = usb.HID_report.Item.create_report(self.report_descriptor);
     return .{
         .Runtime = Runtime(
             self.InReport,
             self.OutReport,
-            usb.HID_report.Item.create_report(self.report_descriptor),
+            report_descriptor,
         ),
         .descriptor = .{
             .interface = .{
@@ -188,7 +189,7 @@ pub fn driver_info(
             .hid = .{
                 .country_code = self.country_code,
                 .num_descriptors = 1,
-                .report_length = .from(self.report_descriptor.len),
+                .report_length = .from(report_descriptor.len),
             },
             .ep_out = .interrupt(
                 alloc.next_ep(.out),
