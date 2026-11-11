@@ -10,6 +10,8 @@ const log = std.log.scoped(.drivers_storage);
 // TODO: stable data format for non extern keys and values
 // TODO: test data corruption
 // TODO: add and test programming page multiple times error
+// TODO: maybe ask the user to provide a buffer (max value size), currently we
+// read the item value twice redundantly, we could use the buffer for this
 
 pub const Options = struct {
     write_size_override: ?u32 = null,
@@ -21,14 +23,13 @@ pub const Options = struct {
 };
 
 pub const Error = error{
-    InvalidRange,
     EraseFailed,
     WriteFailed,
-    InvalidWrite,
     ReadFailed,
-    Corrupted,
     OutOfMemory,
 };
+
+pub const InitError = Error || error{ InvalidRange, Corrupted };
 
 /// A generic storage implementation that can be used with any flash device.
 /// Items are stored sequentially in sectors (inspired by the rust crate
@@ -79,7 +80,7 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
         /// Initialize the storage with the given flash device and range. The
         /// range must be aligned to the erase size and must contain at least
         /// two sectors.
-        pub fn init(flash: Flash, range_start: u32, range_end: u32) Error!Storage {
+        pub fn init(flash: Flash, range_start: u32, range_end: u32) InitError!Storage {
             if (range_start >= range_end) {
                 return error.InvalidRange;
             }
@@ -104,7 +105,7 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
             var active_sector_offset: u32 = find_sector: while (sector_offset < range_end) : (sector_offset += ERASE_SIZE) {
                 const tag = storage.read_tag(sector_offset) catch |err| switch (err) {
                     error.Corrupted => Tag.locked,
-                    else => return err,
+                    else => |e| return e,
                 };
                 if (tag == .in_use) {
                     break :find_sector sector_offset;
@@ -116,7 +117,7 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
                 const prev_sector_offset = storage.get_prev_sector(active_sector_offset);
                 const prev_sector_tag = storage.read_tag(prev_sector_offset) catch |err| switch (err) {
                     error.Corrupted => Tag.locked,
-                    else => return err,
+                    else => |e| return e,
                 };
                 if (prev_sector_tag == .in_use and !try storage.is_sector_erased(prev_sector_offset)) {
                     active_sector_offset = prev_sector_offset;
@@ -167,7 +168,11 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
 
             if (try storage.fetch_item_internal(key, storage.last_sector_offset)) |item| {
                 var value: T = undefined;
-                try storage.read_retrying(item.offset + VALUE_OFFSET, std.mem.asBytes(&value));
+                storage.read_retrying(item.offset + VALUE_OFFSET, std.mem.asBytes(&value)) catch |err| switch (err) {
+                    // shouldn't happen, fetch_item_internal already checked this
+                    error.Corrupted => return null,
+                    error.ReadFailed => return error.ReadFailed,
+                };
                 return value;
             } else return null;
         }
@@ -202,16 +207,16 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
                     var header: ItemHeader = .init(crc.final(), item_len);
 
                     storage.write_retrying_aligned(storage.current_offset + HEADER_OFFSET, std.mem.asBytes(&header)) catch |err| switch (err) {
-                        error.InvalidWrite => continue :to_next_sector,
-                        else => return err,
+                        error.WriteFailed => continue :to_next_sector,
+                        else => |e| return e,
                     };
                     storage.write_retrying_aligned(storage.current_offset + KEY_OFFSET, std.mem.asBytes(&key)) catch |err| switch (err) {
-                        error.InvalidWrite => continue :to_next_slot,
-                        else => return err,
+                        error.WriteFailed => continue :to_next_slot,
+                        else => |e| return e,
                     };
                     storage.write_retrying_aligned(storage.current_offset + VALUE_OFFSET, std.mem.asBytes(&value)) catch |err| switch (err) {
-                        error.InvalidWrite => continue :to_next_slot,
-                        else => return err,
+                        error.WriteFailed => continue :to_next_slot,
+                        else => |e| return e,
                     };
 
                     errdefer comptime unreachable; // we have written the item successfully
@@ -312,12 +317,19 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
                 switch (item.key) {
                     .ok => |item_key| {
                         if (try storage.fetch_item_internal(item_key, last_sector_offset) == null) {
-                            var src_offset = item.offset + HEADER_OFFSET;
+                            try storage.write_retrying_aligned(new_sector_offset + HEADER_OFFSET, std.mem.asBytes(&item.header));
+                            try storage.write_retrying_aligned(new_sector_offset + KEY_OFFSET, std.mem.asBytes(&item_key));
+
+                            var src_offset = item.offset + VALUE_OFFSET;
                             const src_end = item_it.next_offset;
                             const item_new_start = new_sector_offset;
-                            var dst_offset = item_new_start + HEADER_OFFSET;
+                            var dst_offset = item_new_start + VALUE_OFFSET;
 
-                            while (try storage.read_buf_retrying(src_offset, src_end)) |data| : ({
+                            while (storage.read_buf_retrying(src_offset, src_end) catch |err| switch (err) {
+                                // shouldn't happen, ItemIterator already checked it
+                                error.Corrupted => null,
+                                error.ReadFailed => return error.ReadFailed,
+                            }) |data| : ({
                                 src_offset += @truncate(data.len);
                                 dst_offset += @truncate(data.len);
                             }) {
@@ -336,12 +348,12 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
             // lock the current sector
             try storage.clear_tag(active_sector_offset);
 
+            errdefer comptime unreachable;
+
             // we are done with the critical parts, update state
             storage.current_offset = new_sector_offset;
             storage.active_sector_offset = reserved_sector_offset;
             storage.last_sector_offset = last_sector_offset;
-
-            errdefer comptime unreachable;
 
             storage.erase_sector_retrying(to_be_erased_sector_offset) catch |err| {
                 log.warn("failed to erase the new reserved sector at 0x{X}: {}", .{ to_be_erased_sector_offset, err });
@@ -415,31 +427,29 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
             try storage.write_retrying_aligned(offset, &tag);
         }
 
-        fn read_retrying(storage: *Storage, offset: u32, data: []u8) !void {
+        fn read_retrying(storage: *Storage, offset: u32, data: []u8) error{ ReadFailed, Corrupted }!void {
             var attempts_remaining: usize = options.max_read_attempts;
             while (attempts_remaining > 0) : (attempts_remaining -= 1) {
                 return storage.flash.read(offset, data) catch |err| switch (err) {
-                    error.InvalidRange,
-                    error.Corrupted,
-                    => |e| return e,
+                    error.InvalidRange => return error.ReadFailed,
+                    error.Corrupted => return error.Corrupted,
                     error.ReadFailed => continue,
                 };
             } else return error.ReadFailed;
         }
 
-        fn read_buf_retrying(storage: *Storage, offset: u32, end: u32) !?[]const u8 {
+        fn read_buf_retrying(storage: *Storage, offset: u32, end: u32) error{ ReadFailed, Corrupted }!?[]const u8 {
             var attempts_remaining: usize = options.max_read_attempts;
             while (attempts_remaining > 0) : (attempts_remaining -= 1) {
                 return storage.flash.read_buf(offset, end) catch |err| switch (err) {
-                    error.InvalidRange,
-                    error.Corrupted,
-                    => |e| return e,
+                    error.InvalidRange => return error.ReadFailed,
+                    error.Corrupted => return error.Corrupted,
                     error.ReadFailed => continue,
                 };
             } else return error.ReadFailed;
         }
 
-        fn write_retrying_aligned(storage: *Storage, offset: u32, data: []const u8) !void {
+        fn write_retrying_aligned(storage: *Storage, offset: u32, data: []const u8) error{ ReadFailed, WriteFailed }!void {
             if (comptime WRITE_SIZE == 1) {
                 try storage.write_retrying(offset, data);
             } else {
@@ -456,56 +466,55 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
             }
         }
 
-        fn write_retrying(storage: *Storage, offset: u32, data: []const u8) !void {
+        fn write_retrying(storage: *Storage, offset: u32, data: []const u8) error{ ReadFailed, WriteFailed }!void {
             var attempts_remaining: usize = options.max_write_attempts;
             while (attempts_remaining > 0) : (attempts_remaining -= 1) {
                 storage.flash.write(offset, data) catch |err| switch (err) {
-                    error.InvalidRange => return error.InvalidRange,
+                    error.InvalidRange => return error.WriteFailed,
                     error.WriteFailed => continue,
                 };
                 break;
-            }
+            } else return error.WriteFailed;
 
             var current_offset = offset;
             var data_offset: usize = 0;
             const end = current_offset + @as(u32, @truncate(data.len));
             while (storage.read_buf_retrying(current_offset, end) catch |err| switch (err) {
-                error.Corrupted => return error.InvalidWrite,
+                error.Corrupted => return error.WriteFailed,
                 else => |e| return e,
             }) |flash_data| : ({
                 current_offset += @truncate(flash_data.len);
                 data_offset += flash_data.len;
             }) {
                 if (!std.mem.eql(u8, flash_data, data[data_offset..][0..flash_data.len])) {
-                    return error.InvalidWrite;
+                    return error.WriteFailed;
                 }
             }
         }
 
-        fn erase_sector_retrying(storage: *Storage, offset: u32) !void {
+        fn erase_sector_retrying(storage: *Storage, offset: u32) error{ ReadFailed, EraseFailed }!void {
             if (try storage.is_sector_erased(offset)) {
                 return;
             }
-            var attempts_remaining: usize = options.max_erase_attempts;
-            attempts: while (attempts_remaining > 0) : (attempts_remaining -= 1) {
+            var attempts_remaining: usize = options.max_write_attempts;
+            while (attempts_remaining > 0) : (attempts_remaining -= 1) {
                 storage.flash.erase(offset, ERASE_SIZE) catch |err| switch (err) {
-                    error.InvalidRange => return error.InvalidRange,
+                    error.InvalidRange => return error.EraseFailed,
                     error.EraseFailed => continue,
                 };
-                if (try storage.is_sector_erased(offset)) {
-                    break :attempts;
-                } else {
-                    continue :attempts;
-                }
+                break;
             } else return error.EraseFailed;
+            if (!try storage.is_sector_erased(offset)) {
+                return error.EraseFailed;
+            }
         }
 
-        fn is_sector_erased(storage: *Storage, offset: u32) !bool {
+        fn is_sector_erased(storage: *Storage, offset: u32) error{ReadFailed}!bool {
             var current_offset = offset;
             const end = current_offset + ERASE_SIZE;
             while (storage.read_buf_retrying(current_offset, end) catch |err| switch (err) {
                 error.Corrupted => return false,
-                else => return err,
+                else => |e| return e,
             }) |data| : (current_offset += @truncate(data.len)) {
                 if (!std.mem.allEqual(u8, data, 0xFF)) {
                     return false;
@@ -536,7 +545,7 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
             end_offset: u32,
             corrupted_header_flag: bool = false,
 
-            pub fn next(it: *ItemIterator) !?Item {
+            pub fn next(it: *ItemIterator) error{ReadFailed}!?Item {
                 const current_offset = it.next_offset;
 
                 // if there is not enough space for an item to fit
@@ -550,7 +559,7 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
                         it.corrupted_header_flag = true;
                         return null;
                     },
-                    else => return err,
+                    error.ReadFailed => return error.ReadFailed,
                 };
 
                 if (header.is_uninitialized()) {
@@ -574,7 +583,7 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
                 // if the tag is unreadable .in_use is the safe default
                 const tag = it.storage.read_tag(current_offset) catch |err| switch (err) {
                     error.Corrupted => .in_use,
-                    else => return err,
+                    error.ReadFailed => return error.ReadFailed,
                 };
 
                 var key: Key = undefined;
@@ -585,7 +594,7 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
                         .header = header,
                         .key = .corrupted,
                     },
-                    else => return err,
+                    error.ReadFailed => return error.ReadFailed,
                 };
 
                 if (tag == .in_use) {
@@ -602,7 +611,7 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
                             .header = header,
                             .key = .corrupted,
                         },
-                        else => return err,
+                        error.ReadFailed => return error.ReadFailed,
                     }) |data| : (check_offset += @truncate(data.len)) {
                         crc.update(data);
                     }
@@ -931,12 +940,12 @@ fn do_fuzz(_: void, smith: *testing.Smith) !void {
                     error.OutOfMemory => break,
                     // if we encountered a power loss and we failed to write,
                     // the item isn't successfully written
-                    error.InvalidWrite,
+                    error.WriteFailed,
                     error.EraseFailed,
                     => |e| if (storage.flash.power_loss_tripped) {
                         item_written_successfully = false;
                     } else return e,
-                    else => return err,
+                    else => |e| return e,
                 };
                 if (storage.flash.power_loss_tripped) {
                     storage = try .init(TestFlash.init(buf), 0, FLASH_SIZE);
