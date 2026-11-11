@@ -86,6 +86,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "stepper_driver_dumb", .file = "src/stepper_driver_dumb.zig" },
         .{ .name = "usb-hid", .file = "src/usb_hid.zig" },
         .{ .name = "usb-cdc", .file = "src/usb_cdc.zig" },
+        .{ .name = "usb-raw-echo", .file = "src/usb_raw_echo.zig" },
         .{ .name = "dma", .file = "src/dma.zig" },
         .{ .name = "cyw43", .file = "src/cyw43.zig" },
         .{ .name = "cyw43-blinky", .file = "src/cyw43/blinky.zig" },
