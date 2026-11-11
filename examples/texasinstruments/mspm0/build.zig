@@ -9,7 +9,7 @@ pub fn build(b: *std.Build) void {
     const mz_dep = b.dependency("microzig", .{});
     const mb = MicroBuild.init(b, mz_dep) orelse return;
 
-    inline for (comptime std.meta.fieldNames(@TypeOf(mb.ports.mspm0.chips))) |field_name| {
+    inline for (comptime @typeInfo(@TypeOf(mb.ports.mspm0.chips)).@"struct".field_names) |field_name| {
         const target = @field(mb.ports.mspm0.chips, field_name);
 
         inline for ([_][]const u8{

@@ -91,7 +91,7 @@ var usb_tx_buff: [1024]u8 = undefined;
 // Transfer data to host
 // NOTE: After each USB chunk transfer, we have to call the USB task so that bus TX events can be handled
 pub fn usb_cdc_write(serial: *USB_Serial, comptime fmt: []const u8, args: anytype) void {
-    const text = std.fmt.bufPrint(&usb_tx_buff, fmt, args) catch &.{};
+    const text = std.mem.print(&usb_tx_buff, fmt, args) catch &.{};
     var write_buff = text;
     while (write_buff.len > 0) {
         write_buff = write_buff[serial.write(write_buff)..];

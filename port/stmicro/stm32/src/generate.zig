@@ -23,11 +23,11 @@ pub fn main(init: std.process.Init) !void {
     var data_dir = try package_dir.openDir(io, "data", .{});
     defer data_dir.close(io);
 
-    var chip_files = std.array_list.Managed(std.json.Parsed(ChipFile)).init(allocator);
+    var chip_files: std.ArrayList(std.json.Parsed(ChipFile)) = .empty;
     defer {
         for (chip_files.items) |chip_file|
             chip_file.deinit();
-        chip_files.deinit();
+        chip_files.deinit(allocator);
     }
 
     var chips_dir = try data_dir.openDir(io, "chips", .{ .iterate = true });
@@ -57,7 +57,7 @@ pub fn main(init: std.process.Init) !void {
         });
         errdefer chips_file.deinit();
 
-        try chip_files.append(chips_file);
+        try chip_files.append(allocator, chips_file);
     }
 
     // sort to try to keep things somewhat in order
@@ -121,7 +121,7 @@ fn generate_chips_file(
 
         var with_fpu = false;
         for (core.interrupts) |item| {
-            if (std.mem.indexOf(u8, item.name, "FPU")) |_| {
+            if (std.mem.find(u8, item.name, "FPU")) |_| {
                 with_fpu = true;
                 break;
             }
@@ -178,8 +178,8 @@ fn generate_chips_file(
         );
 
         {
-            var chip_memory = try std.array_list.Managed(ChipFile.Memory).initCapacity(allocator, chip_file.memory.len);
-            defer chip_memory.deinit();
+            var chip_memory: std.ArrayList(ChipFile.Memory) = try .initCapacity(allocator, chip_file.memory.len);
+            defer chip_memory.deinit(allocator);
 
             // Some flash bank regions are not merged so we better do that.
             // Flash memory names are formated as: BANK_{id}_REGION_{id}.

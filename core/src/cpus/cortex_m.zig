@@ -295,7 +295,7 @@ pub const atomic = struct {
     }
 
     /// Atomic load
-    pub fn load(comptime T: type, ptr: *const T, comptime ordering: std.builtin.AtomicOrder) T {
+    pub fn load(comptime T: type, ptr: *const T, comptime ordering: std.lang.AtomicOrder) T {
         if (has_native_atomics) {
             return @atomicLoad(T, ptr, ordering);
         } else {
@@ -307,7 +307,7 @@ pub const atomic = struct {
     }
 
     /// Atomic store
-    pub fn store(comptime T: type, ptr: *T, value: T, comptime ordering: std.builtin.AtomicOrder) void {
+    pub fn store(comptime T: type, ptr: *T, value: T, comptime ordering: std.lang.AtomicOrder) void {
         if (has_native_atomics) {
             @atomicStore(T, ptr, value, ordering);
         } else {
@@ -324,8 +324,8 @@ pub const atomic = struct {
         ptr: *T,
         expected_value: T,
         new_value: T,
-        comptime success_ordering: std.builtin.AtomicOrder,
-        comptime failure_ordering: std.builtin.AtomicOrder,
+        comptime success_ordering: std.lang.AtomicOrder,
+        comptime failure_ordering: std.lang.AtomicOrder,
     ) ?T {
         if (has_native_atomics) {
             return @cmpxchgWeak(T, ptr, expected_value, new_value, success_ordering, failure_ordering);
@@ -346,9 +346,9 @@ pub const atomic = struct {
     pub fn rmw(
         comptime T: type,
         ptr: *T,
-        comptime op: std.builtin.AtomicRmwOp,
+        comptime op: std.lang.AtomicRmwOp,
         operand: T,
-        comptime ordering: std.builtin.AtomicOrder,
+        comptime ordering: std.lang.AtomicOrder,
     ) T {
         if (has_native_atomics) {
             return @atomicRmw(T, ptr, op, operand, ordering);
