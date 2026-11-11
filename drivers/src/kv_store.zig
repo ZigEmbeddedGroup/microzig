@@ -23,13 +23,14 @@ pub const Options = struct {
 };
 
 pub const Error = error{
+    Corrupted,
     EraseFailed,
     WriteFailed,
     ReadFailed,
     OutOfMemory,
 };
 
-pub const InitError = Error || error{ InvalidRange, Corrupted };
+pub const InitError = Error || error{InvalidRange};
 
 /// A generic storage implementation that can be used with any flash device.
 /// Items are stored sequentially in sectors (inspired by the rust crate
@@ -168,11 +169,7 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
 
             if (try storage.fetch_item_internal(key, storage.last_sector_offset)) |item| {
                 var value: T = undefined;
-                storage.read_retrying(item.offset + VALUE_OFFSET, std.mem.asBytes(&value)) catch |err| switch (err) {
-                    // shouldn't happen, fetch_item_internal already checked this
-                    error.Corrupted => return null,
-                    error.ReadFailed => return error.ReadFailed,
-                };
+                try storage.read_retrying(item.offset + VALUE_OFFSET, std.mem.asBytes(&value));
                 return value;
             } else return null;
         }
@@ -207,15 +204,15 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
                     var header: ItemHeader = .init(crc.final(), item_len);
 
                     storage.write_retrying_aligned(storage.current_offset + HEADER_OFFSET, std.mem.asBytes(&header)) catch |err| switch (err) {
-                        error.WriteFailed => continue :to_next_sector,
+                        error.Corrupted => continue :to_next_sector,
                         else => |e| return e,
                     };
                     storage.write_retrying_aligned(storage.current_offset + KEY_OFFSET, std.mem.asBytes(&key)) catch |err| switch (err) {
-                        error.WriteFailed => continue :to_next_slot,
+                        error.Corrupted => continue :to_next_slot,
                         else => |e| return e,
                     };
                     storage.write_retrying_aligned(storage.current_offset + VALUE_OFFSET, std.mem.asBytes(&value)) catch |err| switch (err) {
-                        error.WriteFailed => continue :to_next_slot,
+                        error.Corrupted => continue :to_next_slot,
                         else => |e| return e,
                     };
 
@@ -325,11 +322,7 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
                             const item_new_start = new_sector_offset;
                             var dst_offset = item_new_start + VALUE_OFFSET;
 
-                            while (storage.read_buf_retrying(src_offset, src_end) catch |err| switch (err) {
-                                // shouldn't happen, ItemIterator already checked it
-                                error.Corrupted => null,
-                                error.ReadFailed => return error.ReadFailed,
-                            }) |data| : ({
+                            while (try storage.read_buf_retrying(src_offset, src_end)) |data| : ({
                                 src_offset += @truncate(data.len);
                                 dst_offset += @truncate(data.len);
                             }) {
@@ -449,7 +442,7 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
             } else return error.ReadFailed;
         }
 
-        fn write_retrying_aligned(storage: *Storage, offset: u32, data: []const u8) error{ ReadFailed, WriteFailed }!void {
+        fn write_retrying_aligned(storage: *Storage, offset: u32, data: []const u8) error{ Corrupted, ReadFailed, WriteFailed }!void {
             if (comptime WRITE_SIZE == 1) {
                 try storage.write_retrying(offset, data);
             } else {
@@ -466,7 +459,7 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
             }
         }
 
-        fn write_retrying(storage: *Storage, offset: u32, data: []const u8) error{ ReadFailed, WriteFailed }!void {
+        fn write_retrying(storage: *Storage, offset: u32, data: []const u8) error{ Corrupted, ReadFailed, WriteFailed }!void {
             var attempts_remaining: usize = options.max_write_attempts;
             while (attempts_remaining > 0) : (attempts_remaining -= 1) {
                 storage.flash.write(offset, data) catch |err| switch (err) {
@@ -480,19 +473,19 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
             var data_offset: usize = 0;
             const end = current_offset + @as(u32, @truncate(data.len));
             while (storage.read_buf_retrying(current_offset, end) catch |err| switch (err) {
-                error.Corrupted => return error.WriteFailed,
+                error.Corrupted => return error.Corrupted,
                 else => |e| return e,
             }) |flash_data| : ({
                 current_offset += @truncate(flash_data.len);
                 data_offset += flash_data.len;
             }) {
                 if (!std.mem.eql(u8, flash_data, data[data_offset..][0..flash_data.len])) {
-                    return error.WriteFailed;
+                    return error.Corrupted;
                 }
             }
         }
 
-        fn erase_sector_retrying(storage: *Storage, offset: u32) error{ ReadFailed, EraseFailed }!void {
+        fn erase_sector_retrying(storage: *Storage, offset: u32) error{ Corrupted, ReadFailed, EraseFailed }!void {
             if (try storage.is_sector_erased(offset)) {
                 return;
             }
@@ -505,7 +498,7 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
                 break;
             } else return error.EraseFailed;
             if (!try storage.is_sector_erased(offset)) {
-                return error.EraseFailed;
+                return error.Corrupted;
             }
         }
 
@@ -940,8 +933,7 @@ fn do_fuzz(_: void, smith: *testing.Smith) !void {
                     error.OutOfMemory => break,
                     // if we encountered a power loss and we failed to write,
                     // the item isn't successfully written
-                    error.WriteFailed,
-                    error.EraseFailed,
+                    error.Corrupted,
                     => |e| if (storage.flash.power_loss_tripped) {
                         item_written_successfully = false;
                     } else return e,
