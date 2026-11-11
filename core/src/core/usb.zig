@@ -169,28 +169,29 @@ pub const ConfigurationOptions = struct {
 
 pub fn Configuration(
     options: ConfigurationOptions,
-    Drivers: type,
-    driver_args: blk: {
-        const info = @typeInfo(Drivers).@"struct";
-        const count = info.field_names.len;
-        var field_names: [count][:0]const u8 = undefined;
-        var field_types: [count]type = undefined;
-        for (info.field_names, info.field_types, 0..) |field_name, field_type, i| {
-            // Collect field names
-            field_names[i] = field_name;
-            // Collect the type info  for the Descriptor.create function parameter
-            const param_types = @typeInfo(@TypeOf(field_type.Descriptor.create)).@"fn".param_types;
-            // Ensure it takes 3 parameters
-            assert(param_types.len == 3);
-            // The first must be a DescriptorAllocator
-            assert(param_types[0] == *DescriptorAllocator);
-            // The second is usb.types.PacketLength
-            assert(param_types[1] == types.PacketLength);
-            // And save the type of the third
-            field_types[i] = param_types[2].?;
-        }
-        break :blk @Struct(.auto, null, &field_names, &field_types, &@splat(.{}));
-    },
+    driver_config: anytype,
+    // driver_args: blk: {
+    //     const info = @typeInfo(Drivers).@"struct";
+    //     const count = info.field_names.len;
+    //     var field_names: [count][:0]const u8 = undefined;
+    //     var field_types: [count]type = undefined;
+    //     for (info.field_names, info.field_types, 0..) |field_name, field_type, i| {
+    //         // Collect field names
+    //         field_names[i] = field_name;
+    //         // Collect the type info  for the Descriptor.create function parameter
+    //         const param_types = @typeInfo(@TypeOf(field_type.Descriptor.create)).@"fn".param_types;
+    //         // Ensure it takes 3 parameters
+    //         assert(param_types.len == 3);
+    //         // The first must be a DescriptorAllocator
+    //         assert(param_types[0] == *DescriptorAllocator);
+    //         // The second is usb.types.PacketLength
+    //         assert(param_types[1] == types.PacketLength);
+    //         // And save the type of the third
+    //         assert(param_types[2] == field_type);
+    //         field_types[i] = param_types[2].?;
+    //     }
+    //     break :blk @Struct(.auto, null, &field_names, &field_types, &@splat(.{}));
+    // },
 ) type {
     return struct {
         const DriverName = []const u8;
@@ -205,12 +206,12 @@ pub fn Configuration(
         pub fn create(max_psize: types.PacketLength, strings: []const []const u8) struct { @This(), []const []const u8 } {
             var alloc = DescriptorAllocator.init(options.unique_endpoints, strings);
             const configuration_s = alloc.string(options.name);
-            const driver_info = @typeInfo(Drivers).@"struct";
+            const driver_info = @typeInfo(@TypeOf(driver_config)).@"struct";
+            const driver_field_names = driver_info.field_names;
 
-            var field_names: [driver_info.field_names.len][:0]const u8 = undefined;
-            var desc_field_types: [driver_info.field_names.len]type = undefined;
-            var runtime_field_types: [driver_info.field_names.len]type = undefined;
-            var field_attrs: [driver_info.field_names.len]std.builtin.Type.Struct.FieldAttributes = undefined;
+            var desc_field_types: [driver_field_names.len]type = undefined;
+            var runtime_field_types: [driver_field_names.len]type = undefined;
+            var field_attrs: [driver_field_names.len]std.builtin.Type.Struct.FieldAttributes = undefined;
             var ep_handler_types: [2][16]type = @splat(@splat(void));
             var ep_handler_names: [2][16][:0]const u8 = undefined;
             var ep_handler_drivers: [2][16]?usize = @splat(@splat(null));
@@ -219,16 +220,16 @@ pub fn Configuration(
             var driver_alloc_types: []const type = &.{};
             var driver_alloc_attrs: []const std.builtin.Type.Struct.FieldAttributes = &.{};
 
-            for (driver_info.field_names, driver_info.field_types, 0..) |driver_field_name, DriverType, drv_id| {
+            for (driver_field_names, driver_info.field_types, 0..) |driver_field_name, DriverType, drv_id| {
                 runtime_field_types[drv_id] = if (@hasField(DriverType, "generic_runtime"))
-                    DriverType.Runtime(@field(driver_args, driver_field_name).generic_runtime)
+                    DriverType.Runtime(@field(driver_config, driver_field_name).generic_runtime)
                 else
                     DriverType.Runtime;
 
                 // Get descriptor type for the current driver
                 const Descriptors = DriverType.Descriptor;
                 // Call the create method on the descriptor, which wraps it with the allow stuff.
-                const result = Descriptors.create(&alloc, max_psize, @field(driver_args, driver_field_name));
+                const result = Descriptors.create(&alloc, max_psize, @field(driver_config, driver_field_name));
                 // Get the descriptor instance from the result.
                 const descriptors = result.descriptor;
 
@@ -290,7 +291,6 @@ pub fn Configuration(
                         else => {},
                     }
                 }
-                field_names[drv_id] = driver_field_name;
                 desc_field_types[drv_id] = Descriptors;
                 field_attrs[drv_id] = .{ .default_value_ptr = &descriptors };
             }
@@ -311,7 +311,14 @@ pub fn Configuration(
             const const_alloc = alloc.to_const();
             const const_ep_handlers = ep_handlers;
 
-            const DriverConfig = @Struct(.@"extern", null, &field_names, &desc_field_types, &field_attrs);
+            const DriverConfig = @Struct(
+                .@"extern",
+                null,
+                driver_field_names,
+                &desc_field_types,
+                &field_attrs,
+            );
+
             const Descriptor = extern struct {
                 first: descriptor.Configuration = .{
                     .total_length = .from(@sizeOf(descriptor.Configuration) + @sizeOf(DriverConfig)),
@@ -345,7 +352,7 @@ pub fn Configuration(
                         var ret: @FieldType(@This(), "drivers_ep") = undefined;
                         for (&ret, ep_handler_drivers) |*dstv, srcv| {
                             for (dstv, srcv) |*dst, src_opt| {
-                                dst.* = if (src_opt) |src| field_names[src] else null;
+                                dst.* = if (src_opt) |src| driver_field_names[src] else null;
                             }
                         }
                         break :blk ret;
@@ -355,7 +362,13 @@ pub fn Configuration(
                         out: ep_handlers_types[idx_out] = const_ep_handlers[idx_out],
                     },
                     .handlers_itf = handlers_itf,
-                    .RuntimeData = @Struct(.auto, null, &field_names, &runtime_field_types, &@splat(.{})),
+                    .RuntimeData = @Struct(
+                        .auto,
+                        null,
+                        driver_field_names,
+                        &runtime_field_types,
+                        &@splat(.{}),
+                    ),
                 },
                 const_alloc.strings,
             };

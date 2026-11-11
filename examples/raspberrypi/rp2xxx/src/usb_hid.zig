@@ -134,13 +134,9 @@ var usb_controller: usb.DeviceController(.{
     .max_supported_packet_size = USB_Device.max_supported_packet_size,
 }, &.{usb.Configuration(
     .{ .attributes = .{ .self_powered = false }, .max_current_ma = 50 },
-    struct {
-        keyboard: usb.drivers.HID_Interrupt,
-        reset: rp2xxx.usb.ResetDriver(null, 0),
-    },
     .{
         .keyboard = hid_driver_options,
-        .reset = "",
+        .reset = rp2xxx.usb.ResetDriver(null, 0){},
     },
 )}) = .init;
 

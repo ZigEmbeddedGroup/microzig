@@ -57,6 +57,9 @@ pub const LineCoding = extern struct {
 
 const CDC_Driver = @This();
 
+itf_notifi_str: []const u8 = "",
+itf_data_str: []const u8 = "",
+
 // This struct bundles all the descriptors CDC needs into one Configuration.
 pub const Descriptor = extern struct {
     const desc = usb.descriptor;
@@ -72,11 +75,6 @@ pub const Descriptor = extern struct {
     ep_out: desc.Endpoint,
     ep_in: desc.Endpoint,
 
-    const Strings = struct {
-        itf_notifi: []const u8 = "",
-        itf_data: []const u8 = "",
-    };
-
     /// This function is used during descriptor creation. Endpoint and interface numbers are
     /// allocated through the `alloc` parameter. Third argument can be of any type, it's passed
     /// by the user when creating the device controller type. If multiple instances of a driver
@@ -85,7 +83,7 @@ pub const Descriptor = extern struct {
     pub fn create(
         alloc: *usb.DescriptorAllocator,
         max_supported_packet_size: usb.types.PacketLength,
-        strings: Strings,
+        options: CDC_Driver,
     ) usb.DescriptorCreateResult(@This()) {
         // Endpoint and interface numbers are allocated through the `alloc` parameter,
         // so that multiple instances of this driver can coexist.
@@ -106,7 +104,7 @@ pub const Descriptor = extern struct {
                     .alternate_setting = 0,
                     .num_endpoints = 1,
                     .interface_triple = .from(.CDC, .Abstract, .NoneRequired),
-                    .interface_s = alloc.string(strings.itf_notifi),
+                    .interface_s = alloc.string(options.itf_notifi_str),
                 },
                 .cdc_header = .{ .bcd_cdc = .from(1, 20) },
                 .cdc_call_mgmt = .{
@@ -140,7 +138,7 @@ pub const Descriptor = extern struct {
                     .alternate_setting = 0,
                     .num_endpoints = 2,
                     .interface_triple = .from(.CDC_Data, .Unused, .NoneRequired),
-                    .interface_s = alloc.string(strings.itf_data),
+                    .interface_s = alloc.string(options.itf_data_str),
                 },
                 .ep_out = .bulk(alloc.next_ep(.out), max_supported_packet_size),
                 .ep_in = .bulk(alloc.next_ep(.in), max_supported_packet_size),

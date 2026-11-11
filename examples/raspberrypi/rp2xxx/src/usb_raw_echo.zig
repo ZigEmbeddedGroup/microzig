@@ -22,8 +22,10 @@ var usb_controller: usb.DeviceController(.{
     .max_supported_packet_size = USB_Device.max_supported_packet_size,
 }, &.{usb.Configuration(
     .{ .attributes = .{ .self_powered = false }, .max_current_ma = 50 },
-    struct { echo: usb.drivers.EchoExample, reset: rp2xxx.usb.ResetDriver(null, 0) },
-    .{ .echo = "", .reset = "" },
+    .{
+        .echo = usb.drivers.EchoExample{},
+        .reset = rp2xxx.usb.ResetDriver(null, 0){},
+    },
 )}) = .init;
 
 pub const std_options = microzig.std_options(.{

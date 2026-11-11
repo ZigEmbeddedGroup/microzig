@@ -141,10 +141,7 @@ var usb_controller: usb.DeviceController(.{
     .max_supported_packet_size = USBD.max_supported_packet_size,
 }, &.{usb.Configuration(
     .{ .attributes = .{ .self_powered = false }, .max_current_ma = 50 },
-    struct { keyboard: usb.drivers.HID_Interrupt },
-    .{
-        .keyboard = hid_driver_options,
-    },
+    .{ .keyboard = hid_driver_options },
 )}) = .init;
 
 pub fn main() !void {

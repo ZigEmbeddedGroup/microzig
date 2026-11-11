@@ -448,6 +448,9 @@ pub fn Polled(config: Config) type {
 pub fn ResetDriver(bootsel_activity_led: ?u5, interface_disable_mask: u32) type {
     return struct {
         const log_drv = std.log.scoped(.pico_reset);
+        const Options = @This();
+
+        itf_string: []const u8 = "",
 
         pub const Descriptor = extern struct {
             reset_interface: usb.descriptor.Interface,
@@ -455,7 +458,7 @@ pub fn ResetDriver(bootsel_activity_led: ?u5, interface_disable_mask: u32) type 
             pub fn create(
                 alloc: *usb.DescriptorAllocator,
                 _: usb.types.PacketLength,
-                interface_str: []const u8,
+                options: Options,
             ) usb.DescriptorCreateResult(@This()) {
                 return .{ .descriptor = .{ .reset_interface = .{
                     .interface_number = alloc.next_itf(),
@@ -466,7 +469,7 @@ pub fn ResetDriver(bootsel_activity_led: ?u5, interface_disable_mask: u32) type 
                         @fromBackingInt(0x00),
                         @fromBackingInt(0x01),
                     ),
-                    .interface_s = alloc.string(interface_str),
+                    .interface_s = alloc.string(options.itf_string),
                 } } };
             }
         };

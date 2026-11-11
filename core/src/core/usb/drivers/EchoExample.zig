@@ -6,6 +6,8 @@ const log = std.log.scoped(.usb_echo);
 
 pub const EchoExampleDriver = @This();
 
+itf_string: []const u8 = "",
+
 /// The descriptors need to have the same memory layout as the sent data.
 pub const Descriptor = extern struct {
     const desc = usb.descriptor;
@@ -15,14 +17,13 @@ pub const Descriptor = extern struct {
     ep_in: desc.Endpoint,
 
     /// This function is used during descriptor creation. Endpoint and interface numbers are
-    /// allocated through the `alloc` parameter. Third argument can be of any type, it's passed
-    /// by the user when creating the device controller type. If multiple instances of a driver
-    /// are used, this function is called for each, with different arguments. Passing arguments
-    /// through this function is preffered to making the whole driver generic.
+    /// allocated through the `alloc` parameter. Third argument contains driver configuration.
+    /// If multiple instances of a driver are used, this function is called for each,
+    /// with different arguments.
     pub fn create(
         alloc: *usb.DescriptorAllocator,
         max_supported_packet_size: usb.types.PacketLength,
-        itf_string: []const u8,
+        options: EchoExampleDriver,
     ) usb.DescriptorCreateResult(@This()) {
         return .{
             .descriptor = .{
@@ -31,7 +32,7 @@ pub const Descriptor = extern struct {
                     .alternate_setting = 0,
                     .num_endpoints = 2,
                     .interface_triple = .vendor_specific,
-                    .interface_s = alloc.string(itf_string),
+                    .interface_s = alloc.string(options.itf_string),
                 },
                 .ep_out = .bulk(alloc.next_ep(.out), max_supported_packet_size),
                 .ep_in = .bulk(alloc.next_ep(.in), max_supported_packet_size),
