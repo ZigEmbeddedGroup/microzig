@@ -69,19 +69,20 @@ pub fn Create(
             var driver_alloc_attrs: []const std.builtin.Type.Struct.FieldAttributes = &.{};
 
             for (driver_field_names, driver_info.field_types, 0..) |driver_field_name, DriverType, drv_id| {
-                runtime_field_types[drv_id] = if (@hasField(DriverType, "generic_runtime"))
-                    DriverType.Runtime(@field(driver_config, driver_field_name).generic_runtime)
-                else
-                    DriverType.Runtime;
+                const drv = @field(driver_config, driver_field_name);
 
                 // Get descriptor type for the current driver
-                const Descriptors = DriverType.Descriptor;
                 // Call the create method on the descriptor, which wraps it with the allow stuff.
-                const result = Descriptors.create(&alloc, max_psize, @field(driver_config, driver_field_name));
-                // Get the descriptor instance from the result.
-                const descriptors = result.descriptor;
+                const result = drv.create_descriptor(&alloc, max_psize);
+                const Descriptor = @TypeOf(result.descriptor);
 
                 // If the driver requests memory, then collect the names, types, and attrs
+                const Runtime = switch (@typeInfo(@TypeOf(DriverType.Runtime))) {
+                    .@"fn" => drv.Runtime(),
+                    else => DriverType.Runtime,
+                };
+                runtime_field_types[drv_id] = Runtime;
+
                 if (result.alloc_bytes) |len| {
                     driver_alloc_names = driver_alloc_names ++ &[_][:0]const u8{driver_field_name};
                     driver_alloc_types = driver_alloc_types ++ &[_]type{[len]u8};
@@ -90,13 +91,13 @@ pub fn Create(
                     assert(result.alloc_align == null);
                 }
 
-                assert(@alignOf(Descriptors) == 1);
+                assert(@alignOf(Descriptor) == 1);
 
                 // Collect handler types, names, and drivers, to later be bound to the appropriate
                 // endpoints
-                const info = @typeInfo(Descriptors).@"struct";
+                const info = @typeInfo(Descriptor).@"struct";
                 for (info.field_names, info.field_types, 0..) |field_name, field_type, desc_num| {
-                    const desc = @field(descriptors, field_name);
+                    const desc = @field(result.descriptor, field_name);
 
                     // Determine which interface numbers this driver owns. If it is an
                     // InterfaceAssociation, then use the interface count. If it is an Interface,
@@ -139,8 +140,8 @@ pub fn Create(
                         else => {},
                     }
                 }
-                desc_field_types[drv_id] = Descriptors;
-                field_attrs[drv_id] = .{ .default_value_ptr = &descriptors };
+                desc_field_types[drv_id] = Descriptor;
+                field_attrs[drv_id] = .{ .default_value_ptr = &result.descriptor };
             }
 
             // Finally, bind the handler functions based on the data collected above.
@@ -234,12 +235,13 @@ pub fn Create(
                         device_itf.ep_open(desc);
                 }
 
-                const drv = &@field(driver_data, driver_field_name);
+                const drv = @field(driver_config, driver_field_name);
+                const runtime = &@field(driver_data, driver_field_name);
                 // Don't pass empty slices around
                 if (@hasField(@TypeOf(driver_alloc.*), driver_field_name))
-                    drv.init(&cfg, device_itf, &@field(driver_alloc, driver_field_name))
+                    drv.init_runtime(cfg, runtime, device_itf, &@field(driver_alloc, driver_field_name))
                 else
-                    drv.init(&cfg, device_itf);
+                    drv.init_runtime(cfg, runtime, device_itf);
 
                 // Open IN endpoint last so that callbacks can happen
                 inline for (desc_info.field_names, desc_info.field_types) |field_name, field_type| {

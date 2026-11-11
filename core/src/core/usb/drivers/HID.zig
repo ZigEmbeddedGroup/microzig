@@ -1,6 +1,7 @@
 const std = @import("std");
 const usb = @import("../../usb.zig");
 const assert = std.debug.assert;
+const log = std.log.scoped(.usb_hid_int_driver);
 
 /// Reports are a list of tagged ?i32 values. Encoding is variable-length.
 pub const ReportItem = union(enum) {
@@ -291,23 +292,6 @@ pub const ReportItem = union(enum) {
     }
 };
 
-const ClassCode = usb.types.ClassSubclassProtocol.ClassCode.HID;
-
-pub const HID_InterruptDriver = @This();
-
-subclass: ClassCode.Subclass(),
-protocol: ClassCode.Protocol(),
-
-itf_string: []const u8 = "",
-poll_interval: u8,
-country_code: usb.descriptor.HID.CountryCode = .NotSupported,
-
-generic_runtime: struct {
-    report_descriptor: []const ?ReportItem,
-    InReport: type,
-    OutReport: type,
-},
-
 pub const Descriptor = extern struct {
     const desc = usb.descriptor;
 
@@ -315,45 +299,10 @@ pub const Descriptor = extern struct {
     hid: desc.HID,
     ep_out: desc.Endpoint,
     ep_in: desc.Endpoint,
-
-    pub fn create(
-        alloc: *usb.DescriptorAllocator,
-        max_supported_packet_size: usb.types.PacketLength,
-        options: HID_InterruptDriver,
-    ) usb.DescriptorCreateResult(@This()) {
-        assert(@sizeOf(options.generic_runtime.InReport) <= max_supported_packet_size);
-        assert(@sizeOf(options.generic_runtime.OutReport) <= max_supported_packet_size);
-        return .{ .descriptor = .{
-            .interface = .{
-                .interface_number = alloc.next_itf(),
-                .alternate_setting = 0,
-                .num_endpoints = 2,
-                .interface_triple = .from(.HID, options.subclass, options.protocol),
-                .interface_s = alloc.string(options.itf_string),
-            },
-            .hid = .{
-                .country_code = options.country_code,
-                .num_descriptors = 1,
-                .report_length = .from(options.generic_runtime.report_descriptor.len),
-            },
-            .ep_out = .interrupt(
-                alloc.next_ep(.out),
-                @sizeOf(options.generic_runtime.OutReport),
-                options.poll_interval,
-            ),
-            .ep_in = .interrupt(
-                alloc.next_ep(.in),
-                @sizeOf(options.generic_runtime.InReport),
-                options.poll_interval,
-            ),
-        } };
-    }
 };
 
 /// HID Driver with an IN and OUT endpoint
-pub fn Runtime(options: @FieldType(HID_InterruptDriver, "generic_runtime")) type {
-    const log = std.log.scoped(.usb_hid_int_driver);
-
+pub fn RuntimeGeneric(InReport: type, OutReport: type, report_descriptor: []const u8) type {
     return struct {
         pub const RequestType = enum(u8) {
             GetReport = 0x01,
@@ -364,11 +313,6 @@ pub fn Runtime(options: @FieldType(HID_InterruptDriver, "generic_runtime")) type
             SetProtocol = 0x0b,
             _,
         };
-
-        pub const report_descriptor = ReportItem.create_report(options.report_descriptor);
-
-        const OutReport = options.OutReport;
-        const InReport = options.InReport;
 
         pub const Descriptor = HID_InterruptDriver.Descriptor;
 
@@ -381,20 +325,6 @@ pub fn Runtime(options: @FieldType(HID_InterruptDriver, "generic_runtime")) type
         descriptor: *const @This().Descriptor,
         tx_ready: std.atomic.Value(bool),
         rx_ready: std.atomic.Value(bool),
-
-        pub fn init(self: *@This(), desc: *const @This().Descriptor, device: *usb.DeviceInterface) void {
-            log.debug("init", .{});
-            self.* = .{
-                .device = device,
-                .descriptor = desc,
-                .tx_ready = .init(true),
-                .rx_ready = .init(false),
-            };
-            self.device.ep_listen(
-                self.descriptor.ep_out.endpoint.num,
-                @intCast(self.descriptor.ep_out.max_packet_size.native()),
-            );
-        }
 
         pub fn class_request(self: *@This(), setup: *const usb.types.SetupPacket) ?[]const u8 {
             log.debug("class_request {any}", .{setup});
@@ -490,4 +420,78 @@ pub fn Runtime(options: @FieldType(HID_InterruptDriver, "generic_runtime")) type
             return report;
         }
     };
+}
+
+pub fn Runtime(self: @This()) type {
+    return RuntimeGeneric(
+        self.InReport,
+        self.OutReport,
+        ReportItem.create_report(self.report_descriptor),
+    );
+}
+
+const ClassCode = usb.types.ClassSubclassProtocol.ClassCode.HID;
+
+pub const HID_InterruptDriver = @This();
+
+subclass: ClassCode.Subclass(),
+protocol: ClassCode.Protocol(),
+
+itf_string: []const u8 = "",
+poll_interval: u8,
+country_code: usb.descriptor.HID.CountryCode = .NotSupported,
+report_descriptor: []const ?ReportItem,
+InReport: type,
+OutReport: type,
+
+pub fn create_descriptor(
+    comptime self: @This(),
+    alloc: *usb.DescriptorAllocator,
+    max_supported_packet_size: usb.types.PacketLength,
+) usb.DescriptorCreateResult(Descriptor) {
+    assert(@sizeOf(self.InReport) <= max_supported_packet_size);
+    assert(@sizeOf(self.OutReport) <= max_supported_packet_size);
+    return .{ .descriptor = .{
+        .interface = .{
+            .interface_number = alloc.next_itf(),
+            .alternate_setting = 0,
+            .num_endpoints = 2,
+            .interface_triple = .from(.HID, self.subclass, self.protocol),
+            .interface_s = alloc.string(self.itf_string),
+        },
+        .hid = .{
+            .country_code = self.country_code,
+            .num_descriptors = 1,
+            .report_length = .from(self.report_descriptor.len),
+        },
+        .ep_out = .interrupt(
+            alloc.next_ep(.out),
+            @sizeOf(self.OutReport),
+            self.poll_interval,
+        ),
+        .ep_in = .interrupt(
+            alloc.next_ep(.in),
+            @sizeOf(self.InReport),
+            self.poll_interval,
+        ),
+    } };
+}
+
+pub fn init_runtime(
+    comptime self: @This(),
+    comptime descriptor: Descriptor,
+    runtime: *self.Runtime(),
+    device: *usb.DeviceInterface,
+) void {
+    log.debug("init", .{});
+    runtime.* = .{
+        .device = device,
+        .descriptor = &descriptor,
+        .tx_ready = .init(true),
+        .rx_ready = .init(false),
+    };
+    device.ep_listen(
+        descriptor.ep_out.endpoint.num,
+        @intCast(descriptor.ep_out.max_packet_size.native()),
+    );
 }

@@ -59,6 +59,8 @@ pub const DescriptorAllocator = struct {
 /// Wraps a Descriptor type. Returned by the `create` method of the Descriptor.
 pub fn DescriptorCreateResult(Descriptor: type) type {
     return struct {
+        const Inner = Descriptor;
+
         descriptor: Descriptor,
         /// If not null, a slice of this length will be passed
         /// to driver's init function.

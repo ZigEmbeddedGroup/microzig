@@ -55,11 +55,6 @@ pub const LineCoding = extern struct {
     };
 };
 
-const CDC_Driver = @This();
-
-itf_notifi_str: []const u8 = "",
-itf_data_str: []const u8 = "",
-
 // This struct bundles all the descriptors CDC needs into one Configuration.
 pub const Descriptor = extern struct {
     const desc = usb.descriptor;
@@ -74,78 +69,6 @@ pub const Descriptor = extern struct {
     itf_data: desc.Interface,
     ep_out: desc.Endpoint,
     ep_in: desc.Endpoint,
-
-    /// This function is used during descriptor creation. Endpoint and interface numbers are
-    /// allocated through the `alloc` parameter. Third argument can be of any type, it's passed
-    /// by the user when creating the device controller type. If multiple instances of a driver
-    /// are used, this function is called for each, with different arguments. Passing arguments
-    /// through this function is preferred to making the whole driver generic.
-    pub fn create(
-        alloc: *usb.DescriptorAllocator,
-        max_supported_packet_size: usb.types.PacketLength,
-        options: CDC_Driver,
-    ) usb.DescriptorCreateResult(@This()) {
-        // Endpoint and interface numbers are allocated through the `alloc` parameter,
-        // so that multiple instances of this driver can coexist.
-        const itf_notifi = alloc.next_itf();
-        const itf_data = alloc.next_itf();
-        return .{
-            .descriptor = .{
-                .itf_assoc = .{
-                    .first_interface = itf_notifi,
-                    .interface_count = 2,
-                    .function_class = 2,
-                    .function_subclass = 2,
-                    .function_protocol = 0,
-                    .function = 0,
-                },
-                .itf_notifi = .{
-                    .interface_number = itf_notifi,
-                    .alternate_setting = 0,
-                    .num_endpoints = 1,
-                    .interface_triple = .from(.CDC, .Abstract, .NoneRequired),
-                    .interface_s = alloc.string(options.itf_notifi_str),
-                },
-                .cdc_header = .{ .bcd_cdc = .from(1, 20) },
-                .cdc_call_mgmt = .{
-                    .capabilities = .none,
-                    .data_interface = itf_data,
-                },
-                .cdc_acm = .{
-                    .capabilities = .{
-                        .comm_feature = false,
-                        .send_break = false,
-                        // Line coding requests get sent regardless of this bit
-                        .line_coding = true,
-                        .network_connection = false,
-                    },
-                },
-                .cdc_union = .{
-                    .master_interface = itf_notifi,
-                    .slave_interface_0 = itf_data,
-                },
-                // High-speed interrupt intervals are encoded as
-                // 2^(bInterval - 1) microframes, while full-speed intervals
-                // are expressed directly in milliseconds. Keep the intended
-                // polling period at 16 ms for both speeds.
-                .ep_notifi = .interrupt(
-                    alloc.next_ep(.in),
-                    8,
-                    if (max_supported_packet_size > 64) 8 else 16,
-                ),
-                .itf_data = .{
-                    .interface_number = itf_data,
-                    .alternate_setting = 0,
-                    .num_endpoints = 2,
-                    .interface_triple = .from(.CDC_Data, .Unused, .NoneRequired),
-                    .interface_s = alloc.string(options.itf_data_str),
-                },
-                .ep_out = .bulk(alloc.next_ep(.out), max_supported_packet_size),
-                .ep_in = .bulk(alloc.next_ep(.in), max_supported_packet_size),
-            },
-            .alloc_bytes = 2 * max_supported_packet_size,
-        };
-    }
 };
 
 pub const Runtime = struct {
@@ -225,30 +148,6 @@ pub const Runtime = struct {
         .ep_in = on_tx_ready,
     };
 
-    // Called when the host selects a configuration.
-    pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterface, data: []u8) void {
-        const len_half = @divExact(data.len, 2);
-        assert(len_half == desc.ep_in.max_packet_size.native(), .{});
-        assert(len_half == desc.ep_out.max_packet_size.native(), .{});
-        self.* = .{
-            .device = device,
-            .descriptor = desc,
-            .line_coding = .init,
-            .notifi_ready = .init(true),
-
-            // `init` provides a data buffer, which we split in half for rx and tx data.
-            .rx_data = data[0..len_half],
-            .rx_seek = 0,
-            .rx_end = 0,
-            .rx_ready = .init(false),
-
-            .tx_data = data[len_half..],
-            .tx_end = 0,
-            .tx_ready = .init(true),
-        };
-        device.ep_listen(desc.ep_out.endpoint.num, @intCast(self.rx_data.len));
-    }
-
     /// Handle class-specific SETUP requests where recipient=Interface
     /// Called by DeviceController when the interface number matches this driver.
     pub fn class_request(self: *@This(), setup: *const usb.types.SetupPacket) ?[]const u8 {
@@ -282,3 +181,110 @@ pub const Runtime = struct {
         self.notifi_ready.store(true, .seq_cst);
     }
 };
+
+const CDC_Driver = @This();
+
+itf_notifi_str: []const u8 = "",
+itf_data_str: []const u8 = "",
+
+/// This function is used during descriptor creation. Endpoint and interface numbers are
+/// allocated through the `alloc` parameter. Third argument can be of any type, it's passed
+/// by the user when creating the device controller type. If multiple instances of a driver
+/// are used, this function is called for each, with different arguments. Passing arguments
+/// through this function is preferred to making the whole driver generic.
+pub fn create_descriptor(
+    comptime self: @This(),
+    alloc: *usb.DescriptorAllocator,
+    max_supported_packet_size: usb.types.PacketLength,
+) usb.DescriptorCreateResult(Descriptor) {
+    // Endpoint and interface numbers are allocated through the `alloc` parameter,
+    // so that multiple instances of this driver can coexist.
+    const itf_notifi = alloc.next_itf();
+    const itf_data = alloc.next_itf();
+    return .{
+        .descriptor = .{
+            .itf_assoc = .{
+                .first_interface = itf_notifi,
+                .interface_count = 2,
+                .function_class = 2,
+                .function_subclass = 2,
+                .function_protocol = 0,
+                .function = 0,
+            },
+            .itf_notifi = .{
+                .interface_number = itf_notifi,
+                .alternate_setting = 0,
+                .num_endpoints = 1,
+                .interface_triple = .from(.CDC, .Abstract, .NoneRequired),
+                .interface_s = alloc.string(self.itf_notifi_str),
+            },
+            .cdc_header = .{ .bcd_cdc = .from(1, 20) },
+            .cdc_call_mgmt = .{
+                .capabilities = .none,
+                .data_interface = itf_data,
+            },
+            .cdc_acm = .{
+                .capabilities = .{
+                    .comm_feature = false,
+                    .send_break = false,
+                    // Line coding requests get sent regardless of this bit
+                    .line_coding = true,
+                    .network_connection = false,
+                },
+            },
+            .cdc_union = .{
+                .master_interface = itf_notifi,
+                .slave_interface_0 = itf_data,
+            },
+            // High-speed interrupt intervals are encoded as
+            // 2^(bInterval - 1) microframes, while full-speed intervals
+            // are expressed directly in milliseconds. Keep the intended
+            // polling period at 16 ms for both speeds.
+            .ep_notifi = .interrupt(
+                alloc.next_ep(.in),
+                8,
+                if (max_supported_packet_size > 64) 8 else 16,
+            ),
+            .itf_data = .{
+                .interface_number = itf_data,
+                .alternate_setting = 0,
+                .num_endpoints = 2,
+                .interface_triple = .from(.CDC_Data, .Unused, .NoneRequired),
+                .interface_s = alloc.string(self.itf_data_str),
+            },
+            .ep_out = .bulk(alloc.next_ep(.out), max_supported_packet_size),
+            .ep_in = .bulk(alloc.next_ep(.in), max_supported_packet_size),
+        },
+        .alloc_bytes = 2 * max_supported_packet_size,
+    };
+}
+
+// Called when the host selects a configuration.
+pub fn init_runtime(
+    comptime _: @This(),
+    comptime descriptor: Descriptor,
+    runtime: *Runtime,
+    device: *usb.DeviceInterface,
+    data: []u8,
+) void {
+    const len_half = @divExact(data.len, 2);
+    assert(len_half == descriptor.ep_in.max_packet_size.native(), .{});
+    assert(len_half == descriptor.ep_out.max_packet_size.native(), .{});
+    runtime.* = .{
+        .device = device,
+        .descriptor = &descriptor,
+        .line_coding = .init,
+        .notifi_ready = .init(true),
+
+        // `init` provides a data buffer, which we split in half for rx and tx data.
+        .rx_data = data[0..len_half],
+        .rx_seek = 0,
+        .rx_end = 0,
+        .rx_ready = .init(false),
+
+        .tx_data = data[len_half..],
+        .tx_end = 0,
+        .tx_ready = .init(true),
+    };
+    device.ep_listen(descriptor.ep_out.endpoint.num, @intCast(runtime.rx_data.len));
+}

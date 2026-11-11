@@ -448,39 +448,41 @@ pub fn Polled(config: Config) type {
 pub fn ResetDriver(bootsel_activity_led: ?u5, interface_disable_mask: u32) type {
     return struct {
         const log_drv = std.log.scoped(.pico_reset);
-        const Options = @This();
+
+        const Descriptor = extern struct {
+            reset_interface: usb.descriptor.Interface,
+        };
 
         itf_string: []const u8 = "",
 
-        pub const Descriptor = extern struct {
-            reset_interface: usb.descriptor.Interface,
+        pub fn create_descriptor(
+            self: @This(),
+            alloc: *usb.DescriptorAllocator,
+            _: usb.types.PacketLength,
+        ) usb.DescriptorCreateResult(Descriptor) {
+            return .{ .descriptor = .{ .reset_interface = .{
+                .interface_number = alloc.next_itf(),
+                .alternate_setting = 0,
+                .num_endpoints = 0,
+                .interface_triple = .from(
+                    .VendorSpecific,
+                    @fromBackingInt(0x00),
+                    @fromBackingInt(0x01),
+                ),
+                .interface_s = alloc.string(self.itf_string),
+            } } };
+        }
 
-            pub fn create(
-                alloc: *usb.DescriptorAllocator,
-                _: usb.types.PacketLength,
-                options: Options,
-            ) usb.DescriptorCreateResult(@This()) {
-                return .{ .descriptor = .{ .reset_interface = .{
-                    .interface_number = alloc.next_itf(),
-                    .alternate_setting = 0,
-                    .num_endpoints = 0,
-                    .interface_triple = .from(
-                        .VendorSpecific,
-                        @fromBackingInt(0x00),
-                        @fromBackingInt(0x01),
-                    ),
-                    .interface_s = alloc.string(options.itf_string),
-                } } };
-            }
-        };
+        pub fn init_runtime(
+            comptime _: @This(),
+            comptime _: Descriptor,
+            runtime: *Runtime,
+            _: *usb.DeviceInterface,
+        ) void {
+            runtime.* = .{};
+        }
 
         pub const Runtime = struct {
-            pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterface) void {
-                _ = desc;
-                _ = device;
-                self.* = .{};
-            }
-
             pub fn class_request(self: *@This(), setup: *const usb.types.SetupPacket) ?[]const u8 {
                 _ = self;
                 switch (setup.request) {

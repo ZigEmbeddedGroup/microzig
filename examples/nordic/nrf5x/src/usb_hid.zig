@@ -85,48 +85,46 @@ const hid_driver_options: usb.drivers.HID_Interrupt = .{
     .protocol = .Boot,
     .itf_string = "Boot Keyboard",
     .poll_interval = 1,
-    .generic_runtime = .{
-        .report_descriptor = &.{
-            .{ .global_usage_page = .generic_desktop },
-            .local_usage_enum(.{ .generic_desktop = .keyboard }),
-            .{ .main_collection = .Application },
-            // Input: modifier key bitmap
-            .{ .data = .{
-                .usage = .{ .global_page = .keyboard },
-                .usage_range = .{ 0xE0, 0xE7 },
-                .count = 8,
-                .Child = bool,
-                .dir = .in,
-                .type = .dynamic,
-            } },
-            // Reserved 8 bits
-            .{ .data_static = .{ .in, u8 } },
-            // Output: indicator LEDs
-            .{ .data = .{
-                .usage = .{ .global_page = .led },
-                .usage_range = .{ 1, 5 },
-                .count = 5,
-                .Child = bool,
-                .dir = .out,
-                .type = .dynamic,
-            } },
-            // Padding
-            .{ .data_static = .{ .out, u3 } },
-            // Input: up to 6 pressed key codes
-            .{ .data = .{
-                .usage = .{ .global_page = .keyboard },
-                .usage_range = .{ 0x00, 0xff },
-                .count = 6,
-                .Child = u8,
-                .dir = .in,
-                .type = .selector,
-            } },
-            // End
-            .main_collection_end,
-        },
-        .InReport = KeyboardInReport,
-        .OutReport = KeyboardOutReport,
+    .report_descriptor = &.{
+        .{ .global_usage_page = .generic_desktop },
+        .local_usage_enum(.{ .generic_desktop = .keyboard }),
+        .{ .main_collection = .Application },
+        // Input: modifier key bitmap
+        .{ .data = .{
+            .usage = .{ .global_page = .keyboard },
+            .usage_range = .{ 0xE0, 0xE7 },
+            .count = 8,
+            .Child = bool,
+            .dir = .in,
+            .type = .dynamic,
+        } },
+        // Reserved 8 bits
+        .{ .data_static = .{ .in, u8 } },
+        // Output: indicator LEDs
+        .{ .data = .{
+            .usage = .{ .global_page = .led },
+            .usage_range = .{ 1, 5 },
+            .count = 5,
+            .Child = bool,
+            .dir = .out,
+            .type = .dynamic,
+        } },
+        // Padding
+        .{ .data_static = .{ .out, u3 } },
+        // Input: up to 6 pressed key codes
+        .{ .data = .{
+            .usage = .{ .global_page = .keyboard },
+            .usage_range = .{ 0x00, 0xff },
+            .count = 6,
+            .Child = u8,
+            .dir = .in,
+            .type = .selector,
+        } },
+        // End
+        .main_collection_end,
     },
+    .InReport = KeyboardInReport,
+    .OutReport = KeyboardOutReport,
 };
 
 var usb_device: USBD = undefined;

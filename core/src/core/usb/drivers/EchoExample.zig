@@ -4,10 +4,6 @@ const usb = @import("../../usb.zig");
 const assert = std.debug.assert;
 const log = std.log.scoped(.usb_echo);
 
-pub const EchoExampleDriver = @This();
-
-itf_string: []const u8 = "",
-
 /// The descriptors need to have the same memory layout as the sent data.
 pub const Descriptor = extern struct {
     const desc = usb.descriptor;
@@ -15,33 +11,6 @@ pub const Descriptor = extern struct {
     itf: desc.Interface,
     ep_out: desc.Endpoint,
     ep_in: desc.Endpoint,
-
-    /// This function is used during descriptor creation. Endpoint and interface numbers are
-    /// allocated through the `alloc` parameter. Third argument contains driver configuration.
-    /// If multiple instances of a driver are used, this function is called for each,
-    /// with different arguments.
-    pub fn create(
-        alloc: *usb.DescriptorAllocator,
-        max_supported_packet_size: usb.types.PacketLength,
-        options: EchoExampleDriver,
-    ) usb.DescriptorCreateResult(@This()) {
-        return .{
-            .descriptor = .{
-                .itf = .{
-                    .interface_number = alloc.next_itf(),
-                    .alternate_setting = 0,
-                    .num_endpoints = 2,
-                    .interface_triple = .vendor_specific,
-                    .interface_s = alloc.string(options.itf_string),
-                },
-                .ep_out = .bulk(alloc.next_ep(.out), max_supported_packet_size),
-                .ep_in = .bulk(alloc.next_ep(.in), max_supported_packet_size),
-            },
-            // Buffers whose length is only known after creating the
-            // descriptor can be allocated at this stage.
-            .alloc_bytes = max_supported_packet_size,
-        };
-    }
 };
 
 pub const Runtime = struct {
@@ -57,22 +26,6 @@ pub const Runtime = struct {
     descriptor: *const Descriptor,
     packet_buffer: []u8,
     tx_ready: std.atomic.Value(bool),
-
-    /// This function is called when the host chooses a configuration that contains this driver. `self`
-    /// points to undefined memory. `data` is of the length specified in `Descriptor.create()`.
-    pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterface, data: []u8) void {
-        assert(data.len == desc.ep_in.max_packet_size.native());
-        self.* = .{
-            .device = device,
-            .descriptor = desc,
-            .packet_buffer = data,
-            .tx_ready = .init(false),
-        };
-        device.ep_listen(
-            desc.ep_out.endpoint.num,
-            @intCast(desc.ep_out.max_packet_size.native()),
-        );
-    }
 
     /// Used for interface configuration through endpoint 0.
     /// Data returned by this function is sent on endpoint 0.
@@ -116,3 +69,56 @@ pub const Runtime = struct {
         self.device.ep_listen(ep_rx, 64);
     }
 };
+
+pub const EchoExampleDriver = @This();
+
+itf_string: []const u8 = "",
+
+/// This function is used during descriptor creation. Endpoint and interface numbers are
+/// allocated through the `alloc` parameter. Third argument contains driver configuration.
+/// If multiple instances of a driver are used, this function is called for each,
+/// with different arguments.
+pub fn create_descriptor(
+    self: @This(),
+    alloc: *usb.DescriptorAllocator,
+    max_supported_packet_size: usb.types.PacketLength,
+) usb.DescriptorCreateResult(Descriptor) {
+    return .{
+        .descriptor = .{
+            .itf = .{
+                .interface_number = alloc.next_itf(),
+                .alternate_setting = 0,
+                .num_endpoints = 2,
+                .interface_triple = .vendor_specific,
+                .interface_s = alloc.string(self.itf_string),
+            },
+            .ep_out = .bulk(alloc.next_ep(.out), max_supported_packet_size),
+            .ep_in = .bulk(alloc.next_ep(.in), max_supported_packet_size),
+        },
+        // Buffers whose length is only known after creating the
+        // descriptor can be allocated at this stage.
+        .alloc_bytes = max_supported_packet_size,
+    };
+}
+
+/// This function is called when the host chooses a configuration that contains this driver. `self`
+/// points to undefined memory. `data` is of the length specified in `Descriptor.create()`.
+pub fn init_runtime(
+    comptime _: @This(),
+    comptime desc: Descriptor,
+    runtime: *Runtime,
+    device: *usb.DeviceInterface,
+    data: []u8,
+) void {
+    assert(data.len == desc.ep_in.max_packet_size.native());
+    runtime.* = .{
+        .device = device,
+        .descriptor = &desc,
+        .packet_buffer = data,
+        .tx_ready = .init(false),
+    };
+    device.ep_listen(
+        desc.ep_out.endpoint.num,
+        @intCast(desc.ep_out.max_packet_size.native()),
+    );
+}
