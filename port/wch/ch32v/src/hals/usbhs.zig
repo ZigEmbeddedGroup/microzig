@@ -11,8 +11,6 @@ const usb = microzig.core.usb;
 const types = usb.types;
 const descriptor = usb.descriptor;
 
-pub const max_packet_size: u11 = 512;
-
 pub const USBHD_MAX_ENDPOINTS_COUNT = 16;
 
 const max_buffer_pool_size = USBHD_MAX_ENDPOINTS_COUNT * 2 * 512 + 64;
@@ -141,6 +139,16 @@ pub fn Polled(comptime _: Setup, comptime cfg: Config) type {
     return struct {
         const Self = @This();
 
+        pub const device_capabilities: usb.DeviceCapabilities = .{
+            .max_supported_bcd_usb = .v2_00,
+            .max_packet_size0 = 64,
+            .max_packet_size = 512,
+        };
+
+        comptime {
+            usb.validate_device(@This());
+        }
+
         const vtable: usb.DeviceInterface.VTable = .{
             .ep_writev = ep_writev,
             .ep_readv = ep_readv,
@@ -171,13 +179,13 @@ pub fn Polled(comptime _: Setup, comptime cfg: Config) type {
             // EP0 is required; open OUT then IN (or vice versa), we will share buffer.
             self.interface.ep_open(&.{
                 .endpoint = .out(.ep0),
-                .max_packet_size = .from(64),
+                .max_packet_size = .from(device_capabilities.max_packet_size0),
                 .attributes = .{ .transfer_type = .Control, .usage = .data },
                 .interval = 0,
             });
             self.interface.ep_open(&.{
                 .endpoint = .in(.ep0),
-                .max_packet_size = .from(64),
+                .max_packet_size = .from(device_capabilities.max_packet_size0),
                 .attributes = .{ .transfer_type = .Control, .usage = .data },
                 .interval = 0,
             });

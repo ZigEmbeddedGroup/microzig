@@ -29,7 +29,7 @@ pub fn Create(
         handlers_itf: []const DriverName,
         RuntimeData: type,
 
-        pub fn create(max_psize: types.PacketLength, strings: []const []const u8) struct { @This(), []const []const u8 } {
+        pub fn create(device_capabilities: usb.DeviceCapabilities, strings: []const []const u8) struct { @This(), []const []const u8 } {
             var alloc = usb.DescriptorAllocator.init(options.unique_endpoints, strings);
             const configuration_s = alloc.string(options.name);
             const driver_info = @typeInfo(@TypeOf(driver_config)).@"struct";
@@ -50,7 +50,7 @@ pub fn Create(
                 const drv = @field(driver_config, driver_field_name);
 
                 // Get type information for the current driver
-                const info = drv.driver_info(&alloc, max_psize);
+                const info = drv.driver_info(device_capabilities, &alloc);
                 const Descriptor = @TypeOf(info.descriptor);
                 runtime_field_types[drv_id] = info.Runtime;
 

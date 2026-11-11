@@ -84,13 +84,20 @@ pub fn Polled(config: Config) type {
     }
 
     return struct {
-        pub const max_supported_packet_size = 64;
-        pub const max_supported_bcd_usb: usb.types.Version = .v1_10;
-        pub const default_vendor_id: usb.Options.IdStringPair = .{ .id = 0x2E8A, .str = "Raspberry Pi" };
-        pub const default_product_id: usb.Options.IdStringPair = switch (chip) {
-            .RP2040 => .{ .id = 0x000A, .str = "Pico test device" },
-            .RP2350 => .{ .id = 0x000F, .str = "Pico 2 test device" },
+        pub const device_capabilities: usb.DeviceCapabilities = .{
+            .max_supported_bcd_usb = .v1_10,
+            .max_packet_size0 = 64,
+            .max_packet_size = 64,
+            .default_vendor = .{ .id = 0x2E8A, .str = "Raspberry Pi" },
+            .default_product = switch (chip) {
+                .RP2040 => .{ .id = 0x000A, .str = "Pico test device" },
+                .RP2350 => .{ .id = 0x000F, .str = "Pico 2 test device" },
+            },
         };
+
+        comptime {
+            usb.validate_device(@This());
+        }
 
         const vtable: usb.DeviceInterface.VTable = .{
             .ep_writev = ep_writev,
@@ -246,15 +253,15 @@ pub fn Polled(config: Config) type {
             @memset(std.mem.asBytes(&self.endpoints), 0);
 
             // Set up endpoints.
-            self.interface.ep_open(&.control(.in(.ep0), max_supported_packet_size));
-            self.interface.ep_open(&.control(.out(.ep0), max_supported_packet_size));
+            self.interface.ep_open(&.control(.in(.ep0), device_capabilities.max_packet_size));
+            self.interface.ep_open(&.control(.out(.ep0), device_capabilities.max_packet_size));
 
             // Present full-speed device by enabling pullup on DP. This is the point
             // where the host will notice our presence.
             peripherals.USB.SIE_CTRL.modify(.{ .PULLUP_EN = 1 });
 
             // Listen for ACKs
-            self.interface.ep_listen(.ep0, max_supported_packet_size);
+            self.interface.ep_listen(.ep0, device_capabilities.max_packet_size);
 
             return self;
         }
@@ -411,7 +418,7 @@ pub fn Polled(config: Config) type {
 
             const ep_hard = self.hardware_endpoint_get_by_address(ep);
 
-            assert(desc.max_packet_size.native() <= max_supported_packet_size);
+            assert(desc.max_packet_size.native() <= device_capabilities.max_packet_size);
 
             buffer_control[@backingInt(ep.num)].get(ep.dir).modify(.{ .PID_0 = 1 });
 
@@ -483,8 +490,8 @@ pub fn ResetDriver(bootsel_activity_led: ?u5, interface_disable_mask: u32) type 
 
         pub fn driver_info(
             self: @This(),
+            comptime _: usb.DeviceCapabilities,
             alloc: *usb.DescriptorAllocator,
-            _: usb.types.PacketLength,
         ) usb.DriverInfo(Descriptor) {
             return .{
                 .Runtime = Runtime,

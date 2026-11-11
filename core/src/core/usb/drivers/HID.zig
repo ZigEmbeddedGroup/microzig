@@ -455,11 +455,11 @@ OutReport: type,
 
 pub fn driver_info(
     comptime self: @This(),
+    comptime device_capabilities: usb.DeviceCapabilities,
     alloc: *usb.DescriptorAllocator,
-    max_supported_packet_size: usb.types.PacketLength,
 ) usb.DriverInfo(Descriptor) {
-    assert(@sizeOf(self.InReport) <= max_supported_packet_size);
-    assert(@sizeOf(self.OutReport) <= max_supported_packet_size);
+    assert(@sizeOf(self.InReport) <= device_capabilities.max_packet_size);
+    assert(@sizeOf(self.OutReport) <= device_capabilities.max_packet_size);
     return .{
         .Runtime = Runtime(
             self.InReport,

@@ -23,6 +23,8 @@ comptime {
     _ = microzig.export_startup();
 }
 
+const USB_Device = hal.usb.Polled(board.usb_setup, .{});
+
 const USB_Controller = usb.DeviceController(.{
     .bcd_usb = .v2_00,
     .device_triple = .unspecified,
@@ -30,13 +32,13 @@ const USB_Controller = usb.DeviceController(.{
     .product = .{ .id = 0x0001, .str = board.product_string },
     .bcd_device = .v1_00,
     .serial = "someserial",
-    .max_supported_packet_size = hal.usb.max_packet_size,
+    .device_capabilities = USB_Device.device_capabilities,
 }, &.{usb.configuration.Create(
     .{ .attributes = .{ .self_powered = false }, .max_current_ma = 50 },
     .{ .serial = usb.drivers.CDC{ .itf_notifi_str = "Board CDC", .itf_data_str = "Board CDC Data" } },
 )});
 
-pub var usb_dev: hal.usb.Polled(board.usb_setup, .{}) = undefined;
+pub var usb_dev: USB_Device = undefined;
 
 var usb_controller: USB_Controller = .init;
 

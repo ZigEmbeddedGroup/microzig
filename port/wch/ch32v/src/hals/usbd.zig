@@ -327,6 +327,16 @@ pub fn Polled(comptime setup: Setup, comptime cfg: Config) type {
     return struct {
         const Self = @This();
 
+        pub const device_capabilities: usb.DeviceCapabilities = .{
+            .max_supported_bcd_usb = .v2_00, // Is this correct?
+            .max_packet_size0 = 64,
+            .max_packet_size = 64,
+        };
+
+        comptime {
+            usb.validate_device(@This());
+        }
+
         const vtable: usb.DeviceInterface.VTable = .{
             .ep_writev = ep_writev,
             .ep_readv = ep_readv,

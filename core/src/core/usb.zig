@@ -56,6 +56,17 @@ pub const DescriptorAllocator = struct {
     }
 };
 
+/// Device-specific information
+pub const DeviceCapabilities = struct {
+    max_supported_bcd_usb: types.Version = .v1_00,
+    /// Maximimum packet size on ep0
+    max_packet_size0: types.PacketLength,
+    /// Maximimum packet size on other endpoints
+    max_packet_size: types.PacketLength,
+    default_vendor: ?Options.IdStringPair = null,
+    default_product: ?Options.IdStringPair = null,
+};
+
 /// Wraps a Descriptor type. Returned by the `create` method of the Descriptor.
 pub fn DriverInfo(Descriptor: type) type {
     return struct {
@@ -141,14 +152,14 @@ pub const Options = struct {
         str: []const u8,
     };
 
-    /// Usb specification version.
-    bcd_usb: types.Version,
+    /// Usb specification version. `null` means highest supported by device.
+    bcd_usb: ?types.Version = null,
     /// Class, subclass and protocol of this device.
     device_triple: types.ClassSubclassProtocol,
-    /// Vendor id and string
-    vendor: IdStringPair,
-    /// Product id and string.
-    product: IdStringPair,
+    /// Vendor id and string. `null` means default provided by device
+    vendor: ?IdStringPair = null,
+    /// Product id and string. `null` means default provided by device
+    product: ?IdStringPair = null,
     /// Device version.
     bcd_device: types.Version,
     /// String descriptor 0.
@@ -156,7 +167,7 @@ pub const Options = struct {
     /// Serial number string.
     serial: []const u8,
     /// Largest packet length the hardware supports. Must be a power of 2 and at least 8.
-    max_supported_packet_size: types.PacketLength,
+    device_capabilities: DeviceCapabilities,
 };
 
 pub fn validate_controller(T: type) void {
@@ -168,6 +179,14 @@ pub fn validate_controller(T: type) void {
         _ = Controller;
         // More checks
     }
+}
+
+pub fn validate_device(Device: type) void {
+    if (!@hasDecl(Device, "device_capabilities"))
+        @compileError("USB device " ++ @typeName(Device) ++ " is missing a device_capabilities declaration.");
+    if (@TypeOf(Device.device_capabilities) != DeviceCapabilities)
+        @compileError("USB device " ++ @typeName(Device) ++ ".device_capabilities has incorrect type.\n" ++
+            "Got: " ++ @typeName(@TypeOf(DeviceCapabilities)) ++ ", expected usb.DeviceCapabilities");
 }
 
 /// USB device controller
@@ -185,21 +204,30 @@ pub fn DeviceController(options: Options, Configurations: []const type) type {
         /// * table of handlers for endpoints
         /// * table of handlers for interfaces
         const descriptor_parse_result = blk: {
-            const max_psize = options.max_supported_packet_size;
-            assert(max_psize >= 8);
-            assert(std.math.isPowerOfTwo(max_psize));
+            const max_psize0 = options.device_capabilities.max_packet_size0;
+            const max_psize = options.device_capabilities.max_packet_size;
+            if (max_psize0 < 8 or !std.math.isPowerOfTwo(max_psize0) or max_psize < 8 or !std.math.isPowerOfTwo(max_psize))
+                @compileError("Maximum packet size must be a power of two and at least 8");
+
+            const vendor = options.vendor orelse
+                (options.device_capabilities.default_vendor orelse
+                    @compileError("Vendor ID not provided and device does not specify a default."));
+
+            const product = options.product orelse
+                (options.device_capabilities.default_product orelse
+                    @compileError("Product ID not provided and device does not specify a default."));
 
             var strings: []const []const u8 = &.{};
-            strings, const manufacturer_s = dedup_string(strings, options.vendor.str);
-            strings, const product_s = dedup_string(strings, options.product.str);
+            strings, const manufacturer_s = dedup_string(strings, vendor.str);
+            strings, const product_s = dedup_string(strings, product.str);
             strings, const serial_s = dedup_string(strings, options.serial);
 
             const desc_device: descriptor.Device = .{
-                .bcd_usb = options.bcd_usb,
+                .bcd_usb = options.bcd_usb orelse options.device_capabilities.max_supported_bcd_usb,
                 .device_triple = options.device_triple,
-                .max_packet_size0 = @min(options.max_supported_packet_size, 64),
-                .vendor = .from(options.vendor.id),
-                .product = .from(options.product.id),
+                .max_packet_size0 = max_psize0,
+                .vendor = .from(vendor.id),
+                .product = .from(product.id),
                 .bcd_device = options.bcd_device,
                 .manufacturer_s = manufacturer_s,
                 .product_s = product_s,
@@ -209,7 +237,7 @@ pub fn DeviceController(options: Options, Configurations: []const type) type {
 
             var configs: @Tuple(Configurations) = undefined;
             for (0..Configurations.len) |i|
-                configs[i], strings = Configurations[i].create(max_psize, strings);
+                configs[i], strings = Configurations[i].create(options.device_capabilities, strings);
 
             var desc_string: []const descriptor.String = &.{.from_lang(options.language)};
             for (strings) |s|

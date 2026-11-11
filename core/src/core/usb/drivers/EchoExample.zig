@@ -125,8 +125,8 @@ itf_string: []const u8 = "",
 /// Aside from the descriptor, this function can return a type that is later used
 pub fn driver_info(
     self: @This(),
+    comptime device_capabilities: usb.DeviceCapabilities,
     alloc: *usb.DescriptorAllocator,
-    max_supported_packet_size: usb.types.PacketLength,
 ) usb.DriverInfo(Descriptor) {
     return .{
         .Runtime = Runtime,
@@ -138,11 +138,11 @@ pub fn driver_info(
                 .interface_triple = .vendor_specific,
                 .interface_s = alloc.string(self.itf_string),
             },
-            .ep_out = .bulk(alloc.next_ep(.out), max_supported_packet_size),
-            .ep_in = .bulk(alloc.next_ep(.in), max_supported_packet_size),
+            .ep_out = .bulk(alloc.next_ep(.out), device_capabilities.max_packet_size),
+            .ep_in = .bulk(alloc.next_ep(.in), device_capabilities.max_packet_size),
         },
         // Buffers whose length is only known after creating the
         // descriptor can be allocated at this stage.
-        .alloc_bytes = max_supported_packet_size,
+        .alloc_bytes = device_capabilities.max_packet_size,
     };
 }

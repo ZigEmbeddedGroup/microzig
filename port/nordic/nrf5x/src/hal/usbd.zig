@@ -50,10 +50,17 @@ pub const USBD = struct {
 
     interface: usb.DeviceInterface,
 
-    pub const max_supported_packet_size = MAX_PACKET_SIZE;
-    pub const max_supported_bcd_usb: usb.types.Version = .v1_10;
-    pub const default_vendor_id: usb.Options.IdStringPair = .{ .id = 0x1209, .str = "pid.codes" };
-    pub const default_product_id: usb.Options.IdStringPair = .{ .id = 0x0001, .str = "nRF5x test device" };
+    pub const device_capabilities: usb.DeviceCapabilities = .{
+        .max_supported_bcd_usb = .v1_10,
+        .max_packet_size0 = MAX_PACKET_SIZE,
+        .max_packet_size = MAX_PACKET_SIZE,
+        .default_vendor = .{ .id = 0x1209, .str = "pid.codes" },
+        .default_product = .{ .id = 0x0001, .str = "nRF5x test device" },
+    };
+
+    comptime {
+        usb.validate_device(@This());
+    }
 
     const vtable: usb.DeviceInterface.VTable = .{
         .ep_writev = ep_writev,

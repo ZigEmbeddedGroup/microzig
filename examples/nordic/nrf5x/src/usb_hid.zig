@@ -130,13 +130,10 @@ const hid_driver_options: usb.drivers.HID_Interrupt = .{
 var usb_device: USBD = undefined;
 
 var usb_controller: usb.DeviceController(.{
-    .bcd_usb = USBD.max_supported_bcd_usb,
     .device_triple = .unspecified,
-    .vendor = USBD.default_vendor_id,
-    .product = USBD.default_product_id,
     .bcd_device = .v1_00,
     .serial = "someserial",
-    .max_supported_packet_size = USBD.max_supported_packet_size,
+    .device_capabilities = USBD.device_capabilities,
 }, &.{usb.configuration.Create(
     .{ .attributes = .{ .self_powered = false }, .max_current_ma = 50 },
     .{ .keyboard = hid_driver_options },

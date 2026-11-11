@@ -224,8 +224,8 @@ itf_data_str: []const u8 = "",
 /// through this function is preferred to making the whole driver generic.
 pub fn driver_info(
     self: @This(),
+    comptime device_capabilities: usb.DeviceCapabilities,
     alloc: *usb.DescriptorAllocator,
-    comptime max_supported_packet_size: usb.types.PacketLength,
 ) usb.DriverInfo(Descriptor) {
     // Endpoint and interface numbers are allocated through the `alloc` parameter,
     // so that multiple instances of this driver can coexist.
@@ -233,7 +233,7 @@ pub fn driver_info(
     const itf_data = alloc.next_itf();
     return .{
         .Runtime = Runtime,
-        .alloc_bytes = 2 * max_supported_packet_size,
+        .alloc_bytes = 2 * device_capabilities.max_packet_size,
         .descriptor = .{
             .itf_assoc = .{
                 .first_interface = itf_notifi,
@@ -275,7 +275,7 @@ pub fn driver_info(
             .ep_notifi = .interrupt(
                 alloc.next_ep(.in),
                 8,
-                if (max_supported_packet_size > 64) 8 else 16,
+                if (device_capabilities.max_packet_size > 64) 8 else 16,
             ),
             .itf_data = .{
                 .interface_number = itf_data,
@@ -284,8 +284,8 @@ pub fn driver_info(
                 .interface_triple = .from(.CDC_Data, .Unused, .NoneRequired),
                 .interface_s = alloc.string(self.itf_data_str),
             },
-            .ep_out = .bulk(alloc.next_ep(.out), max_supported_packet_size),
-            .ep_in = .bulk(alloc.next_ep(.in), max_supported_packet_size),
+            .ep_out = .bulk(alloc.next_ep(.out), device_capabilities.max_packet_size),
+            .ep_in = .bulk(alloc.next_ep(.in), device_capabilities.max_packet_size),
         },
     };
 }

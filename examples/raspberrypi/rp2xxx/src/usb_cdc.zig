@@ -14,13 +14,10 @@ var usb_device: USB_Device = undefined;
 // Generate a device controller with descriptor and handlers setup for CDC (usb.drivers.CDC) and
 // picotool-controlled reset (ResetDriver).
 var usb_controller: usb.DeviceController(.{
-    .bcd_usb = USB_Device.max_supported_bcd_usb,
     .device_triple = .unspecified,
-    .vendor = USB_Device.default_vendor_id,
-    .product = USB_Device.default_product_id,
     .bcd_device = .v1_00,
     .serial = "someserial",
-    .max_supported_packet_size = USB_Device.max_supported_packet_size,
+    .device_capabilities = USB_Device.device_capabilities,
 }, &.{usb.configuration.Create(
     .{ .attributes = .{ .self_powered = false }, .max_current_ma = 50 },
     .{
