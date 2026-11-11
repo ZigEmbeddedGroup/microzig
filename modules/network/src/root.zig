@@ -509,7 +509,7 @@ pub const Endpoint = struct {
         const ip4_addr: *const lwip.ip4_addr_t = @ptrCast(&self.addr);
         try writer.writeAll(std.mem.sliceTo(lwip.ip4addr_ntoa(ip4_addr), 0));
         var buf: [16]u8 = undefined;
-        try writer.writeAll(std.fmt.bufPrint(&buf, ":{}", .{self.port}) catch "");
+        try writer.writeAll(std.mem.print(&buf, ":{}", .{self.port}) catch "");
     }
 
     pub fn parse(ip: []const u8, port: u16) !Endpoint {

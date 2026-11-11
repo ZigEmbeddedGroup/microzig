@@ -34,7 +34,7 @@ pub fn main(init: std.process.Init) !void {
                     if (is_camel_case(identifier_str) and !is_snake_case(identifier_str)) {
                         const snake_case = try camel_to_snake(allocator, identifier_str);
                         const location = ast.tokenLocation(0, identifier_tok);
-                        const message = try std.fmt.allocPrint(allocator, "Please change to `{s}`, in MicroZig we use snake case for function names.", .{
+                        const message = try allocator.print("Please change to `{s}`, in MicroZig we use snake case for function names.", .{
                             snake_case,
                         });
 
@@ -57,7 +57,7 @@ pub fn main(init: std.process.Init) !void {
                     if (try should_transform_typename(allocator, identifier_str)) |typename| {
                         try issues.append(allocator, .{
                             .line = @intCast(location.line + 1),
-                            .message = try std.fmt.allocPrint(allocator, "Suggestion: Rename `{s}` to `{s}`, " ++
+                            .message = try allocator.print("Suggestion: Rename `{s}` to `{s}`, " ++
                                 "it _should_ be more in line with our [style guidelines](https://microzig.tech/docs/contributing/). " ++
                                 "This automation is not perfect so take it with a grain of salt.", .{ identifier_str, typename }),
                             .file = path,
@@ -575,12 +575,12 @@ pub fn check_todos(
     allocator: Allocator,
     path: []const u8,
     source: []const u8,
-    issues: *std.ArrayListUnmanaged(Issue),
+    issues: *std.ArrayListUnmanaged(Issue), // zlinter-disable-current-line no_deprecated
 ) !void {
     var line_num: u32 = 1;
     var it = std.mem.splitScalar(u8, source, '\n');
     while (it.next()) |line| : (line_num += 1) {
-        const comment_start = std.mem.indexOf(u8, line, "//") orelse continue;
+        const comment_start = std.mem.find(u8, line, "//") orelse continue;
         const comment = line[comment_start..];
         if (contains_todo_keyword(comment) and !contains_link(comment)) {
             try issues.append(allocator, .{
@@ -594,12 +594,12 @@ pub fn check_todos(
 
 /// Checks if a string contains a link (URL).
 fn contains_link(text: []const u8) bool {
-    return std.mem.indexOf(u8, text, "https://github.com/ZigEmbeddedGroup/microzig/issues") != null;
+    return std.mem.find(u8, text, "https://github.com/ZigEmbeddedGroup/microzig/issues") != null;
 }
 
 fn contains_todo_keyword(text: []const u8) bool {
     return for (uppercase_todo_keywords) |keyword| {
-        if (std.mem.indexOf(u8, text, keyword) != null)
+        if (std.mem.find(u8, text, keyword) != null)
             break true;
     } else false;
 }

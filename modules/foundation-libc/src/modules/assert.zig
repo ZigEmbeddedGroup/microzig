@@ -9,7 +9,7 @@ export fn foundation_libc_assert(
     switch (builtin.mode) {
         .Debug, .ReleaseSafe => {
             var buf: [256]u8 = undefined;
-            const str = std.fmt.bufPrint(&buf, "assertion failed: '{?s}' in file {?s} line {}", .{ assertion, file, line }) catch {
+            const str = std.mem.print(&buf, "assertion failed: '{?s}' in file {?s} line {}", .{ assertion, file, line }) catch {
                 @panic("assertion failed");
             };
             @panic(str);

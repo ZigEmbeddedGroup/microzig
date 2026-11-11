@@ -177,7 +177,7 @@ pub const Reader = struct {
 /// A device implementation that can be used to write unit tests for datagram devices.
 pub const TestDevice = struct {
     input: ?std.Io.Reader,
-    output: ?std.array_list.Managed(u8),
+    output: ?std.array_list.Managed(u8), // zlinter-disable-current-line no_deprecated
 
     connected: bool,
 
@@ -189,7 +189,7 @@ pub const TestDevice = struct {
 
             .input = if (input) |bytes| .fixed(bytes) else null,
             .output = if (write_enabled)
-                std.array_list.Managed(u8).init(std.testing.allocator)
+                std.array_list.Managed(u8).init(std.testing.allocator) // zlinter-disable-current-line no_deprecated
             else
                 null,
         };

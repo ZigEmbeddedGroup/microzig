@@ -67,6 +67,8 @@ pub fn build(b: *Build) void {
             .exclude_dirs = &.{b.path("tools/sorcerer")},
         });
         builder.addRule(.{ .builtin = .no_hidden_allocations }, .{});
+        builder.addRule(.{ .builtin = .no_deprecated }, .{});
+        builder.addRule(.{ .builtin = .no_literal_only_bool_expression }, .{});
         builder.addRule(.{ .builtin = .require_fmt }, .{});
         break :step builder.build();
     });
@@ -161,7 +163,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
 
             var field_names: [count][]const u8 = undefined;
             var field_types: [count]type = undefined;
-            var field_attrs: [count]std.builtin.Type.Struct.FieldAttributes = undefined;
+            var field_attrs: [count]std.lang.Type.Struct.FieldAttributes = undefined;
 
             if (count > 0) {
                 var i: usize = 0;
@@ -238,7 +240,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
 
             /// The optimization level that should be used. Usually `ReleaseSmall` or `Debug` is a good choice.
             /// Also using `std.Build.standardOptimizeOption` is a good idea.
-            optimize: std.builtin.OptimizeMode,
+            optimize: std.lang.Optimize,
 
             /// The root source file for the application. This is your `src/main.zig` file.
             root_source_file: LazyPath,
@@ -286,7 +288,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
             strip_unused_symbols: bool = true,
 
             /// Unwind tables option for the firmware executable.
-            unwind_tables: ?std.builtin.UnwindTables = null,
+            unwind_tables: ?std.lang.UnwindTables = null,
 
             /// Error tracing option for the firmware executable.
             error_tracing: ?bool = null,
@@ -759,7 +761,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                         },
                     }) catch @panic("OOM"),
                 };
-            } else if (target.cpu.arch.isRISCV() and target.ptrBitWidth() == 32) {
+            } else if (target.cpu.arch.isRiscv() and target.ptrBitWidth() == 32) {
                 return .{
                     .name = "riscv32",
                     .root_source_file = mb.core_dep.namedLazyPath("cpu_riscv32"),

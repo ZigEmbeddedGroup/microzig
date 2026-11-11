@@ -46,7 +46,7 @@ fn strip_components(path: []const u8, count: u32) ![]const u8 {
     var i: usize = 0;
     var c = count;
     while (c > 0) : (c -= 1) {
-        if (std.mem.indexOfScalarPos(u8, path, i, '/')) |pos| {
+        if (std.mem.findScalarPos(u8, path, i, '/')) |pos| {
             i = pos + 1;
         } else {
             return error.TarComponentsOutsideStrippedPrefix;
@@ -84,8 +84,8 @@ pub fn read_from_fs(
                 const components = try path_to_components(allocator, path);
                 defer allocator.free(components);
 
-                const basename = std.fs.path.basename(path);
-                const dir = if (std.fs.path.dirname(path)) |dirname|
+                const basename = std.Io.Dir.path.basename(path);
+                const dir = if (std.Io.Dir.path.dirname(path)) |dirname|
                     try root_dir.openDir(io, dirname, .{})
                 else
                     root_dir;
@@ -119,7 +119,7 @@ pub fn read_from_fs(
                                 try path_components.appendSlice(allocator, components);
                                 try path_components.append(allocator, entry.path);
 
-                                const path_copy = try std.fs.path.join(allocator, path_components.items);
+                                const path_copy = try std.Io.Dir.path.join(allocator, path_components.items);
                                 defer allocator.free(path_copy);
 
                                 const normalized = try normalize_path_alloc(allocator, path_copy);
@@ -147,14 +147,14 @@ pub fn read_from_fs(
                                 try path_components.appendSlice(allocator, components);
                                 try path_components.append(allocator, entry.path);
 
-                                const path_copy = try std.fs.path.join(allocator, path_components.items);
+                                const path_copy = try std.Io.Dir.path.join(allocator, path_components.items);
                                 defer allocator.free(path_copy);
 
                                 var buf: [8000]u8 = undefined;
                                 const link_len = try entry.dir.readLink(io, entry.basename, &buf);
                                 const link_copy = try allocator.dupe(u8, buf[0..link_len]);
 
-                                if (std.fs.path.sep != canonical_sep) {
+                                if (std.Io.Dir.path.sep != canonical_sep) {
                                     normalize_path(link_copy);
                                 }
 
@@ -187,7 +187,7 @@ pub fn read_from_fs(
                     const text = try file_reader.interface.allocRemaining(allocator, .limited(std.math.maxInt(usize)));
                     errdefer allocator.free(text);
 
-                    const path_copy = try std.fs.path.join(allocator, components);
+                    const path_copy = try std.Io.Dir.path.join(allocator, components);
                     defer allocator.free(path_copy);
 
                     const file_stat = try file.stat(io);
@@ -205,7 +205,7 @@ pub fn read_from_fs(
                 const components = try path_to_components(allocator, path);
                 defer allocator.free(components);
 
-                const path_copy = try std.fs.path.join(allocator, components);
+                const path_copy = try std.Io.Dir.path.join(allocator, components);
                 defer allocator.free(path_copy);
 
                 const normalized = try normalize_path_alloc(allocator, path_copy);
@@ -335,7 +335,7 @@ pub fn hash(
         return error.NameTooLong;
 
     var ver_buf: [32]u8 = undefined;
-    const ver = try std.fmt.bufPrint(&ver_buf, "{f}", .{semver});
+    const ver = try std.mem.print(&ver_buf, "{f}", .{semver});
 
     const archive_hash = try archive.hash_files(gpa);
 
@@ -347,7 +347,7 @@ pub fn hash(
     var buf: [80]u8 = undefined;
     const hashplus_str = std.base64.url_safe_no_pad.Encoder.encode(&buf, &hashplus);
 
-    return try std.fmt.allocPrint(gpa, "{s}-{s}-{s}", .{ name, ver, hashplus_str });
+    return try gpa.print("{s}-{s}-{s}", .{ name, ver, hashplus_str });
 }
 
 const ArchiveHash = struct {
@@ -404,18 +404,18 @@ fn hash_files(
     };
 }
 
-const canonical_sep = std.fs.path.sep_posix;
+const canonical_sep = std.Io.Dir.path.sep_posix;
 
 fn normalize_path_alloc(arena: Allocator, pkg_path: []const u8) ![]const u8 {
     const normalized = try arena.dupe(u8, pkg_path);
-    if (std.fs.path.sep == canonical_sep) return normalized;
+    if (std.Io.Dir.path.sep == canonical_sep) return normalized;
     normalize_path(normalized);
     return normalized;
 }
 
 fn normalize_path(bytes: []u8) void {
-    assert(std.fs.path.sep != canonical_sep);
-    std.mem.replaceScalar(u8, bytes, std.fs.path.sep, canonical_sep);
+    assert(std.Io.Dir.path.sep != canonical_sep);
+    std.mem.replaceScalar(u8, bytes, std.Io.Dir.path.sep, canonical_sep);
 }
 
 const testing = std.testing;
@@ -426,7 +426,7 @@ test "normalize_path_alloc" {
 
     const allocator = arena.allocator();
 
-    try testing.expectEqualStrings("./file", try normalize_path_alloc(allocator, "." ++ std.fs.path.sep_str ++ "file"));
+    try testing.expectEqualStrings("./file", try normalize_path_alloc(allocator, "." ++ std.Io.Dir.path.sep_str ++ "file"));
     try testing.expectEqualStrings("src/file", try normalize_path_alloc(allocator, "src/file"));
     try testing.expectEqualStrings("./src/file", try normalize_path_alloc(allocator, "./src/file"));
 }
