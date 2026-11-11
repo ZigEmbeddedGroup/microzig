@@ -15,8 +15,11 @@ pub const Descriptor = extern struct {
 };
 
 /// HID Driver with an IN and OUT endpoint
-pub fn Runtime(InReport: type, OutReport: type, report_descriptor: []const u8) type {
+pub fn Runtime(report: usb.HID_report.Finalized) type {
     return struct {
+        pub const ReportIn = report.in;
+        pub const ReportOut = report.out;
+
         pub const RequestType = enum(u8) {
             GetReport = 0x01,
             GetIdle = 0x02,
@@ -66,7 +69,7 @@ pub fn Runtime(InReport: type, OutReport: type, report_descriptor: []const u8) t
                     if (request_code == .get_descriptor and hid_desc_type == .HID)
                         return std.mem.asBytes(&self.descriptor.hid)
                     else if (request_code == .get_descriptor and hid_desc_type == .Report)
-                        return report_descriptor;
+                        return report.descriptor;
                 },
                 .class => {
                     const hid_request_type: RequestType = @fromBackingInt(setup.request);
@@ -120,34 +123,34 @@ pub fn Runtime(InReport: type, OutReport: type, report_descriptor: []const u8) t
             self.rx_ready.store(true, .seq_cst);
         }
 
-        pub fn send_report(self: *@This(), report: *const InReport) bool {
+        pub fn send_report(self: *@This(), rep: *const ReportIn) bool {
             if (!self.tx_ready.load(.seq_cst)) return false;
 
             self.tx_ready.store(false, .seq_cst);
 
             const len = self.device.ep_writev(
                 self.descriptor.ep_in.endpoint.num,
-                &.{std.mem.asBytes(report)},
+                &.{std.mem.asBytes(rep)},
             );
 
-            log.debug("sent report {} {any}", .{ len, report });
+            log.debug("sent report {} {any}", .{ len, rep });
 
             return true;
         }
 
-        pub fn receive_report(self: *@This()) ?OutReport {
+        pub fn receive_report(self: *@This()) ?ReportOut {
             if (!self.rx_ready.load(.seq_cst)) return null;
 
             self.rx_ready.store(false, .seq_cst);
 
-            var report: OutReport = undefined;
+            var rep: ReportOut = undefined;
             const ep_num = self.descriptor.ep_out.endpoint.num;
-            const len = self.device.ep_readv(ep_num, &.{std.mem.asBytes(&report)});
+            const len = self.device.ep_readv(ep_num, &.{std.mem.asBytes(&rep)});
             self.device.ep_listen(ep_num, @intCast(self.descriptor.ep_out.max_packet_size.native()));
 
-            log.debug("received report {} {any}", .{ len, report });
+            log.debug("received report {} {any}", .{ len, rep });
 
-            return report;
+            return rep;
         }
     };
 }
@@ -160,24 +163,17 @@ protocol: ClassCode.Protocol(),
 itf_string: []const u8 = "",
 poll_interval: u8,
 country_code: usb.descriptor.HID.CountryCode = .NotSupported,
-report_descriptor: []const usb.HID_report.Item,
-InReport: type,
-OutReport: type,
+report: usb.HID_report.Finalized,
 
 pub fn driver_info(
     comptime self: Driver,
     comptime device_capabilities: usb.DeviceCapabilities,
     alloc: *usb.DescriptorAllocator,
 ) usb.DriverInfo(Descriptor) {
-    assert(@sizeOf(self.InReport) <= device_capabilities.max_packet_size);
-    assert(@sizeOf(self.OutReport) <= device_capabilities.max_packet_size);
-    const report_descriptor = usb.HID_report.Item.create_report(self.report_descriptor);
+    assert(@sizeOf(self.report.in) <= device_capabilities.max_packet_size);
+    assert(@sizeOf(self.report.out) <= device_capabilities.max_packet_size);
     return .{
-        .Runtime = Runtime(
-            self.InReport,
-            self.OutReport,
-            report_descriptor,
-        ),
+        .Runtime = Runtime(self.report),
         .descriptor = .{
             .interface = .{
                 .interface_number = alloc.next_itf(),
@@ -189,16 +185,16 @@ pub fn driver_info(
             .hid = .{
                 .country_code = self.country_code,
                 .num_descriptors = 1,
-                .report_length = .from(report_descriptor.len),
+                .report_length = .from(self.report.descriptor.len),
             },
             .ep_out = .interrupt(
                 alloc.next_ep(.out),
-                @sizeOf(self.OutReport),
+                @sizeOf(self.report.out),
                 self.poll_interval,
             ),
             .ep_in = .interrupt(
                 alloc.next_ep(.in),
-                @sizeOf(self.InReport),
+                @sizeOf(self.report.in),
                 self.poll_interval,
             ),
         },

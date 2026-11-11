@@ -1,6 +1,36 @@
 const std = @import("std");
 const usb = @import("../usb.zig");
 const assert = std.debug.assert;
+const SFAttributes = std.builtin.Type.Struct.FieldAttributes;
+
+pub const Keycode = enum(u8) {
+    // Codes taken from https://gist.github.com/mildsunrise/4e231346e2078f440969cdefb6d4caa3
+    // zig fmt: off
+    reserved = 0x00, error_roll_over, post_fail, error_undefined,
+    a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z,
+    top_1, top_2, top_3, top_4, top_5, top_6, top_7, top_8, top_9, top_0,
+    enter, escape, delete, tab, space,
+    @"-", @"=", @"[", @"]", @"\\", @"non_us_#", @";", @"'", @"`", @",", @".", @"/",
+    caps_lock,
+    f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12,
+    print_screen, scroll_lock, pause, insert, home, page_up, delete_forward, end, page_down,
+    right_arrow, left_arrow, down_arrow, up_arrow, num_lock,
+    kpad_div, kpad_mul, kpad_sub, kpad_add, kpad_enter,
+    kpad_1, kpad_2, kpad_3, kpad_4, kpad_5, kpad_6, kpad_7, kpad_8, kpad_9, kpad_0,
+    kpad_delete, @"non_us_\\", application, power, @"kpad_=",
+    f13, f14, f15, f16, f17, f18, f19, f20, f21, f22, f23, f24,
+    lctrl = 224, lshift, lalt, lgui, rctrl, rshift, ralt, rgui,
+    // zig fmt: on
+    _,
+};
+
+pub const Ledcode = enum(u3) {
+    num_lock = 1,
+    caps_lock = 2,
+    scroll_lock = 3,
+    compose = 4,
+    kana = 5,
+};
 
 /// Reports are a list of tagged ?i32 values. Encoding is variable-length.
 pub const Item = union(enum) {
@@ -36,6 +66,14 @@ pub const Item = union(enum) {
         fido = @as(i16, @bitCast(@as(u16, 0xF1D0))),
         vendor = 0xFF,
         _,
+
+        pub fn Type(self: @This()) type {
+            return switch (self) {
+                .keyboard => Keycode,
+                .led => Ledcode,
+                inline else => @compileError("Not supported for: " ++ @tagName(self)),
+            };
+        }
     };
 
     pub const Usage = union(UsagePage) {
@@ -84,30 +122,6 @@ pub const Item = union(enum) {
         pub const static: @This() = .{ .constant = true };
     };
 
-    pub const Data = struct {
-        pub const Type = enum { dynamic, selector };
-
-        usage: union(enum) {
-            global_page: UsagePage,
-            local: Usage,
-            local_raw: i32,
-
-            pub fn report(self: @This()) Item {
-                return switch (self) {
-                    .global_page => |page| .{ .global_usage_page = page },
-                    .local => |usage| .local_usage_enum(usage),
-                    .local_raw => |val| .{ .local_usage = val },
-                };
-            }
-        },
-        usage_range: ?[2]i32 = null,
-        logical_range: ?[2]i32 = null,
-        count: u31,
-        Child: type,
-        dir: usb.types.Dir,
-        type: Type,
-    };
-
     // main items
     main_input: InputOutput,
     main_output: InputOutput,
@@ -141,14 +155,6 @@ pub const Item = union(enum) {
     local_string_max: ?i32,
     local_delimiter,
 
-    // helpers
-    usage_page_and_local: Usage,
-    global_logical_range: [2]i32,
-    global_report_type: type,
-    local_usage_range: [2]i32,
-    data: Data,
-    data_static: struct { usb.types.Dir, type },
-
     pub fn main_io(dir: usb.types.Dir, payload: InputOutput) @This() {
         return switch (dir) {
             .in => .{ .main_input = payload },
@@ -172,7 +178,7 @@ pub const Item = union(enum) {
             asBytes(&toLittle(i32, int));
     }
 
-    pub fn header(self: @This(), length: usize) ?Header {
+    pub fn header(self: @This(), length: usize) Header {
         const len: Header.Payload = switch (length) {
             0 => .null,
             1 => .i8,
@@ -208,16 +214,8 @@ pub const Item = union(enum) {
             .local_string_min => .{ .local, 8 },
             .local_string_max => .{ .local, 9 },
             .local_delimiter => .{ .local, 10 },
-            else => return null,
         };
         return .{ .len = len, .type = typ, .tag = tag };
-    }
-
-    pub fn type_size(T: type) comptime_int {
-        return switch (@typeInfo(T)) {
-            .int, .bool => @bitSizeOf(T),
-            else => @compileError(@typeName(T) ++ " cannot be sent in a HID report"),
-        };
     }
 
     pub fn create_report(items: []const @This()) []const u8 {
@@ -225,64 +223,16 @@ pub const Item = union(enum) {
 
         for (items) |it| {
             ret = ret ++ switch (it) {
-                .global_report_type => |T| blk: {
-                    const count, const Child = switch (@typeInfo(T)) {
-                        .array => |info| .{ info.len, info.child },
-                        else => .{ 1, T },
-                    };
-                    break :blk create_report(&.{
-                        .{ .global_report_count = count },
-                        .{ .global_report_size = type_size(Child) },
-                    });
-                },
-                .global_logical_range => |range| blk: {
-                    assert(range[0] < range[1]);
-                    break :blk create_report(&.{
-                        .{ .global_logical_min = range[0] },
-                        .{ .global_logical_max = range[1] },
-                    });
-                },
-                .local_usage_range => |range| blk: {
-                    assert(range[0] < range[1]);
-                    break :blk create_report(&.{
-                        .{ .local_usage_min = range[0] },
-                        .{ .local_usage_max = range[1] },
-                    });
-                },
-                .data => |info| create_report(&.{
-                    info.usage.report(),
-                    if (info.usage_range) |ur| .{ .local_usage_range = ur } else null,
-                    .{ .global_logical_range = info.logical_range orelse
-                        switch (@typeInfo(info.Child)) {
-                            .bool => .{ 0, 1 },
-                            .int => .{ std.math.minInt(info.Child), std.math.maxInt(info.Child) },
-                            else => unreachable,
-                        } },
-                    .{ .global_report_type = [info.count]info.Child },
-                    .main_io(info.dir, switch (info.type) {
-                        .dynamic => .dynamic,
-                        .selector => .selector,
-                    }),
-                }),
-                .data_static => |info| create_report(&.{
-                    .{ .global_report_type = info[1] },
-                    .main_io(info[0], .static),
-                }),
-                .usage_page_and_local => |usage| create_report(&.{
-                    .{ .global_usage_page = usage },
-                    .{ .local_usage = usage.local() },
-                }),
                 inline else => |payload| blk: {
                     const data: []const u8 = switch (@TypeOf(payload)) {
                         void => "",
                         Collection, UsagePage => encode_int(@backingInt(payload)),
                         u31, i32, ?i32 => encode_int(payload),
-                        InputOutput => &.{@bitCast(payload)},
+                        InputOutput => &.{@backingInt(payload)},
                         else => |T| @compileError(@typeName(T) ++ " cannot be turned into a HID report"),
                     };
-                    const h = it.header(data.len) orelse
-                        @compileError(@tagName(it) ++ " is not a report");
-                    break :blk &[1]u8{@bitCast(h)} ++ data;
+                    const h = it.header(data.len);
+                    break :blk &[1]u8{@backingInt(h)} ++ data;
                 },
             };
         }
@@ -291,75 +241,179 @@ pub const Item = union(enum) {
     }
 };
 
-pub const BootKeyboardModifiers = packed struct(u8) {
-    lctrl: bool,
-    lshift: bool,
-    lalt: bool,
-    lgui: bool,
-    rctrl: bool,
-    rshift: bool,
-    ralt: bool,
-    rgui: bool,
+pub const Finalized = struct {
+    descriptor: []const u8,
+    in: type,
+    out: type,
 
-    pub const none: @This() = @bitCast(@as(u8, 0));
+    pub const boot_keyboard = blk: {
+        var ret: Report = .generic_desktop;
+        ret.add_raw(.local_usage_enum(.{ .generic_desktop = .keyboard }));
+        ret.add_raw(.{ .main_collection = .Application });
+        // Input: modifier key bitmap
+        ret.add_data_dynamic("modifiers", u8, .keyboard, .lctrl, 8, .in);
+        // Reserved 8 bits
+        ret.add_data_static(8, .in);
+        // Output: indicator LEDs
+        ret.add_data_dynamic("led", u8, .led, .num_lock, 5, .out);
+        // Input: up to 6 pressed key codes
+        ret.add_data_selector("keys", .keyboard, 6, .in);
+        break :blk ret.finalize();
+    };
 };
 
-pub const BootKeycode = enum(u8) {
-    // Codes taken from https://gist.github.com/mildsunrise/4e231346e2078f440969cdefb6d4caa3
-    // zig fmt: off
-    reserved = 0x00, error_roll_over, post_fail, error_undefined,
-    a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z,
-    top_1, top_2, top_3, top_4, top_5, top_6, top_7, top_8, top_9, top_0,
-    enter, escape, delete, tab, space,
-    @"-", @"=", @"[", @"]", @"\\", @"non_us_#", @";", @"'", @"`", @",", @".", @"/",
-    caps_lock,
-    f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12,
-    print_screen, scroll_lock, pause, insert, home, page_up, delete_forward, end, page_down,
-    right_arrow, left_arrow, down_arrow, up_arrow, num_lock,
-    kpad_div, kpad_mul, kpad_sub, kpad_add, kpad_enter,
-    kpad_1, kpad_2, kpad_3, kpad_4, kpad_5, kpad_6, kpad_7, kpad_8, kpad_9, kpad_0,
-    kpad_delete, @"non_us_\\", application, power, @"kpad_=",
-    f13, f14, f15, f16, f17, f18, f19, f20, f21, f22, f23, f24,
-    lctrl = 224, lshift, lalt, lgui, rctrl, rshift, ralt, rgui,
-    // zig fmt: on
-    _,
-};
+const Report = @This();
 
-pub const boot_keyboard = [_]Item{
-    .{ .global_usage_page = .generic_desktop },
-    .local_usage_enum(.{ .generic_desktop = .keyboard }),
-    .{ .main_collection = .Application },
-    // Input: modifier key bitmap
-    .{ .data = .{
-        .usage = .{ .global_page = .keyboard },
-        .usage_range = .{ 0xE0, 0xE7 },
-        .count = 8,
-        .Child = bool,
-        .dir = .in,
-        .type = .dynamic,
-    } },
-    // Reserved 8 bits
-    .{ .data_static = .{ .in, u8 } },
-    // Output: indicator LEDs
-    .{ .data = .{
-        .usage = .{ .global_page = .led },
-        .usage_range = .{ 1, 5 },
-        .count = 5,
-        .Child = bool,
-        .dir = .out,
-        .type = .dynamic,
-    } },
-    // Padding
-    .{ .data_static = .{ .out, u3 } },
-    // Input: up to 6 pressed key codes
-    .{ .data = .{
-        .usage = .{ .global_page = .keyboard },
-        .usage_range = .{ 0x00, 0xff },
-        .count = 6,
-        .Child = u8,
-        .dir = .in,
-        .type = .selector,
-    } },
-    // End
-    .main_collection_end,
-};
+reserved: u16 = 0,
+items: []const Item,
+names: [2][]const [:0]const u8,
+types: [2][]const type,
+attrs: [2][]const SFAttributes,
+
+pub fn finalize(self: Report) Finalized {
+    var ret = Finalized{
+        .descriptor = Item.create_report(self.items ++ [_]Item{.main_collection_end}),
+        .in = undefined,
+        .out = undefined,
+    };
+    for (&.{ usb.types.Dir.in, usb.types.Dir.out }) |dir|
+        @field(ret, @tagName(dir)) = @Struct(
+            .@"extern",
+            null,
+            self.names[@backingInt(dir)],
+            self.types[@backingInt(dir)],
+            self.attrs[@backingInt(dir)],
+        );
+    return ret;
+}
+
+pub fn add_raw(self: *Report, item: Item) void {
+    self.items = self.items ++ [_]Item{item};
+}
+
+pub fn add_data_static(
+    self: *Report,
+    num_bits: u16,
+    dir: usb.types.Dir,
+) void {
+    self.add_data_static_no_field(num_bits, dir);
+    self.add_field(dir, "", @Int(.unsigned, num_bits));
+}
+
+pub fn add_data_dynamic(
+    self: *Report,
+    name: [:0]const u8,
+    BackingInt: type,
+    usage_page: Item.UsagePage,
+    first: usage_page.Type(),
+    count: u16,
+    dir: usb.types.Dir,
+) void {
+    const T = usage_page.Type();
+    self.add_data_non_static_no_field(
+        usage_page,
+        @backingInt(first),
+        @backingInt(first) + (count - 1),
+        count,
+        1,
+        dir,
+        .dynamic,
+    );
+    var names: [count + @intFromBool(count < @bitSizeOf(BackingInt))][:0]const u8 = undefined;
+    var types: [names.len]type = @splat(bool);
+    var attrs: [names.len]SFAttributes = @splat(.{});
+    for (0..count) |i|
+        names[i] = @tagName(@as(T, @fromBackingInt(@backingInt(first) + i)));
+
+    if (count < @bitSizeOf(BackingInt)) {
+        const Padding = @Int(.unsigned, @bitSizeOf(BackingInt) - count);
+        self.add_data_static_no_field(@bitSizeOf(Padding), dir);
+        names[count] = self.get_reserved_name();
+        types[count] = Padding;
+        attrs[count].default_value_ptr = &@as(Padding, 0);
+    }
+    self.add_field(dir, name, @Struct(.@"packed", BackingInt, &names, &types, &attrs));
+}
+
+pub fn add_data_selector(
+    self: *Report,
+    name: [:0]const u8,
+    usage_page: Item.UsagePage,
+    count: u16,
+    dir: usb.types.Dir,
+) void {
+    const T = usage_page.Type();
+    self.add_data_non_static_no_field(
+        usage_page,
+        0,
+        (1 << @bitSizeOf(T)) - 1,
+        count,
+        @bitSizeOf(T),
+        dir,
+        .selector,
+    );
+    self.add_field(dir, name, [count]T);
+}
+
+pub fn with_first_item(item: Item) Report {
+    return .{
+        .reserved = 0,
+        .items = &.{item},
+        .names = @splat(&.{}),
+        .types = @splat(&.{}),
+        .attrs = @splat(&.{}),
+    };
+}
+
+pub const generic_desktop = with_first_item(.{ .global_usage_page = .generic_desktop });
+
+fn add_field(self: *Report, dir: usb.types.Dir, name: [:0]const u8, Type: type) void {
+    var attr = SFAttributes{ .@"align" = 1 };
+    if (name.len > 0)
+        self.names[@backingInt(dir)] = self.names[@backingInt(dir)] ++ [_][:0]const u8{name}
+    else {
+        self.names[@backingInt(dir)] = self.names[@backingInt(dir)] ++ [_][:0]const u8{self.get_reserved_name()};
+        attr.default_value_ptr = &@as(Type, 0);
+    }
+    self.types[@backingInt(dir)] = self.types[@backingInt(dir)] ++ [_]type{Type};
+    self.attrs[@backingInt(dir)] = self.attrs[@backingInt(dir)] ++ [_]SFAttributes{attr};
+}
+
+fn get_reserved_name(self: *Report) [:0]const u8 {
+    defer self.reserved += 1;
+    return std.fmt.comptimePrint("reserved{}", .{self.reserved});
+}
+
+fn add_data_static_no_field(
+    self: *Report,
+    bitsize: u16,
+    dir: usb.types.Dir,
+) void {
+    self.items = self.items ++ [_]Item{
+        .{ .global_report_count = 1 },
+        .{ .global_report_size = bitsize },
+        .main_io(dir, .static),
+    };
+}
+
+fn add_data_non_static_no_field(
+    self: *Report,
+    usage_page: Item.UsagePage,
+    range_min: i32,
+    range_max: i32,
+    count: u16,
+    bitsize: u16,
+    dir: usb.types.Dir,
+    data_type: Item.InputOutput,
+) void {
+    self.items = self.items ++ [_]Item{
+        .{ .global_usage_page = usage_page },
+        .{ .local_usage_min = range_min },
+        .{ .local_usage_max = range_max },
+        .{ .global_logical_min = 0 },
+        .{ .global_logical_max = (1 << bitsize) - 1 },
+        .{ .global_report_count = count },
+        .{ .global_report_size = bitsize },
+        .main_io(dir, data_type),
+    };
+}

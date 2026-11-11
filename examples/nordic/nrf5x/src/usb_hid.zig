@@ -10,7 +10,6 @@ const time = nrf.time;
 const USBD = nrf.usbd.USBD;
 const clocks = nrf.clocks;
 const uart = nrf.uart.num(0);
-const Keycode = usb.HID_report.BootKeycode;
 
 pub const panic = microzig.panic;
 
@@ -28,33 +27,12 @@ comptime {
     _ = microzig.export_startup();
 }
 
-pub const KeyboardInReport = extern struct {
-    modifiers: usb.HID_report.BootKeyboardModifiers,
-    reserved: u8 = 0,
-    keys: [6]Keycode,
-
-    comptime {
-        std.debug.assert(@sizeOf(@This()) == 8);
-    }
-
-    pub const empty: @This() = .{ .modifiers = .none, .keys = @splat(.reserved) };
-};
-
-pub const KeyboardOutReport = packed struct(u8) {
-    num_lock: bool,
-    caps_lock: bool,
-    scroll_lock: bool,
-    padding: u5 = 0,
-};
-
 const hid_driver_options: usb.drivers.HID_Interrupt = .{
     .subclass = .Boot,
     .protocol = .Boot,
     .itf_string = "Boot Keyboard",
     .poll_interval = 1,
     .report_descriptor = &usb.HID_report.boot_keyboard,
-    .InReport = KeyboardInReport,
-    .OutReport = KeyboardOutReport,
 };
 
 var usb_device: USBD = undefined;
@@ -84,7 +62,7 @@ pub fn main() !void {
 
     var old: u64 = time.get_time_since_boot().to_us();
     var new: u64 = 0;
-    const message: []const Keycode = &.{ .h, .e, .l, .l, .o, .space, .w, .o, .r, .l, .d, .caps_lock, .enter };
+    const message: []const usb.HID_report.Keycode = &.{ .h, .e, .l, .l, .o, .space, .w, .o, .r, .l, .d, .caps_lock, .enter };
     var idx: usize = 0;
 
     while (true) {
@@ -98,16 +76,14 @@ pub fn main() !void {
                 idx = 0;
             } else {
                 std.log.info("report {}", .{idx});
-                idx += @intFromBool(if (idx & 1 == 0 and idx < 2 * message.len)
-                    drivers.keyboard.send_report(
-                        &.{ .modifiers = .none, .keys = .{message[@intCast(idx / 2)]} ++ @as([5]Keycode, @splat(.reserved)) },
-                    )
-                else
-                    drivers.keyboard.send_report(&.empty));
+                var report = std.mem.zeroes(@TypeOf(drivers.keyboard).ReportIn);
+                if (idx & 1 == 0 and idx < 2 * message.len)
+                    report.keys[0] = message[@intCast(idx / 2)];
+                idx += @intFromBool(drivers.keyboard.send_report(&report));
             }
 
             if (drivers.keyboard.receive_report()) |report|
-                board.led1.put(@intFromBool(report.caps_lock));
+                board.led1.put(@intFromBool(report.led.caps_lock));
         }
     }
 }
