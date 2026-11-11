@@ -464,6 +464,86 @@ pub fn clock_device() ClockDevice {
     };
 }
 
+pub const Flash = struct {
+    // TODO: We must also wait for flash dma transfers to finish and pause
+    // core1 in addition to critical sections
+
+    const BASE = hal.flash.XIP_BASE;
+    const SIZE = 16 * 1024 * 1024;
+    // const SIZE = blk: {
+    //     for (microzig.config.memory_regions) |region| {
+    //         if (region.tag == .flash) {
+    //             break :blk region.length;
+    //         }
+    //     } else {
+    //         @compileError("no flash memory region found in memory map");
+    //     }
+    // };
+
+    pub const Config = struct {
+        size: u32,
+        storage_start: u32,
+        storage_end: u32,
+    };
+
+    pub const WRITE_SIZE = 1;
+    pub const ERASE_SIZE = hal.flash.SECTOR_SIZE;
+
+    pub fn erase(_: Flash, offset: u32, size: u32) error{ EraseFailed, InvalidRange }!void {
+        if (!std.mem.isAlignedGeneric(u32, offset, ERASE_SIZE)) return error.InvalidRange;
+        if (!std.mem.isAlignedGeneric(u32, size, ERASE_SIZE)) return error.InvalidRange;
+        if (offset + size > SIZE) return error.InvalidRange;
+
+        const cs = microzig.interrupt.enter_critical_section();
+        defer cs.leave();
+        hal.flash.range_erase(BASE + offset, size);
+    }
+
+    pub fn read_buf(_: Flash, start: u32, end: u32) error{ ReadFailed, Corrupted, InvalidRange }!?[]const u8 {
+        if (start > SIZE) return error.InvalidRange;
+        if (end > SIZE) return error.InvalidRange;
+
+        if (start != end) {
+            // TODO: Should we return a volatile slice?
+            return @as([*]const u8, @ptrFromInt(BASE))[start..end];
+        } else {
+            return null;
+        }
+    }
+
+    pub fn read(_: Flash, offset: u32, data: []u8) error{ ReadFailed, Corrupted, InvalidRange }!void {
+        if (offset + @as(u32, @truncate(data.len)) > SIZE) return error.InvalidRange;
+
+        std.mem.copyForwards(u8, data, @as([*]u8, @ptrFromInt(BASE + offset))[0..data.len]);
+    }
+
+    pub fn write(_: Flash, offset: u32, data: []const u8) error{ WriteFailed, InvalidRange }!void {
+        if (offset + @as(u32, @truncate(data.len)) > SIZE) return error.InvalidRange;
+
+        const PAGE_SIZE = hal.flash.PAGE_SIZE;
+
+        const cs = microzig.interrupt.enter_critical_section();
+        defer cs.leave();
+
+        var current_offset = offset;
+        var remaining_data = data;
+
+        while (remaining_data.len > 0) {
+            var buffer: [PAGE_SIZE]u8 = @splat(0xFF);
+
+            const page_offset = current_offset & ~@as(u32, PAGE_SIZE - 1);
+            const offset_in_page = current_offset & @as(u32, PAGE_SIZE - 1);
+            const count = @min(remaining_data.len, PAGE_SIZE - offset_in_page);
+            std.mem.copyForwards(u8, buffer[offset_in_page..][0..count], remaining_data[0..count]);
+
+            hal.flash.range_program(page_offset, &buffer);
+
+            remaining_data = remaining_data[count..];
+            current_offset += count;
+        }
+    }
+};
+
 const CYW43_PIO_SPI = microzig.hal.cyw49_pio_spi.CYW43_PIO_SPI;
 const CYW43_SPI = microzig.drivers.wireless.CYW43_SPI;
 const CYW43_Bus = microzig.drivers.wireless.CYW43_Bus;

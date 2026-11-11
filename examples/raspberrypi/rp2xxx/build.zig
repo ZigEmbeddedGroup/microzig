@@ -105,6 +105,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "net-tcp_server", .file = "src/net/tcp_server.zig" },
         .{ .name = "board-id", .file = "src/board_id.zig" },
         .{ .name = "flash-program", .file = "src/flash_program.zig" },
+        .{ .name = "flash-kv-store", .file = "src/flash_kv_store.zig" },
     };
 
     var available_examples: std.array_list.Managed(Example) = .init(b.allocator);
