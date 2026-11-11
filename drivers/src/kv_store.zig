@@ -424,9 +424,8 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
             var attempts_remaining: usize = options.max_read_attempts;
             while (attempts_remaining > 0) : (attempts_remaining -= 1) {
                 return storage.flash.read(offset, data) catch |err| switch (err) {
-                    error.InvalidRange => return error.ReadFailed,
                     error.Corrupted => return error.Corrupted,
-                    error.ReadFailed => continue,
+                    else => continue,
                 };
             } else return error.ReadFailed;
         }
@@ -435,9 +434,8 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
             var attempts_remaining: usize = options.max_read_attempts;
             while (attempts_remaining > 0) : (attempts_remaining -= 1) {
                 return storage.flash.read_buf(offset, end) catch |err| switch (err) {
-                    error.InvalidRange => return error.ReadFailed,
                     error.Corrupted => return error.Corrupted,
-                    error.ReadFailed => continue,
+                    else => continue,
                 };
             } else return error.ReadFailed;
         }
@@ -462,10 +460,7 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
         fn write_retrying(storage: *Storage, offset: u32, data: []const u8) error{ Corrupted, ReadFailed, WriteFailed }!void {
             var attempts_remaining: usize = options.max_write_attempts;
             while (attempts_remaining > 0) : (attempts_remaining -= 1) {
-                storage.flash.write(offset, data) catch |err| switch (err) {
-                    error.InvalidRange => return error.WriteFailed,
-                    error.WriteFailed => continue,
-                };
+                storage.flash.write(offset, data) catch continue;
                 break;
             } else return error.WriteFailed;
 
@@ -491,10 +486,7 @@ pub fn Generic(Flash: type, Key: type, options: Options) type {
             }
             var attempts_remaining: usize = options.max_write_attempts;
             while (attempts_remaining > 0) : (attempts_remaining -= 1) {
-                storage.flash.erase(offset, ERASE_SIZE) catch |err| switch (err) {
-                    error.InvalidRange => return error.EraseFailed,
-                    error.EraseFailed => continue,
-                };
+                storage.flash.erase(offset, ERASE_SIZE) catch continue;
                 break;
             } else return error.EraseFailed;
             if (!try storage.is_sector_erased(offset)) {
