@@ -60,9 +60,9 @@ pub const DescriptorAllocator = struct {
 /// Device-specific information
 pub const DeviceCapabilities = struct {
     max_supported_bcd_usb: types.Version = .v1_00,
-    /// Maximimum packet size on ep0
+    /// Maximum packet size on ep0
     max_packet_size0: types.PacketLength,
-    /// Maximimum packet size on other endpoints
+    /// Maximum packet size on other endpoints
     max_packet_size: types.PacketLength,
     default_vendor: ?Options.IdStringPair = null,
     default_product: ?Options.IdStringPair = null,

@@ -91,7 +91,7 @@ pub fn Runtime(report: usb.HID_report.Finalized) type {
                             // or vice versa.
                             //
                             // For now, this request is ACKed without doing anything; in practice,
-                            // the OS will reuqest the report protocol anyway, so usually only one format is needed.
+                            // the OS will request the report protocol anyway, so usually only one format is needed.
                             // Unless the report format matches the boot protocol exactly (see ReportDescriptorKeyboard),
                             // our device might not work in a limited BIOS environment.
                             //

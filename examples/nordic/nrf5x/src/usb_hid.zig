@@ -32,7 +32,7 @@ const hid_driver_options: usb.drivers.HID_Interrupt = .{
     .protocol = .Boot,
     .itf_string = "Boot Keyboard",
     .poll_interval = 1,
-    .report_descriptor = &usb.HID_report.boot_keyboard,
+    .report = &usb.HID_report.boot_keyboard,
 };
 
 var usb_device: USBD = undefined;
