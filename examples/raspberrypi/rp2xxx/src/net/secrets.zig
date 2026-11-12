@@ -8,7 +8,7 @@ pub const pwd = "...";
 pub const join_opt: JoinOptions = .{ .security = .wpa2_psk };
 
 pub fn nic_options() !net.Interface.Options {
-    // to use dhcp assigned ip addres
+    // to use dhcp assigned ip address
     return .{};
 
     // // to use fixed ip change to something like:

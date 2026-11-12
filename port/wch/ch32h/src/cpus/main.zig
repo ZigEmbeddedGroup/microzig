@@ -592,7 +592,7 @@ pub const csr = struct {
     pub const mscratch = riscv32_common.csr.mscratch;
     // PC where to `mret` returns to after an interrupt or exception handler runs.
     // - For interrupts, it's set to the next unexecuted instruction.
-    // - For exceptions, it's set to the instruction that was executing when the exception occured.
+    // - For exceptions, it's set to the instruction that was executing when the exception occurred.
     //   That means that `mepc` might need to be modified if we want to 'recover' from an exception.
     pub const mepc = riscv32_common.csr.mepc;
     // Cause of the interrupt/exception.

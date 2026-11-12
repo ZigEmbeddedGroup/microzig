@@ -80,7 +80,7 @@ pub fn main() !void {
     });
 
     //enable GPIOA and TIM2, TIM3, AFIO clocks
-    //AFIO is needed for alternate function remapping, not used in this example but eneble for easy remapping
+    //AFIO is needed for alternate function remapping, not used in this example but enable for easy remapping
     //if needed
     rcc.enable_clock(.GPIOA);
     rcc.enable_clock(.TIM2);

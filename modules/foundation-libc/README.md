@@ -27,7 +27,7 @@ Right now, the following configurations exist:
 
 - `foundation_libc_panic_handler`, which allows users to catch detectable undefined behaviour.
 
-You can also configure the libc by chosing the build mode:
+You can also configure the libc by choosing the build mode:
 
 - `Debug`: Implements additional safety checks and adds breakpoints in panics.
 - `ReleaseSafe`: Keeps the safety checks, but removes breakpoints.
@@ -64,7 +64,7 @@ Which functions belong into which header can be figured out by taking a look at 
 
 ### Style Guides
 
-- The header files are ment to be as minimal as possible
+- The header files are meant to be as minimal as possible
   - Do not use comments documenting the functions, they are well documented everywhere else.
   - Only insert empty lines between functions if necessarity for clarity
   - Keep function names sorted alphabetically

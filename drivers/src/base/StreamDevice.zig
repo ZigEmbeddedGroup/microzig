@@ -1,5 +1,5 @@
 //!
-//! An abstract stream orientied device with runtime dispatch.
+//! An abstract stream oriented device with runtime dispatch.
 //!
 //! Stream devices behave similar to an UART and can send/receive data
 //! in variying lengths without clear boundaries between transmissions.

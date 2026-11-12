@@ -450,7 +450,7 @@ pub fn Encoder(comptime chip: Chip, comptime options: Options) type {
 
             if (program.side_set) |side_set| {
                 if (!side_set.optional and token.side_set == null) {
-                    diags.* = Diagnostics.init(token_index, "'side' must be specified for this instruction because 'opt' was not specied in the .side_set directive", .{});
+                    diags.* = Diagnostics.init(token_index, "'side' must be specified for this instruction because 'opt' was not specified in the .side_set directive", .{});
                     return error.InvalidSideSet;
                 }
             } else {

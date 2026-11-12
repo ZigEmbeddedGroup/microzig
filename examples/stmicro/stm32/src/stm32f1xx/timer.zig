@@ -37,7 +37,7 @@ pub fn main() !void {
     });
 
     //enable GPIOA and TIM2, TIM3, AFIO clocks
-    //AFIO is needed for alternate function remapping, not used in this example but eneble for easy remapping
+    //AFIO is needed for alternate function remapping, not used in this example but enable for easy remapping
     //if needed
     rcc.enable_clock(.GPIOA);
     rcc.enable_clock(.TIM2);
@@ -81,7 +81,7 @@ pub fn main() !void {
         .invert = true,
     });
 
-    //channels need to be enbaled to start generating PWM signals
+    //channels need to be enabled to start generating PWM signals
     for (0..4) |channel| {
         pwm.set_channel(@intCast(channel), true);
     }

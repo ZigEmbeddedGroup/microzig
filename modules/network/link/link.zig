@@ -9,7 +9,7 @@ vtable: struct {
     /// Network module allocates and passes buffer to the recv function. If there
     /// is no data waiting in the driver zero len is returned in the response.
     ///
-    /// Head and len definies part of the buffer where paket data is stored.
+    /// Head and len definies part of the buffer where packet data is stored.
     /// Head position can be greater than zero if there is data link layer
     /// specific header in the buffer after getting data from the driver.
     ///

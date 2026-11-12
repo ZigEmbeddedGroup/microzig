@@ -76,8 +76,8 @@ fn apply_internal(config: Tree.OutputConfig) ClockInitError!void {
     set_flash(latency, prefetch);
 
     if (config.flags.EnableHSE) {
-        const timout = @as(usize, config.HSE_Timout);
-        try enable_hse(config.flags.HSEByPass, config.flags.EnbaleCSS, timout);
+        const timeout = @as(usize, config.HSE_Timout);
+        try enable_hse(config.flags.HSEByPass, config.flags.EnbaleCSS, timeout);
     } else {
         disable_hse();
     }
@@ -124,7 +124,7 @@ fn apply_internal(config: Tree.OutputConfig) ClockInitError!void {
     config_system_clock(sys_clk);
 
     //in case of HSI not used, we have to disable it here
-    //becuse the system clock configuration 'secure_enable' enables it by default
+    //because the system clock configuration 'secure_enable' enables it by default
     calib_hsi(@intCast(config.HSICalibrationValue));
     set_hsi(config.flags.HSIUsed);
 }
@@ -294,7 +294,7 @@ pub fn disable_pll() void {
 
 pub fn config_rtc(source: RTCSEL) void {
 
-    //enable backup domain write acess
+    //enable backup domain write access
     enable_clock(.PWR);
     enable_clock(.BKP);
     power.backup_domain_protection(false);
@@ -387,7 +387,7 @@ pub fn reset_clock(comptime peri: Peripherals) void {
 
     @field(rcc, rcc_register_name).modify_one(field, 1);
     //release the reset, this is necessary because the reset bits are not self-clearing
-    //write 0 to all bits is safe becuse 0 does nothing (other than releasing the reset)
+    //write 0 to all bits is safe because 0 does nothing (other than releasing the reset)
     @field(rcc, rcc_register_name).raw = 0;
 }
 
@@ -503,8 +503,8 @@ pub inline fn get_sys_clk() u32 {
 }
 
 inline fn calc_wait_ticks(val: usize) usize {
-    const corrent_clock: usize = @intCast(current_clocks.SysCLKOutput);
-    const ms_per_tick = corrent_clock / 1000;
+    const current_clock: usize = @intCast(current_clocks.SysCLKOutput);
+    const ms_per_tick = current_clock / 1000;
     return ms_per_tick * val;
 }
 

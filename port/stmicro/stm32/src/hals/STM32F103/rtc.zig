@@ -70,7 +70,7 @@ pub fn apply(config: Config) void {
     exit_config_mode();
 }
 
-///Interrups are one of the only things that is reset by the system reset,
+///Interrupts are one of the only things that is reset by the system reset,
 ///so we needs to apply them every time a reset occurs.
 pub fn apply_interrupts(config: InterruptConfig) void {
     enter_config_mode();

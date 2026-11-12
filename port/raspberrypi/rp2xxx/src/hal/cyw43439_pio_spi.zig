@@ -77,7 +77,7 @@ pub fn init(config: Config) !Self {
     pins.clk.set_slew_rate(.fast);
 
     try pio.sm_load_and_start_program(sm, cyw43spi_program, .{
-        // 50MHz is recomended by datasheet
+        // 50MHz is recommended by datasheet
         .clkdiv = switch (hal.compatibility.chip) {
             .RP2040 => .from_float(2.0),
             .RP2350 => .from_float(3.0),
