@@ -388,13 +388,13 @@ pub fn Encoder(comptime chip: Chip, comptime options: Options) type {
                 .movtorx => |mov| .{
                     .movtorx = .{
                         .idx = mov.idx,
-                        .idxl = @intFromBool(mov.idxl),
+                        .idxi = @intFromBool(mov.idxi),
                     },
                 },
                 .movfromrx => |mov| .{
                     .movfromrx = .{
                         .idx = mov.idx,
-                        .idxl = @intFromBool(mov.idxl),
+                        .idxi = @intFromBool(mov.idxi),
                     },
                 },
                 .irq => |irq| blk: {
@@ -695,12 +695,12 @@ pub fn Instruction(comptime chip: Chip) type {
         // RP2350 only, but we need them for the switch case
         pub const MovToRx = packed struct(u8) {
             idx: u3,
-            idxl: u1,
+            idxi: u1,
             _reserved0: u4 = 1,
         };
         pub const MovFromRx = packed struct(u8) {
             idx: u3,
-            idxl: u1,
+            idxi: u1,
             _reserved0: u4 = 9,
         };
 
