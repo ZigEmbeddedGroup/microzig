@@ -3,6 +3,7 @@ const usb = @import("../usb.zig");
 
 const assert = std.debug.assert;
 const descriptor = usb.descriptor;
+const SFAttributes = std.builtin.Type.Struct.FieldAttributes;
 
 pub const Options = struct {
     attributes: descriptor.Configuration.Attributes,
@@ -44,7 +45,7 @@ pub fn Create(
 
             // Descriptor
             var desc_field_types: [driver_names.len]type = undefined;
-            var desc_field_attrs: [driver_names.len]std.builtin.Type.Struct.FieldAttributes = undefined;
+            var desc_field_attrs: [driver_names.len]SFAttributes = undefined;
 
             // EndpointHandlers
             var ep_handler_types: [2][16]type = @splat(@splat(void));
@@ -52,7 +53,7 @@ pub fn Create(
 
             // DriverAlloc
             var driver_alloc_types: [driver_names.len]type = undefined;
-            var driver_alloc_attrs: [driver_names.len]std.builtin.Type.Struct.FieldAttributes = undefined;
+            var driver_alloc_attrs: [driver_names.len]SFAttributes = undefined;
 
             for (
                 driver_names,
@@ -70,8 +71,11 @@ pub fn Create(
                 *driver_alloc_attr,
             | {
                 // Get type information for the current driver
-                const drv = @field(driver_config, driver_field_name);
-                const driver_data = drv.driver_info(device_capabilities, &alloc);
+                const driver = @field(driver_config, driver_field_name);
+                const Driver = @TypeOf(driver);
+                if (!@hasDecl(Driver, "driver_info"))
+                    @compileError(@typeName(Driver) ++ ".driver_info() missing");
+                const driver_data = driver.driver_info(device_capabilities, &alloc);
                 Descriptor.* = @TypeOf(driver_data.descriptor);
                 assert(@alignOf(Descriptor.*) == 1);
                 Runtime.* = driver_data.Runtime;
@@ -93,10 +97,8 @@ pub fn Create(
                             descriptor.InterfaceAssociation => .{ desc.first_interface, desc.interface_count },
                             descriptor.Interface => .{ desc.interface_number, 1 },
                             else => |T| @compileError(
-                                "Expected first descriptor of driver " ++
-                                    @typeName(@TypeOf(drv)) ++
-                                    " to be of type Interface or InterfaceAssociation descriptor, got: " ++
-                                    @typeName(T),
+                                "Expected first descriptor of driver " ++ @typeName(Driver) ++
+                                    " to be of type Interface or InterfaceAssociation descriptor, got: " ++ @typeName(T),
                             ),
                         };
                         if (itf_start != interface2driver.len)
@@ -213,14 +215,18 @@ pub fn Create(
                         device_itf.ep_open(desc);
                 }
 
-                const drv = @field(driver_config, driver_field_name);
+                const driver = @field(driver_config, driver_field_name);
                 const runtime = &@field(driver_data, driver_field_name);
                 const alloc = &@field(driver_alloc, driver_field_name);
+
+                if (!@hasDecl(@TypeOf(runtime.*), "init"))
+                    @compileError(@typeName(@TypeOf(runtime.*)) ++ ".init() missing");
+
                 // Don't pass *void around
                 if (@TypeOf(alloc) != *void)
-                    runtime.init(drv, &cfg, device_itf, alloc)
+                    runtime.init(driver, &cfg, device_itf, alloc)
                 else
-                    runtime.init(drv, &cfg, device_itf);
+                    runtime.init(driver, &cfg, device_itf);
 
                 // Open IN endpoint last so that callbacks can happen
                 inline for (desc_info.field_names, desc_info.field_types) |field_name, field_type| {

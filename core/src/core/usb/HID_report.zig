@@ -1,6 +1,5 @@
 const std = @import("std");
 const usb = @import("../usb.zig");
-const assert = std.debug.assert;
 const SFAttributes = std.builtin.Type.Struct.FieldAttributes;
 
 pub const Keycode = enum(u8) {

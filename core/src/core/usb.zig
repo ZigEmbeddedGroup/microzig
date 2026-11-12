@@ -397,9 +397,12 @@ pub fn DeviceController(options: Options, Configurations: []const type) type {
             const itf_num: u8 = @truncate(setup.index.native());
             const num_interfaces = configurations[0].interface2driver.len;
             switch (itf_num) {
-                inline else => |itf| if (comptime itf < num_interfaces)
-                    return @field(self.driver_data.?, configurations[0].interface2driver[itf]).class_request(setup)
-                else {
+                inline else => |itf| if (comptime itf < num_interfaces) {
+                    const driver = &@field(self.driver_data.?, configurations[0].interface2driver[itf]);
+                    if (!@hasDecl(@TypeOf(driver.*), "class_request"))
+                        @compileError(@typeName(@TypeOf(driver.*)) ++ ".class_request() missing");
+                    return driver.class_request(setup);
+                } else {
                     log.warn("Interface index ({}) out of range ({})", .{ itf_num, num_interfaces });
                     return nak;
                 },
