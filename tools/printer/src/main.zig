@@ -1,7 +1,6 @@
 const std = @import("std");
 const printer = @import("printer");
 
-var elf_file_reader_buf: [1024]u8 = undefined;
 var in_stream_buf: [1024]u8 = undefined;
 var out_stream_buf: [1024]u8 = undefined;
 
@@ -16,15 +15,14 @@ pub fn main(init: std.process.Init) !void {
         std.process.exit(1);
     }
 
-    const elf_file = try std.Io.Dir.cwd().openFile(io, args[1], .{});
-    defer elf_file.close(io);
+    const elf_path = args[1];
 
-    var elf_file_reader = elf_file.reader(io, &elf_file_reader_buf);
-    var elf: printer.Elf = try .init(gpa, &elf_file_reader);
-    defer elf.deinit(gpa);
-
-    var debug_info: printer.DebugInfo = try .init(gpa, elf);
+    var coverage: std.debug.Coverage = .init;
+    // arch is ignored for elf files, .thumb is just a placeholder
+    var debug_info: std.debug.Info = try .load(gpa, io, .initCwd(elf_path), &coverage, .elf, .thumb);
     defer debug_info.deinit(gpa);
+    // NOTE: this is safe because we specify the elf object format when loading the debug_info
+    const elf_file = &debug_info.impl.elf;
 
     const input_file = if (args.len <= 2 or std.mem.eql(u8, args[2], "-"))
         std.Io.File.stdin()
@@ -44,11 +42,13 @@ pub fn main(init: std.process.Init) !void {
         .mode = try std.Io.Terminal.Mode.detect(io, stdout, no_color, clicolor_force),
     };
 
-    try printer.annotate(
-        io,
-        &reader.interface,
-        &terminal,
-        elf,
-        &debug_info,
-    );
+    while (true) {
+        try printer.annotate(
+            gpa,
+            io,
+            &reader.interface,
+            &terminal,
+            elf_file,
+        );
+    }
 }

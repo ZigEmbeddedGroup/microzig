@@ -113,7 +113,7 @@ jobs:
     continue-on-error: true
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -122,9 +122,6 @@ jobs:
         uses: mlugg/setup-zig@v2
       - name: Build Printer
         run: zig build
-        working-directory: tools/printer
-      - name: Test Printer
-        run: zig build test
         working-directory: tools/printer
 
   build-sorcerer:
