@@ -38,8 +38,8 @@ First of all, the *SOC datasheet*. It contains all relevant information about th
 
 Second, you need the schematics of the device you want to program. You usually can obtain them from the manufacturer of your development board (assuming you are using one), by the vendor of the device you're hacking (if you are lucky enough) or by reverse engineering the device you have at hands (consider this the *hard mode* of embedded development). Reading a schematic is crucial to get your device do what you want, and you can learn a bit about this in the [Embedded Basics](01-embedded-basics.htm) tutorial.
 
-These two documents are the ones you *definitly* need and it's near-impossible to work without them. But usually you need more documents than this:  
-Datasheets for all the peripherial devices like displays, display controllers, motor controllers, expander chips and so on. Another document that helps a lot is the CPU datasheet for the core of your SOC. This document contains a precise description of the startup procedure of your system, what instructions are available, how the interrupts work in detail and similar topics.
+These two documents are the ones you *definitely* need and it's near-impossible to work without them. But usually you need more documents than this:  
+Datasheets for all the peripheral devices like displays, display controllers, motor controllers, expander chips and so on. Another document that helps a lot is the CPU datasheet for the core of your SOC. This document contains a precise description of the startup procedure of your system, what instructions are available, how the interrupts work in detail and similar topics.
 
 And last, but not least: You need a [text editor of your choice](https://en.wikipedia.org/wiki/List_of_text_editors), a toolchain which consists of a [compiler](https://ziglang.org/) and [binutils](https://www.gnu.org/software/binutils/), and a programmer/flashing tool for your SOC, so you can load your program.
 
@@ -49,7 +49,7 @@ So to get an embedded program up and running, we first need to check out the *me
 
 ![Memory Map of LPC1768](memory-map.png)
 
-Here you can see that the memory contains continuous flash memory (*On-chip [non-volatile memory](https://en.wikipedia.org/wiki/Non-volatile_memory)*), two sections of SRAM (*On-chip [SRAM](https://en.wikipedia.org/wiki/Static_random-access_memory)*), some *Boot ROM*, and peripherials.
+Here you can see that the memory contains continuous flash memory (*On-chip [non-volatile memory](https://en.wikipedia.org/wiki/Non-volatile_memory)*), two sections of SRAM (*On-chip [SRAM](https://en.wikipedia.org/wiki/Static_random-access_memory)*), some *Boot ROM*, and peripherals.
 
 This memory map tells us how to design the [linker script](https://ftp.gnu.org/old-gnu/Manuals/ld-2.9.1/html_chapter/ld_3.html#SEC6) and how to lay out our sections (`.text`, `.data`, …). As sections are quite complex topic for themselves, they [will be explained later](#text-data-and-other-curious-sections). For now, we only need to know that `.text` is all of our code (this is where our functions live), `.rodata` is pre-initialized immutable data, `.data` is the pre-initialized mutable data and `.bss` is zero-initialized mutable data.
 
@@ -79,7 +79,7 @@ SECTIONS
   {
     /* include all things that are functions or have linksection(".text") */
     *(.text)
-  } >flash /* this means that this section is layed out in "flash" MEMORY */
+  } >flash /* this means that this section is laid out in "flash" MEMORY */
 
   /* assign the current location to a symbol called code_end */
   code_end = .;
@@ -98,7 +98,7 @@ SECTIONS
 
     /* same as above, but now at the end of the section */
     data_end = .;
-  } >ram /* this means that this section is layed out in "ram" MEMORY */
+  } >ram /* this means that this section is laid out in "ram" MEMORY */
 }
 ```
 
@@ -134,7 +134,7 @@ extern fn _start() callconv(.naked) noreturn {
   // and finally, initialize .data:
   std.mem.copy(u8, dst_ptr[0..length], src_ptr[0..length]);
 
-  // call your program enty point here:
+  // call your program entry point here:
   // …
 }
 ```

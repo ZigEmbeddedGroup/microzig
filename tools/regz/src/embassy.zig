@@ -488,7 +488,7 @@ pub fn load_into_db(db: *Database, io: std.Io, path: []const u8, device: ?[]cons
                                     const bit_offset = non_contiguous_offset.object.get("start").?.integer;
                                     const bit_size = non_contiguous_offset.object.get("end").?.integer - bit_offset + 1;
 
-                                    const enum_id = null; //These can't handle the ENUM size but it will still be avaiable to use.
+                                    const enum_id = null; //These can't handle the ENUM size but it will still be available to use.
 
                                     var array_count: ?u16 = null;
                                     var array_stride: ?u8 = null;
@@ -594,7 +594,7 @@ fn handle_extends(gpa: std.mem.Allocator, root_json: *std.json.Value) !void {
             var arr: std.json.ObjectMap = .empty;
             defer arr.deinit(gpa);
 
-            // Get child value and kind holder of inherting items
+            // Get child value and kind holder of inheriting items
             var child = root_json.object.get(item_name).?;
             const list_name = get_section(item_name);
 
@@ -659,7 +659,7 @@ fn get_parent(gpa: std.mem.Allocator, json_data: *std.json.Value, child_full_nam
 
 /// In the json data
 /// blocks inherit their "items"
-/// fieldsets inherit their "feilds"
+/// fieldsets inherit their "fields"
 /// This picks the appropriate item based on its name.
 fn get_section(child_full_name: []const u8) []const u8 {
     const Item_t = struct {

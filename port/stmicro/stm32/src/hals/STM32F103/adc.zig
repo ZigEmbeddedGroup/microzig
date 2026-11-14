@@ -102,7 +102,7 @@ pub const ADC = struct {
         while (regs.SR.read().EOC == 0) {
             asm volatile ("" ::: .{ .memory = true });
         }
-        const result: u16 = regs.DR.read().DATA; //read the data registe, this will also clear the EOC flag
+        const result: u16 = regs.DR.read().DATA; //read the data register, this will also clear the EOC flag
         regs.SR.modify(.{ .STRT = 0 }); //clear the START flag
         return result;
     }
@@ -297,7 +297,7 @@ pub const Interleaved = struct {
     ///same as in `SimultaneousRegular`
     dma: bool = false,
     ///NOTE: this config only have effect if the ADC is in Fast interleaved.
-    continuos: bool = false,
+    continuous: bool = false,
     trigger: RegularTrigger = .SWSTART,
     channel: Channel, //channel to read in interleaved mode
 
@@ -447,9 +447,9 @@ pub const AdvancedADC = struct {
         time.sleep_us(STAB_VREFE_TIME);
     }
 
-    pub fn set_data_alignment(self: *const AdvancedADC, aling: Alignment) void {
+    pub fn set_data_alignment(self: *const AdvancedADC, @"align": Alignment) void {
         const regs = self.regs;
-        regs.CR2.modify(.{ .ALIGN = @backingInt(aling) }); //set data alignment
+        regs.CR2.modify(.{ .ALIGN = @backingInt(@"align") }); //set data alignment
     }
 
     pub fn read_flags(self: *const AdvancedADC) Flags {
@@ -497,11 +497,11 @@ pub const AdvancedADC = struct {
             });
     }
 
-    pub fn set_regular_seq(self: *const AdvancedADC, seq: Sequence, continuos: bool) RegularConfigError!void {
+    pub fn set_regular_seq(self: *const AdvancedADC, seq: Sequence, continuous: bool) RegularConfigError!void {
         const regs = self.regs;
         const len = seq.seq.len;
         const cr2_state = regs.CR2.read();
-        const val: u1 = @intFromBool(continuos);
+        const val: u1 = @intFromBool(continuous);
         if (len == 0) {
             return RegularConfigError.InvalidSequence;
         } else if (len > 17) {
@@ -679,7 +679,7 @@ pub const AdvancedADC = struct {
         const regs = self.regs;
         var trig: u1 = 1;
 
-        //disable all corrent configs to avoid erros
+        //disable all current configs to avoid errors
         regs.CR1.modify(.{
             .JEOCIE = 0,
             .JDISCEN = 0,
@@ -836,7 +836,7 @@ pub const AdvancedADC = struct {
                 try set_regular_simultaneous(adc1, &adc2, reg);
             },
 
-            //same config, diferent behavior
+            //same config, different behavior
             .FastInterleaved => |inter| {
                 try set_interleaved(adc1, &adc2, inter, true);
             },
@@ -844,7 +844,7 @@ pub const AdvancedADC = struct {
                 try set_interleaved(adc1, &adc2, inter, false);
             },
 
-            //same config, diferent behavior
+            //same config, different behavior
             .Injected, .AlternateTrigger => |inj| {
                 try set_injected_simultaneous(adc1, &adc2, inj);
             },
@@ -964,7 +964,7 @@ pub const AdvancedADC = struct {
     pub fn set_interleaved(adc1: *const AdvancedADC, adc2: *const AdvancedADC, config: Interleaved, fast: bool) DualConfigError!void {
         try check_interleaved(adc1, adc2, config, fast);
         const mode = blk: {
-            if (config.continuos and fast) {
+            if (config.continuous and fast) {
                 break :blk RegularModes{
                     .Continuous = .{
                         .seq = &.{config.channel.channel},
@@ -1061,7 +1061,7 @@ pub const AdvancedADC = struct {
         if (rate > max_sample) return DualConfigError.InvalidSampleRate;
     }
 
-    //========== WTG funcitions =============
+    //========== WTG functions =============
 
     pub fn configure_watchdog(self: *const AdvancedADC, config: Watchdog) void {
         const regs = self.regs;

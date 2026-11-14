@@ -2,8 +2,8 @@
 /// little special handling.
 ///
 /// Interrupt is disabled during SPI read/write. It should be disabled in the
-/// callback handler to prevent storm of interrputs. That is done in
-/// `is_packet_ready_interrupt`. Reading packet data will re-enable intterrupt
+/// callback handler to prevent storm of interrupts. That is done in
+/// `is_packet_ready_interrupt`. Reading packet data will re-enable interrupt
 /// when the last packet is read.
 ///
 const std = @import("std");

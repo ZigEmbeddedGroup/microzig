@@ -349,7 +349,7 @@ pub fn SSD1306_Generic(comptime options: SSD1306_Options) type {
         }
 
         // Timing & Driving Scheme Setting Commands
-        // TODO(philippwendel) Split in two funktions
+        // TODO(philippwendel) Split in two functions
         pub fn set_display_clock_divide_ratio_and_oscillator_frequency(self: Self, divide_ratio: u4, freq: u4) !void {
             try self.execute_command(0xD5, &.{(@as(u8, freq) << 4) | @as(u8, divide_ratio)});
         }
@@ -829,7 +829,7 @@ pub const Framebuffer = struct {
     pub const width = 128;
     pub const height = 64;
 
-    // layed out in 8 pages with 8*128 pixels each.
+    // laid out in 8 pages with 8*128 pixels each.
     // each page is column-major with the column encoded in the bits 0 (top) to 7 (bottom).
     // each byte in the page is a column left-to-right.
     // first page is thus columns 0..7, second page is 8..15 and so on.

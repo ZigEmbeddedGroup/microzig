@@ -535,7 +535,7 @@ fn load_enumerated_value(ctx: *Context, node: xml.Node, enum_id: EnumID) !void {
             if (value_str.len == 0) return error.EnumFieldMalformed;
             if (value_str[0] == '#') {
                 if (value_str.len <= 1) return error.EnumFieldMalformed;
-                // A preceeding '#' indicates binary format per spec
+                // A preceding '#' indicates binary format per spec
                 break :v try std.fmt.parseInt(u32, value_str[1..], 2);
             } else {
                 break :v try std.fmt.parseInt(u32, value_str, 0);
@@ -640,7 +640,7 @@ test "svd.Revision.parse" {
 
 // dimElementGroup specifies the number of array elements (dim), the
 // address offset between to consecutive array elements and an a comma
-// seperated list of strings being used for identifying each element in
+// separated list of strings being used for identifying each element in
 // the array -->
 const DimElements = struct {
     dim: u64,

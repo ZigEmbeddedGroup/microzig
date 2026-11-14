@@ -93,7 +93,7 @@ pub const SystemControlBlock = extern struct {
         /// Data endianness implemented:
         /// 0 = Little-endian
         /// 1 = Big-endian.
-        ENDIANESS: u1,
+        ENDIANNESS: u1,
         /// Register key:
         /// Reads as Unknown
         /// On writes, write 0x05FA to VECTKEY, otherwise the write is ignored.
@@ -210,7 +210,7 @@ pub const MemoryProtectionUnit = extern struct {
         ENABLE: u1,
         /// Enables of operation of MPU during HardFault and MNIHandlers.
         HFNMIENA: u1,
-        /// Enables priviledged software access to default memory map.
+        /// Enables privileged software access to default memory map.
         PRIVDEFENA: u1,
         reserved0: u29 = 0,
     }),

@@ -1,5 +1,5 @@
 //!
-//! The driver framework provides device-independent drivers for peripherials supported by MicroZig.
+//! The driver framework provides device-independent drivers for peripherals supported by MicroZig.
 //!
 const std = @import("std");
 const config = @import("config");

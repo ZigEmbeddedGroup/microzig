@@ -182,7 +182,7 @@ fn generate_chips_file(
             defer chip_memory.deinit();
 
             // Some flash bank regions are not merged so we better do that.
-            // Flash memory names are formated as: BANK_{id}_REGION_{id}.
+            // Flash memory names are formatted as: BANK_{id}_REGION_{id}.
 
             if (chip_file.memory.len == 0) break;
 
@@ -216,7 +216,7 @@ fn generate_chips_file(
                                 continue;
                             }
                         } else {
-                            // This is the beggining of a bank with regions.
+                            // This is the beginning of a bank with regions.
                             flash_bank = memory;
                             flash_bank.?.name = core_ident;
 

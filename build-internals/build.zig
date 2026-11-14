@@ -186,7 +186,7 @@ pub const HardwareAbstractionLayer = struct {
 /// Provides a description of a board.
 ///
 /// Boards provide additional information to a chip and HAL package.
-/// For example, they can list attached peripherials, external crystal frequencies,
+/// For example, they can list attached peripherals, external crystal frequencies,
 /// flash sizes, ...
 pub const Board = struct {
     /// Display name of the board.

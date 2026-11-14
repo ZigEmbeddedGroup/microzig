@@ -115,7 +115,7 @@ zig-out
 ```
 
 And if we run the `file` command, often found on Linux and MacOS, on the ELF
-file we'll see that it's targetting ARM!:
+file we'll see that it's targeting ARM!:
 
 ```
 zig-out/firmware/blinky.elf: ELF 32-bit LSB executable, ARM, EABI5 version 1 (SYSV), statically linked, with debug_info, not stripped

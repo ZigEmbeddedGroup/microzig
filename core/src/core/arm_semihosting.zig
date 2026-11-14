@@ -214,17 +214,17 @@ pub const Time = struct {
         high: u32,
     };
 
-    ///return the host time in epoch
+    /// Return the host time in epoch
     pub fn system_time() usize {
         return @as(usize, @bitCast(sys_time()));
     }
-    ///return the corrent tick counter value in centiseconds
+    /// Return the current tick counter value in centiseconds
     pub fn absolute() TimeError!usize {
         const ret = sys_clock();
         return if (ret == -1) TimeError.ReadTicksFail else @as(usize, @bitCast(ret));
     }
 
-    ///return the corrent tick counter value in "tick_freg"
+    /// Return the current tick counter value in "tick_freg"
     /// This function is optional and if not implemented it always returns an error.
     pub fn elapsed() TimeError!u64 {
         var ticks = Elapsed{ .low = 0, .high = 0 };

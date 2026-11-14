@@ -533,7 +533,7 @@ pub const interrupt_handler: microzig.cpu.InterruptHandler = .{
                 \\beq a1, a0, 1f
                 \\
                 // ensure interrupts are disabled after mret (when a normal
-                // context switch occured)
+                // context switch occurred)
                 \\li a2, 0x80
                 \\csrc mstatus, a2
                 \\

@@ -987,7 +987,7 @@ const StructFieldIterator = struct {
                         const num_matching_offset = it.get_count_registers_matching_offset();
                         assert(num_matching_offset >= 1);
 
-                        // select the first one with the smalles size
+                        // select the first one with the smallest size
                         var smallest_size: ?u64 = null;
                         for (it.registers[it.register_idx .. it.register_idx + num_matching_offset]) |register| {
                             if (smallest_size) |current_smallest| {
@@ -1022,7 +1022,7 @@ const StructFieldIterator = struct {
                 const num_matching_offset = it.get_count_nested_struct_fields_matching_offset();
                 assert(num_matching_offset >= 1);
 
-                // select the first one with the smalles size
+                // select the first one with the smallest size
                 var smallest_size: ?u64 = null;
                 for (it.nested_struct_fields[it.nested_struct_field_idx .. it.nested_struct_field_idx + num_matching_offset]) |nested_struct_field| {
                     if (smallest_size) |current_smallest| {
@@ -1226,7 +1226,7 @@ fn write_fields(
     register_reset: ?RegisterReset,
     out_writer: *std.Io.Writer,
 ) !void {
-    // We first expand every 'array field' into its consituent fields,
+    // We first expand every 'array field' into its constituent fields,
     // named e.g. `@OISN[0]`, `@OISN[1]`, etc. for `field.name` OISN.
     var expanded_fields: std.ArrayList(Database.StructField) = .empty;
     for (fields) |field| {

@@ -149,18 +149,18 @@ pub const CYW43_Bus = struct {
     }
 
     pub inline fn write8(self: *Self, func: FuncType, addr: u17, value: u8) void {
-        return self.writen(func, addr, value, 1);
+        return self.written(func, addr, value, 1);
     }
 
     pub inline fn write16(self: *Self, func: FuncType, addr: u17, value: u16) void {
-        return self.writen(func, addr, value, 2);
+        return self.written(func, addr, value, 2);
     }
 
     pub inline fn write32(self: *Self, func: FuncType, addr: u17, value: u32) void {
-        return self.writen(func, addr, value, 4);
+        return self.written(func, addr, value, 4);
     }
 
-    fn writen(self: *Self, func: FuncType, addr: u17, value: u32, len: u11) void {
+    fn written(self: *Self, func: FuncType, addr: u17, value: u32, len: u11) void {
         const cmd = Cmd{ .cmd = .write, .incr = .incremental, .func = func, .addr = addr, .len = len };
 
         _ = self.spi.spi_write_blocking(&[_]u32{ @bitCast(cmd), value });
@@ -272,19 +272,19 @@ pub const CYW43_Bus = struct {
     }
 
     pub inline fn bp_write8(self: *Self, addr: u32, value: u8) void {
-        self.backplane_writen(addr, value, 1);
+        self.backplane_written(addr, value, 1);
     }
 
     pub inline fn bp_write16(self: *Self, addr: u32, value: u16) void {
-        self.backplane_writen(addr, value, 2);
+        self.backplane_written(addr, value, 2);
     }
 
     pub inline fn bp_write32(self: *Self, addr: u32, value: u32) void {
-        self.backplane_writen(addr, value, 4);
+        self.backplane_written(addr, value, 4);
     }
 
-    pub fn backplane_writen(self: *Self, addr: u32, value: u32, len: u11) void {
-        log.debug("backplane_writen addr = 0x{X} len = {} val = 0x{X}", .{ addr, len, value });
+    pub fn backplane_written(self: *Self, addr: u32, value: u32, len: u11) void {
+        log.debug("backplane_written addr = 0x{X} len = {} val = 0x{X}", .{ addr, len, value });
 
         self.backplane_set_window(addr);
 
@@ -293,7 +293,7 @@ pub const CYW43_Bus = struct {
             bus_addr |= consts.BACKPLANE_ADDRESS_32BIT_FLAG;
         }
 
-        self.writen(.backplane, @truncate(bus_addr), value, len);
+        self.written(.backplane, @truncate(bus_addr), value, len);
     }
 
     fn backplane_set_window(self: *Self, addr: u32) void {

@@ -61,11 +61,11 @@ const SDP_Header = extern struct {
 
     pub fn validate(sdp: SDP_Header, n: u16) !void {
         if (sdp.len != n) {
-            log.err("invalid reponse len actual: {} packet: {}", .{ sdp.len, n });
+            log.err("invalid response len actual: {} packet: {}", .{ sdp.len, n });
             return error.Cyw43SdpInvalidBusLen;
         }
         if (sdp.len ^ sdp.not_len != 0xffff) {
-            log.err("invalid reponse not len len: {x} notlen: {x}", .{ sdp.len, sdp.not_len });
+            log.err("invalid response not len len: {x} notlen: {x}", .{ sdp.len, sdp.not_len });
             return error.Cyw43SdpInvalidNotBusLen;
         }
     }
@@ -80,7 +80,7 @@ const CDC_Header = extern struct {
     status: u32 = 0,
 
     pub fn status_ok(self: CDC_Header) bool {
-        //dev/ apsta, ampdu_rx_factor commands are returing status 0xFFFFFFFB
+        //dev/ apsta, ampdu_rx_factor commands are returning status 0xFFFFFFFB
         return self.status == 0 or self.status == 0xFFFFFFFB;
     }
 };
@@ -557,7 +557,7 @@ pub const EventType = enum(u32) {
     scan_confirm_ind               =  45,
     psk_sup                        =  46, // wpa handshake
     country_code_changed           =  47,
-    exceeded_medium_time           =  48, // wmmac excedded medium time
+    exceeded_medium_time           =  48, // wmmac exceeded medium time
     icv_error                      =  49, // wep icv error occurred
     unicast_decode_error           =  50, // unsupported unicast encrypted frame
     multicast_decode_error         =  51, // unsupported multicast encrypted frame
@@ -646,7 +646,7 @@ pub const EventType = enum(u32) {
     rssi_lqm                       = 133, // enhancement addition for wlc_e_rssi
     pfn_gscan_full_result          = 134, // full probe/beacon (ies etc) results
     pfn_swc                        = 135, // significant change in rssi of bssids being tracked
-    authorized                     = 136, // a sta been authroized for traffic
+    authorized                     = 136, // a sta been authorized for traffic
     probreq_msg_rx                 = 137, // probe req with wl_event_rx_frame_data_t header
     pfn_scan_complete              = 138, // pfn completed scan of network list
     rmc_event                      = 139, // rmc event
