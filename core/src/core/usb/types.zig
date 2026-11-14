@@ -1,5 +1,11 @@
 const std = @import("std");
-const EndianInt = @import("../mem.zig").EndianInt;
+const mem = @import("../mem.zig");
+
+/// Little endian integer, unaffected by host endianness.
+/// Commonly used in USB descriptors
+pub fn LeInt(T: type) type {
+    return mem.EndianInt(T, .little);
+}
 
 pub const ClassSubclassProtocol = extern struct {
     /// Class of device, giving a broad functional area.
@@ -402,12 +408,12 @@ pub const SetupPacket = packed struct(u64) {
     /// conflict.
     request: u8,
     /// A simple argument of up to 16 bits, specific to the request.
-    value: EndianInt(u16, .little),
-    index: EndianInt(u16, .little),
+    value: LeInt(u16),
+    index: LeInt(u16),
     /// If data will be transferred after this request (in the direction given
     /// by `request_type`), this gives the number of bytes (OUT) or maximum
     /// number of bytes (IN).
-    length: EndianInt(u16, .little),
+    length: LeInt(u16),
 
     pub fn format(self: SetupPacket, writer: *std.Io.Writer) !void {
         try writer.print("request_type={} request={} value={} index={} length={}", .{
@@ -480,5 +486,8 @@ pub const Version = extern struct {
     }
 };
 
-/// Represents packet length.
-pub const Len = u11;
+/// Represents physical packet length.
+pub const PacketLength = u11;
+
+/// Deprecated; use `PacketLength`.
+pub const Len = PacketLength;

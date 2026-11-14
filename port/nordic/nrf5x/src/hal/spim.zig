@@ -59,7 +59,7 @@ pub const TransactionError = error{
 };
 
 pub fn num(n: u2) SPIM {
-    return @as(SPIM, @fromBackingInt(n));
+    return @fromBackingInt(n);
 }
 
 pub const SPIM = enum(u1) {

@@ -8,29 +8,23 @@ const usb = microzig.core.usb;
 // read from/write to the peripheral.
 const USB_Device = rp2xxx.usb.Polled(.{});
 // USB class driver
-const USB_Serial = usb.drivers.CDC;
 
 var usb_device: USB_Device = undefined;
 
-// Generate a device controller with descriptor and handlers setup for CDC (USB_Serial) and
+// Generate a device controller with descriptor and handlers setup for CDC (usb.drivers.CDC) and
 // picotool-controlled reset (ResetDriver).
 var usb_controller: usb.DeviceController(.{
-    .bcd_usb = USB_Device.max_supported_bcd_usb,
     .device_triple = .unspecified,
-    .vendor = USB_Device.default_vendor_id,
-    .product = USB_Device.default_product_id,
     .bcd_device = .v1_00,
     .serial = "someserial",
-    .max_supported_packet_size = USB_Device.max_supported_packet_size,
-    .configurations = &.{.{
-        .attributes = .{ .self_powered = false },
-        .max_current_ma = 50,
-        .Drivers = struct { serial: USB_Serial, reset: rp2xxx.usb.ResetDriver(null, 0) },
-    }},
-}, .{.{
-    .serial = .{ .itf_notifi = "Board CDC", .itf_data = "Board CDC Data" },
-    .reset = "",
-}}) = .init;
+    .device_capabilities = USB_Device.device_capabilities,
+}, &.{usb.configuration.Create(
+    .{ .attributes = .{ .self_powered = false }, .max_current_ma = 50 },
+    .{
+        .serial = usb.drivers.CDC{ .itf_notifi_str = "Board CDC", .itf_data_str = "Board CDC Data" },
+        .reset = rp2xxx.usb.ResetDriver(null, 0){},
+    },
+)}) = .init;
 
 pub const std_options = microzig.std_options(.{
     .log_level = .debug,
@@ -105,7 +99,7 @@ var usb_tx_buff: [1024]u8 = undefined;
 /// Transfer data to host
 /// NOTE: After each USB chunk transfer, we have to call the USB task so that bus TX events can be
 /// handled
-pub fn usb_cdc_write(serial: *USB_Serial, comptime fmt: []const u8, args: anytype) void {
+pub fn usb_cdc_write(serial: *usb.drivers.CDC.Runtime, comptime fmt: []const u8, args: anytype) void {
     var tx = std.fmt.bufPrint(&usb_tx_buff, fmt, args) catch &.{};
 
     while (tx.len > 0) {
@@ -122,7 +116,7 @@ var usb_rx_buff: [1024]u8 = undefined;
 /// Receive data from host
 /// NOTE: Read code was not tested extensively. In case of issues, try to call USB task before every
 /// read operation
-pub fn usb_cdc_read(serial: *USB_Serial) []const u8 {
+pub fn usb_cdc_read(serial: *usb.drivers.CDC.Runtime) []const u8 {
     var rx_len: usize = 0;
 
     while (true) {

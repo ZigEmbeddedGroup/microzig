@@ -23,6 +23,8 @@ comptime {
     _ = microzig.export_startup();
 }
 
+const USB_Device = hal.usb.Polled(board.usb_setup, .{});
+
 const USB_Controller = usb.DeviceController(.{
     .bcd_usb = .v2_00,
     .device_triple = .unspecified,
@@ -30,17 +32,13 @@ const USB_Controller = usb.DeviceController(.{
     .product = .{ .id = 0x0001, .str = board.product_string },
     .bcd_device = .v1_00,
     .serial = "someserial",
-    .max_supported_packet_size = hal.usb.max_packet_size,
-    .configurations = &.{.{
-        .attributes = .{ .self_powered = false },
-        .max_current_ma = 50,
-        .Drivers = struct { serial: USB_Serial },
-    }},
-}, .{.{
-    .serial = .{ .itf_notifi = "Board CDC", .itf_data = "Board CDC Data" },
-}});
+    .device_capabilities = USB_Device.device_capabilities,
+}, &.{usb.configuration.Create(
+    .{ .attributes = .{ .self_powered = false }, .max_current_ma = 50 },
+    .{ .serial = usb.drivers.CDC{ .itf_notifi_str = "Board CDC", .itf_data_str = "Board CDC Data" } },
+)});
 
-pub var usb_dev: hal.usb.Polled(board.usb_setup, .{}) = undefined;
+pub var usb_dev: USB_Device = undefined;
 
 var usb_controller: USB_Controller = .init;
 
@@ -90,7 +88,7 @@ var usb_tx_buff: [1024]u8 = undefined;
 
 // Transfer data to host
 // NOTE: After each USB chunk transfer, we have to call the USB task so that bus TX events can be handled
-pub fn usb_cdc_write(serial: *USB_Serial, comptime fmt: []const u8, args: anytype) void {
+pub fn usb_cdc_write(serial: *USB_Serial.Runtime, comptime fmt: []const u8, args: anytype) void {
     const text = std.fmt.bufPrint(&usb_tx_buff, fmt, args) catch &.{};
     var write_buff = text;
     while (write_buff.len > 0) {
@@ -106,7 +104,7 @@ var usb_rx_buff: [1024]u8 = undefined;
 // Receive data from host
 // NOTE: Read code was not tested extensively. In case of issues, try to call USB task before every read operation
 pub fn usb_cdc_read(
-    serial: *USB_Serial,
+    serial: *USB_Serial.Runtime,
 ) []const u8 {
     var total_read: usize = 0;
     var read_buff: []u8 = usb_rx_buff[0..];

@@ -12,7 +12,7 @@ fn get_regs(slice: u32) *volatile Regs {
     @import("std").debug.assert(slice < if (has_rp2350b) 12 else 8);
     const PwmType = microzig.chip.types.peripherals.PWM;
     const reg_diff = comptime @offsetOf(PwmType, "CH1_CSR") - @offsetOf(PwmType, "CH0_CSR");
-    return @as(*volatile Regs, @ptrFromInt(@intFromPtr(PWM) + reg_diff * slice));
+    return @ptrFromInt(@intFromPtr(PWM) + reg_diff * slice);
 }
 
 pub const Channel = enum(u1) { a, b };
