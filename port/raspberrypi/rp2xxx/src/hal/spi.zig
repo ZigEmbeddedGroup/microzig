@@ -315,7 +315,7 @@ pub const SPI = enum(u1) {
     pub fn writev_blocking(spi: SPI, comptime PacketType: type, src_vec: []const []const PacketType) void {
         comptime validate_bitwidth(PacketType);
 
-        var src_iter = microzig.utilities.SliceVector([]const u8).init(src_vec).iterator();
+        var src_iter = microzig.utilities.SliceVector([]const PacketType).init(src_vec).iterator();
 
         _ = spi.prime_tx_fifo(PacketType, &src_iter);
 
