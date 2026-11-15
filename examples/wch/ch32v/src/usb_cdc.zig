@@ -33,7 +33,7 @@ const USB_Controller = usb.DeviceController(.{
     .bcd_device = .v1_00,
     .serial = "someserial",
     .device_capabilities = USB_Device.device_capabilities,
-}, &.{usb.configuration.Create(
+}, &.{usb.Configuration(
     .{ .attributes = .{ .self_powered = false }, .max_current_ma = 50 },
     .{ .serial = usb.drivers.CDC{ .itf_notifi_str = "Board CDC", .itf_data_str = "Board CDC Data" } },
 )});

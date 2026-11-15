@@ -105,7 +105,7 @@ pub const Runtime = struct {
 };
 
 /// `Runtime` type can be generic, in which case the driver type
-/// is the only paramater passed. It may be a good idea to make this function
+/// is the only parameter passed. It may be a good idea to make this function
 /// a wrapper around another, that only takes a subset of the parameters.
 /// This way the generic types are much more readable in zig error output
 /// and potentially less code is duplicated when using multiple driver instances

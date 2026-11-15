@@ -15,7 +15,7 @@ pub const Options = struct {
     unique_endpoints: bool = true,
 };
 
-pub fn Create(
+pub fn Configuration(
     options: Options,
     driver_config: anytype,
 ) type {
@@ -32,7 +32,10 @@ pub fn Create(
         EndpointHandlers: type,
         interface2driver: []const DriverName,
 
-        pub fn create(device_capabilities: usb.DeviceCapabilities, strings: []const []const u8) struct { @This(), []const []const u8 } {
+        pub fn create(
+            device_capabilities: usb.DeviceCapabilities,
+            strings: []const []const u8,
+        ) struct { @This(), []const []const u8 } {
             var alloc = usb.DescriptorAllocator.init(options.unique_endpoints, strings);
             const configuration_s = alloc.string(options.name);
             const driver_names = @typeInfo(@TypeOf(driver_config)).@"struct".field_names;
@@ -203,7 +206,13 @@ pub fn Create(
             };
         }
 
-        pub fn init(comptime self: @This(), device_itf: *usb.DeviceInterface, driver_data: *self.RuntimeData, driver_alloc: anytype, comptime config_descriptor: anytype) void {
+        pub fn init(
+            comptime self: @This(),
+            device_itf: *usb.DeviceInterface,
+            driver_data: *self.RuntimeData,
+            driver_alloc: anytype,
+            comptime config_descriptor: anytype,
+        ) void {
             inline for (@typeInfo(self.RuntimeData).@"struct".field_names) |driver_field_name| {
                 const cfg = @field(config_descriptor.drv, driver_field_name);
                 const desc_info = @typeInfo(@TypeOf(cfg)).@"struct";

@@ -1,8 +1,10 @@
 const std = @import("std");
+const configuration = @import("usb/configuration.zig");
 const assert = std.debug.assert;
 const log = std.log.scoped(.usb_ctrl);
 
-pub const configuration = @import("usb/configuration.zig");
+pub const Configuration = configuration.Configuration;
+pub const ConfigurationOptions = configuration.Options;
 pub const descriptor = @import("usb/descriptor.zig");
 pub const drivers = struct {
     pub const CDC = @import("usb/drivers/CDC.zig");
