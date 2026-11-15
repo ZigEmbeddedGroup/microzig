@@ -800,94 +800,103 @@ pub fn Tokenizer(chip: Chip) type {
             };
         }
 
+        const RxFifoIndex = struct {
+            idxi: bool,
+            idx: Value,
+        };
+
+        fn skip_inline_whitespace(self: *Self) void {
+            while (self.peek()) |p| {
+                switch (p) {
+                    ' ', '\t' => self.consume(1),
+                    else => return,
+                }
+            }
+        }
+
+        /// Parses an `rxfifo[y]` or `rxfifo[<index>]`, consuming it from the stream.
+        fn get_rxfifo_operand(self: *Self, comptime context: []const u8, diags: *?Diagnostics) TokenizeError!RxFifoIndex {
+            const err_msg = context ++ ": expected rxfifo[y] or rxfifo[<index>]";
+            self.skip_inline_whitespace();
+            const start = self.index;
+
+            const keyword = "rxfifo";
+            if (self.source.len - start < keyword.len or
+                !std.ascii.eqlIgnoreCase(self.source[start..][0..keyword.len], keyword))
+            {
+                diags.* = Diagnostics.init(start, err_msg, .{});
+                return error.InvalidExpression;
+            }
+            self.index += keyword.len;
+
+            self.skip_inline_whitespace();
+            if (self.peek() != '[') {
+                diags.* = Diagnostics.init(start, err_msg, .{});
+                return error.InvalidExpression;
+            }
+            self.consume(1);
+
+            const inner_start = self.index;
+            const close = while (self.peek()) |p| : (self.consume(1)) {
+                switch (p) {
+                    ']' => break self.index,
+                    '\n', '\r', ';' => return self.missing_rxfifo_bracket(start, context, diags),
+                    else => {},
+                }
+            } else return self.missing_rxfifo_bracket(start, context, diags);
+            self.consume(1);
+
+            const inner = std.mem.trim(u8, self.source[inner_start..close], " \t");
+            if (inner.len == 0) {
+                diags.* = Diagnostics.init(inner_start, err_msg, .{});
+                return error.InvalidExpression;
+            }
+
+            if (inner.len == 1 and std.ascii.toLower(inner[0]) == 'y')
+                return .{ .idxi = false, .idx = .{ .integer = 0 } };
+
+            // Symbols and expressions are resolved (and range checked) by the encoder.
+            const value = std.fmt.parseInt(u32, inner, 0) catch
+                return .{ .idxi = true, .idx = .{ .expression = inner } };
+
+            // The Index field is 3 bits, but the hardware only uses the two least-significant bits
+            // (the RX FIFO has 4 entries), so 4-7 would silently alias 0-3. pioasm accepts 0-7; we
+            // follow the datasheet.
+            if (value > 3) {
+                diags.* = Diagnostics.init(inner_start, context ++ ": rxfifo index must be between 0 and 3", .{});
+                return error.TooBig;
+            }
+            return .{ .idxi = true, .idx = .{ .integer = value } };
+        }
+
+        fn missing_rxfifo_bracket(_: *Self, start: u32, comptime context: []const u8, diags: *?Diagnostics) TokenizeError {
+            diags.* = Diagnostics.init(start, context ++ ": missing ']' in rxfifo operand", .{});
+            return error.InvalidExpression;
+        }
+
         fn get_movrx(self: *Self, diags: *?Diagnostics) TokenizeError!Token(chip).Instruction.Payload {
-            // NOTE: Assuming there's one space after opcode
-            const dest_idx = self.index + 1;
-            const dest_str = (try self.get_arg(diags)) orelse return error.MissingArg;
-            const dest_lower = try lowercase_bounded(256, dest_str);
-            // NOTE: Assuming there's a comma and one space
-            const source_idx = self.index + 2;
-            const source_str = (try self.get_arg(diags)) orelse return error.MissingArg;
-            const source_lower = try lowercase_bounded(256, source_str);
-            if (std.mem.startsWith(u8, dest_lower.slice(), "rxfifo")) {
-                // MOV (to RX)
-                // -- Source must be isr
-                if (!std.mem.eql(u8, source_lower.slice(), "isr")) {
-                    diags.* = Diagnostics.init(source_idx, "mov (to rx): source must be isr", .{});
+            const dest = (try self.peek_arg(diags)) orelse return error.MissingArg;
+            if (std.ascii.startsWithIgnoreCase(dest.str, "rxfifo")) {
+                // MOV (to RX): mov rxfifo[<index>], isr
+                const index = try self.get_rxfifo_operand("mov (to rx)", diags);
+                const source = (try self.peek_arg(diags)) orelse return error.MissingArg;
+                if (!eql_lower("isr", source.str)) {
+                    diags.* = Diagnostics.init(source.start, "mov (to rx): source must be isr", .{});
                     return error.InvalidSource;
                 }
-                const dest_index_char = dest_lower.slice()["rxfifo".len - 0 ..];
-                if (dest_index_char[0] == 'y') {
-                    return Token(chip).Instruction.Payload{
-                        .movtorx = .{
-                            .idxi = false,
-                            .idx = 0,
-                        },
-                    };
-                } else {
-                    // -- Parse out the index
-                    diags.* = Diagnostics.init(
-                        dest_idx,
-                        "mov (to rx): destination must be rxfifoy or rxfifo[<index>]",
-                        .{},
-                    );
-                    const value = try std.fmt.parseInt(u8, dest_index_char, 10);
-                    if (value > 3) {
-                        return error.InvalidDestination;
-                    }
-                    diags.* = null;
-                    return Token(chip).Instruction.Payload{
-                        .movtorx = .{
-                            .idxi = true,
-                            .idx = @intCast(value),
-                        },
-                    };
-                }
-            } else if (std.mem.eql(u8, dest_lower.slice(), "osr")) {
-                // MOV (from RX)
-                var idxi: bool = false;
-                var idx: u3 = 0;
-                if (std.mem.startsWith(u8, source_lower.slice(), "rxfifo")) {
-                    const src_index_char = source_lower.slice()["rxfifo".len - 0 ..];
-                    if (src_index_char[0] == 'y') {
-                        idxi = false;
-                        idx = 0;
-                    } else {
-                        // -- Parse out the index
-                        idxi = true;
-                        idx = 0;
-                        diags.* = Diagnostics.init(
-                            @intCast(source_idx + "rxfifo".len),
-                            "mov (from rx): source must be rxfifoy or rxfifo[<index>]",
-                            .{},
-                        );
-                        const value = try std.fmt.parseInt(u8, src_index_char, 10);
-                        if (value > 3) {
-                            return error.InvalidSource;
-                        }
-                        idx = @intCast(value);
-                    }
-                } else {
-                    diags.* = Diagnostics.init(
-                        @intCast(self.index - source_str.len),
-                        "mov (from rx): source must be rxfifoy or rxfifo[<index>]",
-                        .{},
-                    );
-                    return error.InvalidSource;
-                }
-                diags.* = null;
-                return Token(chip).Instruction.Payload{
-                    .movfromrx = .{
-                        .idxi = idxi,
-                        .idx = idx,
-                    },
-                };
+                self.consume_peek(source);
+                return .{ .movtorx = .{ .idxi = index.idxi, .idx = index.idx } };
+            } else if (eql_lower("osr", dest.str)) {
+                // MOV (from RX): mov osr, rxfifo[<index>]
+                self.consume_peek(dest);
+                // skip the separating comma
+                if (try self.peek_arg(diags)) |source| {
+                    self.index = source.start;
+                } else return error.MissingArg;
+                const index = try self.get_rxfifo_operand("mov (from rx)", diags);
+                return .{ .movfromrx = .{ .idxi = index.idxi, .idx = index.idx } };
             } else {
-                diags.* = Diagnostics.init(
-                    dest_idx,
-                    "unknown destination",
-                    .{},
-                );
+                diags.* = Diagnostics.init(dest.start, "mov (from rx): destination must be osr", .{});
                 return error.InvalidDestination;
             }
         }
@@ -1288,11 +1297,11 @@ pub fn Token(comptime chip: Chip) type {
 
             pub const MovToRx = struct {
                 idxi: bool,
-                idx: u3,
+                idx: Value,
             };
             pub const MovFromRx = struct {
                 idxi: bool,
-                idx: u3,
+                idx: Value,
             };
 
             pub const Irq = switch (chip) {
@@ -2027,6 +2036,89 @@ test "tokenize.instr.pull.ifempty" {
         .block = false,
         .ifempty = true,
     }, tokens.get(0));
+}
+
+test "tokenize.instr.movrx" {
+    // Move to RX
+    inline for (.{
+        // Case insensitive
+        .{ "mov rxfifo[y], isr", false, Value{ .integer = 0 } },
+        .{ "mov RXFIFO[Y], ISR", false, Value{ .integer = 0 } },
+        // Immediate
+        .{ "mov rxfifo[0], isr", true, Value{ .integer = 0 } },
+        .{ "mov rxfifo[3], isr", true, Value{ .integer = 3 } },
+        // Comma optional
+        .{ "mov rxfifo[y] isr", false, Value{ .integer = 0 } },
+        .{ "mov rxfifo[1] isr", true, Value{ .integer = 1 } },
+        // Spaces ignored
+        .{ "mov rxfifo[ 3 ], isr", true, Value{ .integer = 3 } },
+        .{ "mov rxfifo [ 2 ], isr", true, Value{ .integer = 2 } },
+        // Can parse hex
+        .{ "mov rxfifo[0x2], isr", true, Value{ .integer = 2 } },
+        // Can take symbols
+        .{ "mov rxfifo[foo], isr", true, Value{ .expression = "foo" } },
+        // Can take expressions
+        .{ "mov rxfifo[(foo + 1)], isr", true, Value{ .expression = "(foo + 1)" } },
+    }) |case| {
+        const tokens = try bounded_tokenize(.RP2350, case[0]);
+        const payload = tokens.get(0).data.instruction.payload;
+        try expectEqual(PayloadTag(.RP2350).movtorx, @as(PayloadTag(.RP2350), payload));
+        try expectEqual(case[1], payload.movtorx.idxi);
+        try expect_value(case[2], payload.movtorx.idx);
+    }
+
+    // Move from RX
+    inline for (.{
+        // Case insensitive
+        .{ "mov osr, rxfifo[y]", false, Value{ .integer = 0 } },
+        .{ "mov OSR, RXFIFO[Y]", false, Value{ .integer = 0 } },
+        // Immediate
+        .{ "mov osr, rxfifo[0]", true, Value{ .integer = 0 } },
+        .{ "mov osr, rxfifo[3]", true, Value{ .integer = 3 } },
+        // Comma optional
+        .{ "mov osr rxfifo[y]", false, Value{ .integer = 0 } },
+        .{ "mov osr rxfifo[1]", true, Value{ .integer = 1 } },
+        // Spaces ignored
+        .{ "mov osr, rxfifo[ 3 ]", true, Value{ .integer = 3 } },
+        .{ "mov osr, rxfifo [ 2 ]", true, Value{ .integer = 2 } },
+        // Can parse hex
+        .{ "mov osr, rxfifo[0x2]", true, Value{ .integer = 2 } },
+        // Can take symbols
+        .{ "mov osr, rxfifo[foo]", true, Value{ .expression = "foo" } },
+        // Can take expressions
+        .{ "mov osr, rxfifo[(foo + 1)]", true, Value{ .expression = "(foo + 1)" } },
+    }) |case| {
+        const tokens = try bounded_tokenize(.RP2350, case[0]);
+        const payload = tokens.get(0).data.instruction.payload;
+        try expectEqual(PayloadTag(.RP2350).movfromrx, @as(PayloadTag(.RP2350), payload));
+        try expectEqual(case[1], payload.movfromrx.idxi);
+        try expect_value(case[2], payload.movfromrx.idx);
+    }
+
+    // Delay and side set still parse after the bracketed operand
+    {
+        const tokens = try bounded_tokenize(.RP2350, "mov osr, rxfifo[1] side 1 [2]");
+        const instr = tokens.get(0).data.instruction;
+        try expect_opt_value(Value{ .expression = "1" }, instr.side_set);
+        try expect_opt_value(Value{ .expression = "2" }, instr.delay);
+    }
+}
+
+test "tokenize.instr.movrx.errors" {
+    var diags: ?assembler.Diagnostics = null;
+    inline for (.{
+        // Need brackets on index!
+        .{ "mov rxfifoy, isr", error.InvalidExpression },
+        .{ "mov rxfifo0, isr", error.InvalidExpression },
+        .{ "mov osr, rxfifo1", error.InvalidExpression },
+        .{ "mov rxfifo[0, isr", error.InvalidExpression },
+        .{ "mov rxfifo[], isr", error.InvalidExpression },
+        .{ "mov rxfifo[4], isr", error.TooBig },
+        .{ "mov rxfifo[0], x", error.InvalidSource },
+        .{ "mov x, rxfifo[0]", error.InvalidDestination },
+    }) |case| {
+        try std.testing.expectError(case[1], tokenize(.RP2350, case[0], &diags, .{}));
+    }
 }
 
 test "tokenize.instr.mov" {
