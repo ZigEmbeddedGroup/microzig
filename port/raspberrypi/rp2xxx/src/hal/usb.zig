@@ -95,6 +95,7 @@ pub fn Polled(config: Config) type {
                 .RP2040 => .{ .id = 0x000A, .str = "Pico test device" },
                 .RP2350 => .{ .id = 0x000F, .str = "Pico 2 test device" },
             },
+            .supports_remote_wakeup = true,
         };
 
         comptime {
@@ -107,6 +108,7 @@ pub fn Polled(config: Config) type {
             .ep_listen = ep_listen,
             .ep_open = ep_open,
             .set_address = set_address,
+            .signal_resume = signal_resume,
         };
 
         endpoints: [config.max_endpoints_count][2]HardwareEndpointData,
@@ -181,6 +183,30 @@ pub fn Polled(config: Config) type {
                 peripherals.USB.SIE_STATUS.modify(.{ .BUS_RESET = 1 });
                 set_address(&self.interface, 0);
                 controller.on_bus_reset(&self.interface);
+            }
+
+            // Has the suspend state changed?
+            if (ints.DEV_SUSPEND != 0) {
+                const suspended = peripherals.USB.SIE_STATUS.read().SUSPENDED != 0;
+
+                peripherals.USB.SIE_STATUS.write(.{ .SUSPENDED = 1 });
+
+                if (suspended) {
+                    log.debug("-- bus suspended --", .{});
+                    controller.on_suspend(&self.interface);
+                } else {
+                    log.debug("-- bus resumed --", .{});
+                    controller.on_resume(&self.interface);
+                }
+            }
+
+            // Has the host signaled a resume?
+            if (ints.DEV_RESUME_FROM_HOST != 0) {
+                log.debug("-- resume signaled by host --", .{});
+
+                peripherals.USB.SIE_STATUS.write(.{ .RESUME = 1 });
+
+                controller.on_resume(&self.interface);
             }
         }
 
@@ -265,6 +291,10 @@ pub fn Polled(config: Config) type {
                 .BUS_RESET = 1,
                 // We've gotten a setup request on EP0
                 .SETUP_REQ = 1,
+                // The suspend state has changed (entering or leaving suspend)
+                .DEV_SUSPEND = 1,
+                // The host has signaled a resume
+                .DEV_RESUME_FROM_HOST = 1,
             });
 
             var self: @This() = .{
@@ -403,6 +433,17 @@ pub fn Polled(config: Config) type {
             log.debug("set addr {}", .{addr});
 
             peripherals.USB.ADDR_ENDP.write(.{ .ADDRESS = addr });
+        }
+
+        /// Device-initiated remote wakeup: signal a resume to the host by
+        /// driving the bus into K state.
+        fn signal_resume(_: *usb.DeviceInterface) usb.RemoteWakeupError!void {
+            comptime assert(device_capabilities.supports_remote_wakeup);
+
+            if (peripherals.USB.SIE_STATUS.read().SUSPENDED == 0)
+                return error.NotSuspended;
+
+            peripherals.USB.SIE_CTRL.modify(.{ .RESUME = 1 });
         }
 
         /// On the RP2350 @memcpy uses unaligned accesses,
