@@ -120,7 +120,7 @@ pub const gpio = struct {
     pub fn read(comptime pin: type) microzig.gpio.State {
         const idr_reg = pin.gpio_port.IDR;
         const reg_value = @field(idr_reg.read(), "IDR" ++ pin.suffix); // TODO extract to getRegField()?
-        return @as(microzig.gpio.State, @fromBackingInt(reg_value));
+        return @fromBackingInt(reg_value);
     }
 
     pub fn write(comptime pin: type, state: microzig.gpio.State) void {
@@ -355,7 +355,7 @@ pub fn Uart(comptime index: usize, comptime pins: microzig.uart.Pins) type {
         pub fn rx(self: Self) u8 {
             while (!self.can_read()) {} // Wait till the data is received
             const data_with_parity_bit: u9 = @field(peripherals, usart_name).DR.read();
-            return @as(u8, @intCast(data_with_parity_bit & self.parity_read_mask));
+            return @intCast(data_with_parity_bit & self.parity_read_mask);
         }
     };
 }

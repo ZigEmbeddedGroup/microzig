@@ -122,7 +122,7 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
     return struct {
         pub fn get_instruction_memory(self: EnumType) *volatile [32]u32 {
             const regs = self.get_regs();
-            return @as(*volatile [32]u32, @ptrCast(&regs.INSTR_MEM0));
+            return @ptrCast(&regs.INSTR_MEM0);
         }
 
         pub fn can_add_program_at_offset(self: EnumType, program: Program, offset: u5) bool {

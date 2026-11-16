@@ -19,7 +19,7 @@ pub const Error = error{
 
 /// temp_sensor is not valid because you can refer to it by name.
 pub fn input(n: u2) Input {
-    return @as(Input, @fromBackingInt(n));
+    return @fromBackingInt(n);
 }
 
 /// Enable the ADC controller.
@@ -81,7 +81,7 @@ pub fn select_input(in: Input) void {
 /// Get the currently selected analog input.
 pub fn get_selected_input() Input {
     const cs = ADC.SC.read();
-    return @as(Input, @fromBackingInt(cs.AINSEL));
+    return @fromBackingInt(cs.AINSEL);
 }
 
 /// For RP2040 and RP2350A, the values are:

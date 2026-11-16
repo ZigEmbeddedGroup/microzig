@@ -218,7 +218,7 @@ pub const Mask = enum(u22) {
 
 pub fn num(n: u5) Pin {
     std.debug.assert(n < 22);
-    return @as(Pin, @fromBackingInt(n));
+    return @fromBackingInt(n);
 }
 
 pub const Pin = enum(u5) {
