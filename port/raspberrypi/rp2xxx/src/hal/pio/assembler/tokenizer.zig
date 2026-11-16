@@ -859,17 +859,25 @@ pub fn Tokenizer(chip: Chip) type {
             const value = std.fmt.parseInt(u32, inner, 0) catch
                 return .{ .idxi = true, .idx = .{ .expression = inner } };
 
-            // The Index field is 3 bits, but the hardware only uses the two least-significant bits
-            // (the RX FIFO has 4 entries), so 4-7 would silently alias 0-3. pioasm accepts 0-7; we
-            // follow the datasheet.
+            // The index field is 3 bits, but the hardware only uses the two least-significant bits
+            // (There are 4 RX FIFOs), so values 4-7 would silently alias 0-3.
             if (value > 3) {
-                diags.* = Diagnostics.init(inner_start, context ++ ": rxfifo index must be between 0 and 3", .{});
+                diags.* = Diagnostics.init(
+                    inner_start,
+                    context ++ ": rxfifo index must be between 0 and 3",
+                    .{},
+                );
                 return error.TooBig;
             }
             return .{ .idxi = true, .idx = .{ .integer = value } };
         }
 
-        fn missing_rxfifo_bracket(_: *Self, start: u32, comptime context: []const u8, diags: *?Diagnostics) TokenizeError {
+        fn missing_rxfifo_bracket(
+            _: *Self,
+            start: u32,
+            comptime context: []const u8,
+            diags: *?Diagnostics,
+        ) TokenizeError {
             diags.* = Diagnostics.init(start, context ++ ": missing ']' in rxfifo operand", .{});
             return error.InvalidExpression;
         }
