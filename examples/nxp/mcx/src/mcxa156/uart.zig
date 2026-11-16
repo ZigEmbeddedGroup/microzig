@@ -24,6 +24,6 @@ pub fn main() !void {
             UART.clear_errors();
             continue;
         };
-        UART.write_blocking(&data, time.Deadline.no_deadline) catch unreachable;
+        _ = UART.write_blocking(&data, time.Deadline.no_deadline) catch unreachable;
     }
 }

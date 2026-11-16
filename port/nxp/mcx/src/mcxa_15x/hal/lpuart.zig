@@ -1,6 +1,7 @@
 const std = @import("std");
 const microzig = @import("microzig");
 const time = microzig.drivers.time;
+const ostime = @import("ostimer.zig");
 const syscon = @import("syscon.zig");
 const mapper = @import("mapper.zig");
 const meta = @import("meta_utils.zig");
@@ -167,12 +168,54 @@ pub const ConfigError = error{
 
 // TODO: change this to a format that is portable to any chip
 //TODO: Match Modes / LIN / wakeup / low-power / single wire / IR / watermark / MODEN
+
+var uart_logger: ?LPUART.Writer = null;
+
 pub const LPUART = enum {
     LPUART0,
     LPUART1,
     LPUART2,
     LPUART3,
     LPUART4,
+
+    pub const Writer = struct {
+        uart: LPUART,
+        interface: std.Io.Writer,
+    };
+
+    fn drain(w: *std.Io.Writer, data: []const []const u8, splat: usize) std.Io.Writer.Error!usize {
+        const interf: *const Writer = @fieldParentPtr("interface", w);
+        const uart = interf.uart;
+
+        // bytes from buffer are not included in count.
+        w.end -= uart.write_blocking(w.buffer[0..w.end], time.Deadline.no_deadline) catch unreachable;
+        std.debug.assert(w.end == 0);
+
+        var n: usize = 0;
+        n += uart.writev_blocking(data[0 .. data.len - 1], time.Deadline.no_deadline) catch unreachable;
+        for (0..splat) |_|
+            n += uart.write_blocking(data[data.len - 1], time.Deadline.no_deadline) catch unreachable;
+
+        return n;
+    }
+
+    pub fn writer(intst: LPUART, buf: []u8) Writer {
+        return Writer{
+            .uart = intst,
+            .interface = .{
+                .buffer = buf,
+                .end = 0,
+                .vtable = &.{
+                    .drain = drain,
+                },
+            },
+        };
+    }
+
+    pub fn init_logger(inst: LPUART) void {
+        uart_logger = inst.writer(&.{});
+        _ = uart_logger.?.interface.write("\r\n================ STARTING NEW LOGGER ================\r\n") catch {};
+    }
 
     pub fn get_regs(inst: LPUART) *volatile LPUART_T {
         return switch (inst) {
@@ -319,7 +362,7 @@ pub const LPUART = enum {
     }
 
     //TODO: allow for non-8bits char
-    pub fn write_blocking(self: LPUART, data: []const u8, deadline: time.Deadline) !void {
+    pub fn write_blocking(self: LPUART, data: []const u8, deadline: time.Deadline) !usize {
         const regs = self.get_regs();
         for (data) |b| {
             while (regs.STAT.read().TDRE == .TXDATA)
@@ -327,12 +370,16 @@ pub const LPUART = enum {
             regs.DATA.raw = b;
         }
         while (regs.STAT.read().TC == .ACTIVE) try deadline.check(microzig.hal.time.get_time_since_boot());
+
+        return data.len;
     }
 
-    pub fn writev_blocking(self: LPUART, data: []const []const u8, deadline: time.Deadline) !void {
+    pub fn writev_blocking(self: LPUART, data: []const []const u8, deadline: time.Deadline) !usize {
+        var total_written: usize = 0;
         for (data) |slice| {
-            try self.write_blocking(slice, deadline);
+            total_written += try self.write_blocking(slice, deadline);
         }
+        return total_written;
     }
 
     pub fn read_blocking(self: LPUART, data: []u8, deadline: time.Deadline) !void {
@@ -409,3 +456,24 @@ pub const LPUART = enum {
         }
     }
 };
+
+pub fn log(
+    comptime level: std.log.Level,
+    comptime scope: @TypeOf(.EnumLiteral),
+    comptime format: []const u8,
+    args: anytype,
+) void {
+    const level_prefix = comptime "[{}.{:0>6}] " ++ level.asText();
+    const prefix = comptime level_prefix ++ switch (scope) {
+        .default => ": ",
+        else => " (" ++ @tagName(scope) ++ "): ",
+    };
+
+    if (uart_logger) |*uart| {
+        const current_time = ostime.get_time_since_boot();
+        const seconds = current_time.to_us() / std.time.us_per_s;
+        const microseconds = current_time.to_us() % std.time.us_per_s;
+
+        uart.interface.print(prefix ++ format ++ "\r\n", .{ seconds, microseconds } ++ args) catch {};
+    }
+}
