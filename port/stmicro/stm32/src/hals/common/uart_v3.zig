@@ -165,7 +165,7 @@ pub fn Uart(comptime index: UART_Type) type {
         pub fn rx(self: Self) u8 {
             while (!self.can_read()) {} // Wait till the data is received
             const data_with_parity_bit: u9 = regs.RDR.read().RDR;
-            return @as(u8, @intCast(data_with_parity_bit & self.read_mask()));
+            return @intCast(data_with_parity_bit & self.read_mask());
         }
 
         fn writer_fn(self: *Self, buffer: []const u8) error{}!usize {

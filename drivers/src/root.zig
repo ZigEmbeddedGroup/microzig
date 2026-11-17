@@ -106,7 +106,7 @@ pub const time = struct {
         _,
 
         pub fn from_us(us: u64) Absolute {
-            return @as(Absolute, @fromBackingInt(us));
+            return @fromBackingInt(us);
         }
 
         pub fn to_us(abs: Absolute) u64 {
@@ -136,7 +136,7 @@ pub const time = struct {
         _,
 
         pub fn from_us(us: u64) Duration {
-            return @as(Duration, @fromBackingInt(us));
+            return @fromBackingInt(us);
         }
 
         pub fn from_ms(ms: u64) Duration {
@@ -210,11 +210,11 @@ pub const time = struct {
     };
 
     pub fn make_timeout(since: Absolute, timeout: Duration) Absolute {
-        return @as(Absolute, @fromBackingInt(since.to_us() + timeout.to_us()));
+        return @fromBackingInt(since.to_us() + timeout.to_us());
     }
 
     pub fn make_timeout_us(since: Absolute, timeout_us: u64) Absolute {
-        return @as(Absolute, @fromBackingInt(since.to_us() + timeout_us));
+        return @fromBackingInt(since.to_us() + timeout_us);
     }
 };
 

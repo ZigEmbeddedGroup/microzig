@@ -418,7 +418,7 @@ pub const Chunk = extern struct {
         });
 
         // Otherwise, just go for it.
-        return @as(*Chunk, @ptrCast(@alignCast(data_slice.ptr - header_size)));
+        return @ptrCast(@alignCast(data_slice.ptr - header_size));
     }
 
     /// Return a data slice that maps the chunk's memory the user can use.
