@@ -116,6 +116,13 @@ inline fn wait_for_reset_done(mask: Mask) void {
     while (@as(u32, @bitCast(RESETS.RESET_DONE.read())) & raw_mask != raw_mask) {}
 }
 
+pub fn reset_done(mask: Mask) bool {
+    const raw_mask: u32 = @bitCast(mask);
+
+    // see wait_for_reset_done() for an explanation for the @bitCast
+    return @as(u32, @bitCast(RESETS.RESET_DONE.read())) & raw_mask == raw_mask;
+}
+
 pub const masks = struct {
     /// Mask of peripherals that should be reset at initialization.
     ///
