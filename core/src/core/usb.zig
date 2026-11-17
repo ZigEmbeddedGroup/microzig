@@ -342,8 +342,13 @@ pub fn DeviceController(options: Options, Configurations: []const type) type {
             } else if (comptime ep == types.Endpoint.out(.ep0))
                 log.warn("Unhandled packet on ep0 Out", .{});
 
-            if (comptime driver.len != 0)
-                handler(&@field(self.driver_data.?, driver), ep.num);
+            if (comptime driver.len != 0) {
+                if (self.driver_data) |*data| {
+                    handler(&@field(data, driver), ep.num);
+                } else {
+                    log.warn("Received packet on {t} {t} with uninitialized driver", .{ ep.num, ep.dir });
+                }
+            }
         }
 
         /// Called by the device implementation on bus reset.
