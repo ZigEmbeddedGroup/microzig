@@ -442,13 +442,8 @@ pub fn join(self: *Self, ssid: []const u8, pwd: []const u8, opt: JoinOptions) !J
     // The radio can automatically reassociate while command replies are being
     // polled. When retrying the same credentials, keep that authenticated link
     // instead of clearing its events and aborting it with another set_ssid.
-    if (opt.preserve_auto_reconnect and
-        self.event_log.auth == .success and
-        self.event_log.link == .success and
-        self.event_log.psk_sup == .success and
-        (self.event_log.assoc == .success or self.event_log.join == .success))
-    {
-        // Automatic reassociation does not emit the explicit set_ssid reply.
+    if (opt.preserve_auto_reconnect and self.event_log.authenticated_reassociation()) {
+        // Satisfy join_state() without issuing another set_ssid command.
         self.event_log.set_ssid = .success;
         self.err = null;
         self.join_state = .joined;
@@ -562,7 +557,8 @@ fn handle_event(self: *Self, rsp: *ioctl.Response) void {
         );
     switch (evt.event_type) {
         .link => {
-            event_log.link = state(evt.status == .success and evt.flags & 1 > 0);
+            const link_up: u16 = 1;
+            event_log.link = state(evt.status == .success and evt.flags & link_up > 0);
         },
         .psk_sup => {
             event_log.psk_sup =
@@ -932,6 +928,13 @@ const EventLog = packed struct {
     assoc: EventState = .none,
     join: EventState = .none,
 
+    // Automatic reassociation has no set_ssid completion. Authentication, link
+    // and key setup must succeed, with either association or join confirmed.
+    fn authenticated_reassociation(e: EventLog) bool {
+        return e.auth == .success and e.link == .success and e.psk_sup == .success and
+            (e.assoc == .success or e.join == .success);
+    }
+
     pub fn err(e: EventLog) !void {
         if (e.auth == .fail) return error.Cyw43Authentication;
         if (e.link == .fail) return error.Cyw43LinkDown;
@@ -959,6 +962,24 @@ pub const JoinState = enum {
 };
 
 const testing = std.testing;
+
+test "authenticated reassociation requires a secure associated link" {
+    var e: EventLog = .{ .auth = .success, .link = .success, .psk_sup = .success };
+    try testing.expect(!e.authenticated_reassociation());
+    e.assoc = .success;
+    try testing.expect(e.authenticated_reassociation());
+    e.assoc = .none;
+    e.join = .success;
+    try testing.expect(e.authenticated_reassociation());
+    e.auth = .none;
+    try testing.expect(!e.authenticated_reassociation());
+    e.auth = .success;
+    e.link = .fail;
+    try testing.expect(!e.authenticated_reassociation());
+    e.link = .success;
+    e.psk_sup = .fail;
+    try testing.expect(!e.authenticated_reassociation());
+}
 
 test "events to join_state" {
     var e: EventLog = .{};
@@ -1099,40 +1120,62 @@ test "receive capacity rejects oversized packets and polls full Ethernet frames"
     try testing.expectEqual(@as(usize, 1), mock.packet_reads);
 }
 
-// Shared wire fixtures for the join tests; keep encoding independent of Response.
+// Simulated radio replies for the join tests.
 const JoinTestPackets = struct {
-    const sdpcm_len = 12;
-    const control_len = sdpcm_len + 16; // CDC header, no response data
-    const event_offset = sdpcm_len + 2 + 4 + 4; // bus padding, BDC header, BDC padding
-    const event_len = event_offset + 14 + 10 + 48; // Ethernet, vendor header, event message
+    const sdpcm_len = @sizeOf(ioctl.SDP_Header);
+    const control_len = sdpcm_len + @sizeOf(ioctl.CDC_Header);
+    // Exercise padding before and after the BDC header.
+    const bus_padding = 2;
+    const bdc_padding_words = 1;
+    const event_len = sdpcm_len + bus_padding + @sizeOf(ioctl.BDC_Header) +
+        bdc_padding_words * @sizeOf(u32) + @sizeOf(ioctl.EventPacket);
 
-    fn reply(words: []u32, typ: ?ioctl.EventType, command: u32, id: u16) void {
+    fn status(len: u16) u32 {
+        var value = mem.zeroes(BusStatus);
+        value.f2_packet_available = true;
+        value.packet_length = @intCast(len);
+        return @bitCast(value);
+    }
+
+    fn reply(words: []u32, typ: ?ioctl.EventType, command: ioctl.Cmd, id: u16) void {
         const len: u16 = if (typ != null) event_len else control_len;
         @memset(words, 0);
-        const packet = mem.sliceAsBytes(words);
-        // Radio/host SDPCM and CDC headers use little-endian fields.
-        mem.writeInt(u16, packet[0..2], len, .little);
-        mem.writeInt(u16, packet[2..4], ~len, .little);
+        var writer: std.Io.Writer = .fixed(mem.sliceAsBytes(words));
+        const sdp: ioctl.SDP_Header = .{
+            .len = len,
+            .not_len = ~len,
+            .seq = 0,
+            .cf = .{ .chan = if (typ != null) .event else .control },
+            .hdrlen = sdpcm_len + if (typ != null) @as(u8, bus_padding) else 0,
+        };
+        writer.writeStruct(sdp, .little) catch unreachable;
         if (typ) |event_type| {
-            packet[5] = 1; // SDPCM event channel
-            packet[7] = sdpcm_len + 2; // BDC follows two bytes of bus padding
-            packet[14] = 0x20; // BDC version 2 in the upper nibble
-            packet[17] = 1; // BDC payload offset, in 4-byte words
-
-            // Inside BDC, Ethernet/vendor event fields use network byte order.
-            const eth = packet[event_offset..];
-            mem.writeInt(u16, eth[12..14], 0x886c, .big); // Broadcom EtherType, after both MACs
-            @memcpy(eth[19..22], &[_]u8{ 0x00, 0x10, 0x18 }); // Broadcom OUI in vendor header
-            const msg = eth[14 + 10 ..]; // skip Ethernet and vendor headers
-            mem.writeInt(u16, msg[2..4], 1, .big); // event flags: link up
-            mem.writeInt(u32, msg[4..8], @backingInt(event_type), .big);
-            const status: ioctl.EventStatus = if (event_type == .psk_sup) .unsolicited else .success;
-            mem.writeInt(u32, msg[8..12], @backingInt(status), .big);
+            writer.splatByteAll(0, bus_padding) catch unreachable;
+            const bdc: ioctl.BDC_Header = .{
+                .flags = 0x20, // BDC version 2.
+                .priority = 0,
+                .flags2 = 0,
+                .offset = bdc_padding_words,
+            };
+            writer.writeStruct(bdc, .little) catch unreachable;
+            writer.splatByteAll(0, bdc_padding_words * @sizeOf(u32)) catch unreachable;
+            var event = mem.zeroes(ioctl.EventPacket);
+            event.eth.ether_type = 0x886c; // Broadcom event.
+            event.hdr.oui = .{ 0x00, 0x10, 0x18 }; // Broadcom vendor ID.
+            if (event_type == .link) {
+                const link_up: u16 = 1;
+                event.msg.flags = link_up;
+            }
+            event.msg.event_type = event_type;
+            event.msg.status = if (event_type == .psk_sup) .unsolicited else .success;
+            writer.writeStruct(event, .big) catch unreachable;
         } else {
-            packet[7] = sdpcm_len;
-            const cdc = packet[sdpcm_len..];
-            mem.writeInt(u32, cdc[0..4], command, .little);
-            mem.writeInt(u16, cdc[10..12], id, .little); // after cmd, outlen, inlen and flags
+            const cdc: ioctl.CDC_Header = .{
+                .cmd = command,
+                .outlen = 0,
+                .id = id,
+            };
+            writer.writeStruct(cdc, .little) catch unreachable;
         }
     }
 };
@@ -1146,13 +1189,12 @@ test "control response polling preserves interleaved reconnect events" {
             const self: *@This() = @ptrCast(@alignCast(ptr));
             const is_event = self.index < events.len;
             const len: u16 = if (is_event) JoinTestPackets.event_len else JoinTestPackets.control_len;
-            if (words.len == 2) { // bus-status read, plus trailing SPI status word
-                // gSPI status: F2 packet available at bit 8, packet length at bits 9..19.
-                words[0] = @as(u32, 1) << 8 | @as(u32, len) << 9;
+            if (words.len == 2) { // Bus status, followed by trailing SPI status.
+                words[0] = JoinTestPackets.status(len);
                 words[1] = 0;
                 return;
             }
-            JoinTestPackets.reply(words, if (is_event) events[self.index] else null, @backingInt(ioctl.Cmd.set_ssid), request_id);
+            JoinTestPackets.reply(words, if (is_event) events[self.index] else null, .set_ssid, request_id);
             self.index += 1;
         }
         fn write(_: *anyopaque, _: []u32) void {
@@ -1176,7 +1218,7 @@ test "control response polling preserves interleaved reconnect events" {
 
 test "join preserves automatic reassociation only when explicitly requested" {
     const Mock = struct {
-        cmd: u32 = 0,
+        cmd: ioctl.Cmd = .set_var,
         id: u16 = 0,
         event_index: usize = 0,
         set_ssid_count: usize = 0,
@@ -1184,18 +1226,20 @@ test "join preserves automatic reassociation only when explicitly requested" {
         fn write(ptr: *anyopaque, words: []u32) void {
             const self: *@This() = @ptrCast(@alignCast(ptr));
             const packet = mem.sliceAsBytes(words)[@sizeOf(u32)..]; // skip SPI command word
-            const cdc = packet[JoinTestPackets.sdpcm_len..];
-            self.cmd = mem.readInt(u32, cdc[0..4], .little);
-            self.id = mem.readInt(u16, cdc[10..12], .little); // CDC request ID
-            if (self.cmd == @backingInt(ioctl.Cmd.set_ssid)) self.set_ssid_count += 1;
+            var reader: std.Io.Reader = .fixed(packet);
+            const sdp = reader.takeStruct(ioctl.SDP_Header, .little) catch unreachable;
+            _ = reader.discard(@fromBackingInt(sdp.hdrlen - @sizeOf(ioctl.SDP_Header))) catch unreachable;
+            const cdc = reader.takeStruct(ioctl.CDC_Header, .little) catch unreachable;
+            self.cmd = cdc.cmd;
+            self.id = cdc.id;
+            if (self.cmd == .set_ssid) self.set_ssid_count += 1;
         }
         fn read(ptr: *anyopaque, words: []u32) void {
             const self: *@This() = @ptrCast(@alignCast(ptr));
-            const is_event = self.cmd == @backingInt(ioctl.Cmd.set_wpa_auth) and self.event_index < events.len;
+            const is_event = self.cmd == .set_wpa_auth and self.event_index < events.len;
             const len: u16 = if (is_event) JoinTestPackets.event_len else JoinTestPackets.control_len;
-            if (words.len == 2) { // bus-status read, plus trailing SPI status word
-                // gSPI status: F2 packet available at bit 8, packet length at bits 9..19.
-                words[0] = @as(u32, 1) << 8 | @as(u32, len) << 9;
+            if (words.len == 2) { // Bus status, followed by trailing SPI status.
+                words[0] = JoinTestPackets.status(len);
                 words[1] = 0;
                 return;
             }
@@ -1205,7 +1249,7 @@ test "join preserves automatic reassociation only when explicitly requested" {
         fn irq(_: *anyopaque) void {}
         fn sleep(_: u32) void {}
     };
-    inline for (.{ true, false }) |preserve| {
+    for ([_]bool{ true, false }) |preserve| {
         var mock: Mock = .{};
         var bus: Bus = .{
             .spi = .{ .ptr = &mock, .vtable = &.{ .read = Mock.read, .write = Mock.write, .irq_cleared = Mock.irq } },

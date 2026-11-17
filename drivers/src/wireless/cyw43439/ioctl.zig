@@ -26,7 +26,7 @@ pub const response_poll_interval = 10;
 // SDPCM (Serial Data Packet Communication Module) header
 // SDIO/SPI Bus Layer (SDPCM) header
 // ref: https://iosoft.blog/2022/12/06/picowi_part3/
-const SDP_Header = extern struct {
+pub const SDP_Header = extern struct {
     len: u16,
     not_len: u16,
     /// Rx/Tx sequence number
@@ -71,7 +71,7 @@ const SDP_Header = extern struct {
     }
 };
 
-const CDC_Header = extern struct {
+pub const CDC_Header = extern struct {
     cmd: Cmd,
     outlen: u16,
     inlen: u16 = 0,
@@ -104,7 +104,7 @@ pub const Cmd = enum(u32) {
     _,
 };
 
-const BDC_Header = extern struct {
+pub const BDC_Header = extern struct {
     flags: u8,
     priority: u8,
     flags2: u8,
@@ -428,7 +428,7 @@ pub fn hex_to_bytes(comptime hex: []const u8) [hex.len / 2]u8 {
     return res;
 }
 
-const EventPacket = extern struct {
+pub const EventPacket = extern struct {
     eth: EthernetHeader,
     hdr: EventHeader,
     msg: EventMessage,
