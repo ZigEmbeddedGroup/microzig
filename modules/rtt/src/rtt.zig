@@ -24,7 +24,7 @@ const Header = extern struct {
 
         // Ensure no memory reordering can occur and all accesses are finished before
         // marking block "valid" and writing header string. This prevents the JLINK
-        // from finding a "valid" block while offets/pointers aren't yet valid.
+        // from finding a "valid" block while offsets/pointers aren't yet valid.
         barrier_fn();
         for (0..init_str.len) |i| {
             self.id[i] = init_str[init_str.len - i - 1];
@@ -542,8 +542,8 @@ pub fn RTT(comptime config: Config) type {
 
         /// Returns a Writer that implements the std.Io.Writer interface for a given up channel.
         /// A zero length buffer (&.{}) is valid across the entire std.Io.Writer API, and means that
-        /// all calls to the API will immediatly write data to RTT up channel, making .flush() a noop.
-        /// A small buffer is recomended if application code frequently makes consecutive, small writes.
+        /// all calls to the API will immediately write data to RTT up channel, making .flush() a noop.
+        /// A small buffer is recommended if application code frequently makes consecutive, small writes.
         /// Buffering allows the interface to consolidate these to a single write with .flush(), reducing the
         /// number of locks/interrupt enable/disables.
         pub fn writer(comptime channel_number: usize, buf: []u8) Writer {

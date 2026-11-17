@@ -99,7 +99,7 @@ const WriteRegister = packed struct(u32) {
     // -- Must store bits 4:3 from register 7
     reserved11: u2,
     // -- Used to set slave address for extra devices (up to 8 total). Seems to set bits 4 and 2
-    // to the complement of bit 1 and 0, respectivly
+    // to the complement of bit 1 and 0, respectively
     I2C_ADDR: u2,
     PARITY: u1,
     // Res (0x2) - Reserved
@@ -168,7 +168,7 @@ pub const TLV493D = struct {
         };
 
         // We don't support setting the I2C bits for the extra 6 addresses
-        // In fact, we don't support anything other than the default, since reseting seems to cause
+        // In fact, we don't support anything other than the default, since resetting seems to cause
         // the device to hang.
         if (address != ADDRESS1)
             return Error.Unsupported;

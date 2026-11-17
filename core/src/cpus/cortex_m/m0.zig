@@ -92,7 +92,7 @@ pub const SystemControlBlock = extern struct {
         /// Data endianness implemented:
         /// 0 = Little-endian
         /// 1 = Big-endian.
-        ENDIANESS: u1,
+        ENDIANNESS: u1,
         /// Register key:
         /// Reads as Unknown
         /// On writes, write 0x05FA to VECTKEY, otherwise the write is ignored.

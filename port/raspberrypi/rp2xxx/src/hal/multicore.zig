@@ -111,7 +111,7 @@ pub fn launch_core1_with_stack(entrypoint: *const fn () void, stack: []u32) void
         @intFromPtr(stack.ptr) +
         (stack.len - 2) * @sizeOf(u32); // account for the two elements we "pushed" above
 
-    // after reseting core1 is waiting for this specific sequence
+    // after resetting core1 is waiting for this specific sequence
 
     const cmds: [6]u32 = .{
         0,
@@ -135,7 +135,7 @@ pub fn launch_core1_with_stack(entrypoint: *const fn () void, stack: []u32) void
         }
 
         fifo.write_blocking(cmd);
-        // the second core should respond with the same value, if it doesnt't lets start over
+        // the second core should respond with the same value, if it doesn't lets start over
         seq = if (cmd == fifo.read_blocking()) seq + 1 else 0;
     }
 }

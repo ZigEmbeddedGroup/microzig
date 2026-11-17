@@ -27,7 +27,7 @@ pub const ChannelNumber = enum(u3) {
 pub const Channel = dma_common.Channel;
 pub const ChannelEvent = dma_common.ChannelEvent;
 
-// Buffer place in region that is accesssible to DMA
+// Buffer place in region that is accessible to DMA
 // There is 14 channel max.
 const countDmaChannel = microzig.chip.properties.dma_channel_count orelse 14;
 

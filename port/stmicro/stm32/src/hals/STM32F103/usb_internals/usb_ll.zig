@@ -174,11 +174,11 @@ var reset_ctx: ?*anyopaque = null;
 var error_callback: ?ErrorCallback = null;
 var error_ctx: ?*anyopaque = null;
 
-fn comptime_or_runtime_err(erro: InitError, comptime msg: []const u8, args: anytype) InitError!void {
+fn comptime_or_runtime_err(err: InitError, comptime msg: []const u8, args: anytype) InitError!void {
     if (@inComptime()) {
         @compileError(std.fmt.comptimePrint(msg, args));
     } else {
-        return erro;
+        return err;
     }
 }
 
@@ -311,12 +311,12 @@ fn inner_init(config: Config, PMA_conf: PMA.Config, startup: Duration) InitError
 }
 
 fn change_rx_status(status: USBTypes.STAT, pid: PID, EPC: usize) void {
-    const corrent = USB.EPR[EPC].read();
-    const valid: u2 = @as(u2, @backingInt(corrent.STAT_RX)) ^ @as(u2, @backingInt(status));
+    const current = USB.EPR[EPC].read();
+    const valid: u2 = @as(u2, @backingInt(current.STAT_RX)) ^ @as(u2, @backingInt(status));
     const DTOG_val = switch (pid) {
         .no_change, .endpoint_ctr => @as(u1, 0),
-        .force_data0 => corrent.DTOG_RX,
-        .force_data1 => corrent.DTOG_RX ^ @as(u1, 1),
+        .force_data0 => current.DTOG_RX,
+        .force_data1 => current.DTOG_RX ^ @as(u1, 1),
     };
     USB.EPR[EPC].modify(.{
         .STAT_RX = @as(USBTypes.STAT, @fromBackingInt(valid)),
@@ -327,14 +327,14 @@ fn change_rx_status(status: USBTypes.STAT, pid: PID, EPC: usize) void {
 }
 
 fn change_tx_status(status: USBTypes.STAT, pid: PID, EPC: usize) void {
-    const corrent = USB.EPR[EPC].read();
+    const current = USB.EPR[EPC].read();
     const DTOG_val = switch (pid) {
         .no_change, .endpoint_ctr => @as(u1, 0),
-        .force_data0 => corrent.DTOG_TX,
-        .force_data1 => corrent.DTOG_TX ^ @as(u1, 1),
+        .force_data0 => current.DTOG_TX,
+        .force_data1 => current.DTOG_TX ^ @as(u1, 1),
     };
 
-    const valid: u2 = @as(u2, @backingInt(corrent.STAT_TX)) ^ @as(u2, @backingInt(status));
+    const valid: u2 = @as(u2, @backingInt(current.STAT_TX)) ^ @as(u2, @backingInt(status));
 
     USB.EPR[EPC].modify(.{
         .STAT_TX = @as(USBTypes.STAT, @fromBackingInt(valid)),
@@ -384,13 +384,13 @@ pub fn default_reset_handler() void {
     });
     //clear all endpoints
     for (0..8) |EP| {
-        const corrent = USB.EPR[EP].read();
+        const current = USB.EPR[EP].read();
         USB.EPR[EP].modify(.{
             .EA = @as(u4, @intCast(EP)),
-            .STAT_RX = corrent.STAT_RX,
-            .STAT_TX = corrent.STAT_TX,
-            .DTOG_TX = corrent.DTOG_TX,
-            .DTOG_RX = corrent.DTOG_RX,
+            .STAT_RX = current.STAT_RX,
+            .STAT_TX = current.STAT_TX,
+            .DTOG_TX = current.DTOG_TX,
+            .DTOG_RX = current.DTOG_RX,
             .CTR_RX = 0,
             .CTR_TX = 0,
             .EP_KIND = 0,

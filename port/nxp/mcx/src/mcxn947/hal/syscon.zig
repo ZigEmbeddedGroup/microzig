@@ -50,7 +50,7 @@ pub fn module_reset_release(module: Module) void {
 }
 
 // This enum can be automatically generated using `generate.zig`,
-// but some fields have been manually added for conveniance (e.g. PORT5, GPIO5)
+// but some fields have been manually added for convenience (e.g. PORT5, GPIO5)
 // TODO: some fields are probably missing, add them
 // TODO: use u8
 pub const Module = enum(u7) {

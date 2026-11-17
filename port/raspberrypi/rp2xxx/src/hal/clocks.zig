@@ -14,7 +14,7 @@ const chip_specific = switch (chip) {
 pub const Source = chip_specific.Source;
 
 pub const config = struct {
-    /// Represents a full system clock configuration that can be applied to the sytem
+    /// Represents a full system clock configuration that can be applied to the system
     /// via the apply() method.
     pub const Global = chip_specific.config.Global;
 

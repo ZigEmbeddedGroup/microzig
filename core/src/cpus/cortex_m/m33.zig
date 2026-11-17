@@ -153,7 +153,7 @@ pub const SystemControlBlock = extern struct {
         /// Data endianness implemented:
         /// 0 = Little-endian
         /// 1 = Big-endian.
-        ENDIANESS: u1,
+        ENDIANNESS: u1,
         /// Register key:
         /// Reads as Unknown
         /// On writes, write 0x05FA to VECTKEY, otherwise the write is ignored.
@@ -194,7 +194,7 @@ pub const SystemControlBlock = extern struct {
     /// Configuration and Control Register.
     CCR: mmio.Mmio(packed struct(u32) {
         reserved0: u1 = 0,
-        /// User set pending determines if unpriviledged access to the STIR generates a fault.
+        /// User set pending determines if unprivileged access to the STIR generates a fault.
         USERSETMPEND: u1,
         reserved1: u1 = 0,
         /// Unaligned trap controls trapping of unaligned word and half word accesses.
@@ -258,7 +258,7 @@ pub const SystemControlBlock = extern struct {
             /// Access denied. Any attempted access generates a NOCP UsageFault.
             access_denied = 0b00,
             /// Privileged access only. An unprivileged access generates a NOCP UsageFault.
-            priviledged_access_only = 0b01,
+            privileged_access_only = 0b01,
             reserved = 0b10,
             /// Full access.
             full_access = 0b11,
@@ -396,7 +396,7 @@ pub const MemoryProtectionUnit = extern struct {
         ENABLE: u1,
         /// Enables of operation of MPU during HardFault and MNIHandlers.
         HFNMIENA: u1,
-        /// Enables priviledged software access to default memory map.
+        /// Enables privileged software access to default memory map.
         PRIVDEFENA: u1,
         reserved0: u29 = 0,
     }),
@@ -445,7 +445,7 @@ pub const MemoryProtectionUnit = extern struct {
     pub const RLAR_Register = mmio.Mmio(packed struct(u32) {
         /// Enable the region.
         EN: u1,
-        /// Attribue Index associates a set of attributes in the MPU MAIR0 and MPU MAIR1 fields.
+        /// Attribute Index associates a set of attributes in the MPU MAIR0 and MPU MAIR1 fields.
         AttrIndx: u3,
         reserved0: u1 = 0,
         /// Limit Address contains bits [31:5] of the upper inclusive limit of the selected MPU memory region. This

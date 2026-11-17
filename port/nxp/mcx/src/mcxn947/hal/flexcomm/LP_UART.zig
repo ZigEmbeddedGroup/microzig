@@ -77,7 +77,7 @@ pub const LP_UART = enum(u4) {
         // clear flags and set bit order
         var stat = std.mem.zeroes(@TypeOf(regs.STAT).underlying_type);
         // read and write on these bits are different
-        // writing one cleare those flags
+        // writing one clears those flags
         stat.RXEDGIF = .EDGE;
         stat.IDLE = .IDLE;
         stat.OR = .OVERRUN;
@@ -136,7 +136,7 @@ pub const LP_UART = enum(u4) {
 
     /// Sets the baudrate of the interface to the closest value possible to `baudrate`.
     /// A `baudrate` of 0 will disable the baudrate generator
-    /// The final baudrate will be withing 3% of the desired one. If one cannot be found,
+    /// The final baudrate will be within 3% of the desired one. If one cannot be found,
     /// this function errors.
     ///
     /// Whether a baudrate is available depends on the clock of the interface.

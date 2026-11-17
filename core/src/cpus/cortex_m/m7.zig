@@ -96,7 +96,7 @@ pub const SystemControlBlock = extern struct {
         PRI_15: u8,
     }),
 
-    /// System Handler Contol and State Register
+    /// System Handler Control and State Register
     SHCSR: mmio.Mmio(shared.scb.SHCSR),
     /// Configurable Fault Status Register
     CFSR: mmio.Mmio(packed struct(u32) {
@@ -126,7 +126,7 @@ pub const SystemControlBlock = extern struct {
     PFR: [2]u32,
     /// Debug Feature Register
     DFR: u32,
-    /// Auxilary Feature Register
+    /// Auxiliary Feature Register
     ADR: u32,
     /// Memory Model Feature Register
     MMFR: [4]u32,

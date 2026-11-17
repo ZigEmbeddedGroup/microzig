@@ -79,7 +79,7 @@ pub const SystemControlBlock = extern struct {
     MMFAR: u32,
     /// BusFault Address Register.
     BFAR: u32,
-    /// Auxilary Feature Register.
+    /// Auxiliary Feature Register.
     AFSR: u32,
 };
 
@@ -124,7 +124,7 @@ pub const MemoryProtectionUnit = extern struct {
         ENABLE: u1,
         /// Enables of operation of MPU during HardFault and MNIHandlers.
         HFNMIENA: u1,
-        /// Enables priviledged software access to default memory map.
+        /// Enables privileged software access to default memory map.
         PRIVDEFENA: u1,
         reserved0: u29 = 0,
     }),

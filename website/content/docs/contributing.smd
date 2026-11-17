@@ -56,7 +56,7 @@ Here is an overview of the top level directories of the monorepo:
 ## Naming Sub-packages
 
 We try to keep package names identical to their path in the project, with
-underscores replacing path separators. Package names in Zig are limted to 32
+underscores replacing path separators. Package names in Zig are limited to 32
 bytes, so the earlier components are often shortened. We also try to keep `mz`
 the first component in the name to denote the package as being part of
 MicroZig. For example the `examples/stmicro/stm32` package has the name

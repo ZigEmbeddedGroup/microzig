@@ -243,7 +243,7 @@ fn auto_detect_pico(allocator: std.mem.Allocator) !?[]const u8 {
                 defer device_dir.close();
 
                 const H = struct {
-                    fn is_pico_device(dir: std.fs.Dir, allo: std.mem.Allocator) !?[]const u8 {
+                    fn is_pico_device(dir: std.fs.Dir, alloc: std.mem.Allocator) !?[]const u8 {
                         // "/sys/block/*/removable" => "1"
                         // "/sys/block/*/device/model" => "RP2"
                         // "/sys/block/*/device/vendor" => "RPI"
@@ -264,7 +264,7 @@ fn auto_detect_pico(allocator: std.mem.Allocator) !?[]const u8 {
 
                         const device_id = std.mem.trim(u8, try dir.readFile("dev", &buffer), "\r\n\t ");
 
-                        return try std.fs.path.join(allo, &.{
+                        return try std.fs.path.join(alloc, &.{
                             "/dev/block", device_id,
                         });
                     }

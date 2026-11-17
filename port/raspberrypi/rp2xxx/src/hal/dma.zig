@@ -266,7 +266,7 @@ pub const Channel = enum(u4) {
             }
 
             fn get_data_size(Type: type) ?DataSize {
-                // at this point we are guarnteed that we have pointer type
+                // at this point we are guaranteed that we have pointer type
                 const Info = @typeInfo(Type);
                 const ChildType = Info.pointer.child;
                 return switch (@typeInfo(ChildType)) {

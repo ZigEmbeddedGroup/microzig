@@ -22,7 +22,7 @@ const label_prefix = "--";
 
 /// Flags must have a `default` decl.
 ///
-/// - Integers can use decimal, octal, or hexidecimal formats
+/// - Integers can use decimal, octal, or hexadecimal formats
 pub fn parse(comptime Flags: type, arena: Allocator, args: []const []const u8) !struct { Flags, Positionals } {
     _ = arena;
     var flags: Flags = .default;

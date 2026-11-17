@@ -4,7 +4,7 @@
 #ifndef lwipopts_h
 #define lwipopts_h
 
-// freestanding envrionment
+// freestanding environment
 #define NO_SYS 1       // we don't have an OS
 #define LWIP_SOCKET 0  // requires multi-threaded environments with os
 #define LWIP_NETCONN 0 // requires multi-threaded environments with os

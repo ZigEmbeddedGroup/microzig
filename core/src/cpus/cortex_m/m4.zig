@@ -61,7 +61,7 @@ pub const SystemControlBlock = extern struct {
     }),
     /// System Handlers Priority Registers.
     SHP: [12]u8,
-    /// System Handler Contol and State Register.
+    /// System Handler Control and State Register.
     SHCSR: mmio.Mmio(shared.scb.SHCSR),
     /// Configurable Fault Status Register.
     CFSR: mmio.Mmio(packed struct(u32) {
@@ -80,7 +80,7 @@ pub const SystemControlBlock = extern struct {
     MMFAR: u32,
     /// BusFault Address Register.
     BFAR: u32,
-    /// Auxilary Feature Register.
+    /// Auxiliary Feature Register.
     AFSR: u32,
     reserved0: [18]u32,
     CPACR: mmio.Mmio(packed struct(u32) {
@@ -93,7 +93,7 @@ pub const SystemControlBlock = extern struct {
             /// Access denied. Any attempted access generates a NOCP UsageFault.
             access_denied = 0b00,
             /// Privileged access only. An unprivileged access generates a NOCP UsageFault.
-            priviledged_access_only = 0b01,
+            privileged_access_only = 0b01,
             reserved = 0b10,
             /// Full access.
             full_access = 0b11,
@@ -142,7 +142,7 @@ pub const MemoryProtectionUnit = extern struct {
         ENABLE: u1,
         /// Enables of operation of MPU during HardFault and MNIHandlers.
         HFNMIENA: u1,
-        /// Enables priviledged software access to default memory map.
+        /// Enables privileged software access to default memory map.
         PRIVDEFENA: u1,
         reserved0: u29 = 0,
     }),

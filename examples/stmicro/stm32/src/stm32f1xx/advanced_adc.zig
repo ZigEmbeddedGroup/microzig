@@ -1,13 +1,13 @@
-//example for the advanced ADC API, this API is recommended for those already familiar with the ADC of STM32s
-//this example configures a regular group with software trigger, an injected group configured as auto injected,
-//and an analog comparator (ADC watchdog)
+// example for the advanced ADC API, this API is recommended for those already familiar with the ADC of STM32s
+// this example configures a regular group with software trigger, an injected group configured as auto injected,
+// and an analog comparator (ADC watchdog)
 
-//before creating a program using ADC from older ST families, such as in this case STM32F1
-//be aware of possible hardware bugs and limitations
-//for example:
-//temperature sensor/VREF cannot be read in interleaved mode as it requires a sample time greater than 17
-//readings after 1ms from the previous reading may contain more noise than expected
-//Voltage glitch on ADC input 0
+// before creating a program using ADC from older ST families, such as in this case STM32F1
+// be aware of possible hardware bugs and limitations
+// for example:
+// temperature sensor/VREF cannot be read in interleaved mode as it requires a sample time greater than 17
+// readings after 1ms from the previous reading may contain more noise than expected
+// Voltage glitch on ADC input 0
 
 const std = @import("std");
 const microzig = @import("microzig");
@@ -43,17 +43,17 @@ pub const microzig_options: microzig.Options = .{
 };
 
 const v25 = 1.43;
-const avg_slope = 0.0043; //4.3mV/°C
+const avg_slope = 0.0043; // 4.3mV/°C
 
 var ovf_flag: bool = false;
 pub fn watchdog_handler() callconv(.c) void {
     ovf_flag = true;
-    adc.clear_flags(adc.read_flags()); //clear all active flags
+    adc.clear_flags(adc.read_flags()); // clear all active flags
 }
 
 fn adc_to_temp(val: usize) f32 {
-    const temp_mv: f32 = (@as(f32, @floatFromInt(val)) / 4096) * 3.3; //convert to voltage
-    return ((v25 - temp_mv) / avg_slope) + 25; //convert to celsius
+    const temp_mv: f32 = (@as(f32, @floatFromInt(val)) / 4096) * 3.3; // convert to voltage
+    return ((v25 - temp_mv) / avg_slope) + 25; // convert to celsius
 }
 
 pub fn main() !void {
@@ -92,7 +92,7 @@ pub fn main() !void {
     });
     dma_channel.start();
 
-    //configure UART log
+    // configure UART log
 
     TX.set_output_mode(.alternate_function_push_pull, .max_50MHz);
     try uart.apply_runtime(.{
@@ -100,17 +100,17 @@ pub fn main() !void {
     });
     stm32.uart.init_logger(&uart);
 
-    //configure adc
-    interrupt.enable(.ADC1_2); //enalbe ADC1 interrupt
+    // configure adc
+    interrupt.enable(.ADC1_2); // enable ADC1 interrupt
     ADC_pin1.set_input_mode(.analog);
     ADC_pin2.set_input_mode(.analog);
     ADC_pin3.set_input_mode(.analog);
 
-    //enable ADC and VREF/tempsensor
+    // enable ADC and VREF/tempsensor
     adc.enable(true);
     adc.enable_reftemp();
 
-    //regular group configuration
+    // regular group configuration
     try adc.configure_regular(.{
         .dma = true,
         .trigger = .SWSTART,
@@ -118,16 +118,16 @@ pub fn main() !void {
             .Single = .{
                 .seq = &.{ 16, 17, 2, 3 },
                 .channels_conf = &.{
-                    .{ .channel = 17, .sample_rate = .@"239.5" }, //Vrefint
-                    .{ .channel = 16, .sample_rate = .@"239.5" }, //temperature sensor
-                    .{ .channel = 1, .sample_rate = .@"13.5" }, //ADC1 channel 1
-                    .{ .channel = 3, .sample_rate = .@"13.5" }, //ADC1 channel 2
+                    .{ .channel = 17, .sample_rate = .@"239.5" }, // Vrefint
+                    .{ .channel = 16, .sample_rate = .@"239.5" }, // temperature sensor
+                    .{ .channel = 1, .sample_rate = .@"13.5" }, // ADC1 channel 1
+                    .{ .channel = 3, .sample_rate = .@"13.5" }, // ADC1 channel 2
                 },
             },
         },
     });
 
-    //injected group configuration, AUTO INJECTED mode starts right after the regular group and therefore does not require an external trigger
+    // injected group configuration, AUTO INJECTED mode starts right after the regular group and therefore does not require an external trigger
     try adc.configure_injected(.{
         .mode = .{
             .auto_injected = .{
@@ -136,7 +136,7 @@ pub fn main() !void {
         },
     });
 
-    //despite the name, this is just an analog comparator
+    // despite the name, this is just an analog comparator
     adc.configure_watchdog(
         .{
             .guard_mode = .{ .single_injected = 1 },
@@ -148,9 +148,9 @@ pub fn main() !void {
 
     std.log.info("start Advanced ADC scan", .{});
     while (true) {
-        adc.software_trigger(); //start conversion
+        adc.software_trigger(); // start conversion
         time.sleep_ms(100);
-        std.log.info("\x1B[2J\x1B[H", .{}); //Clear screen and move cursor to 1,1
+        std.log.info("\x1B[2J\x1B[H", .{}); // Clear screen and move cursor to 1,1
         std.log.info("CPU temp: {d:.1}C", .{adc_to_temp(adc_buf[0])});
         std.log.info("Vref: {d:0>4}", .{adc_buf[1]});
         std.log.info("CH1: {d:0>4}", .{adc_buf[2]});

@@ -89,7 +89,7 @@ pub const AUX_SRC_SETTING_SRC_REG = 1;
 pub fn GeneratorImpl(Generator: type, Source: type, IntegerDivisorType: type) type {
     return struct {
 
-        // We can pretend the Generators are a homogenous array of
+        // We can pretend the Generators are a homogeneous array of
         // register clusters for the sake of smaller codegen. Special
         // care needs to be taken when writing these values to account
         // for different bitfield patterns!
@@ -132,7 +132,7 @@ pub fn GeneratorImpl(Generator: type, Source: type, IntegerDivisorType: type) ty
 
         // The bitfields for the *_SELECTED registers are actually a mask of which
         // source is selected. While switching sources it may read as 0, and that's
-        // what this function is indended for: checking if the new source has
+        // what this function is intended for: checking if the new source has
         // switched over yet.
         //
         // Some mention that this is only for the glitchless mux, so if it is non-glitchless then return true
@@ -215,7 +215,7 @@ pub fn GeneratorImpl(Generator: type, Source: type, IntegerDivisorType: type) ty
                 .Standard => {
                     generator.disable();
                     // This CPU delay cycle count is taken directly from the datasheet.
-                    // It's ugly, but per the datasheet this is the only way to gaurantee
+                    // It's ugly, but per the datasheet this is the only way to guarantee
                     // waiting long enough for the clock to be disabled properly.
                     // Switching the AUX on an active clock before it's fully disabled can lead to
                     // undefined behavior since clock glitches would propagate to the peripheral

@@ -491,7 +491,7 @@ pub const JoinPoller = struct {
     // [1.555841] type: .set_ssid, status: .no_networks
     // [1.563185] error: error.Cyw43SetSsid
     //
-    // Wrong security open/wpa_psk/wpa3_sae instad of wpa2_psk
+    // Wrong security open/wpa_psk/wpa3_sae instead of wpa2_psk
     // [1.525449] type: .set_ssid, status: .fail
     // [1.532186] error: error.Cyw43SetSsid
     //
@@ -715,7 +715,7 @@ fn sleep_ms(self: Self, delay: u32) void {
 }
 
 /// buffer.len should be 1540 bytes. Last 4 bytes are for the status which is
-/// writen after each read. 22 bytes at the start is bus header, 18 bytes header
+/// written after each read. 22 bytes at the start is bus header, 18 bytes header
 /// + 4 bytes padding. After that is layer 2, ethernet, packet; 14 bytes of
 /// ethernet header and 1500 bytes of layer 3 mtu.
 ///

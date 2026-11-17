@@ -69,7 +69,7 @@ pub const HAL_Options = switch (compatibility.chip) {
 
 /// A default clock configuration with sensible defaults that will work
 /// for the majority of use cases. Use this unless you have a specific
-/// clock configuration use case that this wont work for (for instance a custom
+/// clock configuration use case that this won't work for (for instance a custom
 /// board that does NOT use an external oscillator XOSC as the clock source).
 ///
 /// Users will have to provide their own init() function to override init() below

@@ -326,7 +326,7 @@ pub const I2C = enum(u1) {
                     .LASTTX_STOP = .Disabled,
                 });
 
-            // We always have to START, but if we are not on tthe firstt chunk, we also have to resume
+            // We always have to START, but if we are not on the first chunk, we also have to resume
             regs.TASKS_STARTTX.write(.{ .TASKS_STARTTX = .Trigger });
             if (i != 0)
                 regs.TASKS_RESUME.write(.{ .TASKS_RESUME = .Trigger });

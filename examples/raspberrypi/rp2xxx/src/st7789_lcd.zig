@@ -48,7 +48,7 @@ const led = gpio.num(DISPLAY_BACKLIGHT_PIN);
 const led_pwm = pwm.get_pwm(DISPLAY_BACKLIGHT_PIN);
 const spi = rp2xxx.spi.instance.SPI1;
 
-// Use pre-compiled display setttings for ST7789 with a 240x240 RGB panel.
+// Use pre-compiled display settings for ST7789 with a 240x240 RGB panel.
 const DisplayDriver = microzig.drivers.display.st77xx.ST7789(.lcd240x240rgb);
 // Framebuffer for off-screen drawing before pushing to the display.
 var display_buffer: [240 * 240]DisplayDriver.Color = undefined;

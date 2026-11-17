@@ -770,14 +770,14 @@
 #define M0PLUS_AIRCR_VECTKEY_LSB    _u(16)
 #define M0PLUS_AIRCR_VECTKEY_ACCESS "RW"
 // -----------------------------------------------------------------------------
-// Field       : M0PLUS_AIRCR_ENDIANESS
+// Field       : M0PLUS_AIRCR_ENDIANNESS
 // Description : Data endianness implemented:
 //               0 = Little-endian.
-#define M0PLUS_AIRCR_ENDIANESS_RESET  _u(0x0)
-#define M0PLUS_AIRCR_ENDIANESS_BITS   _u(0x00008000)
-#define M0PLUS_AIRCR_ENDIANESS_MSB    _u(15)
-#define M0PLUS_AIRCR_ENDIANESS_LSB    _u(15)
-#define M0PLUS_AIRCR_ENDIANESS_ACCESS "RO"
+#define M0PLUS_AIRCR_ENDIANNESS_RESET  _u(0x0)
+#define M0PLUS_AIRCR_ENDIANNESS_BITS   _u(0x00008000)
+#define M0PLUS_AIRCR_ENDIANNESS_MSB    _u(15)
+#define M0PLUS_AIRCR_ENDIANNESS_LSB    _u(15)
+#define M0PLUS_AIRCR_ENDIANNESS_ACCESS "RO"
 // -----------------------------------------------------------------------------
 // Field       : M0PLUS_AIRCR_SYSRESETREQ
 // Description : Writing 1 to this bit causes the SYSRESETREQ signal to the

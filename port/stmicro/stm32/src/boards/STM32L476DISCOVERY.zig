@@ -55,7 +55,7 @@ pub const Lcd = struct {
         0xC44C, 0xCC4C, 0x2060, 0xCCCC, 0xC4CC,
     };
 
-    // All special char will print the same symbole.
+    // All special char will print the same symbol.
     // There will be no distinction between lower or upper cases.
     // Some symbol will be far from the corresponding glype.
     pub const ASCII_MAP = [_]u16{

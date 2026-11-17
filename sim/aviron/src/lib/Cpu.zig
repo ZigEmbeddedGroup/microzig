@@ -1442,7 +1442,7 @@ const instructions = struct {
     ///
     /// **NOTE:** 1. R1 determines the instruction high byte, and R0 determines the instruction low byte.
     ///
-    ///! TODO! (implement much later, we don't really need it for emulating everything execpt bootloaders)
+    ///! TODO! (implement much later, we don't really need it for emulating everything except bootloaders)
     inline fn spm_i(cpu: *Cpu) !void {
         _ = cpu;
         @panic("spm (i) is not supported.");
@@ -1460,7 +1460,7 @@ const instructions = struct {
     ///
     /// **NOTE:** 1. R1 determines the instruction high byte, and R0 determines the instruction low byte.
     ///
-    ///! TODO! (implement much later, we don't really need it for emulating everything execpt bootloaders)
+    ///! TODO! (implement much later, we don't really need it for emulating everything except bootloaders)
     inline fn spm_ii(cpu: *Cpu) !void {
         _ = cpu;
         @panic("spm #2 is not supported.");

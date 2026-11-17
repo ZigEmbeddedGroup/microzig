@@ -655,7 +655,7 @@
 #define SSI_IDR_RESET  _u(0x51535049)
 // -----------------------------------------------------------------------------
 // Field       : SSI_IDR_IDCODE
-// Description : Peripheral dentification code
+// Description : Peripheral identification code
 #define SSI_IDR_IDCODE_RESET  _u(0x51535049)
 #define SSI_IDR_IDCODE_BITS   _u(0xffffffff)
 #define SSI_IDR_IDCODE_MSB    _u(31)

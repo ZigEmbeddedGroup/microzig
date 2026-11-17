@@ -41,12 +41,12 @@ pub fn main() !void {
     var ssid_buf: [32]u8 = undefined;
     var ssid: []const u8 = ssid_buf[0..0];
 
-    log.debug("scaning wifi networks", .{});
+    log.debug("scanning wifi networks", .{});
     var scan = try wifi.scan();
     while (try scan.poll()) {
         if (scan.result()) |res| {
             log.debug(
-                "  found ssid: {s:<20}, channel: {}, open: {:<5}, ap mac {x}",
+                "   found ssid: {s:<20}, channel: {}, open: {:<5}, ap mac {x}",
                 .{ res.ssid, res.channel, res.security.open(), res.ap_mac },
             );
             if (res.security.open() and ssid.len == 0) {

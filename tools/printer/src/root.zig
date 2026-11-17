@@ -1,40 +1,37 @@
 const std = @import("std");
 const Io = std.Io;
 
-pub const Elf = @import("Elf.zig");
-pub const DebugInfo = @import("DebugInfo.zig");
-
 /// Reads lines one by one from in_stream and outputs them with annotated
 /// addresses to out_stream. Returns after it reaches the end of the stream.
 pub fn annotate(
+    gpa: std.mem.Allocator,
     io: Io,
     in_stream: *Io.Reader,
     terminal: *Io.Terminal,
-    elf: Elf,
-    debug_info: *DebugInfo,
+    elf_file: *std.debug.ElfFile,
 ) !void {
     while (true) {
         const line = in_stream.takeDelimiterInclusive('\n') catch |err| switch (err) {
             error.ReadFailed => return error.ReadFailed,
             error.EndOfStream => {
-                try output_line(io, in_stream.buffered(), terminal, elf, debug_info);
+                try output_line(gpa, io, in_stream.buffered(), terminal, elf_file);
                 try terminal.writer.flush();
                 return;
             },
             error.StreamTooLong => return error.StreamTooLong,
         };
 
-        try output_line(io, line, terminal, elf, debug_info);
+        try output_line(gpa, io, line, terminal, elf_file);
         try terminal.writer.flush();
     }
 }
 
 fn output_line(
+    gpa: std.mem.Allocator,
     io: Io,
     line: []const u8,
     terminal: *Io.Terminal,
-    elf: Elf,
-    debug_info: *DebugInfo,
+    elf_file: *std.debug.ElfFile,
 ) !void {
     try terminal.writer.writeAll(line);
 
@@ -53,10 +50,17 @@ fn output_line(
     if (hex_digit_count != 8 and hex_digit_count != 16) return;
 
     const address = std.fmt.parseInt(u64, after_prefix[0..hex_digit_count], 16) catch unreachable;
-    if (elf.is_address_executable(address)) {
-        const query_result = debug_info.query(address);
-        try output_location_info(terminal, address, query_result);
-        if (query_result.source_location) |src_loc| {
+
+    var text_arena: std.heap.ArenaAllocator = .init(gpa);
+    defer text_arena.deinit();
+    const di = &(elf_file.dwarf orelse return);
+    const compile_unit = di.findCompileUnit(elf_file.endian, address) catch return;
+    const maybe_symbol_name = di.getSymbolName(address);
+    const maybe_src_loc = di.getLineNumberInfo(gpa, text_arena.allocator(), elf_file.endian, compile_unit, address) catch null;
+
+    if (maybe_src_loc) |src_loc| {
+        if (maybe_symbol_name) |symbol_name| {
+            try output_location_info(terminal, address, symbol_name, src_loc);
             try output_source_line(io, terminal, src_loc);
         }
     }
@@ -65,19 +69,16 @@ fn output_line(
 fn output_location_info(
     terminal: *Io.Terminal,
     address: u64,
-    query_result: DebugInfo.QueryResult,
+    symbol_name: []const u8,
+    src_loc: std.debug.SourceLocation,
 ) !void {
     try terminal.setColor(.bold);
 
-    if (query_result.source_location) |src_loc| {
-        try terminal.writer.print("{f}:{}:{}", .{
-            std.fs.path.fmtJoin(&.{ src_loc.dir_path, src_loc.file_path }),
-            src_loc.line,
-            src_loc.column,
-        });
-    } else {
-        try terminal.writer.writeAll("???:?:?");
-    }
+    try terminal.writer.print("{s}:{}:{}", .{
+        src_loc.file_name,
+        src_loc.line,
+        src_loc.column,
+    });
 
     try terminal.setColor(.reset);
     try terminal.writer.writeAll(": ");
@@ -85,8 +86,8 @@ fn output_location_info(
     try terminal.setColor(.dim);
     try terminal.writer.print("0x{x} in {s} ({s})\n", .{
         address,
-        query_result.function_name orelse "???",
-        query_result.module_name orelse "???",
+        symbol_name,
+        std.Io.Dir.path.basename(src_loc.file_name),
     });
     try terminal.setColor(.reset);
 }
@@ -94,12 +95,9 @@ fn output_location_info(
 fn output_source_line(
     io: Io,
     terminal: *Io.Terminal,
-    src_loc: DebugInfo.ResolvedSourceLocation,
+    src_loc: std.debug.SourceLocation,
 ) !void {
-    var dir = std.Io.Dir.cwd().openDir(io, src_loc.dir_path, .{}) catch return;
-    defer dir.close(io);
-
-    const file = dir.openFile(io, src_loc.file_path, .{}) catch return;
+    var file = std.Io.Dir.cwd().openFile(io, src_loc.file_name, .{}) catch return;
     defer file.close(io);
 
     var r_buf: [512]u8 = undefined;

@@ -232,7 +232,7 @@ pub const Output_GPIO = struct {
 };
 
 pub const AlternateFunction = struct {
-    // Empty on perpose it should not be used as a GPIO.
+    // Empty on Interrupt it should not be used as a GPIO.
 };
 
 const Analog = struct {

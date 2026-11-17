@@ -117,7 +117,7 @@ const I2C = struct {
     }
 
     // TODO this should configure
-    // Interupt,
+    // Interrupt,
     // Frequency
     // Others...
     pub fn apply(i2c: *const I2C) void {

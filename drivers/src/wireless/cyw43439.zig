@@ -74,7 +74,7 @@ pub fn recv_zc(ptr: *anyopaque, buffer: []u8) anyerror!Link.RecvResponse {
     };
 }
 
-/// Zero copy send. Buffer has to have 22 bytes of headrom for chip control
+/// Zero copy send. Buffer has to have 22 bytes of headroom for chip control
 /// command. Ethernet packet has to start at byte 22. Buffer has to be 4 bytes
 /// aligned.
 pub fn send_zc(ptr: *anyopaque, buffer: []u8) Link.Error!void {

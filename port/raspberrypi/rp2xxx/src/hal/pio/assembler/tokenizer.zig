@@ -820,7 +820,7 @@ pub fn Tokenizer(chip: Chip) type {
                 if (dest_index_char[0] == 'y') {
                     return Token(chip).Instruction.Payload{
                         .movtorx = .{
-                            .idxl = true,
+                            .idxi = false,
                             .idx = 0,
                         },
                     };
@@ -838,23 +838,23 @@ pub fn Tokenizer(chip: Chip) type {
                     diags.* = null;
                     return Token(chip).Instruction.Payload{
                         .movtorx = .{
-                            .idxl = false,
+                            .idxi = true,
                             .idx = @intCast(value),
                         },
                     };
                 }
             } else if (std.mem.eql(u8, dest_lower.slice(), "osr")) {
                 // MOV (from RX)
-                var idxl: bool = false;
+                var idxi: bool = false;
                 var idx: u3 = 0;
                 if (std.mem.startsWith(u8, source_lower.slice(), "rxfifo")) {
                     const src_index_char = source_lower.slice()["rxfifo".len - 0 ..];
                     if (src_index_char[0] == 'y') {
-                        idxl = true;
+                        idxi = false;
                         idx = 0;
                     } else {
                         // -- Parse out the index
-                        idxl = false;
+                        idxi = true;
                         idx = 0;
                         diags.* = Diagnostics.init(
                             @intCast(source_idx + "rxfifo".len),
@@ -878,7 +878,7 @@ pub fn Tokenizer(chip: Chip) type {
                 diags.* = null;
                 return Token(chip).Instruction.Payload{
                     .movfromrx = .{
-                        .idxl = idxl,
+                        .idxi = idxi,
                         .idx = idx,
                     },
                 };
@@ -1287,11 +1287,11 @@ pub fn Token(comptime chip: Chip) type {
             };
 
             pub const MovToRx = struct {
-                idxl: bool,
+                idxi: bool,
                 idx: u3,
             };
             pub const MovFromRx = struct {
-                idxl: bool,
+                idxi: bool,
                 idx: u3,
             };
 
