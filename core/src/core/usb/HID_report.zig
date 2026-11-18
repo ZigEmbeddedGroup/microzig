@@ -2,6 +2,14 @@ const std = @import("std");
 const usb = @import("../usb.zig");
 const SFAttributes = std.builtin.Type.Struct.FieldAttributes;
 
+const Report = @This();
+
+reserved: u16 = 0,
+items: []const Item,
+names: [2][]const [:0]const u8,
+types: [2][]const type,
+attrs: [2][]const SFAttributes,
+
 pub const Keycode = enum(u8) {
     // Codes taken from:
     // https://gist.github.com/mildsunrise/4e231346e2078f440969cdefb6d4caa3
@@ -312,14 +320,6 @@ pub const Finalized = struct {
         break :blk ret.finalize();
     };
 };
-
-const Report = @This();
-
-reserved: u16 = 0,
-items: []const Item,
-names: [2][]const [:0]const u8,
-types: [2][]const type,
-attrs: [2][]const SFAttributes,
 
 pub fn finalize(self: Report) Finalized {
     var ret = Finalized{

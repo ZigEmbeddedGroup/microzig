@@ -7,6 +7,9 @@ const log = std.log.scoped(.usb_cdc);
 
 const Driver = @This();
 
+itf_notifi_str: []const u8 = "",
+itf_data_str: []const u8 = "",
+
 /// CDC PSTN Subclass Management Element Requests
 pub const ManagementRequestType = enum(u8) {
     SetCommFeature = 0x02,
@@ -213,9 +216,6 @@ pub const Runtime = struct {
         self.notifi_ready.store(true, .seq_cst);
     }
 };
-
-itf_notifi_str: []const u8 = "",
-itf_data_str: []const u8 = "",
 
 /// This function is used during descriptor creation. Endpoint and interface numbers are
 /// allocated through the `alloc` parameter. Third argument can be of any type, it's passed

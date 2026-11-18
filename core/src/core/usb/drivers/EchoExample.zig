@@ -8,6 +8,13 @@ const log = std.log.scoped(.usb_echo);
 
 const Driver = @This();
 
+// Each field of the Driver struct represents a configuration option.
+// The values are declared by user code and available during initialization.
+// May have no fields if the driver does not require configuration.
+// Common use case for this type of configuration is for descriptor data
+// that is not used by the driver at runtime, like descriptor strings.
+itf_string: []const u8 = "",
+
 /// Binary representation of the device descriptor as sent to the host.
 /// Make sure to use `extern` layout and endian-aware field types,
 /// such as `usb.types.LeInt(uXX/iXX)`.
@@ -110,19 +117,13 @@ pub const Runtime = struct {
 /// This way the generic types are much more readable in zig error output
 /// and potentially less code is duplicated when using multiple driver instances
 /// with different options. See HID.zig for an example.
-
-// Each field represents a configuration option of the driver.
-// The values are declared by user code and available during initialization.
-// May not have any fields if the driver does not require configuration.
-// Common use case for this type of configuration is for descriptor data
-// that is not used by the driver at runtime, like descriptor strings.
-itf_string: []const u8 = "",
-
-/// This function is used during descriptor creation. Endpoint and interface numbers are
-/// allocated through the `alloc` parameter. Third argument contains the maximum supported
-/// packet length, which varies by implementation. If multiple instances of a driver are used,
-/// this function is called for each, with different arguments.
-/// Aside from the descriptor, this function can return a type that is later used
+/// This function is used during descriptor creation and determines the Runtime type.
+/// `device_capabilities` carries information that varies by implementation, such as maximum packet length.
+/// Endpoint and interface numbers are allocated through the `alloc` parameter.
+/// If multiple instances of a driver are used, this function is called for each,
+/// but the configuration options will be different and `alloc`'s functions will return different values.
+/// This function can also optionally return a type that is later statically
+/// allocated and passed to the driver (this functionality may be removed soon).
 pub fn driver_info(
     self: Driver,
     comptime device_capabilities: usb.DeviceCapabilities,

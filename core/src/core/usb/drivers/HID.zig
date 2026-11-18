@@ -5,6 +5,15 @@ const log = std.log.scoped(.usb_hid_int_driver);
 
 const Driver = @This();
 
+const ClassCode = usb.types.ClassSubclassProtocol.ClassCode.HID;
+
+subclass: ClassCode.Subclass(),
+protocol: ClassCode.Protocol(),
+itf_string: []const u8 = "",
+poll_interval: u8,
+country_code: usb.descriptor.HID.CountryCode = .NotSupported,
+report: usb.HID_report.Finalized,
+
 pub const Descriptor = extern struct {
     const desc = usb.descriptor;
 
@@ -154,16 +163,6 @@ pub fn Runtime(report: usb.HID_report.Finalized) type {
         }
     };
 }
-
-const ClassCode = usb.types.ClassSubclassProtocol.ClassCode.HID;
-
-subclass: ClassCode.Subclass(),
-protocol: ClassCode.Protocol(),
-
-itf_string: []const u8 = "",
-poll_interval: u8,
-country_code: usb.descriptor.HID.CountryCode = .NotSupported,
-report: usb.HID_report.Finalized,
 
 pub fn driver_info(
     comptime self: Driver,
