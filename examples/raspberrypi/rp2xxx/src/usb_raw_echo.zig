@@ -45,9 +45,7 @@ pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noretu
     while (true) {}
 }
 
-const pin_config: rp2xxx.pins.GlobalConfiguration = .{
-    .GPIO25 = .{ .name = "led", .direction = .out },
-};
+const pin_config = microzig.board.pin_config;
 
 pub fn main() !void {
     const pins = pin_config.apply();
