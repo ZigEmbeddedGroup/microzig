@@ -33,6 +33,14 @@ pub fn main() !void {
     });
     rp2xxx.uart.init_logger(uart);
 
+    const chip_id = rp2xxx.get_chip_id();
+    log.info("chip id: part={t} revision={d} manufacturer={t} stop_bit={}", .{
+        chip_id.part,
+        chip_id.revision,
+        chip_id.manufacturer,
+        chip_id.stop_bit,
+    });
+
     while (true) {
         log.info("unique board id: {x}", .{rp2xxx.get_board_id()});
         time.sleep_ms(1000);
