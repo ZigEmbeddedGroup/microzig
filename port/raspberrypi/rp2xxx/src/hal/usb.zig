@@ -46,7 +46,7 @@ const rp2xxx_buffers = struct {
     fn data_offset(ep_data_buffer: []u8) u16 {
         const buf_base = @intFromPtr(&ep_data_buffer[0]);
         const dpram_base = @intFromPtr(peripherals.USB_DPRAM);
-        return @as(u16, @intCast(buf_base - dpram_base));
+        return @intCast(buf_base - dpram_base);
     }
 };
 
@@ -84,13 +84,20 @@ pub fn Polled(config: Config) type {
     }
 
     return struct {
-        pub const max_supported_packet_size = 64;
-        pub const max_supported_bcd_usb: usb.types.Version = .v1_10;
-        pub const default_vendor_id: usb.Config.IdStringPair = .{ .id = 0x2E8A, .str = "Raspberry Pi" };
-        pub const default_product_id: usb.Config.IdStringPair = switch (chip) {
-            .RP2040 => .{ .id = 0x000A, .str = "Pico test device" },
-            .RP2350 => .{ .id = 0x000F, .str = "Pico 2 test device" },
+        pub const device_capabilities: usb.DeviceCapabilities = .{
+            .max_supported_bcd_usb = .v1_10,
+            .max_packet_size0 = 64,
+            .max_packet_size = 64,
+            .default_vendor = .{ .id = 0x2E8A, .str = "Raspberry Pi" },
+            .default_product = switch (chip) {
+                .RP2040 => .{ .id = 0x000A, .str = "Pico test device" },
+                .RP2350 => .{ .id = 0x000F, .str = "Pico 2 test device" },
+            },
         };
+
+        comptime {
+            usb.validate_device(@This());
+        }
 
         const vtable: usb.DeviceInterface.VTable = .{
             .ep_writev = ep_writev,
@@ -246,15 +253,15 @@ pub fn Polled(config: Config) type {
             @memset(std.mem.asBytes(&self.endpoints), 0);
 
             // Set up endpoints.
-            self.interface.ep_open(&.control(.in(.ep0), max_supported_packet_size));
-            self.interface.ep_open(&.control(.out(.ep0), max_supported_packet_size));
+            self.interface.ep_open(&.control(.in(.ep0), device_capabilities.max_packet_size));
+            self.interface.ep_open(&.control(.out(.ep0), device_capabilities.max_packet_size));
 
             // Present full-speed device by enabling pullup on DP. This is the point
             // where the host will notice our presence.
             peripherals.USB.SIE_CTRL.modify(.{ .PULLUP_EN = 1 });
 
             // Listen for ACKs
-            self.interface.ep_listen(.ep0, max_supported_packet_size);
+            self.interface.ep_listen(.ep0, device_capabilities.max_packet_size);
 
             return self;
         }
@@ -268,7 +275,7 @@ pub fn Polled(config: Config) type {
             itf: *usb.DeviceInterface,
             ep_num: usb.types.Endpoint.Num,
             data: []const []const u8,
-        ) usb.types.Len {
+        ) usb.types.PacketLength {
             log.debug("writev {t} {}: {any}", .{ ep_num, data[0].len, data[0] });
 
             const self: *@This() = @fieldParentPtr("interface", itf);
@@ -283,7 +290,7 @@ pub fn Polled(config: Config) type {
                 hw_buf = hw_buf[len..];
             }
 
-            const len: usb.types.Len = @intCast(ep.data_buffer.len - hw_buf.len);
+            const len: usb.types.PacketLength = @intCast(ep.data_buffer.len - hw_buf.len);
 
             var bufctrl = bufctrl_ptr.read();
             assert(bufctrl.AVAILABLE_0 == 0);
@@ -314,7 +321,7 @@ pub fn Polled(config: Config) type {
             itf: *usb.DeviceInterface,
             ep_num: usb.types.Endpoint.Num,
             data: []const []u8,
-        ) usb.types.Len {
+        ) usb.types.PacketLength {
             var total_len: usize = data[0].len;
             for (data[1..]) |d| total_len += d.len;
             log.debug("readv {t} {}", .{ ep_num, total_len });
@@ -340,7 +347,7 @@ pub fn Polled(config: Config) type {
         fn ep_listen(
             itf: *usb.DeviceInterface,
             ep_num: usb.types.Endpoint.Num,
-            len: usb.types.Len,
+            len: usb.types.PacketLength,
         ) void {
             log.debug("listen {t} {}", .{ ep_num, len });
 
@@ -411,7 +418,7 @@ pub fn Polled(config: Config) type {
 
             const ep_hard = self.hardware_endpoint_get_by_address(ep);
 
-            assert(desc.max_packet_size.native() <= max_supported_packet_size);
+            assert(desc.max_packet_size.native() <= device_capabilities.max_packet_size);
 
             buffer_control[@backingInt(ep.num)].get(ep.dir).modify(.{ .PID_0 = 1 });
 
@@ -446,39 +453,16 @@ pub fn Polled(config: Config) type {
 }
 
 pub fn ResetDriver(bootsel_activity_led: ?u5, interface_disable_mask: u32) type {
-    return struct {
-        const log_drv = std.log.scoped(.pico_reset);
+    const log_drv = std.log.scoped(.pico_reset);
 
-        pub const Descriptor = extern struct {
-            reset_interface: usb.descriptor.Interface,
+    const Descriptor = extern struct {
+        reset_interface: usb.descriptor.Interface,
+    };
 
-            pub fn create(
-                alloc: *usb.DescriptorAllocator,
-                _: usb.types.Len,
-                interface_str: []const u8,
-            ) usb.DescriptorCreateResult(@This()) {
-                return .{ .descriptor = .{ .reset_interface = .{
-                    .interface_number = alloc.next_itf(),
-                    .alternate_setting = 0,
-                    .num_endpoints = 0,
-                    .interface_triple = .from(
-                        .VendorSpecific,
-                        @fromBackingInt(0x00),
-                        @fromBackingInt(0x01),
-                    ),
-                    .interface_s = alloc.string(interface_str),
-                } } };
-            }
-        };
+    const Runtime = struct {
+        pub fn init(_: *@This(), _: anytype, _: *const Descriptor, _: *usb.DeviceInterface) void {}
 
-        pub fn init(self: *@This(), desc: *const Descriptor, device: *usb.DeviceInterface) void {
-            _ = desc;
-            _ = device;
-            self.* = .{};
-        }
-
-        pub fn class_request(self: *@This(), setup: *const usb.types.SetupPacket) ?[]const u8 {
-            _ = self;
+        pub fn class_request(_: *@This(), setup: *const usb.types.SetupPacket) ?[]const u8 {
             switch (setup.request) {
                 0x01 => {
                     const value = setup.value.native();
@@ -498,6 +482,31 @@ pub fn ResetDriver(bootsel_activity_led: ?u5, interface_disable_mask: u32) type 
                 else => return usb.nak,
             }
             return usb.ack;
+        }
+    };
+
+    return struct {
+        itf_string: []const u8 = "",
+
+        pub fn driver_info(
+            self: @This(),
+            comptime _: usb.DeviceCapabilities,
+            alloc: *usb.DescriptorAllocator,
+        ) usb.DriverInfo(Descriptor) {
+            return .{
+                .Runtime = Runtime,
+                .descriptor = .{ .reset_interface = .{
+                    .interface_number = alloc.next_itf(),
+                    .alternate_setting = 0,
+                    .num_endpoints = 0,
+                    .interface_triple = .from(
+                        .VendorSpecific,
+                        @fromBackingInt(0x00),
+                        @fromBackingInt(0x01),
+                    ),
+                    .interface_s = alloc.string(self.itf_string),
+                } },
+            };
         }
     };
 }

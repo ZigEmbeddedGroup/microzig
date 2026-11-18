@@ -10,9 +10,6 @@ const peripherals = microzig.chip.peripherals;
 const usb = microzig.core.usb;
 const types = usb.types;
 const descriptor = usb.descriptor;
-
-pub const max_packet_size: u11 = 64;
-
 pub const USB_MAX_ENDPOINTS_COUNT = 8;
 
 const max_buffer_pool_size = USB_MAX_ENDPOINTS_COUNT * 2 * 64 + 64;
@@ -156,6 +153,16 @@ pub fn Polled(comptime _: Setup, comptime cfg: Config) type {
     return struct {
         const Self = @This();
 
+        pub const device_capabilities: usb.DeviceCapabilities = .{
+            .max_supported_bcd_usb = .v2_00, // Is this correct?
+            .max_packet_size0 = 64,
+            .max_packet_size = 64,
+        };
+
+        comptime {
+            usb.validate_device(Self);
+        }
+
         const vtable: usb.DeviceInterface.VTable = .{
             .ep_writev = ep_writev,
             .ep_readv = ep_readv,
@@ -186,13 +193,13 @@ pub fn Polled(comptime _: Setup, comptime cfg: Config) type {
             // EP0 is required; open OUT then IN (or vice versa), we will share buffer.
             self.interface.ep_open(&.{
                 .endpoint = .out(.ep0),
-                .max_packet_size = .from(64),
+                .max_packet_size = .from(device_capabilities.max_packet_size0),
                 .attributes = .{ .transfer_type = .Control, .usage = .data },
                 .interval = 0,
             });
             self.interface.ep_open(&.{
                 .endpoint = .in(.ep0),
-                .max_packet_size = .from(64),
+                .max_packet_size = .from(device_capabilities.max_packet_size0),
                 .attributes = .{ .transfer_type = .Control, .usage = .data },
                 .interval = 0,
             });
@@ -457,7 +464,7 @@ pub fn Polled(comptime _: Setup, comptime cfg: Config) type {
             }
         }
 
-        fn ep_listen(itf: *usb.DeviceInterface, ep_num: types.Endpoint.Num, len: types.Len) void {
+        fn ep_listen(itf: *usb.DeviceInterface, ep_num: types.Endpoint.Num, len: types.PacketLength) void {
             log.debug("ep_listen ep{} len={}", .{ ep_num, len });
             const self: *Self = @fieldParentPtr("interface", itf);
 
@@ -489,7 +496,7 @@ pub fn Polled(comptime _: Setup, comptime cfg: Config) type {
             set_rx_ctrl(ep_i, RES_ACK, current_rx_tog(ep_i), false);
         }
 
-        fn ep_readv(itf: *usb.DeviceInterface, ep_num: types.Endpoint.Num, data: []const []u8) types.Len {
+        fn ep_readv(itf: *usb.DeviceInterface, ep_num: types.Endpoint.Num, data: []const []u8) types.PacketLength {
             const self: *Self = @fieldParentPtr("interface", itf);
 
             const st_out = self.st(ep_num, .out);
@@ -514,10 +521,10 @@ pub fn Polled(comptime _: Setup, comptime cfg: Config) type {
             }
 
             // Driver is responsible for re-arming via ep_listen().
-            return @as(types.Len, @intCast(copied));
+            return @intCast(copied);
         }
 
-        fn ep_writev(itf: *usb.DeviceInterface, ep_num: types.Endpoint.Num, vec: []const []const u8) types.Len {
+        fn ep_writev(itf: *usb.DeviceInterface, ep_num: types.Endpoint.Num, vec: []const []const u8) types.PacketLength {
             log.debug("ep_writev called for ep{} with {} chunks", .{ ep_num, vec.len });
             const self: *Self = @fieldParentPtr("interface", itf);
             assert(vec.len > 0);
@@ -549,7 +556,7 @@ pub fn Polled(comptime _: Setup, comptime cfg: Config) type {
             set_tx_ctrl(ep_i, RES_ACK, current_tx_tog(ep_i), false);
 
             // For ZLP ACK, usb.DeviceInterface.ep_ack() expects ep_writev() returns 0.
-            return @as(types.Len, @intCast(w));
+            return @intCast(w);
         }
 
         // ---- HW init ---------------------------------------------------------

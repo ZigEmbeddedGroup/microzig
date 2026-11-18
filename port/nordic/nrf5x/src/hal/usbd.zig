@@ -40,6 +40,8 @@ const EP_Config = struct {
 };
 
 pub const USBD = struct {
+    const Self = @This();
+
     power: PowerState = .detached,
 
     bufs_in: [NUM_EP][MAX_PACKET_SIZE]u8 align(4) = @splat(@splat(0)),
@@ -50,10 +52,17 @@ pub const USBD = struct {
 
     interface: usb.DeviceInterface,
 
-    pub const max_supported_packet_size = MAX_PACKET_SIZE;
-    pub const max_supported_bcd_usb: usb.types.Version = .v1_10;
-    pub const default_vendor_id: usb.Config.IdStringPair = .{ .id = 0x1209, .str = "pid.codes" };
-    pub const default_product_id: usb.Config.IdStringPair = .{ .id = 0x0001, .str = "nRF5x test device" };
+    pub const device_capabilities: usb.DeviceCapabilities = .{
+        .max_supported_bcd_usb = .v1_10,
+        .max_packet_size0 = MAX_PACKET_SIZE,
+        .max_packet_size = MAX_PACKET_SIZE,
+        .default_vendor = .{ .id = 0x1209, .str = "pid.codes" },
+        .default_product = .{ .id = 0x0001, .str = "nRF5x test device" },
+    };
+
+    comptime {
+        usb.validate_device(Self);
+    }
 
     const vtable: usb.DeviceInterface.VTable = .{
         .ep_writev = ep_writev,
@@ -62,8 +71,6 @@ pub const USBD = struct {
         .ep_open = ep_open,
         .set_address = set_address,
     };
-
-    const Self = @This();
 
     pub fn init() Self {
         peripherals.USBD.USBPULLUP.write_raw(0);
@@ -263,7 +270,7 @@ pub const USBD = struct {
         itf: *usb.DeviceInterface,
         ep_num: usb.types.Endpoint.Num,
         data: []const []const u8,
-    ) usb.types.Len {
+    ) usb.types.PacketLength {
         const self: *Self = @fieldParentPtr("interface", itf);
         log.debug("ep_writev {t}: ({} bytes) {X} ({s})", .{ ep_num, data[0].len, data[0], data[0] });
 
@@ -283,7 +290,7 @@ pub const USBD = struct {
             scratch_slice = scratch_slice[len..];
         }
 
-        const len: usb.types.Len = @intCast(scratch_cap - scratch_slice.len);
+        const len: usb.types.PacketLength = @intCast(scratch_cap - scratch_slice.len);
 
         // Prepare DMA transfer
         peripherals.USBD.EPIN[i].PTR.write_raw(@intFromPtr(scratch));
@@ -323,7 +330,7 @@ pub const USBD = struct {
         itf: *usb.DeviceInterface,
         ep_num: usb.types.Endpoint.Num,
         data: []const []u8,
-    ) usb.types.Len {
+    ) usb.types.PacketLength {
         var total_len: usize = data[0].len;
         for (data[1..]) |d| total_len += d.len;
         log.debug("ep_readv {t}: ({} bytes)", .{ ep_num, total_len });
@@ -362,7 +369,7 @@ pub const USBD = struct {
     fn ep_listen(
         _: *usb.DeviceInterface,
         ep_num: usb.types.Endpoint.Num,
-        len: usb.types.Len,
+        len: usb.types.PacketLength,
     ) void {
         log.debug("ep_listen {t}: ({} bytes)", .{ ep_num, len });
 
