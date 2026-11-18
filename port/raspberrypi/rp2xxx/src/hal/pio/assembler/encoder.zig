@@ -1211,6 +1211,7 @@ test "encode.movrx" {
     );
 
     const program = output.programs.get(0);
+    // 0b1000_0000_F001_Iiii (F = FromFifo, I = IdxI)
     const expected = [_]u16{ 0x8010, 0x801a, 0x809b, 0x809b };
     for (expected, 0..) |word, i|
         try expectEqual(word, @as(u16, @bitCast(program.instructions.get(i))));
