@@ -11,6 +11,8 @@ const microzig = @import("microzig");
 const peripherals = microzig.chip.peripherals;
 const chip = microzig.hal.compatibility.chip;
 const usb = microzig.core.usb;
+const resets = microzig.hal.resets;
+const time = microzig.hal.time;
 
 pub const RP2XXX_MAX_ENDPOINTS_COUNT = 16;
 
@@ -183,10 +185,23 @@ pub fn Polled(config: Config) type {
         }
 
         pub fn init() @This() {
-            if (chip == .RP2350)
-                peripherals.USB.MAIN_CTRL.write(.{ .PHY_ISO = 0 });
+            // A warm restart (SWD flash, debugger reset) keeps the previous
+            // image's pull-up: sample it before the block reset below
+            const was_attached =
+                resets.reset_done(.only(.usbctrl)) and
+                peripherals.USB.SIE_CTRL.read().PULLUP_EN != 0;
 
-            peripherals.USB.SIE_CTRL.modify(.{ .PULLUP_EN = 0 });
+            // Reset hardware to a clean state. Not done by init_sequence()
+            // because that would disturb a USB-to-SWD bridge
+            resets.reset_block(.only(.usbctrl));
+            resets.unreset_block_wait(.only(.usbctrl));
+
+            if (was_attached) {
+                // hold the pull-up off 2 ms so the host sees a detach even
+                // behind a max-size full-speed packet (USB 2.0 7.1.7.3 needs
+                // undriven SE0)
+                time.sleep_ms(2);
+            }
 
             // Clear the control portion of DPRAM. This may not be necessary -- the
             // datasheet is ambiguous -- but the C examples do it, and so do we.
@@ -221,21 +236,29 @@ pub fn Polled(config: Config) type {
                 .VBUS_DETECT_OVERRIDE_EN = 1,
             });
 
-            // Enable controller in device mode.
-            peripherals.USB.MAIN_CTRL.modify(.{
-                .CONTROLLER_EN = 1,
-                .HOST_NDEVICE = 0,
-            });
+            // Enable the controller in device mode.
+            switch (chip) {
+                .RP2040 => peripherals.USB.MAIN_CTRL.write(.{
+                    .CONTROLLER_EN = 1,
+                    .HOST_NDEVICE = 0,
+                }),
+                .RP2350 => peripherals.USB.MAIN_CTRL.write(.{
+                    .CONTROLLER_EN = 1,
+                    .HOST_NDEVICE = 0,
+                    .PHY_ISO = 0,
+                }),
+            }
 
             // Request to have an interrupt (which really just means setting a bit in
             // the `buff_status` register) every time a buffer moves through EP0.
-            peripherals.USB.SIE_CTRL.modify(.{
+            peripherals.USB.SIE_CTRL.write(.{
                 .EP0_INT_1BUF = 1,
+                .PULLDOWN_EN = 0,
             });
 
             // Enable interrupts (bits set in the `ints` register) for other conditions
-            // we use:
-            peripherals.USB.INTE.modify(.{
+            // we use.
+            peripherals.USB.INTE.write(.{
                 // A buffer is done
                 .BUFF_STATUS = 1,
                 // The host has reset us
