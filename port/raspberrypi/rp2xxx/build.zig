@@ -34,6 +34,7 @@ pub fn init(dep: *std.Build.Dependency) ?Self {
     const b = dep.builder;
 
     const riscv32_common_dep = b.dependency("microzig/modules/riscv32-common", .{});
+    const rtt_dep = b.dependency("microzig/modules/rtt", .{});
     const pico_sdk = b.lazyDependency("pico-sdk", .{}) orelse return null;
     const bounded_array_dep = b.dependency("bounded-array", .{});
 
@@ -129,6 +130,10 @@ pub fn init(dep: *std.Build.Dependency) ?Self {
             .name = "hazard3",
             .root_source_file = b.path("src/cpus/hazard3.zig"),
             .imports = b.allocator.dupe(std.Build.Module.Import, &.{
+                .{
+                    .name = "rtt",
+                    .module = rtt_dep.module("rtt"),
+                },
                 .{
                     .name = "riscv32-common",
                     .module = riscv32_common_dep.module("riscv32-common"),
