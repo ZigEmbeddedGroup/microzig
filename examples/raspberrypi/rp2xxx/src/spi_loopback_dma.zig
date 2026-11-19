@@ -1,36 +1,27 @@
 const std = @import("std");
 const microzig = @import("microzig");
+const common = @import("common.zig");
 
 const rp2xxx = microzig.hal;
 const time = rp2xxx.time;
-const gpio = rp2xxx.gpio;
 const dma = rp2xxx.dma;
-
-const uart = rp2xxx.uart.instance.num(0);
-const uart_tx_pin = gpio.num(0);
 
 const BUF_LEN = 0x100;
 const spi = rp2xxx.spi.instance.SPI0;
 
-pub const panic = microzig.panic;
-
 pub const std_options = microzig.std_options(.{
     .log_level = .debug,
-    .logFn = rp2xxx.uart.log,
+    .logFn = common.log,
 });
+
+pub const panic = microzig.panic;
 
 comptime {
     _ = microzig.export_startup();
 }
 
 pub fn main() !void {
-    uart_tx_pin.set_function(.uart);
-
-    uart.apply(.{
-        .clock_config = rp2xxx.clock_config,
-    });
-
-    rp2xxx.uart.init_logger(uart);
+    common.init_logger();
 
     var out_buf = std.mem.zeroes([BUF_LEN]u8);
     var in_buf: [BUF_LEN]u8 = undefined;

@@ -10,9 +10,9 @@ const i2c0 = i2c.instance.num(0);
 const empty_row: [16]u8 = @splat(' ');
 const four_rows: [16 * 4]u8 = @splat(' ');
 
-pub const panic = microzig.panic;
-
 pub const std_options = microzig.std_options(.{});
+
+pub const panic = microzig.panic;
 
 comptime {
     _ = microzig.export_startup();

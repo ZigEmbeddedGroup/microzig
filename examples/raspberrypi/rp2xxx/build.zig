@@ -5,9 +5,15 @@ const MicroBuild = microzig.MicroBuild(.{
     .rp2xxx = true,
 });
 
+const Logger = enum {
+    rtt,
+    uart,
+};
+
 pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
     const maybe_example = b.option([]const u8, "example", "only build matching examples");
+    const logger: Logger = b.option(Logger, "logger", "Which logger to use") orelse .uart;
 
     const mz_dep = b.dependency("microzig", .{});
     const mb = MicroBuild.init(b, mz_dep) orelse return;
@@ -135,6 +141,9 @@ pub fn build(b: *std.Build) void {
         }
     }
 
+    const example_options = b.addOptions();
+    example_options.addOption(Logger, "logger", logger);
+
     for (available_examples.items) |example| {
         // If we specify example, only select the ones that match
         if (maybe_example) |selected_example|
@@ -153,6 +162,7 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path(example.file),
             .imports = example.imports,
         });
+        fw.exe.root_module.addOptions("options", example_options);
 
         // Import net module for some examples
         if (std.mem.indexOf(u8, example.name, "_net-") != null) {

@@ -1,5 +1,5 @@
-const std = @import("std");
 const microzig = @import("microzig");
+const common = @import("common.zig");
 
 const rp2xxx = microzig.hal;
 const time = rp2xxx.time;
@@ -32,29 +32,20 @@ pub const std_options = microzig.std_options(.{
         .{ .scope = .usb_ctrl, .level = .warn },
         .{ .scope = .usb_echo, .level = .warn },
     },
-    .logFn = rp2xxx.uart.log,
+    .logFn = common.log,
 });
 
 comptime {
     _ = microzig.export_startup();
 }
 
-pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
-    std.log.err("panic: {s}", .{message});
-    @breakpoint();
-    while (true) {}
-}
+pub const panic = microzig.panic;
 
 const pin_config = microzig.board.pin_config;
 
 pub fn main() !void {
+    common.init_logger();
     const pins = pin_config.apply();
-
-    const uart = rp2xxx.uart.instance.num(0);
-    uart.apply(.{
-        .clock_config = rp2xxx.clock_config,
-    });
-    rp2xxx.uart.init_logger(uart);
 
     pins.led.put(1);
 

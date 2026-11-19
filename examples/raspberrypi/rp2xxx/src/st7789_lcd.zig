@@ -13,6 +13,7 @@
 //! - Backlight: GPIO 13 (PWM for brightness control)
 
 const microzig = @import("microzig");
+const common = @import("common.zig");
 
 const rp2xxx = microzig.hal;
 const time = rp2xxx.time;
@@ -29,16 +30,12 @@ const DISPLAY_DC_PIN = 8;
 const DISPLAY_RST_PIN = 12;
 const DISPLAY_BACKLIGHT_PIN = 13;
 
-const uart = rp2xxx.uart.instance.num(0);
-const uart_tx_pin = gpio.num(0);
-const uart_rx_pin = gpio.num(1);
-
-pub const panic = microzig.panic;
-
 pub const std_options = microzig.std_options(.{
     .log_level = .debug,
-    .logFn = rp2xxx.uart.log,
+    .logFn = common.log,
 });
+
+pub const panic = microzig.panic;
 
 comptime {
     _ = microzig.export_startup();
@@ -87,13 +84,7 @@ fn flush_display_buffer(display: *DisplayDriver, buffer: []DisplayDriver.Color) 
 }
 
 pub fn main() !void {
-    inline for (&.{ uart_tx_pin, uart_rx_pin }) |pin| {
-        pin.set_function(.uart);
-    }
-
-    uart.apply(.{
-        .clock_config = rp2xxx.clock_config,
-    });
+    common.init_logger();
 
     led.set_function(.pwm);
     led.set_direction(.out);

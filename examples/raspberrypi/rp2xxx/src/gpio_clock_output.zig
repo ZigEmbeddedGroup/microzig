@@ -6,9 +6,9 @@ const clocks = rp2xxx.clocks;
 
 const gpout0_pin = gpio.num(21);
 
-pub const panic = microzig.panic;
-
 pub const std_options = microzig.std_options(.{});
+
+pub const panic = microzig.panic;
 
 comptime {
     _ = microzig.export_startup();

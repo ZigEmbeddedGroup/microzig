@@ -129,7 +129,9 @@ jobs:
       working-directory: examples/nxp/mcx
 
     - name: raspberrypi/rp2xxx
-      run: zig build -Doptimize=ReleaseSmall
+      run: |
+        zig build -Doptimize=ReleaseSmall -Dlogger=uart
+        zig build -Doptimize=ReleaseSmall -Dlogger=rtt
       working-directory: examples/raspberrypi/rp2xxx
 
     - name: stmicro/stm32

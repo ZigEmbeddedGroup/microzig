@@ -1,5 +1,6 @@
 const std = @import("std");
 const microzig = @import("microzig");
+const common = @import("common.zig");
 
 const rp2xxx = microzig.hal;
 const time = rp2xxx.time;
@@ -13,8 +14,10 @@ pub const std_options = microzig.std_options(.{
         .{ .scope = .usb_ctrl, .level = .warn },
         .{ .scope = .usb_hid_int_driver, .level = .warn },
     },
-    .logFn = rp2xxx.uart.log,
+    .logFn = common.log,
 });
+
+pub const panic = microzig.panic;
 
 comptime {
     _ = microzig.export_startup();
@@ -43,25 +46,15 @@ var usb_controller: usb.DeviceController(.{
     },
 )}) = .init;
 
-pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
-    std.log.err("panic: {s}", .{message});
-    @breakpoint();
-    while (true) {}
-}
-
 const pin_config: rp2xxx.pins.GlobalConfiguration = .{
     .GPIO0 = .{ .function = .UART0_TX },
     .GPIO25 = .{ .name = "led", .direction = .out },
 };
 
 pub fn main() !void {
-    const pins = pin_config.apply();
+    common.init_logger();
 
-    const uart = rp2xxx.uart.instance.num(0);
-    uart.apply(.{
-        .clock_config = rp2xxx.clock_config,
-    });
-    rp2xxx.uart.init_logger(uart);
+    const pins = pin_config.apply();
 
     pins.led.put(1);
 

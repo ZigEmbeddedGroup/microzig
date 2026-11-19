@@ -1,5 +1,7 @@
 const std = @import("std");
 const microzig = @import("microzig");
+const common = @import("common.zig");
+
 const rp2xxx = microzig.hal;
 const gpio = rp2xxx.gpio;
 const time = rp2xxx.time;
@@ -7,30 +9,18 @@ const time = rp2xxx.time;
 const GPIO_Device = rp2xxx.drivers.GPIO_Device;
 const ULN2003 = microzig.drivers.stepper.ULN2003;
 
-const uart = rp2xxx.uart.instance.num(0);
-const uart_tx_pin = gpio.num(0);
-
 pub const std_options = microzig.std_options(.{
-    .logFn = rp2xxx.uart.log,
+    .logFn = common.log,
 });
+
+pub const panic = microzig.panic;
 
 comptime {
     _ = microzig.export_startup();
 }
 
-pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
-    std.log.err("panic: {s}", .{message});
-    @breakpoint();
-    while (true) {}
-}
-
 pub fn main() !void {
-    // init uart logging
-    uart_tx_pin.set_function(.uart);
-    uart.apply(.{
-        .clock_config = rp2xxx.clock_config,
-    });
-    rp2xxx.uart.init_logger(uart);
+    common.init_logger();
 
     // Setup all pins for the stepper driver
     var pins: struct {

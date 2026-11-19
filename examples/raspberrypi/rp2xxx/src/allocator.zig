@@ -1,11 +1,10 @@
 const std = @import("std");
 const microzig = @import("microzig");
+const common = @import("common.zig");
 
 const hal = microzig.hal;
 
 const time = hal.time;
-
-const uart = hal.uart.instance.num(0);
 
 var RandomGen = std.Random.DefaultPrng.init(0);
 const rand = RandomGen.random();
@@ -27,16 +26,13 @@ const pin_config = hal.pins.GlobalConfiguration{
     },
 };
 
-// ---- UART Configuration --------------------------------
-
-const baud_rate = 115200;
-
 // ---- MicroZig Options --------------------------------
 
 pub const panic = microzig.panic;
 
 pub const std_options = microzig.std_options(.{
     .log_level = .debug,
+    .logFn = common.log,
 });
 
 comptime {
@@ -44,21 +40,10 @@ comptime {
 }
 
 pub fn main() !void {
+    common.init_logger();
 
     // --- Set up GPIO -------------------------------
-
     _ = pin_config.apply();
-
-    // --- Set up UART -------------------------------
-
-    uart.apply(.{
-        .baud_rate = baud_rate,
-        .clock_config = hal.clock_config,
-    });
-
-    // --- Set up Logger -----------------------------
-
-    hal.uart.init_logger(uart);
 
     time.sleep_ms(1000);
 
