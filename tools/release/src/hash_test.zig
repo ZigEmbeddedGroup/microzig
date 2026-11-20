@@ -33,7 +33,7 @@ fn createTempPackage(
     test_dir_name: []const u8,
     files: []const TestFile,
 ) ![]const u8 {
-    const tmp_path = try std.fmt.allocPrint(allocator, "/tmp/release-test-{s}", .{test_dir_name});
+    const tmp_path = try allocator.print("/tmp/release-test-{s}", .{test_dir_name});
     // Clean up any leftover
     std.Io.Dir.cwd().deleteTree(io, tmp_path) catch {};
     _ = try std.Io.Dir.cwd().createDirPathOpen(io, tmp_path, .{});
@@ -43,7 +43,7 @@ fn createTempPackage(
 
     for (files) |f| {
         // Create parent directories if needed
-        if (std.fs.path.dirname(f.path)) |dirname| {
+        if (std.Io.Dir.path.dirname(f.path)) |dirname| {
             pkg_dir.createDirPath(io, dirname) catch |err| switch (err) {
                 error.PathAlreadyExists => {},
                 else => return err,
@@ -105,7 +105,7 @@ fn verifyHashMatches(
     defer allocator.free(tar_gz);
 
     // Write tar.gz to a temp file
-    const tar_gz_path = try std.fmt.allocPrint(allocator, "/tmp/release-test-{s}.tar.gz", .{pkg.name});
+    const tar_gz_path = try allocator.print("/tmp/release-test-{s}.tar.gz", .{pkg.name});
     defer {
         std.Io.Dir.cwd().deleteFile(io, tar_gz_path) catch {};
         allocator.free(tar_gz_path);
@@ -132,7 +132,7 @@ fn verifyHashMatches(
         var i: usize = 0;
         while (env_ptr[i]) |entry| : (i += 1) {
             const entry_str = std.mem.span(entry);
-            const eq_pos = std.mem.indexOfScalar(u8, entry_str, '=') orelse continue;
+            const eq_pos = std.mem.findScalar(u8, entry_str, '=') orelse continue;
             try m.put(entry_str[0..eq_pos], entry_str[eq_pos + 1 ..]);
         }
         break :blk m;

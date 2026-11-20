@@ -17,7 +17,7 @@ comptime {
     _ = microzig.export_startup();
 }
 
-pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
+pub fn panic(message: []const u8, _: ?*std.lang.StackTrace, _: ?usize) noreturn {
     std.log.err("panic: {s}", .{message});
     @breakpoint();
     while (true) {}

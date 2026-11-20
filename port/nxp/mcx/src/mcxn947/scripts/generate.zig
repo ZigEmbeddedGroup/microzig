@@ -38,9 +38,9 @@ pub fn print_fields(comptime ty: []const u8, comptime suffix_: ?[]const u8) []Fi
     inline for (0..4) |i| {
         const num: []const u8 = &[_]u8{comptime std.fmt.digitToChar(i, .lower)};
         const T = @FieldType(peripherals.SYSCON0, ty ++ num).underlying_type;
-        inline for (comptime std.meta.fieldNames(T)) |name| {
-            if (comptime std.mem.indexOf(u8, name, "reserved") != null or std.mem.indexOf(u8, name, "padding") != null) continue;
-            const suf_i: ?usize = if (suffix_) |suffix| comptime std.mem.indexOf(u8, name, suffix) else name.len;
+        inline for (@typeInfo(T).@"struct".field_names) |name| {
+            if (comptime std.mem.find(u8, name, "reserved") != null or std.mem.find(u8, name, "padding") != null) continue;
+            const suf_i: ?usize = if (suffix_) |suffix| comptime std.mem.find(u8, name, suffix) else name.len;
             if (suf_i == null) @compileError("field doesn't have suffix");
             fields_[len] = .{ .name = name[0..suf_i.?], .i = i, .offset = get_field_offset(T, name) };
             max_len = @max(max_len, fields_[len].name.len);

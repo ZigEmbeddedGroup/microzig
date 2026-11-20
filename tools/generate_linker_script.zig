@@ -57,7 +57,7 @@ pub fn main(init: std.process.Init) !void {
             if (region.name) |name| {
                 region_name.* = try allocator.dupe(u8, name);
             } else {
-                region_name.* = try std.fmt.allocPrint(allocator, "{s}{}", .{
+                region_name.* = try allocator.print("{s}{}", .{
                     @tagName(region.tag),
                     counters[@backingInt(region.tag)],
                 });
@@ -248,7 +248,7 @@ pub fn main(init: std.process.Init) !void {
             \\
         , .{
             if (!parsed_args.ram_image)
-                try std.fmt.allocPrint(allocator, "{s} AT> {s}", .{ ram_region_name, flash_region_name })
+                try allocator.print("{s} AT> {s}", .{ ram_region_name, flash_region_name })
             else
                 ram_region_name,
             ram_region_name,

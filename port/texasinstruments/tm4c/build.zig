@@ -29,10 +29,10 @@ pub fn init(dep: *std.Build.Dependency) ?Self {
     };
 }
 
-pub fn build(b: *std.Build) void {
+pub fn build(b: *std.Build) !void {
     const generate = b.option(bool, "generate", "") orelse false;
     if (generate) {
-        const ti_data = b.lazyDependency("ti_data", .{}) orelse return;
+        const ti_data = try b.dependencyLazy("ti_data", .{});
         const targetdb = ti_data.path("targetdb");
 
         const generate_optimize: std.lang.Optimize = .safe;

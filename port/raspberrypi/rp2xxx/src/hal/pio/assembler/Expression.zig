@@ -231,7 +231,7 @@ fn recursive_tokenize(
     } else {
         // if we hit this path, then the full string has been scanned, and no operators
         const trimmed = std.mem.trim(u8, expr_str, " \t");
-        const value_index = expr_index + @as(u32, @intCast(std.mem.indexOf(u8, expr_str, trimmed).?));
+        const value_index = expr_index + @as(u32, @intCast(std.mem.find(u8, expr_str, trimmed).?));
         try ops.append(.{
             .op = .value,
             .index = value_index,

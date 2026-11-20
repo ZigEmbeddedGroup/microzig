@@ -409,7 +409,7 @@ fn _vector_table() align(256) linksection(".ram_vectors") callconv(.naked) void 
         var interrupt_jump_asm: []const u8 = "";
         var interrupt_c_stubs_asm: []const u8 = "";
 
-        for (std.meta.fieldNames(InterruptOptions)) |field_name| {
+        for (@typeInfo(InterruptOptions).@"struct".field_names) |field_name| {
             const handler: InterruptHandler = @field(microzig.options.interrupts, field_name) orelse .{ .c = &unhandled };
             switch (handler) {
                 .naked => |naked_handler| {

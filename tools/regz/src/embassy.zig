@@ -159,7 +159,7 @@ pub fn load_into_db(db: *Database, io: std.Io, path: []const u8, device: ?[]cons
         chip_files.deinit(allocator);
     }
 
-    var register_files: std.StringArrayHashMapUnmanaged(std.json.Parsed(std.json.Value)) = .empty;
+    var register_files: std.array_hash_map.String(std.json.Parsed(std.json.Value)) = .empty;
     defer {
         for (register_files.values()) |*value|
             value.deinit();
@@ -239,7 +239,7 @@ pub fn load_into_db(db: *Database, io: std.Io, path: []const u8, device: ?[]cons
 
         try handle_extends(allocator, &register_file.value);
 
-        const register_name = try allocator.dupe(u8, entry.name[0 .. entry.name.len - std.fs.path.extension(entry.name).len]);
+        const register_name = try allocator.dupe(u8, entry.name[0 .. entry.name.len - std.Io.Dir.path.extension(entry.name).len]);
         try register_files.put(allocator, register_name, register_file);
     }
 
@@ -251,7 +251,7 @@ pub fn load_into_db(db: *Database, io: std.Io, path: []const u8, device: ?[]cons
             .name = name,
         });
 
-        var enums: std.StringArrayHashMapUnmanaged(Database.EnumID) = .empty;
+        var enums: std.array_hash_map.String(Database.EnumID) = .empty;
         defer enums.deinit(allocator);
 
         for (register_file.value.object.keys(), register_file.value.object.values()) |key, obj| {
@@ -322,7 +322,7 @@ pub fn load_into_db(db: *Database, io: std.Io, path: []const u8, device: ?[]cons
                 // of cluster.
                 if (item.object.get("block")) |block| {
                     const ref_type = block.string;
-                    const block_key = try std.fmt.allocPrint(allocator, "block/{s}", .{ref_type});
+                    const block_key = try allocator.print("block/{s}", .{ref_type});
                     const block_value = (register_file.value.object.get(block_key) orelse continue).object;
                     var max_bytes: u64 = 0;
                     for (block_value.get("items").?.array.items) |nested_item| {
@@ -353,7 +353,7 @@ pub fn load_into_db(db: *Database, io: std.Io, path: []const u8, device: ?[]cons
                     } else if (maybe_stride) |stride| {
                         // We have spread cluster
                         for (0..maybe_count.?) |id| {
-                            const register_part_name = try std.fmt.allocPrint(allocator, "{s}[{d}]", .{
+                            const register_part_name = try allocator.print("{s}[{d}]", .{
                                 register_name,
                                 id,
                             });
@@ -389,7 +389,7 @@ pub fn load_into_db(db: *Database, io: std.Io, path: []const u8, device: ?[]cons
                     if (maybe_count) |count| {
                         // We spread the register as it jumps over other registers
                         for (0..count) |id| {
-                            const register_part_name = try std.fmt.allocPrint(allocator, "{s}[{d}]", .{
+                            const register_part_name = try allocator.print("{s}[{d}]", .{
                                 register_name,
                                 id,
                             });
@@ -415,7 +415,7 @@ pub fn load_into_db(db: *Database, io: std.Io, path: []const u8, device: ?[]cons
                 }
 
                 if (item.object.get("fieldset")) |fieldset| blk: {
-                    const fieldset_key = try std.fmt.allocPrint(allocator, "fieldset/{s}", .{fieldset.string});
+                    const fieldset_key = try allocator.print("fieldset/{s}", .{fieldset.string});
                     const fieldset_value = (register_file.value.object.get(fieldset_key) orelse break :blk).object;
                     next_field: for (fieldset_value.get("fields").?.array.items) |field| {
                         const field_name = field.object.get("name").?.string;
@@ -445,7 +445,7 @@ pub fn load_into_db(db: *Database, io: std.Io, path: []const u8, device: ?[]cons
 
                                     if (object_map.get("offsets")) |positions| {
                                         for (positions.array.items, 0..) |position, idx| {
-                                            const field_name_irregular_stride = try std.fmt.allocPrint(allocator, "{s}[{}]", .{ field_name, idx });
+                                            const field_name_irregular_stride = try allocator.print("{s}[{}]", .{ field_name, idx });
                                             for (register_ids.items) |register_id| {
                                                 try db.add_register_field(register_id, .{
                                                     .name = field_name_irregular_stride,
@@ -481,7 +481,7 @@ pub fn load_into_db(db: *Database, io: std.Io, path: []const u8, device: ?[]cons
                                     std.log.warn("skipping {s}, it's an non-consecutive field with more than two parts", .{field_name});
                                     continue;
                                 }
-                                const cont_field = try std.fmt.allocPrint(allocator, "{s}_CONT", .{field_name});
+                                const cont_field = try allocator.print("{s}_CONT", .{field_name});
                                 const field_names = [2][]const u8{ field_name, cont_field };
 
                                 for (arr.items, field_names) |non_contiguous_offset, non_contiguous_field_name| {
@@ -544,11 +544,11 @@ pub fn load_into_db(db: *Database, io: std.Io, path: []const u8, device: ?[]cons
                 .idx = interrupt.number,
             });
 
-            if (std.mem.indexOf(u8, interrupt.name, "FPU")) |_| {
+            if (std.mem.find(u8, interrupt.name, "FPU")) |_| {
                 has_fpu = true;
             }
 
-            if (std.mem.indexOf(u8, interrupt.name, "DMA")) |_| {
+            if (std.mem.find(u8, interrupt.name, "DMA")) |_| {
                 dma_channel_count += 1;
             }
         }
@@ -560,14 +560,14 @@ pub fn load_into_db(db: *Database, io: std.Io, path: []const u8, device: ?[]cons
 
         try db.add_device_property(device_id, .{
             .key = "cpu.dmaChannelCount",
-            .value = try std.fmt.allocPrint(allocator, "{d}", .{dma_channel_count}),
+            .value = try allocator.print("{d}", .{dma_channel_count}),
         });
 
         for (core.peripherals) |peripheral| {
             // Don't know what to do if registers is null, so skipping
             const registers = peripheral.registers orelse continue;
 
-            const periph_name = try std.fmt.allocPrint(allocator, "{s}_{s}", .{ registers.kind, registers.version });
+            const periph_name = try allocator.print("{s}_{s}", .{ registers.kind, registers.version });
             // get the register group representing the peripheral instance
             const periph_id = try db.get_peripheral_by_name(periph_name) orelse return error.MissingPeripheral;
             const struct_id = try db.get_peripheral_struct(periph_id);
@@ -651,7 +651,7 @@ fn get_parent(gpa: std.mem.Allocator, json_data: *std.json.Value, child_full_nam
     const family_name = name_iterator.first();
 
     //Get qualified parent name
-    const parent_full_name = try std.fmt.allocPrint(gpa, "{s}/{s}", .{ family_name, parent_name });
+    const parent_full_name = try gpa.print("{s}/{s}", .{ family_name, parent_name });
     defer gpa.free(parent_full_name);
 
     return json_data.object.getEntry(parent_full_name).?;

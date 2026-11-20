@@ -17,7 +17,7 @@ pub const Archive = struct {
     allocator: Allocator,
     io: std.Io,
     blocks: std.ArrayList(Block),
-    families: std.AutoArrayHashMapUnmanaged(FamilyId, void),
+    families: std.array_hash_map.Auto(FamilyId, void),
     files: std.ArrayList(FileEntry),
 
     pub fn init(allocator: std.mem.Allocator, io: std.Io) Archive {
@@ -51,7 +51,7 @@ pub const Archive = struct {
     /// Reads UF2 blocks from a reader. Reader buffer size must be at least 512
     /// bytes.
     pub fn read_from(self: *Archive, reader: *std.Io.Reader, options: ReadFromOptions) !void {
-        var new_family_ids: std.AutoArrayHashMapUnmanaged(FamilyId, void) = .empty;
+        var new_family_ids: std.array_hash_map.Auto(FamilyId, void) = .empty;
         defer new_family_ids.deinit(self.allocator);
 
         while (reader.takeStruct(Block, .little)) |block| {
@@ -165,7 +165,7 @@ pub const Archive = struct {
 
     pub fn add_file(self: *Archive, path: []const u8) !void {
         if (self.has_file(path)) return error.FileAlreadyAdded;
-        const file = if (std.fs.path.isAbsolute(path))
+        const file = if (std.Io.Dir.path.isAbsolute(path))
             try std.Io.Dir.openFileAbsolute(self.io, path, .{})
         else
             try std.Io.Dir.cwd().openFile(self.io, path, .{});

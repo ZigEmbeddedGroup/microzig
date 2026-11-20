@@ -114,7 +114,7 @@ fn add_test_suite(
     debug_step: *Build.Step,
     host_target: ResolvedTarget,
     avr_target: ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
+    optimize: std.lang.Optimize,
     aviron_module: *Build.Module,
     flags_module: *Build.Module,
 ) !void {
@@ -193,7 +193,7 @@ fn add_test_suite(
             .json = .ignore,
         };
 
-        const ext = std.fs.path.extension(entry.basename);
+        const ext = std.Io.Dir.path.extension(entry.basename);
         const action: FileAction = inline for (@typeInfo(@TypeOf(extension_to_action)).@"struct".field_names) |field_name| {
             const action: FileAction = @field(extension_to_action, field_name);
 
@@ -227,7 +227,7 @@ fn add_test_suite(
                 else
                     avr_target;
 
-                const file_ext = std.fs.path.extension(entry.path);
+                const file_ext = std.Io.Dir.path.extension(entry.path);
                 const is_zig_test = std.mem.eql(u8, file_ext, ".zig");
                 const is_c_test = std.mem.eql(u8, file_ext, ".c");
                 const is_asm_test = std.mem.eql(u8, file_ext, ".S");
@@ -241,7 +241,7 @@ fn add_test_suite(
                     b.path("testsuite/dummy.zig");
 
                 const test_payload = b.addExecutable(.{
-                    .name = std.fs.path.stem(entry.basename),
+                    .name = std.Io.Dir.path.stem(entry.basename),
                     .root_module = b.createModule(.{
                         .root_source_file = if (is_zig_test) root_file else null,
                         .target = custom_target,
@@ -279,8 +279,8 @@ fn add_test_suite(
                 debug_step.dependOn(&b.addInstallFile(
                     test_payload.getEmittedBin(),
                     b.fmt("testsuite/{s}/{s}.elf", .{
-                        std.fs.path.dirname(entry.path).?,
-                        std.fs.path.stem(entry.basename),
+                        std.Io.Dir.path.dirname(entry.path).?,
+                        std.Io.Dir.path.stem(entry.basename),
                     }),
                 ).step);
 
@@ -308,14 +308,14 @@ fn add_test_suite(
         };
 
         const write_file = b.addWriteFile(
-            b.fmt("test-config-{s}.json", .{std.fs.path.stem(entry.basename)}),
+            b.fmt("test-config-{s}.json", .{std.Io.Dir.path.stem(entry.basename)}),
             cae.config.to_string(b),
         );
 
         const test_run = b.addRunArtifact(testrunner_exe);
         test_run.addPrefixedFileArg("--config=", write_file.getDirectory().path(b, b.fmt(
             "test-config-{s}.json",
-            .{std.fs.path.stem(entry.basename)},
+            .{std.Io.Dir.path.stem(entry.basename)},
         )));
         test_run.addArg(b.fmt("--name={s}", .{entry.path}));
 
@@ -363,7 +363,7 @@ fn add_test_suite_update(
             .md = .ignore,
         };
 
-        const ext = std.fs.path.extension(entry.basename);
+        const ext = std.Io.Dir.path.extension(entry.basename);
         const action: FileAction = inline for (@typeInfo(@TypeOf(extension_to_action)).@"struct".field_names) |field_name| {
             const action: FileAction = @field(extension_to_action, field_name);
             if (std.mem.eql(u8, ext, "." ++ field_name))
@@ -403,7 +403,7 @@ fn add_test_suite_update(
                     json_write.addFileArg(temp_json.getDirectory().path(b, "temp.json"));
                     json_write.addArg(b.fmt(
                         "testsuite/{s}/{s}{s}.elf.json",
-                        .{ std.fs.path.dirname(entry.path).?, std.fs.path.stem(entry.basename), json_suffix },
+                        .{ std.Io.Dir.path.dirname(entry.path).?, std.Io.Dir.path.stem(entry.basename), json_suffix },
                     ));
                     json_write.step.dependOn(&temp_json.step);
 
@@ -411,7 +411,7 @@ fn add_test_suite_update(
                     const gcc_invocation = Build.Step.Run.create(b, b.fmt("compile elf for {s}", .{cpu}));
                     gcc_invocation.addFileArg(avr_gcc);
                     gcc_invocation.addArg("-o");
-                    gcc_invocation.addArg(b.fmt("testsuite/{s}/{s}{s}.elf", .{ std.fs.path.dirname(entry.path).?, std.fs.path.stem(entry.basename), json_suffix }));
+                    gcc_invocation.addArg(b.fmt("testsuite/{s}/{s}{s}.elf", .{ std.Io.Dir.path.dirname(entry.path).?, std.Io.Dir.path.stem(entry.basename), json_suffix }));
                     gcc_invocation.addArg(b.fmt("-mmcu={s}", .{cpu}));
                     for (config.gcc_flags) |opt| {
                         gcc_invocation.addArg(opt);
@@ -425,7 +425,7 @@ fn add_test_suite_update(
                     const objcopy = Build.Step.Run.create(b, b.fmt("strip locals for {s}", .{cpu}));
                     objcopy.addArg("avr-objcopy");
                     objcopy.addArg("--strip-unneeded");
-                    objcopy.addArg(b.fmt("testsuite/{s}/{s}{s}.elf", .{ std.fs.path.dirname(entry.path).?, std.fs.path.stem(entry.basename), json_suffix }));
+                    objcopy.addArg(b.fmt("testsuite/{s}/{s}{s}.elf", .{ std.Io.Dir.path.dirname(entry.path).?, std.Io.Dir.path.stem(entry.basename), json_suffix }));
                     objcopy.step.dependOn(&gcc_invocation.step);
 
                     invoke_step.dependOn(&json_write.step);
@@ -438,8 +438,8 @@ fn add_test_suite_update(
 
 fn parse_test_suite_config(b: *Build, file: std.Io.File) !TestSuiteConfig {
     const io = b.graph.io;
-    var code = std.array_list.Managed(u8).init(b.allocator);
-    defer code.deinit();
+    var code: std.ArrayList(u8) = .empty;
+    defer code.deinit(b.allocator);
 
     var read_buf: [4096]u8 = undefined;
     var file_reader = file.reader(io, &read_buf);
@@ -449,8 +449,8 @@ fn parse_test_suite_config(b: *Build, file: std.Io.File) !TestSuiteConfig {
         const comment_prefix = "//!";
         const line = try reader.takeDelimiter('\n') orelse break;
         if (std.mem.startsWith(u8, line, comment_prefix)) {
-            try code.appendSlice(line[comment_prefix.len..]);
-            try code.appendSlice("\n");
+            try code.appendSlice(b.allocator, line[comment_prefix.len..]);
+            try code.appendSlice(b.allocator, "\n");
         }
     }
 

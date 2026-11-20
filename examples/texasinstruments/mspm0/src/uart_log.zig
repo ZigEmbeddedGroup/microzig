@@ -2,7 +2,7 @@ const std = @import("std");
 const microzig = @import("microzig");
 const mspm0 = microzig.hal;
 
-pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
+pub fn panic(message: []const u8, _: ?*std.lang.StackTrace, _: ?usize) noreturn {
     std.log.err("panic: {s}", .{message});
     while (true) @breakpoint();
 }

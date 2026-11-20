@@ -149,7 +149,7 @@ fn write_device_file(
 
     try ast.render(arena, &rendered_buffer.writer, fixups);
 
-    const filename = try std.fmt.allocPrint(arena, "{s}.zig", .{device.name});
+    const filename = try arena.print("{s}.zig", .{device.name});
     try dir.writeFile(io, .{
         .sub_path = filename,
         .data = rendered_buffer.written(),
@@ -193,7 +193,7 @@ fn write_peripherals_files(io: std.Io, db: *Database, arena: Allocator, dir: std
             continue;
         };
 
-        const path = try std.fmt.allocPrint(arena, "{s}.zig", .{
+        const path = try arena.print("{s}.zig", .{
             peripheral.name,
         });
 
@@ -546,7 +546,7 @@ fn write_device_peripheral(
 
     var array_prefix_buf: [80]u8 = undefined;
     const array_prefix = if (instance.count) |count|
-        try std.fmt.bufPrint(&array_prefix_buf, "[{}]", .{count})
+        try std.mem.print(&array_prefix_buf, "[{}]", .{count})
     else
         "";
 
@@ -1066,13 +1066,13 @@ fn write_nested_struct_field(db: *Database, arena: Allocator, nsf: *const Nested
 
     var offset_buf: [80]u8 = undefined;
     const offset_str: []const u8 =
-        try std.fmt.bufPrint(&offset_buf, "offset: 0x{x:0>2}", .{nsf.offset_bytes});
+        try std.mem.print(&offset_buf, "offset: 0x{x:0>2}", .{nsf.offset_bytes});
     try write_doc_comment(arena, offset_str, writer);
 
     try writer.print("{f}: ", .{std.zig.fmtId(nsf.name)});
     var array_prefix_buf: [80]u8 = undefined;
     const array_prefix: []const u8 = if (nsf.count) |count|
-        try std.fmt.bufPrint(&array_prefix_buf, "[{}]", .{count})
+        try std.mem.print(&array_prefix_buf, "[{}]", .{count})
     else
         "";
     try writer.print("{s}", .{array_prefix});
@@ -1144,12 +1144,12 @@ fn write_register(
     // Add offset comment
     var offset_buf: [80]u8 = undefined;
     const offset_str: []const u8 =
-        try std.fmt.bufPrint(&offset_buf, "offset: 0x{x:0>2}", .{register.offset_bytes});
+        try std.mem.print(&offset_buf, "offset: 0x{x:0>2}", .{register.offset_bytes});
     try write_doc_comment(arena, offset_str, writer);
 
     var array_prefix_buf: [80]u8 = undefined;
     const array_prefix: []const u8 = if (register.count) |count|
-        try std.fmt.bufPrint(&array_prefix_buf, "[{}]", .{count})
+        try std.mem.print(&array_prefix_buf, "[{}]", .{count})
     else
         "";
 
@@ -1241,8 +1241,8 @@ fn write_fields(
                 subfield.count = undefined;
                 subfield.stride = undefined;
                 subfield.offset_bits = field.offset_bits + @as(u8, @intCast(stride * i));
-                subfield.name = try std.fmt.allocPrint(arena, "{s}[{d}]", .{ field.name, i });
-                subfield.description = try std.fmt.allocPrint(arena, "({d}/{d} of {s}) {s}", .{ i + 1, count, field.name, field.description orelse "" });
+                subfield.name = try arena.print("{s}[{d}]", .{ field.name, i });
+                subfield.description = try arena.print("({d}/{d} of {s}) {s}", .{ i + 1, count, field.name, field.description orelse "" });
                 try expanded_fields.append(arena, subfield);
             }
         } else try expanded_fields.append(arena, field);
@@ -1271,13 +1271,13 @@ fn write_fields(
             // If the offset of this field is the exact same as for another shorter field,
             // then (because of the `field_comes_before()` sort order) we will already have seen the shorter field,
             // and here we are skipping the longer field.
-            const message = try std.fmt.allocPrint(arena, "skipped overlapping field {s} at offset {d} bits", .{ field.name, field.offset_bits });
+            const message = try arena.print("skipped overlapping field {s} at offset {d} bits", .{ field.name, field.offset_bits });
             log.debug("{s}", .{message});
             try write_regular_comment(arena, message, writer);
             continue;
         }
         if (offset + field.size_bits > register_size_bits) {
-            const message = try std.fmt.allocPrint(arena, "skipped too long field {s} at offset {d} bits, length {d} bits", .{ field.name, field.offset_bits, field.size_bits });
+            const message = try arena.print("skipped too long field {s} at offset {d} bits, length {d} bits", .{ field.name, field.offset_bits, field.size_bits });
             log.warn("{s}", .{message});
             try write_regular_comment(arena, message, writer);
             continue;
