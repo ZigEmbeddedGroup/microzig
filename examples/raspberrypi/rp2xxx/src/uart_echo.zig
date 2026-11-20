@@ -9,9 +9,9 @@ const uart = rp2xxx.uart.instance.num(0);
 const uart_tx_pin = gpio.num(0);
 const uart_rx_pin = gpio.num(1);
 
-pub const panic = microzig.panic;
-
 pub const std_options = microzig.std_options(.{});
+
+pub const panic = microzig.panic;
 
 comptime {
     _ = microzig.export_startup();

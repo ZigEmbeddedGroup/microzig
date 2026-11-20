@@ -130,6 +130,27 @@ pub const default = struct {
         }
     };
 
+    const RiscV = struct {
+        const MSTATUS_MIE: usize = 1 << 3;
+
+        fn lock(context: *Context) void {
+            var val: usize = undefined;
+            asm volatile ("csrrci %[val], mstatus, 8"
+                : [val] "=r" (val),
+                :
+                : .{ .memory = true });
+            context.isr_reg_value = val;
+        }
+
+        fn unlock(context: *Context) void {
+            const mask: usize = context.isr_reg_value & MSTATUS_MIE;
+            asm volatile ("csrs mstatus, %[mask]"
+                :
+                : [mask] "r" (mask),
+                : .{ .memory = true });
+        }
+    };
+
     /// Allows an intelligent compile error when someone attempts to use RTT on a platform where "default" locking isn't supported yet
     const ErrorLock = struct {
         fn error_lock_unlock(_: *Context) void {
@@ -140,32 +161,42 @@ pub const default = struct {
     fn resolve_lock_type() type {
         const current_arch = builtin.cpu.arch;
         switch (current_arch) {
-            .arm, .armeb, .thumb, .thumbeb => {},
-            else => return GenericLock(*Context, ErrorLock.error_lock_unlock, ErrorLock.error_lock_unlock),
+            .arm, .armeb, .thumb, .thumbeb => {
+                if (builtin.cpu.features.isEnabled(@backingInt(std.Target.arm.Feature.v6m)) or builtin.cpu.features.isEnabled(@backingInt(std.Target.arm.Feature.v8m))) {
+                    return GenericLock(
+                        *Context,
+                        ArmV6mV8m.lock,
+                        ArmV6mV8m.unlock,
+                    );
+                } else if (builtin.cpu.features.isEnabled(@backingInt(std.Target.arm.Feature.v7m)) or builtin.cpu.features.isEnabled(@backingInt(std.Target.arm.Feature.v7em)) or builtin.cpu.features.isEnabled(@backingInt(std.Target.arm.Feature.v8m_main))) {
+                    return GenericLock(
+                        *Context,
+                        ArmV7mV7emV8mMain.lock,
+                        ArmV7mV7emV8mMain.unlock,
+                    );
+                } else if (builtin.cpu.features.isEnabled(@backingInt(std.Target.arm.Feature.v7a)) or builtin.cpu.features.isEnabled(@backingInt(std.Target.arm.Feature.v7r))) {
+                    return GenericLock(
+                        *Context,
+                        ArmV7aV7r.lock,
+                        ArmV7aV7r.unlock,
+                    );
+                }
+            },
+            .riscv32, .riscv64 => {
+                if (builtin.cpu.features.isEnabled(@backingInt(std.Target.riscv.Feature.zicsr))) {
+                    return GenericLock(
+                        *Context,
+                        RiscV.lock,
+                        RiscV.unlock,
+                    );
+                }
+            },
+            else => {},
         }
 
-        if (builtin.cpu.features.isEnabled(@backingInt(std.Target.arm.Feature.v6m)) or builtin.cpu.features.isEnabled(@backingInt(std.Target.arm.Feature.v8m))) {
-            return GenericLock(
-                *Context,
-                ArmV6mV8m.lock,
-                ArmV6mV8m.unlock,
-            );
-        } else if (builtin.cpu.features.isEnabled(@backingInt(std.Target.arm.Feature.v7m)) or builtin.cpu.features.isEnabled(@backingInt(std.Target.arm.Feature.v7em)) or builtin.cpu.features.isEnabled(@backingInt(std.Target.arm.Feature.v8m_main))) {
-            return GenericLock(
-                *Context,
-                ArmV7mV7emV8mMain.lock,
-                ArmV7mV7emV8mMain.unlock,
-            );
-        } else if (builtin.cpu.features.isEnabled(@backingInt(std.Target.arm.Feature.v7a)) or builtin.cpu.features.isEnabled(@backingInt(std.Target.arm.Feature.v7r))) {
-            return GenericLock(
-                *Context,
-                ArmV7aV7r.lock,
-                ArmV7aV7r.unlock,
-            );
-        } else {
-            return GenericLock(*Context, ErrorLock.error_lock_unlock, ErrorLock.error_lock_unlock);
-        }
+        return GenericLock(*Context, ErrorLock.error_lock_unlock, ErrorLock.error_lock_unlock);
     }
+
     pub fn get() AnyLock {
         return generic_lock.any();
     }

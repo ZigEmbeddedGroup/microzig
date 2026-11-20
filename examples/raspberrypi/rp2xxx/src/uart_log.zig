@@ -1,40 +1,30 @@
 const std = @import("std");
 const microzig = @import("microzig");
+const common = @import("common.zig");
+
 const rp2xxx = microzig.hal;
 const time = rp2xxx.time;
 const gpio = rp2xxx.gpio;
 
 const led = gpio.num(25);
-const uart = rp2xxx.uart.instance.num(0);
-const uart_tx_pin = gpio.num(0);
 
 pub const std_options = microzig.std_options(.{
     .log_level = .debug,
-    .logFn = rp2xxx.uart.log,
+    .logFn = common.log,
 });
+
+pub const panic = microzig.panic;
 
 comptime {
     _ = microzig.export_startup();
 }
 
-pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
-    std.log.err("panic: {s}", .{message});
-    @breakpoint();
-    while (true) {}
-}
-
 pub fn main() !void {
+    common.init_logger();
+
     led.set_function(.sio);
     led.set_direction(.out);
     led.put(1);
-
-    uart_tx_pin.set_function(.uart);
-
-    uart.apply(.{
-        .clock_config = rp2xxx.clock_config,
-    });
-
-    rp2xxx.uart.init_logger(uart);
 
     var i: u32 = 0;
     while (true) : (i += 1) {

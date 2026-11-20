@@ -1,19 +1,17 @@
 const std = @import("std");
 const microzig = @import("microzig");
+const common = @import("common.zig");
 
 const rp2xxx = microzig.hal;
 const time = rp2xxx.time;
 const gpio = rp2xxx.gpio;
 
-const uart = rp2xxx.uart.instance.num(0);
-const uart_tx_pin = gpio.num(0);
-
-pub const panic = microzig.panic;
-
 pub const std_options = microzig.std_options(.{
     .log_level = .debug,
     .logFn = rp2xxx.uart.log,
 });
+
+pub const panic = microzig.panic;
 
 comptime {
     _ = microzig.export_startup();
@@ -31,6 +29,8 @@ const SCK_PIN = 18;
 const RX_PIN = 16;
 
 pub fn main() !void {
+    common.init_logger();
+
     // Set pin functions for CS, SCK, RX
     const csn = gpio.num(CS_PIN);
     const mosi = gpio.num(RX_PIN);
@@ -38,13 +38,6 @@ pub fn main() !void {
     inline for (&.{ csn, mosi, sck }) |pin| {
         pin.set_function(.spi);
     }
-
-    uart_tx_pin.set_function(.uart);
-    uart.apply(.{
-        .clock_config = rp2xxx.clock_config,
-    });
-
-    rp2xxx.uart.init_logger(uart);
 
     std.log.info("Setting SPI as slave device", .{});
     spi.set_slave(true);

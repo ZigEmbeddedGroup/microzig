@@ -25,6 +25,9 @@ pub const CoreInterrupt = enum(u5) {
     MachineExternal = 0xb,
 };
 
+/// Segger's RTT support
+pub const rtt = @import("rtt");
+
 // supports a maximum of 128 interrupts (actually supports 512 but for some reason priorities
 // only support 128)
 pub const Interrupt = microzig.utilities.GenerateInterruptEnum(u7);

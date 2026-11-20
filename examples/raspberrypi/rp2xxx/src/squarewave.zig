@@ -29,9 +29,9 @@ const pio: Pio = rp2xxx.pio.num(0);
 const sm: StateMachine = .sm0;
 const pin = gpio.num(2);
 
-pub const panic = microzig.panic;
-
 pub const std_options = microzig.std_options(.{});
+
+pub const panic = microzig.panic;
 
 comptime {
     _ = microzig.export_startup();

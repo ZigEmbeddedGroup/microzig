@@ -1,5 +1,6 @@
 const std = @import("std");
 const microzig = @import("microzig");
+const common = @import("common.zig");
 
 const rp2xxx = microzig.hal;
 const time = rp2xxx.time;
@@ -15,15 +16,20 @@ const SCK_PIN = 18;
 const TX_PIN = 19;
 
 // Communicate with another RP2040 over spi
-pub const panic = microzig.panic;
+pub const std_options = microzig.std_options(.{
+    .log_level = .debug,
+    .logFn = common.log,
+});
 
-pub const std_options = microzig.std_options(.{});
+pub const panic = microzig.panic;
 
 comptime {
     _ = microzig.export_startup();
 }
 
 pub fn main() !void {
+    common.init_logger();
+
     // Set pin functions for CS, SCK, RX
     const csn = rp2xxx.gpio.num(CS_PIN);
     const mosi = rp2xxx.gpio.num(TX_PIN);

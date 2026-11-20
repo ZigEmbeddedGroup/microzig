@@ -6,9 +6,9 @@ const pin_config = rp2xxx.pins.GlobalConfiguration{
     .GPIO25 = .{ .name = "led", .function = .PWM4_B },
 };
 
-pub const panic = microzig.panic;
-
 pub const std_options = microzig.std_options(.{});
+
+pub const panic = microzig.panic;
 
 comptime {
     _ = microzig.export_startup();

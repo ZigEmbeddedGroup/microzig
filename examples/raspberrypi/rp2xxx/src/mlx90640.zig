@@ -1,5 +1,7 @@
 const std = @import("std");
 const microzig = @import("microzig");
+const common = @import("common.zig");
+
 const sensor = microzig.drivers.sensor;
 const rp2xxx = microzig.hal;
 const gpio = rp2xxx.gpio;
@@ -9,27 +11,25 @@ const MLX90640 = sensor.MLX90640;
 
 const time = rp2xxx.time;
 
-const uart = rp2xxx.uart.instance.num(0);
-const uart_tx_pin = gpio.num(0);
-
 var i2c0 = i2c.instance.num(0);
 
 const pin_config = rp2xxx.pins.GlobalConfiguration{
     .GPIO0 = .{ .name = "gpio0", .function = .UART0_TX },
 };
 
-pub const panic = microzig.panic;
-
 pub const std_options = microzig.std_options(.{
     .log_level = .debug,
-    .logFn = rp2xxx.uart.log,
+    .logFn = common.log,
 });
+
+pub const panic = microzig.panic;
 
 comptime {
     _ = microzig.export_startup();
 }
 
 pub fn main() !void {
+    common.init_logger();
     try init();
 
     var i2c_device = I2C_Device.init(i2c0, null);
@@ -74,14 +74,6 @@ pub fn main() !void {
 }
 
 fn init() !void {
-    uart_tx_pin.set_function(.uart);
-    uart.apply(.{
-        .clock_config = rp2xxx.clock_config,
-    });
-
-    i2c0.apply(i2c.Config{ .clock_config = rp2xxx.clock_config });
-
-    rp2xxx.uart.init_logger(uart);
     _ = pin_config.apply();
 
     std.log.info("Hello from mlx90640", .{});
