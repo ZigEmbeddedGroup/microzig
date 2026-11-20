@@ -68,6 +68,8 @@ pub const DeviceCapabilities = struct {
     max_packet_size: types.PacketLength,
     default_vendor: ?Options.IdStringPair = null,
     default_product: ?Options.IdStringPair = null,
+    /// Ports that enable this must also provide the `signal_resume` vtable function.
+    supports_remote_wakeup: bool = false,
 };
 
 /// Wraps a Descriptor type. Returned by the `create` method of the Descriptor.
@@ -83,6 +85,13 @@ pub fn DriverInfo(Descriptor: type) type {
     };
 }
 
+pub const RemoteWakeupError = error{
+    NotSupported,
+    NotEnabledByHost,
+    NotConfigured,
+    NotSuspended,
+};
+
 /// USB Device interface
 /// Any device implementation used with DeviceController must implement these functions
 pub const DeviceInterface = struct {
@@ -92,6 +101,7 @@ pub const DeviceInterface = struct {
         ep_listen: *const fn (*DeviceInterface, types.Endpoint.Num, types.PacketLength) void,
         ep_open: *const fn (*DeviceInterface, *const descriptor.Endpoint) void,
         set_address: *const fn (*DeviceInterface, u7) void,
+        signal_resume: ?*const fn (*DeviceInterface) RemoteWakeupError!void = null,
     };
 
     vtable: *const VTable,
@@ -130,6 +140,11 @@ pub const DeviceInterface = struct {
     /// Immediately sets the device address.
     pub fn set_address(self: *@This(), addr: u7) void {
         return self.vtable.set_address(self, addr);
+    }
+
+    /// Drive resume signaling on the bus to wake the host
+    pub fn signal_resume(self: *@This()) RemoteWakeupError!void {
+        return if (self.vtable.signal_resume) |f| f(self) else error.NotSupported;
     }
 };
 
@@ -171,6 +186,10 @@ pub const Options = struct {
     serial: []const u8,
     /// Largest packet length the hardware supports. Must be a power of 2 and at least 8.
     device_capabilities: DeviceCapabilities,
+    /// Only called when the bus actually enters suspend.
+    on_suspend: ?*const fn () void = null,
+    /// Only called when the bus actually leaves suspend.
+    on_resume: ?*const fn () void = null,
 };
 
 pub fn validate_controller(T: type) void {
@@ -272,6 +291,10 @@ pub fn DeviceController(options: Options, Configurations: []const type) type {
         driver_data: ?configurations[0].RuntimeData,
         /// Additional driver allocations (size is comptime-known)
         driver_alloc: configurations[0].DriverAlloc,
+        /// Whether the host has enabled the remote wakeup feature
+        remote_wakeup_enabled: bool,
+        /// Whether the bus is currently suspended.
+        is_suspended: bool,
 
         /// Initial values
         pub const init: @This() = .{
@@ -280,6 +303,8 @@ pub fn DeviceController(options: Options, Configurations: []const type) type {
             .tx_slice = null,
             .driver_data = null,
             .driver_alloc = undefined,
+            .remote_wakeup_enabled = false,
+            .is_suspended = false,
         };
 
         /// Returns a pointer to the drivers
@@ -356,6 +381,56 @@ pub fn DeviceController(options: Options, Configurations: []const type) type {
             self.* = .init;
         }
 
+        /// Called by the device implementation when the bus has been suspended.
+        pub fn on_suspend(self: *@This(), device_itf: *DeviceInterface) void {
+            _ = device_itf;
+            log.debug("on_suspend", .{});
+
+            if (!self.is_suspended) {
+                self.is_suspended = true;
+                if (options.on_suspend) |cb| cb();
+            }
+        }
+
+        /// Called by the device implementation when the bus has resumed,
+        /// either by the host or by the device itself via remote wakeupe.
+        pub fn on_resume(self: *@This(), device_itf: *DeviceInterface) void {
+            _ = device_itf;
+            log.debug("on_resume", .{});
+
+            if (self.is_suspended) {
+                self.is_suspended = false;
+                if (options.on_resume) |cb| cb();
+            }
+        }
+
+        /// Returns whether the bus is currently suspended.
+        pub fn suspended(self: *@This()) bool {
+            return self.is_suspended;
+        }
+
+        /// Attempt to wake up the host with a device-initiated remote wakeup.
+        pub fn remote_wakeup(self: *@This(), device_itf: *DeviceInterface) RemoteWakeupError!void {
+            if (!self.remote_wakeup_enabled) {
+                log.debug("remote wakeup requested, but not enabled by host", .{});
+                return error.NotEnabledByHost;
+            }
+            if (self.cfg_num == 0) {
+                log.debug("remote wakeup requested, but device is not configured", .{});
+                return error.NotConfigured;
+            }
+            if (!self.is_suspended) {
+                log.debug("remote wakeup requested, but bus is not suspended", .{});
+                return error.NotSuspended;
+            }
+            device_itf.signal_resume() catch |err| {
+                log.debug("remote wakeup requested, but device implementation refused: {s}", .{@errorName(err)});
+                return err;
+            };
+            // In the case of self-initiated resume we call the callback directly
+            self.on_resume(device_itf);
+        }
+
         // Utility functions
 
         fn process_device_setup(self: *@This(), device_itf: *DeviceInterface, setup: *const types.SetupPacket) ?[]const u8 {
@@ -366,18 +441,50 @@ pub fn DeviceController(options: Options, Configurations: []const type) type {
                     switch (request) {
                         .get_status => {
                             const attr = config_descriptor.first.attributes;
-                            const status: types.DeviceStatus = comptime .create(attr.self_powered, false);
-                            return std.mem.asBytes(&status);
+                            const S = struct {
+                                const responses = [2]types.DeviceStatus{
+                                    .create(attr.self_powered, false),
+                                    .create(attr.self_powered, true),
+                                };
+                            };
+                            return std.mem.asBytes(&S.responses[@intFromBool(self.remote_wakeup_enabled)]);
                         },
                         .set_address => self.new_address = @truncate(setup.value.native()),
                         .set_configuration => self.process_set_config(device_itf, setup.value.native()),
                         .get_descriptor => return get_descriptor(setup.value.native()),
                         .set_feature => {
-                            const feature: types.FeatureSelector = @fromBackingInt(@intCast(setup.value.native() >> 8));
+                            const feature: types.FeatureSelector = @fromBackingInt(@truncate(setup.value.native()));
                             switch (feature) {
-                                .DeviceRemoteWakeup, .EndpointHalt => {},
+                                .DeviceRemoteWakeup => {
+                                    if (comptime !config_descriptor.first.attributes.can_remote_wakeup) {
+                                        log.warn("Host set DEVICE_REMOTE_WAKEUP, but we do not advertise it", .{});
+                                        return nak;
+                                    }
+                                    log.debug("Host enabled remote wakeup", .{});
+                                    self.remote_wakeup_enabled = true;
+                                },
+                                .EndpointHalt => {
+                                    // TODO: https://github.com/ZigEmbeddedGroup/microzig/issues/1144
+                                },
                                 // TODO: https://github.com/ZigEmbeddedGroup/microzig/issues/453
                                 .TestMode => return nak,
+                                else => return nak,
+                            }
+                        },
+                        .clear_feature => {
+                            const feature: types.FeatureSelector = @fromBackingInt(@truncate(setup.value.native()));
+                            switch (feature) {
+                                .DeviceRemoteWakeup => {
+                                    if (comptime !config_descriptor.first.attributes.can_remote_wakeup) {
+                                        log.warn("Host cleared DEVICE_REMOTE_WAKEUP, but we do not advertise it", .{});
+                                        return nak;
+                                    }
+                                    log.debug("Host disabled remote wakeup", .{});
+                                    self.remote_wakeup_enabled = false;
+                                },
+                                .EndpointHalt => {
+                                    // TODO: https://github.com/ZigEmbeddedGroup/microzig/issues/1144
+                                },
                                 else => return nak,
                             }
                         },
@@ -439,6 +546,9 @@ pub fn DeviceController(options: Options, Configurations: []const type) type {
 
             if (self.driver_data) |*data_old|
                 configurations[0].deinit(device_itf, data_old);
+
+            // (Re)configuration disables the remote wakeup feature.
+            self.remote_wakeup_enabled = false;
 
             self.cfg_num = cfg_num;
             if (cfg_num == 0)
