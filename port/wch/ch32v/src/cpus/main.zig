@@ -11,6 +11,7 @@ pub const cpu_frequency = cpu_impl.cpu_frequency;
 
 pub const CpuName = enum {
     @"qingkev2-rv32ec",
+    @"qingkev2-rv32emc",
     @"qingkev3-rv32imac",
     @"qingkev4-rv32imac",
     @"qingkev4-rv32imacf",
@@ -240,6 +241,14 @@ pub const startup_logic = struct {
         // Configure the CPU.
         switch (cpu_name) {
             .@"qingkev2-rv32ec" => csr.intsyscr.write(.{ .hwstken = 1, .inesten = 1, .eabien = 1 }),
+            // The EABI (Extended Application Binary Interface) functionality of the QingKe V2C is
+            // mentioned but not documented in the QingKe V2 processor manual.
+            // [QingKeV2 Processor Manual - 3.2 Interrupt-related CSR Registers]
+            // The WCH reference doesn't set the EABIEN bit in any of the examples leaving it at
+            // its reset value of zero.
+            // [https://github.com/openwch/ch32v002_004_005_006_007/tree/main/EVT/EXAM/*]
+            // Having no reason to set it any differently, here it is also left set to zero.
+            .@"qingkev2-rv32emc" => csr.intsyscr.write(.{ .hwstken = 1, .inesten = 1, .eabien = 0 }),
             .@"qingkev3-rv32imac" => {},
             .@"qingkev4-rv32imac" => {
                 // Configure pipelining and instruction prediction.

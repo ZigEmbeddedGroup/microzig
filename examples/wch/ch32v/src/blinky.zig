@@ -5,13 +5,13 @@ const cpu = microzig.cpu;
 const pin_config = hal.pins.GlobalConfiguration{
     .GPIOC = .{
         .PIN0 = .{
-            .name = "led",
+            .name = "led1",
             .mode = .{ .output = .general_purpose_push_pull },
         },
     },
     .GPIOA = .{
         .PIN3 = .{
-            // can access as PA3
+            .name = "led2",
             .mode = .{ .output = .general_purpose_push_pull },
         },
     },
@@ -34,8 +34,8 @@ pub fn main() !void {
         //     0 => pins.led.put(1),
         //     1 => pins.led.put(0),
         // }
-        pins.led.toggle();
-        pins.PA3.toggle();
+        pins.led1.toggle();
+        pins.led2.toggle();
 
         busy_delay(1000);
     }
@@ -44,7 +44,12 @@ pub fn main() !void {
 inline fn busy_delay(comptime ms: u32) void {
     const cpu_frequency = if (@hasDecl(cpu, "cpu_frequency")) cpu.cpu_frequency else 8_000_000;
     const cycles_per_ms = cpu_frequency / 1_000;
-    const loop_cycles = if (cpu.cpu_name == .@"qingkev2-rv32ec") 4 else 3;
+    const loop_cycles =
+        switch (cpu.cpu_name) {
+            .@"qingkev2-rv32ec" => 5, // Experimentally determined values to make the LEDs blink
+            .@"qingkev2-rv32emc" => 9, // as close as possible to the requested period.
+            else => 3,
+        };
     const limit = cycles_per_ms * ms / loop_cycles;
 
     var i: u32 = 0;

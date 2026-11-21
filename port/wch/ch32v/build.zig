@@ -3,7 +3,8 @@ const microzig = @import("microzig/build-internals");
 const CpuName = @import("src/cpus/main.zig").CpuName;
 
 // Technical reference manuals:
-// 003: https://ch32-riscv-ug.github.io/CH32V003/datasheet_en/CH32V003RM.PDF
+// 003: https://www.wch-ic.com/downloads/CH32V003RM_PDF.html
+// 00x: https://www.wch-ic.com/downloads/CH32V00XRM_PDF.html
 // 20x, 30x, 31x: https://static.chipdip.ru/lib/820/DOC059820997.pdf
 const Self = @This();
 
@@ -69,13 +70,12 @@ const BaseChip = struct {
     }
 };
 
-// Generated with:
-// curl 'https://www.wch-ic.com/api/product_tables/47?page=1&limit=100' |
-// jq -r '.data[] | select(.["Part NO."] | startswith("CH32V")) | [ "    ", (.["Part NO."] | ascii_downcase), ": *const microzig.Target, // ", .Flash, " / ", .SRAM, " / ", .Freq ] | join("")' |
-// awk 'match($0, /    ch32v/) { $0 = substr($0, 1, RSTART+11) "x" substr($0, RSTART+13, 1) substr($0, RSTART+16) }; {print}' |
-// sort -n | uniq
+// The old link used to generate the below list (i.e.
+// 'https://www.wch-ic.com/api/product_tables/47?') now returns a 404 error.
+// Therefore the list has been updated by hand.
 chips: struct {
     ch32v003x4: *const microzig.Target, // 16K / 2K / 48MHz
+    ch32v006x8: *const microzig.Target, // 62K / 8K / 48MHz
     ch32v103x6: *const microzig.Target, // 32K / 10K / 80MHz
     ch32v103x8: *const microzig.Target, // 64K / 20K / 80MHz
     ch32v203x6: *const microzig.Target, // 32K / 10K / 144MHz
@@ -114,10 +114,19 @@ pub fn init(dep: *std.Build.Dependency) ?Self {
     const chip_ch32v003_base: BaseChip = .{
         .name = "CH32V003", // <name/> from SVD
         .cpu_features = std.Target.riscv.featureSet(&.{ .@"32bit", .e, .c, .xwchc, .zicsr, .zifencei }),
-        .cpu_name = .@"qingkev2-rv32ec",
+        .cpu_name = .@"qingkev2-rv32ec", // QingKe V2A core, RV32EC instruction set
         .cpu_file = b.path("src/cpus/qingkev2-rv32ec.zig"),
         .hal_file = b.path("src/hals/ch32v003.zig"),
         .svd = b.path("src/chips/ch32v003.svd"),
+    };
+
+    const chip_ch32v006_base: BaseChip = .{
+        .name = "CH32V006", // <name/> from SVD
+        .cpu_features = std.Target.riscv.featureSet(&.{ .@"32bit", .e, .zmmul, .c, .xwchc, .zicsr, .zifencei }),
+        .cpu_name = .@"qingkev2-rv32emc", // QingKe V2C core, RV32EmC instruction set (the "m" implements only the zmmul extension)
+        .cpu_file = b.path("src/cpus/qingkev2-rv32emc.zig"),
+        .hal_file = b.path("src/hals/ch32v006.zig"),
+        .svd = b.path("src/chips/ch32v006.svd"), // TODO: avoid renaming the generic svd file for each ch32v00x MCUs.
     };
 
     const chip_ch32v103_base: BaseChip = .{
@@ -148,6 +157,7 @@ pub fn init(dep: *std.Build.Dependency) ?Self {
     };
 
     const chip_ch32v003x4 = chip_ch32v003_base.create(dep, 16 * KiB, 2 * KiB);
+    const chip_ch32v006x8 = chip_ch32v006_base.create(dep, 62 * KiB, 8 * KiB);
     const chip_ch32v103x6 = chip_ch32v103_base.create(dep, 32 * KiB, 10 * KiB);
     const chip_ch32v103x8 = chip_ch32v103_base.create(dep, 64 * KiB, 20 * KiB);
     const chip_ch32v203x6 = chip_ch32v20x_base.create(dep, 32 * KiB, 10 * KiB);
@@ -218,6 +228,7 @@ pub fn init(dep: *std.Build.Dependency) ?Self {
     return .{
         .chips = .{
             .ch32v003x4 = chip_ch32v003x4,
+            .ch32v006x8 = chip_ch32v006x8,
             .ch32v103x6 = chip_ch32v103x6,
             .ch32v103x8 = chip_ch32v103x8,
             .ch32v203x6 = chip_ch32v203x6,

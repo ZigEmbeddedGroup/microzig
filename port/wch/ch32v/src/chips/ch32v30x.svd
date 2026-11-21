@@ -15605,7 +15605,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <description>Transmit status</description>
               <bitOffset>0</bitOffset>
               <bitWidth>1</bitWidth>
-              <access>read/clear</access>
+              <access>read-write</access>
             </field>
             <field>
               <name>TPSS</name>
@@ -15613,7 +15613,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               status</description>
               <bitOffset>1</bitOffset>
               <bitWidth>1</bitWidth>
-              <access>read/clear</access>
+              <access>read-write</access>
             </field>
             <field>
               <name>TBUS</name>
@@ -15621,7 +15621,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               status</description>
               <bitOffset>2</bitOffset>
               <bitWidth>1</bitWidth>
-              <access>read/clear</access>
+              <access>read-write</access>
             </field>
             <field>
               <name>TJTS</name>
@@ -15629,28 +15629,28 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               status</description>
               <bitOffset>3</bitOffset>
               <bitWidth>1</bitWidth>
-              <access>read/clear</access>
+              <access>read-write</access>
             </field>
             <field>
               <name>ROS</name>
               <description>Receive overflow status</description>
               <bitOffset>4</bitOffset>
               <bitWidth>1</bitWidth>
-              <access>read/clear</access>
+              <access>read-write</access>
             </field>
             <field>
               <name>TUS</name>
               <description>Transmit underflow status</description>
               <bitOffset>5</bitOffset>
               <bitWidth>1</bitWidth>
-              <access>read/clear</access>
+              <access>read-write</access>
             </field>
             <field>
               <name>RS</name>
               <description>Receive status</description>
               <bitOffset>6</bitOffset>
               <bitWidth>1</bitWidth>
-              <access>read/clear</access>
+              <access>read-write</access>
             </field>
             <field>
               <name>RBUS</name>
@@ -15658,7 +15658,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               status</description>
               <bitOffset>7</bitOffset>
               <bitWidth>1</bitWidth>
-              <access>read/clear</access>
+              <access>read-write</access>
             </field>
             <field>
               <name>RPSS</name>
@@ -15666,7 +15666,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               status</description>
               <bitOffset>8</bitOffset>
               <bitWidth>1</bitWidth>
-              <access>read/clear</access>
+              <access>read-write</access>
             </field>
             <field>
               <name>PWTS</name>
@@ -15674,42 +15674,42 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               status</description>
               <bitOffset>9</bitOffset>
               <bitWidth>1</bitWidth>
-              <access>read/clear</access>
+              <access>read-write</access>
             </field>
             <field>
               <name>ETS</name>
               <description>Early transmit status</description>
               <bitOffset>10</bitOffset>
               <bitWidth>1</bitWidth>
-              <access>read/clear</access>
+              <access>read-write</access>
             </field>
             <field>
               <name>FBES</name>
               <description>Fatal bus error status</description>
               <bitOffset>13</bitOffset>
               <bitWidth>1</bitWidth>
-              <access>read/clear</access>
+              <access>read-write</access>
             </field>
             <field>
               <name>ERS</name>
               <description>Early receive status</description>
               <bitOffset>14</bitOffset>
               <bitWidth>1</bitWidth>
-              <access>read/clear</access>
+              <access>read-write</access>
             </field>
             <field>
               <name>AIS</name>
               <description>Abnormal interrupt summary</description>
               <bitOffset>15</bitOffset>
               <bitWidth>1</bitWidth>
-              <access>read/clear</access>
+              <access>read-write</access>
             </field>
             <field>
               <name>NIS</name>
               <description>Normal interrupt summary</description>
               <bitOffset>16</bitOffset>
               <bitWidth>1</bitWidth>
-              <access>read/clear</access>
+              <access>read-write</access>
             </field>
             <field>
               <name>RPS</name>
@@ -19663,7 +19663,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <description>LOCKUP RESET</description>
               <bitOffset>7</bitOffset>
               <bitWidth>1</bitWidth>
-              <access>read/clear</access>
+              <access>read-write</access>
             </field>
             <field>
               <name>ULLDOTRIM</name>
