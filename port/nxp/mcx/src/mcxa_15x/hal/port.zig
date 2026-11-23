@@ -5,10 +5,43 @@ const mapper = @import("mapper.zig");
 
 const PORT_T = microzig.chip.types.peripherals.PORT0;
 
+pub const Drive_Strength = enum(u1) {
+    low = 0,
+    high = 1,
+};
+
+pub const slew_rate = enum(u1) {
+    fast = 0,
+    slow = 1,
+};
+
+pub const Pull_Select = enum(u1) {
+    down = 0,
+    up = 1,
+};
+
+pub const Pull_Value = enum(u1) {
+    low = 0,
+    high = 1,
+};
+
+pub const Pull_Resistor = struct {
+    select: Pull_Select,
+    //value: Pull_Value = .low, //TODO: fix MMIO register access to support this.
+};
+
 //TODO ADD ALL PIN CONFG
 pub const PinConfig = struct {
-    MUX: u3,
     input_buffer_enabled: bool = true,
+    invert_input: bool = false,
+    drive_strength: Drive_Strength = .low,
+    //drive_strength_1: Drive_Strength = .low, // TODO: fix MMIO register access to support this.
+    open_drain: bool = false,
+    passive_filter: bool = false,
+    slew_rate: slew_rate = .fast,
+    pull_resistor: ?Pull_Resistor = null,
+
+    MUX: u3,
 };
 
 const PIN_T = @FieldType(microzig.chip.types.peripherals.PORT0, "PCR0");
@@ -56,8 +89,19 @@ pub const Port = enum(u3) {
 
         pin_regs.modify_one("LK", .lk0);
         defer pin_regs.modify_one("LK", .lk1);
-
-        pin_regs.modify_one("MUX", @fromBackingInt(@intCast(config.MUX)));
-        pin_regs.modify_one("IBE", @fromBackingInt(@intFromBool(config.input_buffer_enabled)));
+        var pcr = pin_regs.read();
+        if (config.pull_resistor) |pr| {
+            pcr.PE = @fromBackingInt(1);
+            pcr.PS = @fromBackingInt(@backingInt(pr.select));
+        } else {
+            pcr.PE = @fromBackingInt(0);
+        }
+        pcr.SRE = @fromBackingInt(@backingInt(config.slew_rate));
+        pcr.ODE = @fromBackingInt(@intFromBool(config.open_drain));
+        pcr.DSE = @fromBackingInt(@backingInt(config.drive_strength));
+        pcr.MUX = @fromBackingInt(config.MUX);
+        pcr.IBE = @fromBackingInt(@intFromBool(config.input_buffer_enabled));
+        pcr.INV = @fromBackingInt(@intFromBool(config.invert_input));
+        -pin_regs.write(pcr);
     }
 };
