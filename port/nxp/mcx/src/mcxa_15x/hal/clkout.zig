@@ -1,4 +1,3 @@
-const std = @import("std");
 const microzig = @import("microzig");
 const syscon = @import("syscon.zig");
 const mapper = @import("mapper.zig");

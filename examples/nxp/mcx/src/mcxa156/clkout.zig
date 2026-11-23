@@ -1,7 +1,6 @@
 pub const std_options = microzig.std_options(.{});
 
 const microzig = @import("microzig");
-const std = @import("std");
 const hal = microzig.hal;
 const Port = hal.port.Port;
 const clkout = hal.clkout;
