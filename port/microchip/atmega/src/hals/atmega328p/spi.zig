@@ -8,6 +8,7 @@
 const std = @import("std");
 const microzig = @import("microzig");
 const gpio = microzig.hal.gpio;
+const SliceVector = microzig.utilities.SliceVector;
 
 const SPI0 = microzig.chip.peripherals.SPI;
 
@@ -89,6 +90,15 @@ pub const SPI = enum {
     /// have the same length.
     pub fn transceive_blocking(_: SPI, tx_data: []const u8, rx_data: []u8) void {
         for (tx_data, rx_data) |tx_byte, *rx_byte| rx_byte.* = transfer_byte(tx_byte);
+    }
+    /// Sends `write_chunks` and receives into `read_chunks` at the same time as one transfer.
+    /// The total lengths must match, the chunk boundaries don't have to.
+    pub fn transceivev_blocking(_: SPI, write_chunks: []const []const u8, read_chunks: []const []u8) void {
+        var reads = SliceVector([]u8).init(read_chunks).iterator();
+        for (write_chunks) |chunk| for (chunk) |byte| {
+            const rx = reads.next_element_ptr() orelse return;
+            rx.value_ptr.* = transfer_byte(byte);
+        };
     }
 };
 
