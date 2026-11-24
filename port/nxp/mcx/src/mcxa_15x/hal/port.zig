@@ -1,6 +1,5 @@
 const microzig = @import("microzig");
 const syscon = @import("./syscon.zig");
-const gpio = @import("./gpio.zig");
 const mapper = @import("mapper.zig");
 
 const PORT_T = microzig.chip.types.peripherals.PORT0;
