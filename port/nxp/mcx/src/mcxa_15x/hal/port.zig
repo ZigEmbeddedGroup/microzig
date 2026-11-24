@@ -102,6 +102,6 @@ pub const Port = enum(u3) {
         pcr.MUX = @fromBackingInt(config.MUX);
         pcr.IBE = @fromBackingInt(@intFromBool(config.input_buffer_enabled));
         pcr.INV = @fromBackingInt(@intFromBool(config.invert_input));
-        -pin_regs.write(pcr);
+        pin_regs.write(pcr);
     }
 };
