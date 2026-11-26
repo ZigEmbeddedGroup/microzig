@@ -7,7 +7,8 @@
 //!
 //! The `DatagramDevice` must be an SPI bus in mode 0 (MSB first, up to
 //! 10 MHz) that drives CS low in `connect` and high in `disconnect`, and must
-//! support `writev` and `writev_then_readv`.
+//! support `writev` and `writev_then_readv`. If it also supports
+//! `transceivev`, `send` reads STATUS with a 1-byte NOP.
 //!
 //! Functions return `!void` and pass results through pointers: on AVR, Zig
 //! 0.17.1 can't compile error unions with a non-void payload
@@ -23,6 +24,8 @@ const command = struct {
     const w_tx_payload = 0xA0;
     const flush_tx = 0xE1;
     const flush_rx = 0xE2;
+    /// Does nothing; the radio still sends STATUS while it is shifted in.
+    const nop = 0xFF;
 };
 
 const Register = enum(u8) {
@@ -244,7 +247,7 @@ pub fn NRF24L01_Generic(comptime options: NRF24L01_Options) type {
             const timeout = self.clock.make_timeout(.from_ms(send_timeout_ms));
             while (true) {
                 var status: u8 = undefined;
-                try self.read_register(.status, &status);
+                try self.read_status(&status);
                 if (status & status_bits.reserved != 0) return error.IoError;
                 if (status & status_bits.max_rt != 0) {
                     // FLUSH_TX drops the payload; MAX_RT is cleared by the next send.
@@ -293,6 +296,20 @@ pub fn NRF24L01_Generic(comptime options: NRF24L01_Options) type {
             try self.dev.connect();
             defer self.dev.disconnect();
             try self.dev.writev_then_readv(&.{&.{cmd}}, &.{buffer});
+        }
+
+        /// Reads STATUS with a 1-byte NOP if the device supports `transceivev`,
+        /// and with R_REGISTER otherwise.
+        fn read_status(self: *const Self, status: *u8) !void {
+            if (comptime std.meta.hasMethod(options.DatagramDevice, "transceivev")) {
+                try self.dev.connect();
+                const result = self.dev.transceivev(&.{&.{command.nop}}, &.{status[0..1]});
+                self.dev.disconnect();
+                if (result) |_| return else |err| {
+                    if (err != error.Unsupported) return err;
+                }
+            }
+            try self.read_register(.status, status);
         }
 
         fn read_register(self: *const Self, register: Register, value: *u8) !void {
@@ -471,11 +488,117 @@ test "send loads the payload, pulses CE and waits for TX_DS" {
     try t.dd.expect_sent(&.{
         &.{ 0x27, 0x30 }, // STATUS: clear TX_DS and MAX_RT
         &.{ 0xA0, 1, 2, 3 }, // W_TX_PAYLOAD
-        &.{0x07}, // read STATUS
-        &.{0x07}, // read STATUS
+        &.{0xFF}, // NOP: read STATUS
+        &.{0xFF}, // NOP: read STATUS
     });
     try std.testing.expectEqual(.low, t.ce.state);
     try std.testing.expectEqual(10 + 100, t.clock.get_total_sleep_time());
+}
+
+test "send reads STATUS with R_REGISTER without transceivev_fn" {
+    var t: TestRadio = .init(&.{&.{0x2E}});
+    defer t.deinit();
+    var vtable = t.dd.datagram_device().vtable.*;
+    vtable.transceivev_fn = null;
+    var radio: NRF24L01 = .init(
+        .{ .ptr = &t.dd, .vtable = &vtable },
+        t.ce.digital_io(),
+        t.clock.clock_device(),
+    );
+    radio.payload_size = 1;
+
+    try radio.send(&.{1});
+
+    try t.dd.expect_sent(&.{
+        &.{ 0x27, 0x30 }, // STATUS: clear TX_DS and MAX_RT
+        &.{ 0xA0, 1 }, // W_TX_PAYLOAD
+        &.{0x07}, // R_REGISTER STATUS
+    });
+}
+
+/// Concrete full-duplex device whose errors don't include `Unsupported`.
+const FullDuplex = struct {
+    dd: mdf.base.DatagramDevice,
+
+    pub fn connect(d: @This()) !void {
+        try d.dd.connect();
+    }
+    pub fn disconnect(d: @This()) void {
+        d.dd.disconnect();
+    }
+    pub fn writev(d: @This(), chunks: []const []const u8) !void {
+        try d.dd.writev(chunks);
+    }
+    pub fn writev_then_readv(d: @This(), write_chunks: []const []const u8, read_chunks: []const []u8) !void {
+        try d.dd.writev_then_readv(write_chunks, read_chunks);
+    }
+    pub fn transceivev(d: @This(), write_chunks: []const []const u8, read_chunks: []const []u8) error{IoError}!void {
+        d.dd.transceivev(write_chunks, read_chunks) catch return error.IoError;
+    }
+};
+
+test "send reads STATUS with NOP on a concrete device with transceivev" {
+    var t: TestRadio = .init(&.{&.{0x2E}});
+    defer t.deinit();
+    var radio = init(FullDuplex{ .dd = t.dd.datagram_device() }, t.ce.digital_io(), t.clock.clock_device());
+    radio.payload_size = 1;
+
+    try radio.send(&.{1});
+
+    try t.dd.expect_sent(&.{
+        &.{ 0x27, 0x30 }, // STATUS: clear TX_DS and MAX_RT
+        &.{ 0xA0, 1 }, // W_TX_PAYLOAD
+        &.{0xFF}, // NOP: read STATUS
+    });
+}
+
+test "send returns a transceivev error without falling back" {
+    // No reply: the transfer fails with IoError.
+    var t: TestRadio = .init(&.{});
+    defer t.deinit();
+    var radio = init(FullDuplex{ .dd = t.dd.datagram_device() }, t.ce.digital_io(), t.clock.clock_device());
+    radio.payload_size = 1;
+
+    try std.testing.expectError(error.IoError, radio.send(&.{1}));
+
+    try t.dd.expect_sent(&.{
+        &.{ 0x27, 0x30 }, // STATUS: clear TX_DS and MAX_RT
+        &.{ 0xA0, 1 }, // W_TX_PAYLOAD
+        &.{0xFF}, // NOP, no R_REGISTER after it
+    });
+    try std.testing.expect(!t.dd.connected);
+}
+
+test "send reads STATUS with R_REGISTER on a concrete device without transceivev" {
+    // Forwards everything but `transceivev` to the test device.
+    const HalfDuplex = struct {
+        dd: mdf.base.DatagramDevice,
+
+        pub fn connect(d: @This()) !void {
+            try d.dd.connect();
+        }
+        pub fn disconnect(d: @This()) void {
+            d.dd.disconnect();
+        }
+        pub fn writev(d: @This(), chunks: []const []const u8) !void {
+            try d.dd.writev(chunks);
+        }
+        pub fn writev_then_readv(d: @This(), write_chunks: []const []const u8, read_chunks: []const []u8) !void {
+            try d.dd.writev_then_readv(write_chunks, read_chunks);
+        }
+    };
+    var t: TestRadio = .init(&.{&.{0x2E}});
+    defer t.deinit();
+    var radio = init(HalfDuplex{ .dd = t.dd.datagram_device() }, t.ce.digital_io(), t.clock.clock_device());
+    radio.payload_size = 1;
+
+    try radio.send(&.{1});
+
+    try t.dd.expect_sent(&.{
+        &.{ 0x27, 0x30 }, // STATUS: clear TX_DS and MAX_RT
+        &.{ 0xA0, 1 }, // W_TX_PAYLOAD
+        &.{0x07}, // R_REGISTER STATUS
+    });
 }
 
 test "send flushes the payload and fails after MAX_RT" {
