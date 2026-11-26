@@ -387,13 +387,13 @@ pub fn Encoder(comptime chip: Chip, comptime options: Options) type {
                 // NOTE: These instructions values only exist for RP2350
                 .movtorx => |mov| .{
                     .movtorx = .{
-                        .idx = mov.idx,
+                        .idx = try self.evaluate(u2, program.*, mov.idx, token_index, diags),
                         .idxi = @intFromBool(mov.idxi),
                     },
                 },
                 .movfromrx => |mov| .{
                     .movfromrx = .{
-                        .idx = mov.idx,
+                        .idx = try self.evaluate(u2, program.*, mov.idx, token_index, diags),
                         .idxi = @intFromBool(mov.idxi),
                     },
                 },
@@ -1198,6 +1198,31 @@ test "encode.error.sideset opt delay collision" {
         \\.side_set 2, opt
         \\nop side 3 [3]
     );
+}
+
+test "encode.movrx" {
+    const output = try encode_bounded_output(.RP2350,
+        \\.program movrx
+        \\.define idx 2
+        \\mov rxfifo[y], isr
+        \\mov rxfifo[idx], isr
+        \\mov osr, rxfifo[(idx + 1)]
+        \\mov osr, rxfifo[3]
+    );
+
+    const program = output.programs.get(0);
+    // 0b1000_0000_F001_Iiii (F = FromFifo, I = IdxI)
+    const expected = [_]u16{ 0x8010, 0x801a, 0x809b, 0x809b };
+    for (expected, 0..) |word, i|
+        try expectEqual(word, @as(u16, @bitCast(program.instructions.get(i))));
+}
+
+test "encode.error.movrx index too big" {
+    try expectError(error.TooBig, encode_bounded_output(.RP2350,
+        \\.program movrx
+        \\.define idx 4
+        \\mov rxfifo[idx], isr
+    ));
 }
 
 //test "encode.error.duplicated program name" {}
