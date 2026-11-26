@@ -1,0 +1,7 @@
+.{
+    .name = .dhcp_server,
+    .version = "0.0.1",
+    .minimum_zig_version = "0.17.0",
+    .paths = .{ "build.zig", "build.zig.zon", "src/" },
+    .fingerprint = 0xbe36d1282563e822,
+}
