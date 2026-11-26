@@ -514,6 +514,106 @@ pub const JoinPoller = struct {
     }
 };
 
+pub const ApOptions = struct {
+    security: Security = .wpa2_psk,
+    channel: u8 = 5,
+
+    pub const Security = enum {
+        open,
+        wpa_psk,
+        wpa2_psk,
+        wpa3_sae,
+    };
+};
+
+pub fn start_ap(
+    self: *Self,
+    ssid: []const u8,
+    pwd: []const u8,
+    opt: ApOptions,
+) !void {
+    // Fit maximum password length
+    var buf: [64 + @sizeOf(u32) * 2]u8 = undefined;
+    // Check password length. Reffrenced: embassy-rs
+    const min_pwd_len = 8;
+    const max_pwd_len = 64;
+    if (opt.security != .open and (min_pwd_len > pwd.len or pwd.len > max_pwd_len)) {
+        log.err(
+            "Password length must be between {} and {}. Length was {}.",
+            .{ min_pwd_len, max_pwd_len, pwd.len },
+        );
+        return error.InvalidPassphrase;
+    }
+
+    try self.set_var("apsta", &.{0});
+    self.sleep_ms(10);
+
+    try self.set_cmd(.set_auth, &.{0});
+    self.sleep_ms(10);
+
+    try self.set_cmd(.set_ap, &.{1});
+    self.sleep_ms(10);
+
+    try self.set_var("bsscfg:ssid", ioctl.encode_ap_ssid(&buf, ssid));
+    self.sleep_ms(10);
+    self.event_log.set_ssid = .success;
+
+    try self.set_cmd(.set_channel, std.mem.asBytes(&@as(u32, opt.channel)));
+    self.sleep_ms(10);
+
+    const wsec: u32 = switch (opt.security) {
+        .open => 0,
+        else => 4,
+    };
+    try self.set_var("bsscfg:wsec", std.mem.asBytes(&[_]u32{ 0, wsec }));
+    self.sleep_ms(10);
+
+    try self.set_var("mfp", &.{switch (opt.security) {
+        .open, .wpa_psk, .wpa2_psk => 0, // none
+        // .wpa2_wpa3 => 1 // Capable
+        .wpa3_sae => 2, // Required
+    }});
+    self.sleep_ms(10);
+
+    const wpa_auth: [8]u8 = [4]u8{ 0, 0, 0, 0 } ++ switch (opt.security) {
+        .wpa_psk => [4]u8{ 0x04, 0, 0, 0 },
+        .wpa2_psk => [4]u8{ 0x80, 0, 0, 0 },
+        .wpa3_sae => [4]u8{ 0, 0, 0x04, 0 },
+        .open => [4]u8{ 0, 0, 0, 0 },
+    };
+    try self.set_var("bsscfg:wpa_auth", &wpa_auth);
+    self.sleep_ms(10);
+
+    if (opt.security != .open) {
+        self.sleep_ms(100);
+    }
+    switch (opt.security) {
+        .open => {},
+        .wpa_psk, .wpa2_psk => try self.set_cmd(.set_wsec_pmk, ioctl.encode_pwd(&buf, pwd)),
+        .wpa3_sae => try self.set_var("sae_password", ioctl.encode_sae_pwd(&buf, pwd)),
+    }
+    self.sleep_ms(10);
+    self.event_log.psk_sup = .success;
+    self.event_log.auth = .success;
+
+    try self.set_var("2g_mrate", std.mem.asBytes(&@as(u32, 11_000_000 / 500_000)));
+    self.sleep_ms(10);
+    try self.set_var("bss", std.mem.asBytes(&[_]u32{ 0, 1 }));
+    self.sleep_ms(10);
+}
+
+pub fn stop_ap(self: *@This()) !void {
+    self.set_var("bss", std.mem.asBytes(&[_]u32{ 0, 0 }));
+    self.sleep_ms(10);
+    self.set_cmd(.set_ap, &.{0});
+    self.sleep_ms(10);
+    try self.set_var("apsta", &.{1});
+    self.sleep_ms(10);
+    self.event_log.set_ssid = .none;
+    self.event_log.psk_sup = .none;
+    self.event_log.auth = .none;
+}
+
 pub fn poll(self: *Self) !void {
     var bytes: [ioctl_response_bytes_len]u8 align(4) = undefined;
     var rsp, _ = try self.read(&bytes) orelse return;
@@ -550,9 +650,7 @@ fn handle_event(self: *Self, rsp: *ioctl.Response) void {
         .auth => {
             event_log.auth = state(evt.status == .success);
         },
-        .deauth_ind => {
-            event_log.auth = .fail;
-        },
+        .deauth_ind => {},
         .set_ssid => {
             event_log.set_ssid = state(evt.status == .success);
         },

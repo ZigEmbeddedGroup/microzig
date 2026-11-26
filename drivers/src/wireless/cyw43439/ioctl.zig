@@ -19,7 +19,7 @@ const testing = std.testing;
 const log = std.log.scoped(.cyw43_ioctl);
 
 // Time to wait for ioctl response (msec)
-pub const response_wait = response_poll_interval * 8;
+pub const response_wait = response_poll_interval * 32;
 // Polling interval for ioctl responses
 pub const response_poll_interval = 10;
 
@@ -91,9 +91,11 @@ pub const Cmd = enum(u32) {
     set_infra = 20,
     set_auth = 22,
     set_ssid = 26,
+    set_channel = 30,
     set_antdiv = 64,
     set_pm = 86,
     set_gmode = 110,
+    set_ap = 118,
     set_wsec = 134,
     set_band = 142,
     set_wpa_auth = 165,
@@ -739,6 +741,12 @@ pub fn encode_ssid(buf: []u8, ssid: []const u8) []u8 {
     mem.writeInt(u32, buf[0..4], @intCast(ssid.len), .little);
     @memcpy(buf[4..][0..ssid.len], ssid);
     return buf[0 .. 4 + ssid.len];
+}
+
+pub fn encode_ap_ssid(buf: []u8, ssid: []const u8) []u8 {
+    mem.writeInt(u32, buf[0..4], 0, .little);
+    const encoded_ssid = encode_ssid(buf[4..], ssid);
+    return buf[0 .. 4 + encoded_ssid.len];
 }
 
 pub fn bytes_to_words(bytes: []const u8) struct { []const u32, ?u32 } {

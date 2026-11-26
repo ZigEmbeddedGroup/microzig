@@ -104,6 +104,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "net-udp", .file = "src/net/udp.zig" },
         .{ .name = "net-tcp_client", .file = "src/net/tcp_client.zig" },
         .{ .name = "net-tcp_server", .file = "src/net/tcp_server.zig" },
+        .{ .name = "net-access_point", .file = "src/net/access_point.zig" },
         .{ .name = "board-id", .file = "src/board_id.zig" },
         .{ .name = "flash-program", .file = "src/flash_program.zig" },
     };
@@ -167,6 +168,12 @@ pub fn build(b: *std.Build) void {
             });
             const net_mod = net_dep.module("net");
             fw.exe.root_module.addImport("net", net_mod);
+        }
+
+        if (std.mem.find(u8, example.name, "_net-access_point") != null) {
+            const dhcp_dep = b.dependency("dhcp_server", .{});
+            const dhcp_mod = dhcp_dep.module("dhcp_server");
+            fw.exe.root_module.addImport("dhcp", dhcp_mod);
         }
 
         // Import freertos module for some examples, kind of a hack

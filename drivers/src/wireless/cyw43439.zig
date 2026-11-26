@@ -5,6 +5,7 @@ const Link = @import("link");
 const Bus = @import("cyw43439/bus.zig");
 const WiFi = @import("cyw43439/wifi.zig");
 pub const JoinOptions = WiFi.JoinOptions;
+pub const ApOptions = WiFi.ApOptions;
 pub const InitOptions = WiFi.InitOptions;
 
 const log = std.log.scoped(.cyw43);
@@ -48,6 +49,14 @@ pub fn join_state(self: *Self) WiFi.JoinState {
 
 pub fn is_joined(self: *Self) bool {
     return self.wifi.join_state == .joined;
+}
+
+pub fn start_ap(self: *Self, ssid: []const u8, pwd: []const u8, opt: ApOptions) !void {
+    try self.wifi.start_ap(ssid, pwd, opt);
+}
+
+pub fn stop_ap(self: *Self) !void {
+    try self.wifi.stop_ap();
 }
 
 /// Non blocking scan. Returns poller.

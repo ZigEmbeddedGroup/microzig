@@ -5,6 +5,7 @@
     .dependencies = .{
         .microzig = .{ .path = "../../.." },
         .net = .{ .path = "../../../modules/network/" },
+        .dhcp_server = .{ .path = "../../../modules/dhcp-server/" },
         .freertos = .{ .path = "../../../modules/freertos/" },
     },
     .paths = .{
