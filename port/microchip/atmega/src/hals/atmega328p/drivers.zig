@@ -129,12 +129,21 @@ pub fn SPI_DatagramDevice(comptime cs_pin: gpio.Pin) type {
             bus.readv_blocking(read_chunks);
         }
 
+        pub fn transceivev(
+            _: Self,
+            write_chunks: []const []const u8,
+            read_chunks: []const []u8,
+        ) (DatagramDevice.WriteError || DatagramDevice.ReadError)!void {
+            bus.transceivev_blocking(write_chunks, read_chunks);
+        }
+
         const vtable: DatagramDevice.VTable = .{
             .connect_fn = connect_fn,
             .disconnect_fn = disconnect_fn,
             .writev_fn = writev_fn,
             .readv_fn = readv_fn,
             .writev_then_readv_fn = writev_then_readv_fn,
+            .transceivev_fn = transceivev_fn,
         };
 
         fn connect_fn(_: *anyopaque) DatagramDevice.ConnectError!void {
@@ -159,6 +168,14 @@ pub fn SPI_DatagramDevice(comptime cs_pin: gpio.Pin) type {
             read_chunks: []const []u8,
         ) DatagramDevice.ReadError!void {
             return Self.writev_then_readv(.{}, write_chunks, read_chunks);
+        }
+
+        fn transceivev_fn(
+            _: *anyopaque,
+            write_chunks: []const []const u8,
+            read_chunks: []const []u8,
+        ) (DatagramDevice.WriteError || DatagramDevice.ReadError)!void {
+            return Self.transceivev(.{}, write_chunks, read_chunks);
         }
     };
 }
