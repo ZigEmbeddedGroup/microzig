@@ -8,6 +8,7 @@ comptime {
     _ = microzig.export_startup();
 }
 
+const cpu = microzig.cpu;
 const clocks = microzig.hal.clocks;
 const gpio = microzig.hal.gpio;
 
@@ -21,18 +22,15 @@ fn delay(cycles: u32) void {
 
 pub fn main() !void {
     clocks.init();
-    clocks.enable_gpio(.c);
 
-    const pc2: gpio.Pin = .{ .port = .c, .number = 2 };
+    const pc2: gpio.Pin = .{ .gpio = .GPIOC, .number = 2 };
     pc2.apply(.{
         .mode = .{ .output = .general_purpose_open_drain },
         .speed = .max_50MHz,
         .pull = .disabled,
     });
 
-    // Wakeup V5F
-    PFIC.WAKEIP1.raw = 0x10000 & ~@as(u32, 0x3FF);
-    PFIC.SCTLR.raw |= (1 << 5);
+    cpu.wakeup_v5f();
 
     while (true) {
         pc2.toggle();
